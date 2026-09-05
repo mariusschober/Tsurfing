@@ -1,6 +1,52 @@
 # Tsurfing personal-beta implementation plan — 2026-09-05
 
-Status: IN PROGRESS. Release remains NOT READY.
+Status: OWNER TRIAL — additional testing paused at the owner's request. Release remains NOT READY.
+
+## Latest owner decision — 2026-09-05
+
+Use Web and Android intensively for one to two weeks. Telegram login and chat
+remain in scope; Mini App and native macOS/signing are deferred. Keep testing
+minimal and review the owner's documented issues next week. Do not execute the
+older five-surface sequence below automatically; it is retained as deferred
+release work, not tonight's instruction.
+
+Current installed Android/staging source: `d5134d47735c2bfa14359989cf4273a3bdb1a43f`.
+Staging returned HTTP 200 with that exact revision at handoff. The S23 received
+the staging-configured local-debug APK with data preserved; SHA256
+`4c56f220dc7be99c36aca04422e61d51384d1e3b3f1c2edf38bce989c2127f5d`.
+This is not the future signed internal-beta artifact.
+
+Fresh S23 email OTP plus owner MFA succeeded after preserving sessions awaiting
+MFA. Fresh Telegram sign-in returned to native Android via the browser's manual
+Open app banner; automatic return is not proven. The new build explains that
+return step. A real Telegram chat capture was observed in Web and Android.
+Two old restore-sentinel conflicts were explicitly resolved via normal cloud
+acknowledgments with owner approval. The Android update adds item/field-level
+conflict explanations and Review later; its actual conflict-dialog visual QA
+remains unperformed because the owner requested minimal testing.
+
+Local checks: 333 web/server tests passed; Android 128 passed and one hosted
+case skipped. Required static integrity and build checks passed. Prior revision
+`69a67fb652b12552c3808c5b5d49aa78c8f2c969` CI completed successfully:
+https://github.com/mariusschober/Tsurfing/actions/runs/33995598797 .
+Current revision CI was still in progress at handoff:
+https://github.com/mariusschober/Tsurfing/actions/runs/33997186165 .
+Do not represent its status as passed without checking it again.
+
+Tested macOS CAPTCHA/MFA fixes are preserved locally on
+`fix/macos-auth-policy-20260905`, commit
+`2378b18` (194 tests passed, one hosted case skipped), and are not included in the
+staging push. This Mac has zero valid code-signing identities; live secure
+Keychain proof and distribution signing remain deferred.
+
+Remaining release gates include Turnstile, broader physical offline/reconnect
+and convergence checks, deferred Mac/Mini App journeys, signed artifacts,
+isolated production configuration/deployment, and protected release promotion.
+No production, main, integration/beta or release tag was changed.
+
+---
+
+The following is historical execution context; latest owner scope above prevails.
 
 ## Verified baseline
 
