@@ -623,7 +623,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
                     <p className="mb-2 text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">{requiresMonthlyPlanning ? 'Monthly planning' : 'Daily planning'}</p>
                     <h1 className="mb-3 text-3xl font-bold text-gray-900 dark:text-white">Plan once. Then focus.</h1>
                     <p className="mb-6 text-gray-600 dark:text-gray-300">
-                        {requiresMonthlyPlanning ? 'Assign each current-month task to an exact day. Then review today and return to one-task focus.' : `Review overdue work and today's order. Once confirmed, Goalflow will show one task at a time.`}
+                        {requiresMonthlyPlanning ? 'Assign each current-month task to an exact day. Then review today and return to one-task focus.' : `Review overdue work and today's order. Once confirmed, Tsurfing will show one task at a time.`}
                     </p>
                     <button type="button" onClick={() => handleSetView('planning')} className="rounded-xl bg-indigo-600 px-6 py-3 font-bold text-white transition hover:bg-indigo-700">
                         Open today's plan
@@ -719,7 +719,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
 
       {currentView !== 'gamification' && (
         <footer className="text-center py-6 text-gray-400 dark:text-gray-600 text-xs print:hidden">
-            <p>Goalflow &copy; {new Date().getFullYear()} • Focus. Flow. Finish.</p>
+            <p>Tsurfing &copy; {new Date().getFullYear()} • Focus. Flow. Finish.</p>
         </footer>
       )}
     </div>

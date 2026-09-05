@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "web": {
     "databaseName": "GoalflowDB",
     "activeDatabaseKey": "goalflow_active_database_v2",
@@ -7,13 +7,13 @@
     "deviceIdKey": "goalflow-device-id"
   },
   "android": {
-    "capacitorApplicationId": "com.mariusschober.goalflow",
+    "capacitorApplicationId": "com.mariusschober.tsurfing",
     "legacyNamespace": "com.mariusschober.goalflow",
     "nativeNamespace": "com.mariusschober.goalflow.nativeapp",
-    "nativeApplicationId": "com.mariusschober.goalflow",
+    "nativeApplicationId": "com.mariusschober.tsurfing",
     "nativeDatabaseName": "goalflow-native.db",
-    "urlScheme": "goalflow",
-    "authRedirectUri": "goalflow://auth/callback",
+    "urlScheme": "tsurfing",
+    "authRedirectUri": "tsurfing://auth/callback",
     "securePreferences": "goalflow-secure-session",
     "keystoreAlias": "goalflow_native_session"
   },
@@ -33,7 +33,15 @@
     "202608310001_telegram_auth_state_pkce.sql",
     "202609030001_access_boundary_hardening.sql",
     "202609030002_account_lifecycle.sql",
-    "202609030003_backup_restore_hardening.sql"
+    "202609030003_backup_restore_hardening.sql",
+    "202609030004_telegram_webhook_claims.sql",
+    "202609030005_telegram_mini_sessions.sql",
+    "202609030006_telegram_link_hardening.sql",
+    "202609030007_telegram_capture_confirmation.sql",
+    "202609040001_email_otp_activation.sql",
+    "202609040002_telegram_oidc_activation.sql",
+    "202609040003_realtime_sync_wakeup.sql",
+    "202609040004_database_advisor_hardening.sql"
   ],
   "roomSchemaFiles": [
     "1.json",

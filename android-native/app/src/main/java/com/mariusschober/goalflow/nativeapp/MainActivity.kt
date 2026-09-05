@@ -20,7 +20,7 @@ import com.mariusschober.goalflow.nativeapp.sync.NativeSyncScheduler
 import com.mariusschober.goalflow.nativeapp.ui.GoalflowRoot
 import kotlinx.coroutines.launch
 
-const val GOALFLOW_CAPTURE_ACTION = "com.mariusschober.goalflow.CAPTURE"
+const val GOALFLOW_CAPTURE_ACTION = "com.mariusschober.tsurfing.CAPTURE"
 
 class MainActivity : ComponentActivity() {
     private lateinit var authClient: NativeAuthClient
@@ -73,10 +73,16 @@ class MainActivity : ComponentActivity() {
                 .onSuccess { accepted ->
                     if (accepted) {
                         authSessionRevision += 1
+                        (application as GoalflowApplication).foregroundSyncCoordinator.sessionChanged()
                         NativeSyncScheduler.schedule(this@MainActivity)
                     }
                 }
                 .onFailure { error ->
+                    // A verified PKCE exchange may already be stored while a
+                    // retryable activation/link acknowledgement is pending.
+                    // Re-evaluate encrypted auth state without exposing it.
+                    authSessionRevision += 1
+                    (application as GoalflowApplication).foregroundSyncCoordinator.sessionChanged()
                     Toast.makeText(
                         this@MainActivity,
                         error.message ?: "Sign-in could not be completed.",

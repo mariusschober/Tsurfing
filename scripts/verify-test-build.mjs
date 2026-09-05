@@ -17,5 +17,6 @@ const contents = await Promise.all(files.map((file) => readFile(file, 'utf8')));
 const bundle = contents.join('\n');
 
 if (!bundle.includes('123456')) throw new Error('The test build does not contain the configured test gate.');
-if (!bundle.includes('Goalflow Test')) throw new Error('The test build does not contain the test-build marker.');
+if (!bundle.includes('goalflow-test-access')) throw new Error('The test build does not contain the isolated access marker.');
+if (!bundle.includes('Tsurfing Test')) throw new Error('The test build does not contain the test-build marker.');
 console.log(`Test build verification passed across ${files.length} built files.`);

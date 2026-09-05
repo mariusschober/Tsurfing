@@ -648,6 +648,19 @@ class GoalflowRepositorySyncTest {
             mutation.mutationId,
             repository.pendingSyncMutations().single { it.entityType == "tasks" }.mutationId
         )
+        try {
+            repository.commitPushResults(
+                listOf(mutation),
+                listOf(accepted(mutation, 1).copy(recordDeviceId = "device-b"))
+            )
+            fail("An acceptance for another device must not be committed")
+        } catch (_: IllegalArgumentException) {
+            // The exact local mutation remains pending.
+        }
+        assertEquals(
+            mutation.mutationId,
+            repository.pendingSyncMutations().single { it.entityType == "tasks" }.mutationId
+        )
 
         val remote = task.copy(title = "Remote", updatedAt = task.updatedAt + 1)
         repository.applyRemotePage(
@@ -1078,6 +1091,7 @@ class GoalflowRepositorySyncTest {
             serverVersion = serverVersion,
             recordEntityType = mutation.entityType,
             recordEntityId = mutation.entityId,
+            recordDeviceId = mutation.deviceId,
             recordVersion = mutation.version,
             recordServerVersion = serverVersion,
             recordPayload = mutation.payload,

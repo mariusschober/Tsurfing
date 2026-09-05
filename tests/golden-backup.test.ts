@@ -36,7 +36,7 @@ describe('golden backup fixtures', () => {
     install();
     const userA = ownerA.ownerKey;
     // Import ownerB's backup into ownerA context should fail owner check
-    await expect(storageService.importBackup(userA, ownerB as any, 'merge')).rejects.toThrow(/different Goalflow account/i);
+    await expect(storageService.importBackup(userA, ownerB as any, 'merge')).rejects.toThrow(/different Tsurfing account/i);
   });
 
   it('pending outbox fixture survives validation', async () => {

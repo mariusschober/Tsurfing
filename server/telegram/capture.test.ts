@@ -25,4 +25,34 @@ describe('Telegram quick capture', () => {
     expect(() => parseTelegramCapture('Review insurance in July 2026', '2026-07-18')).toThrow(SchedulingError);
     expect(() => parseTelegramCapture('2026-08-02', '2026-07-18')).toThrow('actionable task title');
   });
+
+  it('parses explicit today and the next occurrence of a weekday', () => {
+    expect(parseTelegramCapture('Send report today', '2026-09-04')).toMatchObject({
+      title: 'Send report', scheduledFor: '2026-09-04', defaultedToToday: false
+    });
+    expect(parseTelegramCapture('Send report Friday', '2026-09-04')).toMatchObject({
+      title: 'Send report', scheduledFor: '2026-09-11', defaultedToToday: false
+    });
+  });
+
+  it('parses time, duration and deduplicated tags without changing the date default', () => {
+    expect(parseTelegramCapture('Call Peter tomorrow at 14:30 1h 30m #sales #sales', '2026-08-30')).toMatchObject({
+      title: 'Call Peter',
+      scheduledFor: '2026-08-31',
+      scheduledTime: '14:30',
+      estimatedMinutes: 90,
+      tags: ['sales'],
+      defaultedToToday: false
+    });
+    expect(parseTelegramCapture('Draft proposal 45m #work', '2026-08-30')).toMatchObject({
+      title: 'Draft proposal', estimatedMinutes: 45, tags: ['work'], defaultedToToday: true
+    });
+  });
+
+  it('rejects ambiguous or invalid rich scheduling input instead of coercing it', () => {
+    expect(parseTelegramCapture('We may review', '2026-08-30')).toMatchObject({ title: 'We may review' });
+    expect(() => parseTelegramCapture('Review in September at 14:30', '2026-08-30')).toThrow(SchedulingError);
+    expect(() => parseTelegramCapture(`Task ${'x'.repeat(241)}`, '2026-08-30')).toThrow(/240/);
+    expect(() => parseTelegramCapture('Task 25h', '2026-08-30')).toThrow(/24 hours/);
+  });
 });

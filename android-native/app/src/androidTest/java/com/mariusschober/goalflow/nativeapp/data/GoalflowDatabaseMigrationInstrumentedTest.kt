@@ -34,6 +34,22 @@ class GoalflowDatabaseMigrationInstrumentedTest {
             val mutationId = stableUuid(startVersion)
             val dependencyMutationId = stableUuid(100 + startVersion)
             val ownerUserId = stableUuid(200 + startVersion)
+            // Version 2 shipped a collection-snapshot protocol. Its durable entity ID was
+            // "singleton" and its metadata key was the collection name. Version 3 introduced
+            // per-entity conflicts and metadata keys. Model the contract that actually shipped
+            // so this test detects identity changes instead of inventing a recoverable v2 ID.
+            val entityId = if (startVersion == 2) "singleton" else taskId
+            val syncMetaKey = if (startVersion == 2) "tasks" else "tasks:$taskId"
+            val localPayload = if (startVersion == 2) {
+                """[{"id":"$taskId","title":"Local snapshot"}]"""
+            } else {
+                """{"id":"$taskId","title":"Local entity"}"""
+            }
+            val serverPayload = if (startVersion == 2) {
+                """[{"id":"$taskId","title":"Server snapshot"}]"""
+            } else {
+                """{"id":"$taskId","title":"Server entity"}"""
+            }
             val updatedAt = "2026-08-27T00:00:00Z"
             val deletedAt = "2026-08-28T00:00:00Z"
             val attemptedAt = "2026-08-29T00:00:00Z"
@@ -41,30 +57,30 @@ class GoalflowDatabaseMigrationInstrumentedTest {
             migrationHelper.createDatabase(databaseName, startVersion).apply {
                 execSQL(
                     "INSERT INTO tasks (id,title,notes,schedulePrecision,scheduledFor,scheduledTime,plannedOrder,status,isFrog,beforeFrog,frogFailures,source,goalId,parentTaskId,habitId,createdAt,updatedAt,completedAt,deletedAt" +
-                        if (startVersion >= 4) ",extraJson)" else ")" +
+                        (if (startVersion >= 4) ",extraJson)" else ")") +
                         " VALUES ('$taskId','Keep this task','','DAY','2026-08-27',NULL,0,'OPEN',0,0,0,'MANUAL',NULL,NULL,NULL,1000,2000,NULL,NULL" +
-                        if (startVersion >= 4) ",'{}')" else ")"
+                        (if (startVersion >= 4) ",'{}')" else ")")
                 )
                 execSQL(
                     "INSERT INTO tasks (id,title,notes,schedulePrecision,scheduledFor,scheduledTime,plannedOrder,status,isFrog,beforeFrog,frogFailures,source,goalId,parentTaskId,habitId,createdAt,updatedAt,completedAt,deletedAt" +
-                        if (startVersion >= 4) ",extraJson)" else ")" +
+                        (if (startVersion >= 4) ",extraJson)" else ")") +
                         " VALUES ('$tombstoneTaskId','Preserve this tombstone','','DAY','2026-08-26',NULL,1,'DONE',0,0,0,'MANUAL',NULL,NULL,NULL,3000,4000,4500,5000" +
-                        if (startVersion >= 4) ",'{}')" else ")"
+                        (if (startVersion >= 4) ",'{}')" else ")")
                 )
                 execSQL("INSERT INTO daily_plans (localDate,confirmedAt,taskIds) VALUES ('2026-08-27',6000,'$taskId')")
                 if (startVersion >= 2) {
                     execSQL(
                         "INSERT INTO sync_outbox (mutationId,deviceId,entityType,entityId,baseServerVersion,version,payload,updatedAt,deletedAt" +
-                            if (startVersion >= 3) ",dependsOnMutationId,resolvesConflictId,attemptedAt)" else ")" +
-                            " VALUES ('$mutationId','device-a','tasks','$taskId',41,42,'{\"id\":\"$taskId\"}','$updatedAt','$deletedAt'" +
-                            if (startVersion >= 3) ",'$dependencyMutationId','conflict-$startVersion','$attemptedAt')" else ")"
+                            (if (startVersion >= 3) ",dependsOnMutationId,resolvesConflictId,attemptedAt)" else ")") +
+                            " VALUES ('$mutationId','device-a','tasks','$entityId',41,42,'$localPayload','$updatedAt','$deletedAt'" +
+                            (if (startVersion >= 3) ",'$dependencyMutationId','conflict-$startVersion','$attemptedAt')" else ")")
                     )
-                    execSQL("INSERT INTO sync_meta (entityType,cursor,localVersion,serverVersion,lastSuccessfulSync) VALUES ('tasks:$taskId',17,42,41,'$updatedAt')")
+                    execSQL("INSERT INTO sync_meta (entityType,cursor,localVersion,serverVersion,lastSuccessfulSync) VALUES ('$syncMetaKey',17,42,41,'$updatedAt')")
                     execSQL(
                         "INSERT INTO sync_conflicts (id,entityType,localPayload,serverPayload,serverVersion,createdAt" +
-                            if (startVersion >= 3) ",entityId,mutationId,localDeletedAt,localHistory,serverDeletedAt,status)" else ")" +
-                            " VALUES ('conflict-$startVersion','tasks','{\"side\":\"local\"}','{\"side\":\"server\"}',43,'$updatedAt'" +
-                            if (startVersion >= 3) ",'$taskId','$mutationId','$deletedAt','[\"history\"]','$attemptedAt','unresolved')" else ")"
+                            (if (startVersion >= 3) ",entityId,mutationId,localDeletedAt,localHistory,serverDeletedAt,status)" else ")") +
+                            " VALUES ('conflict-$startVersion','tasks','$localPayload','$serverPayload',43,'$updatedAt'" +
+                            (if (startVersion >= 3) ",'$entityId','$mutationId','$deletedAt','[\"history\"]','$attemptedAt','unresolved')" else ")")
                     )
                 }
                 if (startVersion >= 5) {
@@ -107,9 +123,10 @@ class GoalflowDatabaseMigrationInstrumentedTest {
                     assertEquals(1, outbox.size)
                     assertEquals(mutationId, outbox.single().mutationId)
                     assertEquals(mutationId, UUID.fromString(outbox.single().mutationId).toString())
-                    assertEquals(taskId, outbox.single().entityId)
+                    assertEquals(entityId, outbox.single().entityId)
                     assertEquals(41L, outbox.single().baseServerVersion)
                     assertEquals(42L, outbox.single().version)
+                    assertEquals(localPayload, outbox.single().payload)
                     assertEquals(updatedAt, outbox.single().updatedAt)
                     assertEquals(deletedAt, outbox.single().deletedAt)
                     if (startVersion >= 3) {
@@ -121,7 +138,7 @@ class GoalflowDatabaseMigrationInstrumentedTest {
                         assertNull(outbox.single().resolvesConflictId)
                         assertNull(outbox.single().attemptedAt)
                     }
-                    val syncMeta = migrated.syncMetaDao().get("tasks:$taskId")
+                    val syncMeta = migrated.syncMetaDao().get(syncMetaKey)
                     assertEquals(17L, syncMeta?.cursor)
                     assertEquals(42L, syncMeta?.localVersion)
                     assertEquals(41L, syncMeta?.serverVersion)
@@ -133,7 +150,12 @@ class GoalflowDatabaseMigrationInstrumentedTest {
                 if (startVersion >= 2) {
                     val conflicts = migrated.syncConflictDao().getAll()
                     assertEquals(1, conflicts.size)
-                    assertEquals(taskId, conflicts.single().entityId)
+                    assertEquals("conflict-$startVersion", conflicts.single().id)
+                    assertEquals("tasks", conflicts.single().entityType)
+                    assertEquals(entityId, conflicts.single().entityId)
+                    assertEquals(localPayload, conflicts.single().localPayload)
+                    assertEquals(serverPayload, conflicts.single().serverPayload)
+                    assertEquals(43L, conflicts.single().serverVersion)
                     assertEquals("unresolved", conflicts.single().status)
                     assertEquals(updatedAt, conflicts.single().createdAt)
                     if (startVersion >= 3) {

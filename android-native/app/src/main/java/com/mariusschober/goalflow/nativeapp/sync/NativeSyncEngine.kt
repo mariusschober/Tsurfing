@@ -7,23 +7,28 @@ import com.mariusschober.goalflow.nativeapp.data.NativeServerConflict
 import com.mariusschober.goalflow.nativeapp.data.SyncConflictEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.ConnectionPool
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
+import okhttp3.ResponseBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 import kotlin.math.min
 import kotlin.random.Random
 
 // P1-5: OkHttp singleton with HTTP/2 + 30s pool for NativeSyncEngine
-private val okHttpSingleton: OkHttpClient by lazy {
+internal val nativeOkHttpClient: OkHttpClient by lazy {
     OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
@@ -46,11 +51,38 @@ fun interface NativeSyncTransport {
 }
 
 class AuthenticationExpiredDuringSync : IllegalStateException("Authentication expired during synchronization.")
+class NativeSyncMfaRequired : IllegalStateException("Verify the owner session before cloud synchronization.")
 class NativeSyncSessionChangedDuringSync : IllegalStateException(
     "The local cloud session changed while synchronization was running. Local changes remain pending."
 )
 class NativeSyncProtocolException(message: String) : IllegalStateException(message)
 class NativeSyncTransientException(message: String, cause: Throwable? = null) : IOException(message, cause)
+private const val MAX_NATIVE_SYNC_RESPONSE_BYTES = 16 * 1024 * 1024
+
+internal fun readNativeSyncResponse(
+    body: ResponseBody?,
+    maximumBytes: Int = MAX_NATIVE_SYNC_RESPONSE_BYTES
+): String {
+    require(maximumBytes > 0) { "A positive response limit is required." }
+    if (body == null) return ""
+    val declaredLength = body.contentLength()
+    if (declaredLength > maximumBytes) {
+        throw NativeSyncProtocolException("The synchronization response exceeded the safe client limit.")
+    }
+    val output = ByteArrayOutputStream()
+    body.byteStream().use { stream ->
+        val buffer = ByteArray(8_192)
+        while (true) {
+            val count = stream.read(buffer)
+            if (count < 0) break
+            if (count > maximumBytes - output.size()) {
+                throw NativeSyncProtocolException("The synchronization response exceeded the safe client limit.")
+            }
+            output.write(buffer, 0, count)
+        }
+    }
+    return String(output.toByteArray(), StandardCharsets.UTF_8)
+}
 
 data class NativeSyncRetryPolicy(
     val maxAttempts: Int = 3,
@@ -79,8 +111,16 @@ class NativeSyncEngine(
     private val cloudAvailable: () -> Boolean = { NativeConfig.canUseCloud },
     private val retryPolicy: NativeSyncRetryPolicy = NativeSyncRetryPolicy()
 ) {
+    private val synchronizationMutex = Mutex()
+
     suspend fun resolveConflictWithCloud(conflict: SyncConflictEntity) = withContext(Dispatchers.IO) {
-        if (cloudAvailable() && conflict.mutationId != null) {
+        val serverLedgerConflict = runCatching { java.util.UUID.fromString(conflict.id) }.isSuccess
+        if (serverLedgerConflict) {
+            if (!cloudAvailable()) {
+                throw NativeSyncProtocolException("The server conflict cannot be resolved while cloud access is unavailable; both versions remain preserved.")
+            }
+            val mutationId = conflict.mutationId?.takeIf { it.matches(UUID_PATTERN) }
+                ?: throw NativeSyncProtocolException("The server conflict identity is invalid; both versions remain preserved.")
             val session = sessionProvider.read() ?: throw AuthenticationExpiredDuringSync()
             if (session.expiresAtMillis <= System.currentTimeMillis() + 60_000L) {
                 throw AuthenticationExpiredDuringSync()
@@ -91,16 +131,30 @@ class NativeSyncEngine(
                 "/api/v1/sync/conflicts/resolve",
                 "POST",
                 JSONObject()
-                    .put("mutationId", conflict.mutationId)
+                    .put("conflictId", conflict.id)
+                    .put("mutationId", mutationId)
                     .put("choice", "cloud")
                     .toString()
             )
             ensureSuccessful(response, "The server conflict could not be resolved; both versions remain preserved.")
+            val acknowledgment = parseObject(
+                response.body,
+                "The server conflict response was invalid; both versions remain preserved."
+            )
+            if (acknowledgment.opt("resolved") !is Boolean
+                || !acknowledgment.getBoolean("resolved")
+                || acknowledgment.optString("conflictId") != conflict.id
+                || acknowledgment.optString("mutationId") != mutationId
+            ) {
+                throw NativeSyncProtocolException("The server did not acknowledge the exact conflict; both versions remain preserved.")
+            }
         }
         repository.resolveConflictWithCloud(conflict.id)
     }
 
-    suspend fun synchronize(): SyncResult = withContext(Dispatchers.IO) {
+    suspend fun synchronize(): SyncResult = synchronizationMutex.withLock { synchronizeOnce() }
+
+    private suspend fun synchronizeOnce(): SyncResult = withContext(Dispatchers.IO) {
         if (!cloudAvailable()) return@withContext SyncResult.Skipped
         val session = sessionProvider.read() ?: return@withContext SyncResult.Skipped
         if (session.expiresAtMillis <= System.currentTimeMillis() + 60_000L) {
@@ -161,6 +215,19 @@ class NativeSyncEngine(
                         ?: record?.optString("entity_type")?.takeIf(String::isNotBlank)
                     val recordEntityId = record?.optString("entityId")?.takeIf(String::isNotBlank)
                         ?: record?.optString("entity_id")?.takeIf(String::isNotBlank)
+                    val recordDeviceIdValue = record?.let {
+                        when {
+                            it.has("deviceId") -> it.opt("deviceId")
+                            it.has("device_id") -> it.opt("device_id")
+                            else -> null
+                        }
+                    }
+                    val recordDeviceId = when (recordDeviceIdValue) {
+                        null, JSONObject.NULL -> null
+                        is String -> recordDeviceIdValue.takeIf(String::isNotBlank)
+                            ?: throw NativeSyncProtocolException("Sync push response contains an invalid record device identity.")
+                        else -> throw NativeSyncProtocolException("Sync push response contains an invalid record device identity.")
+                    }
                     val recordVersion = record?.let {
                         if (!it.has("version")) null else safeLong(it.opt("version"), "accepted record version")
                     }
@@ -186,6 +253,7 @@ class NativeSyncEngine(
                             serverDeletedAt = recordDeletedAt,
                             recordEntityType = recordEntityType,
                             recordEntityId = recordEntityId,
+                            recordDeviceId = recordDeviceId,
                             recordVersion = recordVersion,
                             recordServerVersion = recordServerVersion,
                             recordPayload = recordPayload,
@@ -235,11 +303,14 @@ class NativeSyncEngine(
                     val entityId = record.opt("entityId")
                     val version = record.opt("version")
                     val serverVersion = record.opt("serverVersion")
+                    val deviceId = record.opt("deviceId")
+                    val updatedAt = record.opt("updatedAt")
                     if (entityType !is String || entityType.isBlank()
                         || entityId !is String || entityId.isBlank()
                         || version !is Number || serverVersion !is Number
-                        || (record.has("deviceId") && record.opt("deviceId") !is String)
-                        || (record.has("updatedAt") && record.opt("updatedAt") !is String)
+                        || deviceId !is String || deviceId.isBlank()
+                        || updatedAt !is String || runCatching { Instant.parse(updatedAt) }.isFailure
+                        || !record.has("deletedAt")
                         || (record.has("deletedAt") && !record.isNull("deletedAt") && record.opt("deletedAt") !is String)
                     ) {
                         throw NativeSyncProtocolException("Sync pull response contains an ambiguous record.")
@@ -250,9 +321,9 @@ class NativeSyncEngine(
                             entityId = entityId,
                             version = safeLong(version, "remote record version"),
                             serverVersion = safeLong(serverVersion, "remote server version", allowZero = false),
-                            deviceId = record.optString("deviceId"),
+                            deviceId = deviceId,
                             payload = jsonValueText(payload),
-                            updatedAt = record.optString("updatedAt", Instant.EPOCH.toString()),
+                            updatedAt = updatedAt,
                             deletedAt = record.nullableString("deletedAt")
                         )
                     )
@@ -348,6 +419,12 @@ class NativeSyncEngine(
     }
 
     private fun ensureAuthorized(response: NativeHttpResponse) {
+        if (response.code == 403) {
+            val errorCode = runCatching {
+                JSONObject(response.body).optJSONObject("error")?.optString("code")
+            }.getOrNull()
+            if (errorCode == "mfa_required") throw NativeSyncMfaRequired()
+        }
         if (response.code == 401 || response.code == 403) throw AuthenticationExpiredDuringSync()
     }
 
@@ -458,7 +535,6 @@ class NativeSyncEngine(
         }
 
         const val MAX_SAFE_JSON_INTEGER = 9_007_199_254_740_991.0
-
         fun isRetryableStatus(code: Int): Boolean = code >= 500 || code in RETRYABLE_STATUS
 
         fun JSONObject.nullableString(key: String): String? =
@@ -477,9 +553,9 @@ class NativeSyncEngine(
                 "GET" -> builder.get()
                 else -> builder.method(method, requestBody)
             }.build()
-            okHttpSingleton.newCall(request).execute().use { response ->
+            nativeOkHttpClient.newCall(request).execute().use { response ->
                 val code = response.code
-                val responseBody = response.body?.string().orEmpty()
+                val responseBody = readNativeSyncResponse(response.body)
                 return NativeHttpResponse(code, responseBody)
             }
         }

@@ -32,6 +32,27 @@ const requireDatabase = (admin?: SupabaseClient): SupabaseClient => {
   return admin;
 };
 
+/** Readiness verifies the same immutable protocol; retain one retryable guard per process. */
+export const createSyncProtocolGuard = (database: SupabaseClient): (() => Promise<void>) => {
+  let verification: Promise<void> | undefined;
+  return async () => {
+    if (!verification) {
+      verification = (async () => {
+        const { data, error } = await database.rpc('goalflow_sync_protocol_version');
+        if (error || Number(data) !== 3) {
+          throw new Error('The hardened synchronization protocol is not installed. Local mutations remain pending.');
+        }
+      })();
+    }
+    try {
+      await verification;
+    } catch (error) {
+      verification = undefined;
+      throw error;
+    }
+  };
+};
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === 'object' && !Array.isArray(value));
 
@@ -50,6 +71,23 @@ const sameInstant = (left: unknown, right: string | null): boolean => {
   return Number.isFinite(leftTime) && leftTime === Date.parse(right);
 };
 
+/**
+ * PostgREST serializes UTC timestamptz values with a `+00:00` suffix and trims
+ * insignificant trailing fractional zeroes. Sync clients use at least
+ * millisecond precision, so restore that minimum width at the API boundary.
+ * Fractions longer than three digits remain lossless; do not round-trip through
+ * JavaScript's millisecond-limited Date serializer.
+ */
+export const canonicalSyncTimestamp = (value: unknown): string => {
+  if (typeof value !== 'string' || !Number.isFinite(Date.parse(value))) {
+    throw new Error('Synchronization record contains an invalid timestamp.');
+  }
+  const utc = value.endsWith('+00:00') ? `${value.slice(0, -6)}Z` : value;
+  const parts = /^(.*T\d{2}:\d{2}:\d{2})(?:\.(\d+))?Z$/.exec(utc);
+  if (!parts) return utc;
+  return `${parts[1]}.${(parts[2] ?? '').padEnd(3, '0')}Z`;
+};
+
 export const assertDurableReceipt = (mutation: z.infer<typeof syncMutationSchema>, value: unknown): Record<string, unknown> => {
   if (!isRecord(value) || typeof value.accepted !== 'boolean'
     || !Number.isSafeInteger(Number(value.serverVersion)) || Number(value.serverVersion) < 0) {
@@ -60,6 +98,7 @@ export const assertDurableReceipt = (mutation: z.infer<typeof syncMutationSchema
   if (!isRecord(record)
     || record.entity_type !== mutation.entityType
     || record.entity_id !== mutation.entityId
+    || record.device_id !== mutation.deviceId
     || Number(record.version) !== mutation.version
     || Number(record.server_version) !== Number(value.serverVersion)
     || canonicalJson(record.payload) !== canonicalJson(mutation.payload)
@@ -74,6 +113,27 @@ export const assertDurableReceipt = (mutation: z.infer<typeof syncMutationSchema
 };
 
 type SyncMutation = z.infer<typeof syncMutationSchema>;
+
+export const resolveCloudConflictRecord = async (
+  database: SupabaseClient,
+  userId: string,
+  conflictId: string,
+  mutationId: string
+): Promise<{ resolved: true; conflictId: string; mutationId: string } | null> => {
+  const { data, error } = await database.from('sync_conflicts')
+    .update({ resolved_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('id', conflictId)
+    .eq('mutation_id', mutationId)
+    .select('id,mutation_id,resolved_at')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  if (data.id !== conflictId || data.mutation_id !== mutationId || typeof data.resolved_at !== 'string') {
+    throw new Error('Conflict resolution did not prove the exact durable server row.');
+  }
+  return { resolved: true, conflictId, mutationId };
+};
 
 /**
  * Preserve client dependency order. Earlier calls may commit before a later
@@ -125,6 +185,7 @@ const invalidRequest = (response: Response, error: unknown) => {
 
 export const createSyncRouter = (admin?: SupabaseClient) => {
   const router = Router();
+  const requireHardenedProtocol = admin ? createSyncProtocolGuard(admin) : undefined;
 
   router.post('/sync/push', async (request, response) => {
     try {
@@ -133,10 +194,8 @@ export const createSyncRouter = (admin?: SupabaseClient) => {
       // Never call the legacy RPC: it did not fingerprint requests and could
       // auto-resolve conflicts. Production rollout must apply the forward
       // migration before this server begins accepting mutations.
-      const { data: protocolVersion, error: protocolError } = await database.rpc('goalflow_sync_protocol_version');
-      if (protocolError || Number(protocolVersion) !== 3) {
-        throw new Error('The hardened synchronization protocol is not installed. Local mutations remain pending.');
-      }
+      if (!requireHardenedProtocol) throw new Error('Synchronization is not configured.');
+      await requireHardenedProtocol();
       const results = await applySyncMutationsSequentially(database, request.user!.id, body.mutations);
       response.json({ results });
     } catch (error) {
@@ -165,8 +224,8 @@ export const createSyncRouter = (admin?: SupabaseClient) => {
           serverVersion: row.server_version,
           deviceId: row.device_id,
           payload: row.payload,
-          updatedAt: row.updated_at,
-          deletedAt: row.deleted_at
+          updatedAt: canonicalSyncTimestamp(row.updated_at),
+          deletedAt: row.deleted_at == null ? null : canonicalSyncTimestamp(row.deleted_at)
         })),
         nextCursor: page.length ? Number(page[page.length - 1].server_version) : query.cursor,
         hasMore: rows.length > query.limit
@@ -229,17 +288,30 @@ export const createSyncRouter = (admin?: SupabaseClient) => {
   router.post('/sync/conflicts/resolve', async (request, response) => {
     try {
       const database = requireDatabase(admin);
-      const input = z.object({ mutationId: z.string().uuid(), choice: z.enum(['local', 'cloud']) }).parse(request.body);
+      const input = z.object({
+        conflictId: z.string().uuid(),
+        mutationId: z.string().uuid(),
+        choice: z.enum(['local', 'cloud'])
+      }).parse(request.body);
       // Keeping the local version is only complete once its retry is accepted
       // by push_sync_mutation. Leave the server conflict visible until then.
       if (input.choice === 'local') {
         response.status(204).end();
         return;
       }
-      const { error } = await database.from('sync_conflicts').update({ resolved_at: new Date().toISOString() })
-        .eq('user_id', request.user!.id).eq('mutation_id', input.mutationId).is('resolved_at', null);
-      if (error) throw error;
-      response.status(204).end();
+      const acknowledgment = await resolveCloudConflictRecord(
+        database,
+        request.user!.id,
+        input.conflictId,
+        input.mutationId
+      );
+      if (!acknowledgment) {
+        response.status(404).json({
+          error: { code: 'conflict_not_found', message: 'The exact synchronization conflict was not found.' }
+        });
+        return;
+      }
+      response.json(acknowledgment);
     } catch (error) {
       invalidRequest(response, error);
     }

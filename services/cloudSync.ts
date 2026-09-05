@@ -3,6 +3,7 @@ import {
   SessionAccountMismatchError,
   supabase
 } from './authService';
+import { readResponseBodyWithLimit, ResponseTooLargeError } from './boundedResponse';
 import { DurableStorageError, storageService, STORES } from './storage';
 import {
   emptySyncMeta,
@@ -31,8 +32,13 @@ export interface CloudSyncDependencies {
   sleep?: (delayMs: number) => Promise<void>;
   random?: () => number;
   requestTimeoutMs?: number;
+  maxResponseBytes?: number;
   maxAttempts?: number;
   signal?: AbortSignal;
+}
+
+interface CloudSyncOptions {
+  seedLocalData?: boolean;
 }
 
 const persistentDeviceId = (): string => {
@@ -59,6 +65,34 @@ const dependenciesForUser = (userKey: string, signal?: AbortSignal): CloudSyncDe
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const RETRYABLE_STATUS = new Set([408, 425, 429]);
+export const FOREGROUND_SYNC_INTERVAL_MS = 30_000;
+export const SYNC_HEALTH_INTERVAL_MS = 30_000;
+
+export const syncWakeupTopicForUser = (userId: string): string | null =>
+  UUID_PATTERN.test(userId) ? `tsurfing:user:${userId.toLowerCase()}` : null;
+
+type ConfiguredSupabaseClient = NonNullable<typeof supabase>;
+
+/** Subscribe only to the immutable account's private, payload-free wake-up topic. */
+export const subscribeToSyncWakeups = (
+  client: ConfiguredSupabaseClient,
+  userId: string,
+  onWake: () => void
+): (() => void) => {
+  const topic = syncWakeupTopicForUser(userId);
+  if (!topic) return () => undefined;
+  const realtimeChannel = client
+    .channel(topic, { config: { private: true } })
+    .on('broadcast', { event: 'sync_wakeup' }, () => onWake())
+    .subscribe(status => {
+      // A successful initial join or rejoin is itself a catch-up hint. The
+      // cursor pull remains authoritative even if every Broadcast was missed.
+      if (status === 'SUBSCRIBED') onWake();
+    });
+  return () => {
+    void client.removeChannel(realtimeChannel).catch(() => undefined);
+  };
+};
 
 export class SyncHttpError extends Error {
   readonly permanent: boolean;
@@ -80,6 +114,7 @@ export class SyncProtocolError extends Error {
 export const isPermanentSyncFailure = (error: unknown): boolean =>
   (error instanceof SyncHttpError && error.permanent)
   || error instanceof SyncProtocolError
+  || error instanceof ResponseTooLargeError
   || error instanceof DurableStorageError
   || error instanceof SessionAccountMismatchError;
 
@@ -107,10 +142,28 @@ const parseJson = async <T>(response: Response, failureMessage: string): Promise
   return body as T;
 };
 
+const isValidWireInstant = (value: unknown): value is string =>
+  typeof value === 'string' && value.length > 0 && Number.isFinite(Date.parse(value));
+
+const isValidRemoteWireRecord = (value: unknown): value is RemoteSyncRecord => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const record = value as Record<string, unknown>;
+  return typeof record.entityType === 'string' && record.entityType.length > 0
+    && typeof record.entityId === 'string' && record.entityId.length > 0
+    && Number.isSafeInteger(record.version) && Number(record.version) > 0
+    && Number.isSafeInteger(record.serverVersion) && Number(record.serverVersion) > 0
+    && typeof record.deviceId === 'string' && record.deviceId.length > 0
+    && Object.prototype.hasOwnProperty.call(record, 'payload')
+    && isValidWireInstant(record.updatedAt)
+    && Object.prototype.hasOwnProperty.call(record, 'deletedAt')
+    && (record.deletedAt === null || isValidWireInstant(record.deletedAt));
+};
+
 const defaultSleep = (delayMs: number): Promise<void> =>
   new Promise(resolve => globalThis.setTimeout(resolve, delayMs));
 
 const retryableStatus = (status: number): boolean => status >= 500 || RETRYABLE_STATUS.has(status);
+const responseWithoutBody = (status: number): boolean => status === 204 || status === 205 || status === 304;
 
 /** Bounded, jittered retry for idempotent sync requests and mutation-ID pushes. */
 export const fetchSyncWithRetry = async (
@@ -120,6 +173,10 @@ export const fetchSyncWithRetry = async (
 ): Promise<Response> => {
   const maximumAttempts = Math.max(1, Math.min(5, dependencies.maxAttempts ?? 3));
   const timeoutMs = Math.max(250, Math.min(120_000, dependencies.requestTimeoutMs ?? 15_000));
+  const maximumResponseBytes = Math.max(
+    1,
+    Math.min(16 * 1024 * 1024, dependencies.maxResponseBytes ?? 16 * 1024 * 1024)
+  );
   const sleep = dependencies.sleep ?? defaultSleep;
   const random = dependencies.random ?? Math.random;
   let lastError: unknown;
@@ -138,7 +195,16 @@ export const fetchSyncWithRetry = async (
     );
     try {
       const response = await dependencies.fetch(input, { ...init, signal: controller.signal });
-      if (!retryableStatus(response.status) || attempt + 1 >= maximumAttempts) return response;
+      if (!retryableStatus(response.status) || attempt + 1 >= maximumAttempts) {
+        const body = responseWithoutBody(response.status)
+          ? null
+          : await readResponseBodyWithLimit(response, maximumResponseBytes);
+        return new Response(body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers
+        });
+      }
       await response.body?.cancel().catch(() => undefined);
       lastError = new SyncHttpError('Synchronization service is temporarily unavailable.', response.status, 'sync_retryable');
     } catch (error) {
@@ -191,9 +257,10 @@ const seedUnsynchronizedLocalData = async (userKey: string): Promise<void> => {
 /** One crash-safe, retry-safe synchronization cycle. Exported for adversarial tests. */
 export const synchronizeCloudOnce = async (
   userKey: string,
-  dependencies: CloudSyncDependencies = dependenciesForUser(userKey)
+  dependencies: CloudSyncDependencies = dependenciesForUser(userKey),
+  options: CloudSyncOptions = {}
 ): Promise<SyncMeta> => {
-  await seedUnsynchronizedLocalData(userKey);
+  if (options.seedLocalData !== false) await seedUnsynchronizedLocalData(userKey);
   let meta = normalizeSyncMeta(await storageService.get(STORES.SYNC, userKey));
   if (!dependencies.isOnline()) return meta;
   const ownDeviceId = dependencies.deviceId();
@@ -229,7 +296,8 @@ export const synchronizeCloudOnce = async (
       || !Array.isArray(body.records)
       || typeof body.nextCursor !== 'number'
       || !Number.isSafeInteger(body.nextCursor)
-      || typeof body.hasMore !== 'boolean') {
+      || typeof body.hasMore !== 'boolean'
+      || body.records.some(record => !isValidRemoteWireRecord(record))) {
       throw new SyncProtocolError('Sync pull response was invalid. The local cursor was not advanced.');
     }
     const nextCursor = body.nextCursor;
@@ -287,20 +355,75 @@ export const fetchSyncHealth = async (
   };
 };
 
+/** Keep the non-authoritative diagnostic probe out of bursty durable sync traffic. */
+export const createPeriodicSyncHealthCheck = (
+  check: () => Promise<unknown>,
+  now: () => number = () => Date.now()
+): (() => Promise<void>) => {
+  let nextAllowedAt = Number.NEGATIVE_INFINITY;
+  return async () => {
+    const observedAt = now();
+    if (observedAt < nextAllowedAt) return;
+    nextAllowedAt = observedAt + SYNC_HEALTH_INTERVAL_MS;
+    await check().catch(() => undefined);
+  };
+};
+
+/** Coalesces overlapping wake-ups without losing a request made during an active cycle. */
+export const createCoalescedSyncRunner = (
+  canRun: () => boolean,
+  runOnce: () => Promise<void>
+): (() => Promise<void>) => {
+  let active: Promise<void> | null = null;
+  let rerunRequested = false;
+
+  const request = async (): Promise<void> => {
+    if (!canRun()) return;
+    if (active) {
+      rerunRequested = true;
+      return active;
+    }
+    active = (async () => {
+      do {
+        rerunRequested = false;
+        await runOnce();
+      } while (rerunRequested && canRun());
+    })().finally(() => { active = null; });
+    return active;
+  };
+  return request;
+};
+
+/** Completes a migration-style initializer once, while leaving failures retryable. */
+export const createRetryableOneTimeInitializer = (
+  initialize: () => Promise<void>
+): (() => Promise<void>) => {
+  let initialized = false;
+  return async () => {
+    if (initialized) return;
+    await initialize();
+    initialized = true;
+  };
+};
+
 export const startCloudSync = (userKey: string): (() => void) => {
   if (!supabase) return () => undefined;
   let stopped = false;
   let blockedByPermanentError = false;
-  let timer: number | undefined;
-  let activeSync: Promise<void> | null = null;
+  let localChangeQueued = false;
   const lifecycleController = new AbortController();
   const lifecycleDependencies = dependenciesForUser(userKey, lifecycleController.signal);
+  const checkHealth = createPeriodicSyncHealthCheck(
+    () => fetchSyncHealth(userKey, lifecycleDependencies)
+  );
   const channel = typeof BroadcastChannel === 'undefined' ? undefined : new BroadcastChannel(`goalflow-sync:${userKey}`);
+  const ensureLocalDataSeeded = createRetryableOneTimeInitializer(
+    () => seedUnsynchronizedLocalData(userKey)
+  );
 
-  const synchronize = async (): Promise<void> => {
-    if (stopped || blockedByPermanentError) return;
-    if (activeSync) return activeSync;
-    activeSync = (async () => {
+  const synchronize = createCoalescedSyncRunner(
+    () => !stopped && !blockedByPermanentError,
+    async () => {
       try {
         const before = normalizeSyncMeta(await storageService.get(STORES.SYNC, userKey));
         if (!navigator.onLine) {
@@ -310,7 +433,8 @@ export const startCloudSync = (userKey: string): (() => void) => {
         emit('syncing', before);
         const run = async () => {
           if (stopped) return;
-          const meta = await synchronizeCloudOnce(userKey, lifecycleDependencies);
+          await ensureLocalDataSeeded();
+          const meta = await synchronizeCloudOnce(userKey, lifecycleDependencies, { seedLocalData: false });
           const state: SyncState = meta.conflicts.length ? 'conflict' : 'synced';
           emit(state, meta);
           channel?.postMessage({
@@ -323,12 +447,12 @@ export const startCloudSync = (userKey: string): (() => void) => {
           await navigator.locks.request(`goalflow-sync:${userKey}`, { ifAvailable: false }, async lock => {
             if (lock) {
               await syncMutex.acquire();
-              try { await run(); await fetchSyncHealth(userKey, lifecycleDependencies).catch(() => undefined); } finally { syncMutex.release(); }
+              try { await run(); await checkHealth(); } finally { syncMutex.release(); }
             }
           });
         } else {
           await syncMutex.acquire();
-          try { await run(); await fetchSyncHealth(userKey, lifecycleDependencies).catch(() => undefined); } finally { syncMutex.release(); }
+          try { await run(); await checkHealth(); } finally { syncMutex.release(); }
         }
       } catch (error) {
         if (stopped && (error instanceof DOMException || lifecycleController.signal.aborted)) return;
@@ -347,18 +471,19 @@ export const startCloudSync = (userKey: string): (() => void) => {
           meta = emptySyncMeta();
         }
         emit(navigator.onLine ? 'error' : 'offline', meta, error instanceof Error ? error.message : 'Synchronization failed.');
-      } finally {
-        activeSync = null;
       }
-    })();
-    return activeSync;
-  };
+    }
+  );
 
   const onLocalChange = (event: Event) => {
     const detail = (event as CustomEvent<{ storeName: string; key: string }>).detail;
     if (detail.key !== userKey || !SYNCED_STORES.includes(detail.storeName)) return;
-    window.clearTimeout(timer);
-    timer = window.setTimeout(() => void synchronize(), 500);
+    if (localChangeQueued) return;
+    localChangeQueued = true;
+    window.queueMicrotask(() => {
+      localChangeQueued = false;
+      void synchronize();
+    });
   };
   const onOnline = () => void synchronize();
   const onRetry = () => { blockedByPermanentError = false; void synchronize(); };
@@ -366,6 +491,7 @@ export const startCloudSync = (userKey: string): (() => void) => {
   const onChannel = (event: MessageEvent) => {
     if (event.data?.type === 'complete') window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: event.data }));
   };
+  const stopRealtimeWakeups = subscribeToSyncWakeups(supabase, userKey, () => void synchronize());
 
   window.addEventListener('goalflow:local-change', onLocalChange);
   window.addEventListener('online', onOnline);
@@ -375,19 +501,19 @@ export const startCloudSync = (userKey: string): (() => void) => {
   channel?.addEventListener('message', onChannel);
   const interval = window.setInterval(() => {
     if (document.visibilityState === 'visible') void synchronize();
-  }, 60_000);
+  }, FOREGROUND_SYNC_INTERVAL_MS);
   void synchronize();
 
   return () => {
     stopped = true;
     lifecycleController.abort(new DOMException('Synchronization stopped.', 'AbortError'));
-    window.clearTimeout(timer);
     window.clearInterval(interval);
     window.removeEventListener('goalflow:local-change', onLocalChange);
     window.removeEventListener('online', onOnline);
     window.removeEventListener('goalflow:sync-retry', onRetry);
     window.removeEventListener('focus', onFocus);
     document.removeEventListener('visibilitychange', onFocus);
+    stopRealtimeWakeups();
     channel?.removeEventListener('message', onChannel);
     channel?.close();
   };
@@ -396,7 +522,8 @@ export const startCloudSync = (userKey: string): (() => void) => {
 export const resolveLocalConflict = async (
   userKey: string,
   conflictId: string,
-  choice: 'local' | 'cloud'
+  choice: 'local' | 'cloud',
+  dependencies: CloudSyncDependencies = dependenciesForUser(userKey)
 ): Promise<void> => {
   const conflict = await storageService.getConflict(userKey, conflictId);
   if (!conflict) return;
@@ -406,14 +533,24 @@ export const resolveLocalConflict = async (
     window.dispatchEvent(new Event('online'));
     return;
   }
-  if (conflict.mutationId) {
+  if (UUID_PATTERN.test(conflict.id)) {
+    if (!conflict.mutationId || !UUID_PATTERN.test(conflict.mutationId)) {
+      throw new SyncProtocolError('The server conflict identity is invalid. Both versions remain preserved.');
+    }
     const response = await fetchSyncWithRetry('/api/v1/sync/conflicts/resolve', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ mutationId: conflict.mutationId, choice: 'cloud' })
-    }, dependenciesForUser(userKey));
-    if (!response.ok) {
-      throw new SyncHttpError('The server conflict could not be resolved. Both versions remain preserved.', response.status, 'conflict_resolution_failed');
+      body: JSON.stringify({ conflictId: conflict.id, mutationId: conflict.mutationId, choice: 'cloud' })
+    }, dependencies);
+    const acknowledgment = await parseJson<{
+      resolved?: boolean;
+      conflictId?: string;
+      mutationId?: string;
+    }>(response, 'The server conflict could not be resolved. Both versions remain preserved.');
+    if (acknowledgment.resolved !== true
+      || acknowledgment.conflictId !== conflict.id
+      || acknowledgment.mutationId !== conflict.mutationId) {
+      throw new SyncProtocolError('The server did not acknowledge the exact conflict. Both versions remain preserved.');
     }
   }
   const meta = await storageService.resolveConflictWithCloud(userKey, conflictId);

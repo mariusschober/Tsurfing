@@ -47,6 +47,7 @@ data class NativePushResult(
     val serverDeletedAt: String? = null,
     val recordEntityType: String? = null,
     val recordEntityId: String? = null,
+    val recordDeviceId: String? = null,
     val recordVersion: Long? = null,
     val recordServerVersion: Long? = null,
     val recordPayload: String? = null,
@@ -82,7 +83,7 @@ data class NativeServerConflict(
 )
 
 class NativeSyncAccountMismatch : IllegalStateException(
-    "This local database is bound to a different Goalflow account. Its data was not synchronized or overwritten."
+    "This local database is bound to a different Tsurfing account. Its data was not synchronized or overwritten."
 )
 
 data class NativeReorderResult(
@@ -1927,6 +1928,7 @@ class GoalflowRepository(
                 require(
                     result.recordEntityType == batch.firstOrNull { it.mutationId == result.mutationId }?.entityType
                         && result.recordEntityId == batch.firstOrNull { it.mutationId == result.mutationId }?.entityId
+                        && result.recordDeviceId == batch.firstOrNull { it.mutationId == result.mutationId }?.deviceId
                         && result.recordVersion == batch.firstOrNull { it.mutationId == result.mutationId }?.version
                         && result.recordServerVersion == result.serverVersion
                         && result.recordPayload != null

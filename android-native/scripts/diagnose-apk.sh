@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 apk_path="${1:?usage: diagnose-apk.sh path/to/app.apk}"
 if [[ ! -f "$apk_path" || "$apk_path" != *.apk ]]; then
     echo "Expected an existing .apk file: $apk_path" >&2
@@ -100,11 +101,8 @@ if [[ "${DIAGNOSE_APK_INSTALL:-0}" == "1" ]]; then
     "$adb_bin" uninstall "$package_name" >/dev/null 2>&1 || true
     "$adb_bin" install "$apk_path"
     echo "INSTALL_MATRIX=CLEAN_INSTALL_PASS"
-    "$adb_bin" shell monkey -p "$package_name" 1 >/dev/null
-    sleep 3
-    activity_state="$("$adb_bin" shell dumpsys activity activities)"
-    grep -Fq "$package_name" <<<"$activity_state"
-    echo "LAUNCH_FIRST_FRAME=PASS"
+    "$script_dir/verify-installed-app-launch.sh" \
+        "$package_name" com.mariusschober.goalflow.nativeapp.MainActivity LAUNCH_FIRST_FRAME
 fi
 
 echo "APK_DIAGNOSTIC=PASS"

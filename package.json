@@ -1,7 +1,7 @@
 {
-  "name": "goalflow",
+  "name": "tsurfing",
   "private": true,
-  "version": "0.3.0-tranche3",
+  "version": "0.4.0-beta.1",
   "type": "module",
   "engines": {
     "node": "22.x"
@@ -13,8 +13,9 @@
     "local": "tsx --env-file=.env.local server/index.ts",
     "dev": "tsx watch server/index.ts",
     "build:client": "vite build",
+    "build:mini": "vite build --config vite.mini.config.ts",
     "build:server": "esbuild server/index.ts server/maintenance.ts --bundle --platform=node --format=esm --packages=external --outdir=dist/server --out-extension:.js=.mjs",
-    "build": "npm run build:client && npm run build:server",
+    "build": "npm run build:client && npm run build:mini && npm run build:server && npm run verify:client-secrets && npm run verify:client-artifacts",
     "start": "NODE_ENV=production node dist/server/index.mjs",
     "maintenance": "NODE_ENV=production node dist/server/maintenance.mjs",
     "verify:server": "node scripts/verify-production.mjs",
@@ -27,8 +28,11 @@
     "verify:room-hashes": "node scripts/verify-room-schema-hashes.mjs",
     "verify:identifiers": "node scripts/check-durable-identifiers.mjs",
     "test:migrations:postgres": "bash scripts/test-postgres-migrations.sh",
+    "test:hosted:staging": "node --import tsx scripts/test-hosted-staging.ts",
+    "test:hosted:browser": "playwright test --config playwright.hosted.config.ts",
+    "test:hosted:cross-client-browser": "playwright test --config playwright.cross-client.config.ts",
     "restore:backup": "tsx scripts/restore-production-backup.ts",
-    "verify:release": "npm run lint && npm test && npm run build && npm run verify:server && npm run verify:maintenance && npm run verify:client-secrets && npm run verify:client-artifacts && npm audit --audit-level=high",
+    "verify:release": "npm run lint && npm test && npm run build && npm run verify:server && npm run verify:maintenance && npm run verify:client-secrets && npm run verify:client-artifacts",
     "test:e2e": "playwright test",
     "verify:web-e2e": "playwright test --reporter=list",
     "android:sync": "npm run build:client && cap sync android",

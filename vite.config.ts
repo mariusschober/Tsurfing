@@ -26,8 +26,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['icons/icon.svg', 'icons/maskable.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png'],
       manifest: {
-        name: 'Goalflow',
-        short_name: 'Goalflow',
+        name: 'Tsurfing',
+        short_name: 'Tsurfing',
         description: 'Plan deliberately, then execute exactly one task.',
         theme_color: '#4F46E5',
         background_color: '#F7F8FA',

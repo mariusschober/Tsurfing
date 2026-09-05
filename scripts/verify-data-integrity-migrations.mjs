@@ -13,6 +13,10 @@ const telegramAuth = migrations.find(item => item.file === '202608310001_telegra
 const accessBoundary = migrations.find(item => item.file === '202609030001_access_boundary_hardening.sql');
 const accountLifecycle = migrations.find(item => item.file === '202609030002_account_lifecycle.sql');
 const backupHardening = migrations.find(item => item.file === '202609030003_backup_restore_hardening.sql');
+const telegramCaptureConfirmation = migrations.find(item => item.file === '202609030007_telegram_capture_confirmation.sql');
+const emailOtpActivation = migrations.find(item => item.file === '202609040001_email_otp_activation.sql');
+const realtimeSyncWakeup = migrations.find(item => item.file === '202609040003_realtime_sync_wakeup.sql');
+const databaseAdvisorHardening = migrations.find(item => item.file === '202609040004_database_advisor_hardening.sql');
 assert(latest, 'Data-integrity migration is missing.');
 assert(nativeEvents, 'Native task-event projection migration is missing.');
 assert(transportCompletion, 'Native synchronization transport completion migration is missing.');
@@ -20,6 +24,10 @@ assert(telegramAuth, 'Telegram auth state PKCE migration is missing.');
 assert(accessBoundary, 'Access-boundary hardening migration is missing.');
 assert(accountLifecycle, 'Account lifecycle migration is missing.');
 assert(backupHardening, 'Backup/restore hardening migration is missing.');
+assert(telegramCaptureConfirmation, 'Atomic Telegram capture confirmation migration is missing.');
+assert(emailOtpActivation, 'Typed email OTP activation migration is missing.');
+assert(realtimeSyncWakeup, 'Transactional Realtime sync wake-up migration is missing.');
+assert(databaseAdvisorHardening, 'Database advisor hardening migration is missing.');
 
 for (const migration of migrations) {
   const quoteCount = migration.sql.split('$$').length - 1;
@@ -123,6 +131,57 @@ assert(
     && accountLifecycle.sql.includes('from auth.sessions'),
   'Atomic invite activation, verified owner bootstrap, or session revocation support is incomplete.'
 );
+assert(
+  emailOtpActivation.sql.includes('create table public.email_otp_attempts')
+    && emailOtpActivation.sql.includes('token_hash text not null unique')
+    && emailOtpActivation.sql.includes("interval '10 minutes'")
+    && emailOtpActivation.sql.includes('captcha_token_hash')
+    && emailOtpActivation.sql.includes('captcha_verified_at')
+    && emailOtpActivation.sql.includes('request_ip_hash')
+    && emailOtpActivation.sql.includes('goalflow_create_email_otp_attempt')
+    && emailOtpActivation.sql.includes('pg_advisory_xact_lock')
+    && emailOtpActivation.sql.includes('goalflow_mark_email_otp_delivery')
+    && emailOtpActivation.sql.includes('activate_goalflow_email_otp')
+    && emailOtpActivation.sql.includes('email_confirmed_at is not null')
+    && emailOtpActivation.sql.includes('auth_user_id = target_user_id')
+    && emailOtpActivation.sql.includes('auth_session_id = target_session_id')
+    && emailOtpActivation.sql.includes('target_authenticated_at < attempt.created_at')
+    && emailOtpActivation.sql.includes('revoke all on function public.activate_goalflow_email_beta')
+    && !emailOtpActivation.sql.includes('user_metadata'),
+  'Typed OTP binding, rate limits, one-use activation, or metadata retirement is incomplete.'
+);
+assert(
+  realtimeSyncWakeup.sql.includes('create table if not exists public.sync_wakeup_state')
+    && realtimeSyncWakeup.sql.includes('alter table public.sync_wakeup_state force row level security')
+    && realtimeSyncWakeup.sql.includes('grant select on table public.sync_wakeup_state to authenticated')
+    && realtimeSyncWakeup.sql.includes('(select auth.uid()) = user_id')
+    && realtimeSyncWakeup.sql.includes('create or replace function public.tsurfing_signal_sync_wakeup')
+    && realtimeSyncWakeup.sql.includes('security definer')
+    && realtimeSyncWakeup.sql.includes('set search_path = pg_catalog')
+    && realtimeSyncWakeup.sql.includes("'{}'::jsonb")
+    && realtimeSyncWakeup.sql.includes("'sync_wakeup'")
+    && realtimeSyncWakeup.sql.includes("'tsurfing:user:' || target_user_id::text")
+    && realtimeSyncWakeup.sql.includes('after insert or update or delete on public.sync_records')
+    && realtimeSyncWakeup.sql.includes('create policy "users receive own sync wakeups"')
+    && realtimeSyncWakeup.sql.includes('(select realtime.topic()) =')
+    && realtimeSyncWakeup.sql.includes("realtime.messages.extension = 'broadcast'")
+    && !/create\s+policy[\s\S]{0,160}?for\s+insert[\s\S]{0,160}?to\s+authenticated/i.test(realtimeSyncWakeup.sql),
+  'Transactional payload-free wake-up, exact private topic authorization, or client forgery denial is incomplete.'
+);
+const advisorHardeningWithoutBodies = databaseAdvisorHardening.sql.replace(/\$\$[\s\S]*?\$\$/g, '$$BODY$$').toLowerCase();
+for (const forbidden of [/\bdrop\s+table\b/, /\btruncate\b/, /\bdrop\s+column\b/, /\bdelete\s+from\b/]) {
+  assert(
+    !forbidden.test(advisorHardeningWithoutBodies),
+    `Database advisor hardening migration contains destructive SQL: ${forbidden}.`
+  );
+}
+assert(
+  databaseAdvisorHardening.sql.includes('alter function public.validate_goalflow_task_schedule()')
+    && databaseAdvisorHardening.sql.includes('set search_path = pg_catalog')
+    && (databaseAdvisorHardening.sql.match(/\(select auth\.uid\(\)\)/g) ?? []).length === 14
+    && (databaseAdvisorHardening.sql.match(/create index if not exists/g) ?? []).length === 15,
+  'Fixed search path, cached ownership checks, or foreign-key indexes are incomplete.'
+);
 const backupWithoutBodies = backupHardening.sql.replace(/\$\$[\s\S]*?\$\$/g, '$$BODY$$').toLowerCase();
 for (const forbidden of [/\bdrop\s+table\b/, /\btruncate\b/, /\bdrop\s+column\b/, /\bdelete\s+from\b/]) {
   assert(!forbidden.test(backupWithoutBodies), `Backup hardening migration contains destructive top-level SQL: ${forbidden}.`);
@@ -138,6 +197,17 @@ assert(
     && backupHardening.sql.includes('revoke all on function public.restore_goalflow_backup(uuid, jsonb)')
     && backupHardening.sql.includes('greatest(current_usage.request_count, excluded.request_count)'),
   'Per-user backup protocol metadata, dry-run validation, or non-rewindable quota recovery is incomplete.'
+);
+assert(
+  telegramCaptureConfirmation.sql.includes('goalflow_confirm_telegram_capture')
+    && telegramCaptureConfirmation.sql.includes('for update')
+    && telegramCaptureConfirmation.sql.includes("status = 'active'")
+    && telegramCaptureConfirmation.sql.includes('goalflow_create_task_idempotent')
+    && telegramCaptureConfirmation.sql.includes("set state = 'confirmed'")
+    && telegramCaptureConfirmation.sql.includes('get diagnostics changed_rows = row_count')
+    && telegramCaptureConfirmation.sql.includes('revoke all on function public.goalflow_confirm_telegram_capture')
+    && telegramCaptureConfirmation.sql.includes('to service_role'),
+  'Telegram task creation and capture confirmation are not atomic and server-only.'
 );
 
 process.stdout.write(JSON.stringify({

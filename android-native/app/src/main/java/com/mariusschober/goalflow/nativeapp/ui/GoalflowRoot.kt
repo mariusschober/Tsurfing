@@ -1,5 +1,6 @@
 package com.mariusschober.goalflow.nativeapp.ui
 
+import android.content.Intent
 import android.net.Uri
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -132,7 +134,10 @@ import com.mariusschober.goalflow.nativeapp.data.BackupRestoreMode
 import com.mariusschober.goalflow.nativeapp.data.NativeBackupPreview
 import com.mariusschober.goalflow.nativeapp.sync.NativeAuthClient
 import com.mariusschober.goalflow.nativeapp.sync.NativeConfig
+import com.mariusschober.goalflow.nativeapp.sync.NativeOAuthFlow
 import com.mariusschober.goalflow.nativeapp.sync.NativeSyncScheduler
+import com.mariusschober.goalflow.nativeapp.sync.NativeTelegramStatus
+import com.mariusschober.goalflow.nativeapp.sync.PendingEmailOtpAttempt
 import com.mariusschober.goalflow.nativeapp.time.datePickerMillisToLocalDate
 import com.mariusschober.goalflow.nativeapp.time.localDateToDatePickerMillis
 import java.time.LocalDate
@@ -222,11 +227,31 @@ fun GoalflowRoot(
     var editTask by remember { mutableStateOf<GoalflowTask?>(null) }
     var backupAction by rememberSaveable { mutableStateOf<String?>(null) }
     var backupError by rememberSaveable { mutableStateOf<String?>(null) }
+    var authError by rememberSaveable { mutableStateOf<String?>(null) }
     var signInOpen by rememberSaveable { mutableStateOf(false) }
+    var mfaOpen by rememberSaveable { mutableStateOf(false) }
+    var reviewedConflictId by rememberSaveable { mutableStateOf<String?>(null) }
+    val unresolvedConflicts = conflicts.filter { it.status !in setOf("resolved", "resolving_local") }
     var circadianOpen by rememberSaveable { mutableStateOf(false) }
     var focusTask by remember { mutableStateOf<GoalflowTask?>(null) }
     var focusStartedAt by remember { mutableStateOf<Long?>(null) }
-    var sessionActive by remember { mutableStateOf(application.sessionStore.read() != null) }
+    fun readUsableStoredSession() = application.sessionStore.read()?.takeIf {
+        application.sessionStore.getPendingEmailOtp() == null
+            && application.sessionStore.getPendingOAuth()?.flow !in setOf(
+                NativeOAuthFlow.TELEGRAM_SIGN_IN,
+                NativeOAuthFlow.TELEGRAM_ACTIVATION
+            )
+    }
+    var sessionActive by remember { mutableStateOf(readUsableStoredSession() != null) }
+    var sessionAssuranceLevel by remember {
+        mutableStateOf(application.sessionStore.read()?.assuranceLevel ?: "aal1")
+    }
+    var sessionStorageProblem by remember {
+        mutableStateOf(application.sessionStore.readProblem())
+    }
+    var telegramStatus by remember { mutableStateOf<NativeTelegramStatus?>(null) }
+    var telegramStatusMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var telegramWorking by rememberSaveable { mutableStateOf(false) }
     var breakdownTask by remember { mutableStateOf<GoalflowTask?>(null) }
     var pendingExportPassword by remember { mutableStateOf<String?>(null) }
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
@@ -238,6 +263,10 @@ fun GoalflowRoot(
     var restoreCheckpointAvailable by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(sessionStorageProblem) {
+        sessionStorageProblem?.let { snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long) }
+    }
 
     // Room is the source of truth for recovery. Query it directly before
     // observing the task stream so an initial empty StateFlow value cannot
@@ -258,7 +287,57 @@ fun GoalflowRoot(
     }
 
     LaunchedEffect(authSessionRevision) {
-        sessionActive = application.sessionStore.read() != null
+        val authClient = NativeAuthClient(application.sessionStore)
+        val resumedEmail = if (application.sessionStore.getPendingEmailOtp() != null
+            && application.sessionStore.read() != null
+        ) {
+            runCatching { authClient.resumePendingEmailActivation() }
+                .onFailure { authError = it.message ?: "Account activation could not be completed." }
+                .getOrNull()
+        } else null
+        val resumedTelegram = if (application.sessionStore.getPendingOAuth()?.flow in setOf(
+                NativeOAuthFlow.TELEGRAM_SIGN_IN,
+                NativeOAuthFlow.TELEGRAM_ACTIVATION,
+                NativeOAuthFlow.TELEGRAM_LINK
+            ) && application.sessionStore.read() != null
+        ) {
+            runCatching { authClient.resumePendingTelegramFlow() }
+                .onFailure { authError = it.message ?: "Telegram verification could not be completed." }
+                .getOrNull()
+        } else null
+        val currentSession = readUsableStoredSession()
+        sessionActive = currentSession != null
+        sessionAssuranceLevel = if (sessionActive) currentSession?.assuranceLevel ?: "aal1" else "aal1"
+        sessionStorageProblem = application.sessionStore.readProblem()
+        if (resumedEmail != null || resumedTelegram != null) {
+            authError = null
+            NativeSyncScheduler.schedule(context)
+            snackbarHostState.showSnackbar(
+                if (resumedTelegram != null) "Telegram verification completed after reconnecting."
+                else "Email verification completed after reconnecting."
+            )
+        }
+    }
+
+    LaunchedEffect(sessionActive, sessionAssuranceLevel, authSessionRevision) {
+        application.foregroundSyncCoordinator.sessionChanged()
+        if (!sessionActive || !NativeConfig.canUseTelegram) {
+            telegramStatus = null
+            telegramStatusMessage = null
+            telegramWorking = false
+            return@LaunchedEffect
+        }
+        telegramWorking = true
+        runCatching { NativeAuthClient(application.sessionStore).telegramStatus() }
+            .onSuccess {
+                telegramStatus = it
+                telegramStatusMessage = null
+            }
+            .onFailure {
+                telegramStatus = null
+                telegramStatusMessage = it.message ?: "Telegram status could not be loaded."
+            }
+        telegramWorking = false
     }
 
     LaunchedEffect(tasks) {
@@ -310,22 +389,51 @@ fun GoalflowRoot(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
+                application.foregroundSyncCoordinator.start()
                 goalflowViewModel.refreshToday()
-                sessionActive = application.sessionStore.read() != null
+                scope.launch {
+                    val authClient = NativeAuthClient(application.sessionStore)
+                    if (application.sessionStore.getPendingEmailOtp() != null
+                        && application.sessionStore.read() != null
+                    ) {
+                        runCatching { authClient.resumePendingEmailActivation() }
+                            .onFailure { authError = it.message ?: "Account activation could not be completed." }
+                    }
+                    if (application.sessionStore.getPendingOAuth()?.flow in setOf(
+                            NativeOAuthFlow.TELEGRAM_SIGN_IN,
+                            NativeOAuthFlow.TELEGRAM_ACTIVATION,
+                            NativeOAuthFlow.TELEGRAM_LINK
+                        ) && application.sessionStore.read() != null
+                    ) {
+                        runCatching { authClient.resumePendingTelegramFlow() }
+                            .onFailure { authError = it.message ?: "Telegram verification could not be completed." }
+                    }
+                    val currentSession = readUsableStoredSession()
+                    sessionActive = currentSession != null
+                    sessionAssuranceLevel = if (sessionActive) currentSession?.assuranceLevel ?: "aal1" else "aal1"
+                    sessionStorageProblem = application.sessionStore.readProblem()
+                    if (sessionActive) NativeSyncScheduler.schedule(context)
+                }
+            } else if (event == Lifecycle.Event.ON_PAUSE) {
+                application.foregroundSyncCoordinator.stop()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            application.foregroundSyncCoordinator.stop()
+        }
     }
 
     LaunchedEffect(Unit) {
         withFrameNanos { }
+        application.foregroundSyncCoordinator.start()
         NativeSyncScheduler.schedule(context)
     }
 
     BackHandler(enabled = destination != RootDestination.CURRENT && !captureOpen && editTask == null &&
         datePickerForTask == null && breakdownTask == null && backupAction == null && restorePreview == null &&
-        !replaceRestoreConfirmation && !signInOpen && focusTask == null) {
+        !replaceRestoreConfirmation && !signInOpen && !mfaOpen && focusTask == null) {
         destination = if (destination == RootDestination.INSIGHTS) RootDestination.GOALS else RootDestination.CURRENT
     }
 
@@ -442,6 +550,21 @@ fun GoalflowRoot(
             Scaffold(
             modifier = Modifier.fillMaxSize(),
             snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                if (unresolvedConflicts.isNotEmpty()) {
+                    Surface(color = MaterialTheme.colorScheme.secondaryContainer) {
+                        TextButton(
+                            onClick = { reviewedConflictId = unresolvedConflicts.first().id },
+                            modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp)
+                        ) {
+                            val count = unresolvedConflicts.size
+                            Text(if (count == 1) "1 sync change needs review" else "$count sync changes need review",
+                                modifier = Modifier.weight(1f))
+                            Text("Review")
+                        }
+                    }
+                }
+            },
             bottomBar = {
                 GoalflowNavigationBar(destination) { destination = it }
             }
@@ -623,22 +746,86 @@ fun GoalflowRoot(
                     )
                     RootDestination.SETTINGS -> SettingsScreen(
                         signedIn = sessionActive,
+                        mfaVerified = sessionAssuranceLevel == "aal2",
+                        cloudSessionProblem = sessionStorageProblem,
                         canUseAuthentication = NativeConfig.canUseAuthentication,
                         canUseCloud = NativeConfig.canUseCloud,
+                        canUseTelegram = NativeConfig.canUseTelegram,
+                        telegramStatus = telegramStatus,
+                        telegramStatusMessage = telegramStatusMessage,
+                        telegramWorking = telegramWorking,
                         onSignIn = { signInOpen = true },
+                        onVerifyMfa = {
+                            authError = null
+                            mfaOpen = true
+                        },
                         onSignOut = {
                             sessionActive = false
+                            sessionAssuranceLevel = "aal1"
+                            telegramStatus = null
+                            telegramStatusMessage = null
                             scope.launch(start = CoroutineStart.UNDISPATCHED) {
                                 runCatching { NativeAuthClient(application.sessionStore).signOut() }
                                     .onSuccess {
                                         snackbarHostState.showSnackbar("Signed out. Local commitments stay here.")
                                     }
                                     .onFailure { error ->
-                                        sessionActive = application.sessionStore.read() != null
+                                        val currentSession = application.sessionStore.read()
+                                        sessionActive = currentSession != null
+                                        sessionAssuranceLevel = currentSession?.assuranceLevel ?: "aal1"
+                                        sessionStorageProblem = application.sessionStore.readProblem()
                                         snackbarHostState.showSnackbar(
                                             error.message ?: "Server sign-out could not be confirmed."
                                         )
+                                }
+                            }
+                        },
+                        onConnectTelegram = {
+                            if (!telegramWorking) {
+                                telegramWorking = true
+                                scope.launch {
+                                    try {
+                                        val providerUri = NativeAuthClient(application.sessionStore).beginTelegramLink()
+                                        if (providerUri == null) {
+                                            telegramStatus = NativeAuthClient(application.sessionStore).telegramStatus()
+                                            telegramStatusMessage = null
+                                            snackbarHostState.showSnackbar("Telegram is connected.")
+                                        } else {
+                                            try {
+                                                context.startActivity(
+                                                    Intent(Intent.ACTION_VIEW, providerUri)
+                                                        .addCategory(Intent.CATEGORY_BROWSABLE)
+                                                )
+                                                snackbarHostState.showSnackbar("Complete Telegram authorization in the browser.")
+                                            } catch (error: Exception) {
+                                                application.sessionStore.clearPendingState()
+                                                throw error
+                                            }
+                                        }
+                                    } catch (error: Exception) {
+                                        telegramStatusMessage = error.message ?: "Telegram could not be connected."
+                                        snackbarHostState.showSnackbar(telegramStatusMessage!!)
+                                    } finally {
+                                        telegramWorking = false
                                     }
+                                }
+                            }
+                        },
+                        onDisconnectTelegram = {
+                            if (!telegramWorking) {
+                                telegramWorking = true
+                                scope.launch {
+                                    try {
+                                        telegramStatus = NativeAuthClient(application.sessionStore).unlinkTelegram()
+                                        telegramStatusMessage = null
+                                        snackbarHostState.showSnackbar("Telegram access was disconnected.")
+                                    } catch (error: Exception) {
+                                        telegramStatusMessage = error.message ?: "Telegram could not be disconnected."
+                                        snackbarHostState.showSnackbar(telegramStatusMessage!!)
+                                    } finally {
+                                        telegramWorking = false
+                                    }
+                                }
                             }
                         },
                         onExport = {
@@ -661,35 +848,22 @@ fun GoalflowRoot(
     }
 
     if (focusTask == null) {
-        conflicts.firstOrNull { it.status !in setOf("resolved", "resolving_local") }?.let { conflict ->
-        val supportedLocally = conflict.entityType in setOf("tasks", "goals", "habits", "daily_plans", "task_events") ||
-            (conflict.entityType in NATIVE_RAW_COLLECTION_TYPES && conflict.localPayload.isNotBlank())
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("Sync conflict — both versions are safe") },
-            text = {
-                Text(if (supportedLocally) {
-                    "This ${conflict.entityType.removeSuffix("s")} was changed in two places. " +
-                        "Choose explicitly; Goalflow will not overwrite either version silently."
-                } else {
-                    "A cloud ${conflict.entityType} change cannot be displayed by this app version. " +
-                        "Its complete payload remains preserved until you explicitly keep the canonical cloud copy."
-                })
-            },
-            confirmButton = {
-                if (supportedLocally) {
-                    Button(onClick = { goalflowViewModel.resolveConflict(conflict, keepLocal = true) }) {
-                        Text("Keep this device")
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { goalflowViewModel.resolveConflict(conflict, keepLocal = false) }) {
-                    Text(if (supportedLocally) "Use cloud version" else "Keep canonical cloud copy")
-                }
-            }
-        )
-    }
+        unresolvedConflicts.firstOrNull { it.id == reviewedConflictId }?.let { conflict ->
+            val supportedLocally = conflict.entityType in setOf("tasks", "goals", "habits", "daily_plans", "task_events") ||
+                (conflict.entityType in NATIVE_RAW_COLLECTION_TYPES && conflict.localPayload.isNotBlank())
+            NativeConflictReviewDialog(
+                conflict = conflict,
+                onKeepDevice = if (supportedLocally) ({
+                    reviewedConflictId = null
+                    goalflowViewModel.resolveConflict(conflict, keepLocal = true)
+                }) else null,
+                onKeepCloud = {
+                    reviewedConflictId = null
+                    goalflowViewModel.resolveConflict(conflict, keepLocal = false)
+                },
+                onLater = { reviewedConflictId = null }
+            )
+        }
     }
 
     if (captureOpen) {
@@ -834,7 +1008,7 @@ fun GoalflowRoot(
                 } else if (backupAction == "export") {
                     backupAction = null
                     pendingExportPassword = password
-                    exportLauncher.launch("Goalflow-backup.json")
+                    exportLauncher.launch("Tsurfing-backup.tsurfing-backup")
                 } else if (backupAction == "rollback") {
                     backupAction = null
                     scope.launch {
@@ -902,23 +1076,119 @@ fun GoalflowRoot(
     }
 
     if (signInOpen) {
+        val pendingEmailOtp = remember(signInOpen, authSessionRevision) {
+            application.sessionStore.getPendingEmailOtp()
+                ?.takeIf { it.expiresAtMillis > System.currentTimeMillis() }
+        }
         SignInDialog(
-            error = backupError,
+            error = authError,
+            pendingAttempt = pendingEmailOtp,
+            canUseTelegram = NativeConfig.canUseTelegram,
+            loadCaptchaPolicy = { NativeAuthClient(application.sessionStore).emailCaptchaRequired() },
             onDismiss = {
                 signInOpen = false
-                backupError = null
+                authError = null
             },
-            onConfirm = { email, onComplete, onFailure ->
+            onRequest = { email, purpose, inviteCode, captchaToken, onComplete, onFailure ->
                 scope.launch {
-                    runCatching { NativeAuthClient(application.sessionStore).requestMagicLink(email) }
-                        .onSuccess {
-                            onComplete()
-                            signInOpen = false
-                            snackbarHostState.showSnackbar("Sign-in link sent")
+                    runCatching {
+                        NativeAuthClient(application.sessionStore).requestEmailCode(
+                            email = email,
+                            purpose = purpose,
+                            inviteCode = inviteCode,
+                            captchaToken = captchaToken
+                        )
+                    }
+                        .onSuccess { attempt ->
+                            onComplete(attempt)
+                            snackbarHostState.showSnackbar("If approved, a six-digit email code is on its way")
                         }
                         .onFailure {
                             onFailure()
-                            backupError = it.message ?: "Sign-in failed"
+                            authError = it.message ?: "Sign-in failed"
+                        }
+                }
+            },
+            onVerify = { email, code, onComplete, onFailure ->
+                scope.launch {
+                    runCatching { NativeAuthClient(application.sessionStore).verifyEmailCode(email, code) }
+                        .onSuccess { verified ->
+                            onComplete()
+                            sessionActive = true
+                            sessionAssuranceLevel = verified.assuranceLevel
+                            sessionStorageProblem = application.sessionStore.readProblem()
+                            authError = null
+                            signInOpen = false
+                            NativeSyncScheduler.schedule(context)
+                            snackbarHostState.showSnackbar("Email verified. Cloud sync is connected.")
+                        }
+                        .onFailure { failure ->
+                            onFailure()
+                            authError = failure.message ?: "Email verification failed"
+                        }
+                }
+            },
+            onTelegram = { joiningBeta, inviteCode, captchaToken, onComplete, onFailure ->
+                scope.launch {
+                    runCatching {
+                        val authClient = NativeAuthClient(application.sessionStore)
+                        if (joiningBeta) authClient.beginTelegramActivation(inviteCode, captchaToken)
+                        else authClient.beginTelegramSignIn()
+                    }
+                        .onSuccess { providerUri ->
+                            onComplete()
+                            runCatching {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, providerUri)
+                                        .addCategory(Intent.CATEGORY_BROWSABLE)
+                                )
+                            }
+                                .onSuccess {
+                                    authError = null
+                                    signInOpen = false
+                                }
+                                .onFailure { error ->
+                                    application.sessionStore.clearPendingState()
+                                    onFailure()
+                                    authError = error.message ?: "A browser could not be opened for Telegram sign-in."
+                                }
+                        }
+                        .onFailure { error ->
+                            onFailure()
+                            authError = error.message ?: "Telegram sign-in could not be started."
+                        }
+                }
+            }
+        )
+    }
+
+    if (mfaOpen) {
+        MfaDialog(
+            error = authError,
+            onDismiss = {
+                mfaOpen = false
+                authError = null
+            },
+            onConfirm = { code, onComplete, onFailure ->
+                scope.launch {
+                    runCatching { NativeAuthClient(application.sessionStore).completeMfa(code) }
+                        .onSuccess { elevated ->
+                            onComplete()
+                            sessionActive = true
+                            sessionAssuranceLevel = elevated.assuranceLevel
+                            sessionStorageProblem = application.sessionStore.readProblem()
+                            authError = null
+                            mfaOpen = false
+                            NativeSyncScheduler.schedule(context)
+                            snackbarHostState.showSnackbar("Owner session verified. Cloud sync can continue.")
+                        }
+                        .onFailure { error ->
+                            onFailure()
+                            val currentSession = application.sessionStore.read()
+                            sessionActive = currentSession != null
+                            sessionAssuranceLevel = currentSession?.assuranceLevel ?: "aal1"
+                            sessionStorageProblem = application.sessionStore.readProblem()
+                            authError = error.message ?: "Owner verification failed"
                         }
                 }
             }
@@ -977,7 +1247,7 @@ private fun GoalflowSandboxGate(onGranted: () -> Unit) {
                 modifier = Modifier.size(58.dp)
             )
             Spacer(Modifier.height(20.dp))
-            Text("Goalflow Test", style = MaterialTheme.typography.headlineLarge, textAlign = TextAlign.Center)
+            Text("Tsurfing Test", style = MaterialTheme.typography.headlineLarge, textAlign = TextAlign.Center)
             Spacer(Modifier.height(8.dp))
             Text(
                 "This is the isolated native test build. Enter the test code to continue.",
@@ -1899,10 +2169,19 @@ private fun GoalRow(goal: GoalflowGoal) {
 @Composable
 private fun SettingsScreen(
     signedIn: Boolean,
+    mfaVerified: Boolean,
+    cloudSessionProblem: String?,
     canUseAuthentication: Boolean,
     canUseCloud: Boolean,
+    canUseTelegram: Boolean,
+    telegramStatus: NativeTelegramStatus?,
+    telegramStatusMessage: String?,
+    telegramWorking: Boolean,
     onSignIn: () -> Unit,
+    onVerifyMfa: () -> Unit,
     onSignOut: () -> Unit,
+    onConnectTelegram: () -> Unit,
+    onDisconnectTelegram: () -> Unit,
     onExport: () -> Unit,
     onImport: () -> Unit,
     restoreCheckpointAvailable: Boolean,
@@ -1924,7 +2203,9 @@ private fun SettingsScreen(
             SettingsCard(
                 title = "Cloud sync",
                 body = when {
-                    signedIn && canUseCloud -> "Connected. Local actions stay immediate; queued changes sync when the network returns."
+                    cloudSessionProblem != null -> cloudSessionProblem
+                    signedIn && canUseCloud && mfaVerified -> "Signed in with owner verification. Local actions stay immediate; queued changes are complete only after server acknowledgment."
+                    signedIn && canUseCloud -> "Signed in at basic assurance. Beta accounts can sync; owner accounts must verify an authenticator before cloud sync can continue."
                     canUseCloud -> "Optional. Sign in to sync across devices. Local execution never waits for it."
                     else -> "Not configured in this build. Local execution is complete without a backend."
                 },
@@ -1935,6 +2216,35 @@ private fun SettingsScreen(
                 },
                 onAction = if (signedIn) onSignOut else onSignIn
             )
+            if (signedIn && canUseAuthentication && !mfaVerified) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(onClick = onVerifyMfa, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                    Text("Verify owner session")
+                }
+            }
+        }
+        if (signedIn && canUseTelegram) {
+            item {
+                SettingsCard(
+                    title = "Telegram",
+                    body = when {
+                        telegramStatusMessage != null -> telegramStatusMessage
+                        telegramWorking -> "Checking the securely linked Telegram identity…"
+                        telegramStatus?.enabled != true -> "Telegram is not enabled by the current Tsurfing server."
+                        telegramStatus.linked -> telegramStatus.username
+                            ?.takeIf(String::isNotBlank)
+                            ?.let { "Connected as @$it. Bot access can be revoked here." }
+                            ?: "Connected. Bot access can be revoked here."
+                        else -> "Connect a Telegram identity explicitly. Tsurfing never merges accounts by email, username, phone, or profile metadata."
+                    },
+                    actionLabel = when {
+                        telegramWorking || telegramStatus?.enabled != true -> null
+                        telegramStatus.linked -> "Disconnect Telegram"
+                        else -> "Connect Telegram"
+                    },
+                    onAction = if (telegramStatus?.linked == true) onDisconnectTelegram else onConnectTelegram
+                )
+            }
         }
         item {
             SettingsCard(
@@ -1959,8 +2269,8 @@ private fun SettingsScreen(
         }
         item {
             SettingsCard(
-                title = "Goalflow native",
-                body = "A focused Android client with the existing Goalflow rules intact."
+                title = "Tsurfing native",
+                body = "A focused Android client with the existing durable sync rules intact."
             )
         }
     }
@@ -2002,7 +2312,7 @@ private fun BackupPasswordDialog(
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
                     when (action) {
-                        "export" -> "Use a password you can recover later. Goalflow cannot reset it."
+                        "export" -> "Use a password you can recover later. Tsurfing cannot reset it."
                         "rollback" -> "The checkpoint was encrypted before the last restore."
                         else -> "The backup is validated and previewed before it changes local data."
                     },
@@ -2106,30 +2416,236 @@ private fun ReplaceRestoreDialog(
 @Composable
 private fun SignInDialog(
     error: String?,
+    pendingAttempt: PendingEmailOtpAttempt?,
+    canUseTelegram: Boolean,
+    loadCaptchaPolicy: suspend () -> Boolean,
     onDismiss: () -> Unit,
-    onConfirm: (String, () -> Unit, () -> Unit) -> Unit
+    onRequest: (String, String, String, String, (PendingEmailOtpAttempt) -> Unit, () -> Unit) -> Unit,
+    onVerify: (String, String, () -> Unit, () -> Unit) -> Unit,
+    onTelegram: (Boolean, String, String, () -> Unit, () -> Unit) -> Unit
 ) {
-    var email by rememberSaveable { mutableStateOf("") }
-    var sending by rememberSaveable { mutableStateOf(false) }
+    var email by rememberSaveable(pendingAttempt?.attemptToken) { mutableStateOf(pendingAttempt?.email ?: "") }
+    var inviteCode by rememberSaveable { mutableStateOf("") }
+    var emailCode by rememberSaveable { mutableStateOf("") }
+    var joiningBeta by rememberSaveable(pendingAttempt?.attemptToken) {
+        mutableStateOf(pendingAttempt?.purpose == "activation")
+    }
+    var codeRequested by rememberSaveable(pendingAttempt?.attemptToken) {
+        mutableStateOf(pendingAttempt != null)
+    }
+    var working by rememberSaveable { mutableStateOf(false) }
+    var captchaToken by rememberSaveable { mutableStateOf("") }
+    var captchaRevision by rememberSaveable { mutableStateOf(0) }
+    var captchaMessage by rememberSaveable { mutableStateOf("") }
+    var captchaRequired by remember { mutableStateOf<Boolean?>(null) }
+    var captchaPolicyError by remember { mutableStateOf<String?>(null) }
+    var captchaPolicyRevision by remember { mutableStateOf(0) }
+    val verificationReady = captchaRequired == false || (captchaRequired == true && captchaToken.isNotBlank())
+    LaunchedEffect(captchaPolicyRevision) {
+        captchaRequired = null
+        captchaPolicyError = null
+        runCatching { loadCaptchaPolicy() }
+            .onSuccess { captchaRequired = it }
+            .onFailure { captchaPolicyError = it.message ?: "Sign-in settings could not load." }
+    }
+
+    var resendAtMillis by rememberSaveable(pendingAttempt?.attemptToken) {
+        mutableStateOf(pendingAttempt?.resendAtMillis ?: 0L)
+    }
+    var clockMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+    val resendSeconds = ceil(
+        (resendAtMillis - clockMillis).coerceAtLeast(0L) / 1_000.0
+    ).toInt()
     LaunchedEffect(error) {
-        if (error != null) sending = false
+        if (error != null) working = false
+    }
+    LaunchedEffect(codeRequested, resendAtMillis) {
+        while (codeRequested && System.currentTimeMillis() < resendAtMillis) {
+            clockMillis = System.currentTimeMillis()
+            delay(1_000)
+        }
+        clockMillis = System.currentTimeMillis()
     }
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!working) onDismiss() },
         title = { Text("Sign in to sync") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Goalflow will send a magic link. Your local commitments stay available either way.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (!codeRequested) {
+                    Text(
+                        "Tsurfing sends a typed email code. Your local commitments stay available either way.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Email") },
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Next
+                        )
+                    )
+                    if (joiningBeta) {
+                        OutlinedTextField(
+                            value = inviteCode,
+                            onValueChange = { inviteCode = it.take(128) },
+                            modifier = Modifier.fillMaxWidth(),
+                            label = { Text("Beta invite code") },
+                            singleLine = true
+                        )
+                    }
+                    TextButton(onClick = { joiningBeta = !joiningBeta }, enabled = !working) {
+                        Text(if (joiningBeta) "I already have an account" else "Join with a beta invite")
+                    }
+                    if (captchaRequired == null) {
+                        Text(captchaPolicyError ?: "Loading sign-in settings…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (captchaPolicyError != null) {
+                            TextButton(onClick = { captchaPolicyRevision += 1 }) { Text("Retry sign-in settings") }
+                        }
+                    }
+                    if (captchaRequired == true) NativeCaptchaView(
+                        revision = captchaRevision,
+                        onToken = {
+                            captchaToken = it
+                            captchaMessage = "Human verification complete."
+                        },
+                        onError = { captchaMessage = it }
+                    )
+                    if (captchaMessage.isNotBlank()) {
+                        Text(captchaMessage, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (canUseTelegram) {
+                        OutlinedButton(
+                            onClick = {
+                                if (!working) {
+                                    working = true
+                                    onTelegram(
+                                        joiningBeta,
+                                        inviteCode,
+                                        captchaToken,
+                                        { working = false },
+                                        { working = false }
+                                    )
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            enabled = !working && (!joiningBeta || (
+                                inviteCode.length >= 6 && verificationReady
+                            ))
+                        ) {
+                            Text(if (joiningBeta) "Join beta with Telegram" else "Continue with Telegram")
+                        }
+                        Text(
+                            "After approving Telegram in your browser, tap Open app to return to Tsurfing if it does not reopen automatically.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    Text(
+                        "Enter the six-digit code sent to ${email.trim().lowercase()}.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = emailCode,
+                        onValueChange = { emailCode = it.filter(Char::isDigit).take(6) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Email code") },
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = KeyboardType.NumberPassword,
+                            imeAction = ImeAction.Done
+                        )
+                    )
+                    TextButton(onClick = {
+                        codeRequested = false
+                        emailCode = ""
+                        captchaToken = ""
+                        captchaMessage = ""
+                        captchaRevision += 1
+                    }, enabled = !working && resendSeconds == 0) {
+                        Text(if (resendSeconds > 0) "Request another code in ${resendSeconds}s" else "Request another code")
+                    }
+                }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (!working) {
+                        working = true
+                        if (codeRequested) {
+                            onVerify(
+                                email,
+                                emailCode,
+                                { working = false },
+                                { working = false }
+                            )
+                        } else {
+                            onRequest(
+                                email,
+                                if (joiningBeta) "activation" else "sign_in",
+                                if (joiningBeta) inviteCode else "",
+                                captchaToken,
+                                { attempt ->
+                                    working = false
+                                    email = attempt.email
+                                    joiningBeta = attempt.purpose == "activation"
+                                    codeRequested = true
+                                    resendAtMillis = attempt.resendAtMillis
+                                    clockMillis = System.currentTimeMillis()
+                                    captchaToken = ""
+                                },
+                                { working = false }
+                            )
+                        }
+                    }
+                },
+                enabled = !working && if (codeRequested) {
+                    emailCode.length == 6
+                } else {
+                    email.isNotBlank() && verificationReady && (!joiningBeta || inviteCode.length >= 6)
+                }
+            ) { Text(if (working) "Working…" else if (codeRequested) "Verify code" else "Send email code") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !working) { Text("Cancel") } }
+    )
+}
+
+@Composable
+private fun MfaDialog(
+    error: String?,
+    onDismiss: () -> Unit,
+    onConfirm: (String, () -> Unit, () -> Unit) -> Unit
+) {
+    var code by rememberSaveable { mutableStateOf("") }
+    var verifying by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(error) {
+        if (error != null) verifying = false
+    }
+    AlertDialog(
+        onDismissRequest = { if (!verifying) onDismiss() },
+        title = { Text("Verify owner session") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "Enter the six-digit code from the authenticator enrolled for the owner account.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
+                    value = code,
+                    onValueChange = { code = it.filter(Char::isDigit).take(6) },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Email") },
+                    label = { Text("Authenticator code") },
                     singleLine = true,
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = KeyboardType.Email,
+                        keyboardType = KeyboardType.NumberPassword,
                         imeAction = ImeAction.Done
-                    )
+                    ),
+                    visualTransformation = PasswordVisualTransformation()
                 )
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             }
@@ -2137,15 +2653,15 @@ private fun SignInDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (!sending) {
-                        sending = true
-                        onConfirm(email, { sending = false }, { sending = false })
+                    if (!verifying) {
+                        verifying = true
+                        onConfirm(code, { verifying = false }, { verifying = false })
                     }
                 },
-                enabled = email.isNotBlank() && !sending
-            ) { Text(if (sending) "Sending…" else "Send link") }
+                enabled = code.length == 6 && !verifying
+            ) { Text(if (verifying) "Verifying…" else "Verify") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !verifying) { Text("Cancel") } }
     )
 }
 

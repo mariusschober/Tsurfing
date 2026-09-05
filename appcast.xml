@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>Tsurfing</title>
+    <link>https://app.tsurfing.com</link>
+    <description>Tsurfing beta updates. Release entries are added only after the corresponding artifact is published.</description>
+  </channel>
+</rss>

@@ -212,8 +212,8 @@ test.describe('web-critical — deterministic visible UI journey', () => {
     expect(manifestResponse.ok()).toBe(true);
     const manifest = await manifestResponse.json();
     expect(manifest).toMatchObject({
-      name: 'Goalflow',
-      short_name: 'Goalflow',
+      name: 'Tsurfing',
+      short_name: 'Tsurfing',
       display: 'standalone',
       start_url: '/',
       scope: '/'

@@ -21,7 +21,7 @@ class GoalflowStartupBenchmark {
 
     @Test
     fun cold_start_to_current() = benchmarkRule.measureRepeated(
-        packageName = "com.mariusschober.goalflow",
+        packageName = "com.mariusschober.tsurfing",
         metrics = listOf(StartupTimingMetric(), FrameTimingMetric()),
         iterations = 5,
         startupMode = StartupMode.COLD,

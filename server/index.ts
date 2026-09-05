@@ -1,5 +1,6 @@
 import { createApp } from "./app";
 import { productionConfigurationProblems, readConfig } from "./config";
+import { configureTelegramDeployment } from "./telegram/deployment";
 
 const config = readConfig();
 const configurationProblems = productionConfigurationProblems(config);
@@ -8,6 +9,16 @@ if (configurationProblems.length > 0) {
     level: "error",
     event: "server.production_configuration_invalid",
     problems: configurationProblems
+  }));
+}
+const telegram = await configureTelegramDeployment(config);
+if (telegram.configured) {
+  console.log(JSON.stringify({
+    level: "info",
+    event: "telegram.deployment_configured",
+    username: telegram.username,
+    webhookUrl: telegram.webhookUrl,
+    miniAppUrl: telegram.miniAppUrl
   }));
 }
 const app = await createApp(config);

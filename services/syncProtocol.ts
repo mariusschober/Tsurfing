@@ -103,6 +103,8 @@ export interface PushResult {
     entity_type?: string;
     entityId?: string;
     entity_id?: string;
+    deviceId?: string;
+    device_id?: string;
     version?: number;
     serverVersion?: number;
     server_version?: number;
@@ -549,6 +551,7 @@ export const applyPushResults = (
       const record = candidate.record;
       const recordEntityType = record?.entityType ?? record?.entity_type;
       const recordEntityId = record?.entityId ?? record?.entity_id;
+      const recordDeviceId = record?.deviceId ?? record?.device_id;
       const recordVersion = Number(record?.version);
       const recordServerVersion = Number(record?.serverVersion ?? record?.server_version);
       const recordUpdatedAt = record?.updatedAt ?? record?.updated_at;
@@ -556,6 +559,7 @@ export const applyPushResults = (
       if (!record
         || recordEntityType !== mutation.entityType
         || recordEntityId !== mutation.entityId
+        || recordDeviceId !== mutation.deviceId
         || recordVersion !== mutation.version
         || recordServerVersion !== candidate.serverVersion
         || stableJson(record.payload) !== stableJson(mutation.payload)

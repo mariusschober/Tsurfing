@@ -311,7 +311,7 @@ describe('durable storage failure boundaries', () => {
     await storageService.set(STORES.TASKS, targetKey, [{ id: 'target', title: 'must survive' }], 'cloud');
     const backup = await storageService.exportBackup(sourceKey);
 
-    await expect(storageService.importBackup(targetKey, backup, 'replace')).rejects.toThrow('different Goalflow account');
+    await expect(storageService.importBackup(targetKey, backup, 'replace')).rejects.toThrow('different Tsurfing account');
     expect(await storageService.get(STORES.TASKS, targetKey)).toEqual([{ id: 'target', title: 'must survive' }]);
   });
 

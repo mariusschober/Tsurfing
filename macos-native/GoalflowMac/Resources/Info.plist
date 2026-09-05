@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key><string>en</string>
+	<key>CFBundleDisplayName</key><string>Tsurfing</string>
+	<key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIconFile</key><string>AppIcon</string>
+	<key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
+	<key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key><string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key><string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSMinimumSystemVersion</key><string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>LSUIElement</key><true/>
+	<key>LSApplicationCategoryType</key><string>public.app-category.productivity</string>
+	<key>NSHumanReadableCopyright</key><string>Copyright © 2026 Marius Schober. All rights reserved.</string>
+	<key>NSPrincipalClass</key><string>NSApplication</string>
+	<key>SUFeedURL</key><string>https://app.tsurfing.com/appcast.xml</string>
+	<key>SUEnableInstallerLauncherService</key><true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key><string>com.mariusschober.tsurfing.auth</string>
+			<key>CFBundleURLSchemes</key><array><string>tsurfing</string></array>
+		</dict>
+	</array>
+	<key>NSCalendarsUsageDescription</key><string>Tsurfing checks your calendar to warn if a timed task overlaps an existing event. No events are stored or modified.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key><string>Tsurfing checks your calendar to warn if a timed task overlaps an existing event. No events are stored or modified.</string>
+	<key>SUPABASE_URL</key><string>$(SUPABASE_URL)</string>
+	<key>SUPABASE_PUBLISHABLE_KEY</key><string>$(SUPABASE_PUBLISHABLE_KEY)</string>
+	<key>API_ORIGIN</key><string>$(API_ORIGIN)</string>
+	<key>GOALFLOW_ENVIRONMENT</key><string>$(GOALFLOW_ENVIRONMENT)</string>
+	<key>TELEGRAM_ENABLED</key><string>$(TELEGRAM_ENABLED)</string>
+	<key>TELEGRAM_OIDC_PROVIDER_ID</key><string>$(TELEGRAM_OIDC_PROVIDER_ID)</string>
+</dict>
+</plist>

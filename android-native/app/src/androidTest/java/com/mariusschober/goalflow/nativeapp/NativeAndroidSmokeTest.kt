@@ -195,7 +195,7 @@ class NativeAndroidSmokeTest {
         val visible = checkNotNull(snapshot.currentTask)
         application.sendBroadcast(
             Intent(application, com.mariusschober.goalflow.nativeapp.widget.GoalflowWidgetProvider::class.java)
-                .setAction("com.mariusschober.goalflow.WIDGET_ACTION")
+                .setAction("com.mariusschober.tsurfing.WIDGET_ACTION")
                 .putExtra("goalflow_widget_action", "complete")
                 .putExtra("goalflow_widget_task_id", visible.id)
                 .putExtra("goalflow_widget_expected_updated_at", visible.updatedAt)

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Goalflow</string>
-    <string name="title_activity_main">Goalflow</string>
-    <string name="package_name">com.mariusschober.goalflow</string>
-    <string name="custom_url_scheme">com.mariusschober.goalflow</string>
+    <string name="app_name">Tsurfing</string>
+    <string name="title_activity_main">Tsurfing</string>
+    <string name="package_name">com.mariusschober.tsurfing</string>
+    <string name="custom_url_scheme">com.mariusschober.tsurfing</string>
 </resources>

@@ -8,5 +8,13 @@
   "202608310001_telegram_auth_state_pkce.sql": "bc03354e202602ae111a27c2fa99f6256cee64abe4332882ba2c213f89f3868d",
   "202609030001_access_boundary_hardening.sql": "da05c9f3ca5bc8f88cfc7577b9acbf0f9dfa1e316257b1548d6f548e59013627",
   "202609030002_account_lifecycle.sql": "3653ad3b92d1c7079fe4190646b1cd4682f88540c9f08408b6c3fe1d65723d4f",
-  "202609030003_backup_restore_hardening.sql": "a90f96ef6fe1ba175be4f0335be64f0b1cb4bc96f16f3715612fd7db6a65805c"
+  "202609030003_backup_restore_hardening.sql": "a90f96ef6fe1ba175be4f0335be64f0b1cb4bc96f16f3715612fd7db6a65805c",
+  "202609030004_telegram_webhook_claims.sql": "771abee5f25bdfb50537221c73ecd38089dc98cce1274e49fab26fc9eb934665",
+  "202609030005_telegram_mini_sessions.sql": "fb82ad2f2b66af0d599186823a2c77b1a0b1de7d7462121dddf26f0c2ff98e91",
+  "202609030006_telegram_link_hardening.sql": "fd3cedb8d4ab51c7e4cda32be77932a85ed958c637ece23c90c0467f81c50672",
+  "202609030007_telegram_capture_confirmation.sql": "a85bb7525d60756af1211ce73c11114c7f12514643ff3193871ecf8bdd82ccf6",
+  "202609040001_email_otp_activation.sql": "ecb9d140d648113ecff76ac203d1fa17491c76816aeeb7a83fbfa2b931ebbbcf",
+  "202609040002_telegram_oidc_activation.sql": "b0597f42b89170e74f85e7bccc69858a1593cc4070d46c566a2283c2458d7e13",
+  "202609040003_realtime_sync_wakeup.sql": "28dae08a56aca84aedf90b666986b30c16e9869930b37447a667d6f313671a51",
+  "202609040004_database_advisor_hardening.sql": "d484d89159dfa83ad82a55100650d203fc19578fdf9d9e207acafb7534a80707"
 }

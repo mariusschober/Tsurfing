@@ -27,7 +27,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 internal object GoalflowWidgetIntent {
-    const val ACTION = "com.mariusschober.goalflow.WIDGET_ACTION"
+    const val ACTION = "com.mariusschober.tsurfing.WIDGET_ACTION"
     const val EXTRA_ACTION = "goalflow_widget_action"
     const val EXTRA_TASK_ID = "goalflow_widget_task_id"
     const val EXTRA_EXPECTED_UPDATED_AT = "goalflow_widget_expected_updated_at"
@@ -128,7 +128,7 @@ class GoalflowWidgetProvider : AppWidgetProvider() {
         widgetScope.launch {
             try {
                 val application = appContext as? GoalflowApplication
-                    ?: error("Goalflow is not ready to handle a widget action.")
+                    ?: error("Tsurfing is not ready to handle a widget action.")
                 when (intent.getStringExtra(GoalflowWidgetIntent.EXTRA_ACTION)) {
                     GoalflowWidgetIntent.ACTION_COMPLETE -> {
                         val target = readTarget(intent)

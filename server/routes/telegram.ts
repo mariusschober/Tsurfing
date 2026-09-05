@@ -1,28 +1,33 @@
 import crypto from "node:crypto";
 import { Router } from "express";
+import { rateLimit } from "express-rate-limit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AppConfig } from "../config";
 import type { Logger } from "../logger";
 import type { SpeechProvider } from "../speech/types";
 import { createTelegramProcessor, type TelegramUpdate } from "../telegram/bot";
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value && typeof value === "object" && !Array.isArray(value));
-
-const canonicalJson = (value: unknown): string => JSON.stringify(value, (_key, candidate) => {
-  if (!isRecord(candidate)) return candidate;
-  return Object.keys(candidate).sort().reduce<Record<string, unknown>>((ordered, key) => {
-    ordered[key] = candidate[key];
-    return ordered;
-  }, {});
-});
+export type TelegramProcessor = (update: TelegramUpdate) => Promise<void>;
 
 export const createTelegramRouter = (
-  config: AppConfig, database: SupabaseClient | undefined, speech: SpeechProvider | undefined, logger: Logger
+  config: AppConfig,
+  database: SupabaseClient | undefined,
+  speech: SpeechProvider | undefined,
+  logger: Logger,
+  processorOverride?: TelegramProcessor
 ) => {
   const router = Router();
-  const processor = database ? createTelegramProcessor(config, database, speech, logger) : undefined;
-  router.post("/webhook", async (request, response) => {
+  const processor = processorOverride ?? (database ? createTelegramProcessor(config, database, speech, logger) : undefined);
+  const webhookLimiter = rateLimit({
+    windowMs: 60_000,
+    limit: 120,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    handler: (_request, response) => response.status(429).json({
+      error: { code: "telegram_rate_limited", message: "Too many Telegram requests. Try again shortly." }
+    })
+  });
+  router.post("/webhook", webhookLimiter, async (request, response) => {
     if (config.TELEGRAM_ENABLED !== "true" || !config.TELEGRAM_WEBHOOK_SECRET || !config.TELEGRAM_BOT_TOKEN || !processor || !database) {
       response.status(503).json({ error: { code: "telegram_not_configured", message: "Telegram is not configured." } }); return;
     }
@@ -35,48 +40,52 @@ export const createTelegramRouter = (
       response.status(401).json({ error: { code: "invalid_webhook_secret", message: "Webhook authentication failed." } }); return;
     }
     const update = request.body as TelegramUpdate;
-    if (!Number.isSafeInteger(update?.update_id)) {
+    if (!Number.isSafeInteger(update?.update_id) || update.update_id < 0) {
       response.status(400).json({ error: { code: "invalid_update", message: "Telegram update is invalid." } }); return;
     }
     const telegramUserId = update.message?.from?.id ?? update.callback_query?.from?.id;
-    const { error } = await database.from("telegram_updates").insert({
-      update_id: update.update_id,
-      telegram_user_id: telegramUserId ?? null,
-      payload: update
-    });
-    if (error?.code === "23505") {
-      // A completed update is the only safe duplicate to ignore. A received,
-      // processing, or failed update may belong to a process that died after
-      // the HTTP response; all data mutations below use the update-derived
-      // idempotency key, so reprocessing is safe.
-      const { data: previous, error: previousError } = await database.from("telegram_updates")
-        .select("outcome,payload").eq("update_id", update.update_id).maybeSingle();
-      if (previousError) { response.status(503).json({ error: { code: "deduplication_unavailable", message: "Update could not be inspected." } }); return; }
-      if (previous?.payload && canonicalJson(previous.payload) !== canonicalJson(update)) {
-        response.status(409).json({ error: { code: "update_id_collision", message: "The Telegram update id was reused for different data." } }); return;
-      }
-      if (previous && !previous.payload) {
-        const { error: backfillError } = await database.from("telegram_updates")
-          .update({ payload: update }).eq("update_id", update.update_id).is("payload", null);
-        if (backfillError) { response.status(503).json({ error: { code: "deduplication_unavailable", message: "Update identity could not be bound." } }); return; }
-      }
-      if (previous?.outcome === "processed") { response.status(200).json({ ok: true, duplicate: true }); return; }
+    if (telegramUserId !== undefined && (!Number.isSafeInteger(telegramUserId) || telegramUserId <= 0)) {
+      response.status(400).json({ error: { code: "invalid_update", message: "Telegram update is invalid." } }); return;
     }
-    if (error && error.code !== "23505") { response.status(503).json({ error: { code: "deduplication_unavailable", message: "Update could not be accepted." } }); return; }
-    const { error: claimError } = await database.from("telegram_updates")
-      .update({ processed_at: null, outcome: "processing", error_code: null })
-      .eq("update_id", update.update_id);
-    if (claimError) { response.status(503).json({ error: { code: "deduplication_unavailable", message: "Update could not be claimed." } }); return; }
+    const leaseId = crypto.randomUUID();
+    const { data: claim, error: claimError } = await database.rpc("goalflow_claim_telegram_update", {
+      target_update_id: update.update_id,
+      target_telegram_user_id: telegramUserId ?? null,
+      target_payload: update,
+      target_lease_id: leaseId,
+      target_lease_seconds: 60
+    });
+    if (claimError || claim === "unavailable") {
+      response.status(503).json({ error: { code: "deduplication_unavailable", message: "Update could not be claimed." } }); return;
+    }
+    if (claim === "collision") {
+      response.status(409).json({ error: { code: "update_id_collision", message: "The Telegram update id was reused for different data." } }); return;
+    }
+    if (claim === "duplicate") { response.status(200).json({ ok: true, duplicate: true }); return; }
+    if (claim === "busy") {
+      response.status(503).json({ error: { code: "update_in_progress", message: "Update processing is still in progress." } }); return;
+    }
+    if (claim !== "claimed") {
+      response.status(503).json({ error: { code: "deduplication_unavailable", message: "Update could not be claimed." } }); return;
+    }
     try {
       await processor(update);
-      const { error: completionError } = await database.from("telegram_updates")
-        .update({ processed_at: new Date().toISOString(), outcome: "processed", error_code: null })
-        .eq("update_id", update.update_id);
-      if (completionError) throw completionError;
+      const { data: completed, error: completionError } = await database.rpc("goalflow_complete_telegram_update", {
+        target_update_id: update.update_id,
+        target_lease_id: leaseId,
+        target_outcome: "processed",
+        target_error_code: null
+      });
+      if (completionError || completed !== true) throw completionError ?? new Error("Telegram update lease was lost before acknowledgment.");
       response.status(200).json({ ok: true });
     } catch (processingError) {
       logger.error("telegram.update_failed", { updateId: update.update_id, category: processingError instanceof Error ? processingError.name : "unknown" });
-      await database.from("telegram_updates").update({ processed_at: new Date().toISOString(), outcome: "error", error_code: "processing_failed" }).eq("update_id", update.update_id);
+      await database.rpc("goalflow_complete_telegram_update", {
+        target_update_id: update.update_id,
+        target_lease_id: leaseId,
+        target_outcome: "error",
+        target_error_code: "processing_failed"
+      });
       response.status(503).json({ error: { code: "processing_failed", message: "Update will be retried safely." } });
     }
   });

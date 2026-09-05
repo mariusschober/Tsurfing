@@ -89,7 +89,7 @@ export const validateBackupCollections = (backup: unknown): Record<string, any> 
     throw new Error('The backup schema version is invalid.');
   }
   if (envelope.schemaVersion && envelope.schemaVersion > BACKUP_SCHEMA_VERSION) {
-    throw new Error('This backup was created by a newer Goalflow version.');
+    throw new Error('This backup was created by a newer Tsurfing version.');
   }
   if (Number(envelope.schemaVersion) >= 3) {
     if (typeof envelope.exportedAt !== 'string' || !Number.isFinite(Date.parse(envelope.exportedAt))) {
@@ -1077,7 +1077,7 @@ export const storageService = {
     const envelope = backup as Partial<GoalflowBackup>;
     const verifiedCollections = validateBackupCollections(backup);
     if (Number(envelope.schemaVersion) >= 4 && envelope.ownerKey !== userKey) {
-      throw new Error('This backup belongs to a different Goalflow account. Existing data is unchanged.');
+      throw new Error('This backup belongs to a different Tsurfing account. Existing data is unchanged.');
     }
     if (envelope.checksum && await checksumCollections(verifiedCollections) !== envelope.checksum.toLowerCase()) {
       throw new Error('Backup checksum validation failed. The file may be incomplete or modified.');

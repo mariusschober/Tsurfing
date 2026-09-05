@@ -18,23 +18,32 @@ const hasFlag = (name: string): boolean => process.argv.includes(name);
 const userId = argument('--user');
 const objectPath = argument('--object');
 const confirmedUser = argument('--confirm-user');
+const expectedRevision = argument('--expect-revision')?.toLowerCase();
 const dryRun = hasFlag('--dry-run');
 const execute = hasFlag('--execute');
 const USER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const RELEASE_SHA_PATTERN = /^[0-9a-f]{40}$/;
 
 let preRestoreBackup: CreatedEncryptedBackup | undefined;
 
-const usage = 'Usage: npm run restore:backup -- --user <uuid> --object <path> --dry-run\n'
-  + '   or: npm run restore:backup -- --user <uuid> --object <path> --execute --confirm-user <same uuid>';
+const usage = 'Usage: npm run restore:backup -- --user <uuid> --object <path> --dry-run '
+  + '[--expect-revision <40-character sha>]\n'
+  + '   or: npm run restore:backup -- --user <uuid> --object <path> --execute '
+  + '--confirm-user <same uuid> --expect-revision <40-character sha>';
 
 const main = async (): Promise<void> => {
   if (!userId || !USER_ID_PATTERN.test(userId) || !objectPath || dryRun === execute
     || objectPath.includes('..') || !objectPath.startsWith(`${userId}/`)
-    || (execute && confirmedUser !== userId) || (dryRun && confirmedUser)) {
+    || (execute && (confirmedUser !== userId || !expectedRevision)) || (dryRun && confirmedUser)
+    || (expectedRevision !== undefined && !RELEASE_SHA_PATTERN.test(expectedRevision))) {
     throw new Error(usage);
   }
 
   const config = readConfig({ ...process.env, NODE_ENV: 'production' });
+  const releaseSha = config.RAILWAY_GIT_COMMIT_SHA?.toLowerCase() ?? null;
+  if (expectedRevision && releaseSha !== expectedRevision) {
+    throw new Error('Restore deployment revision does not match --expect-revision.');
+  }
   if (!config.BACKUP_MASTER_KEY) throw new Error('BACKUP_MASTER_KEY is not configured.');
   const admin = createAdminClient(config);
   if (!admin) throw new Error('Supabase server access is not configured.');
@@ -77,6 +86,7 @@ const main = async (): Promise<void> => {
     process.stdout.write(`${JSON.stringify({
       mode: 'dry-run',
       valid: true,
+      releaseSha,
       userId,
       objectPath,
       schemaVersion: backup.schemaVersion,
@@ -118,6 +128,7 @@ const main = async (): Promise<void> => {
   process.stdout.write(`${JSON.stringify({
     mode: 'execute',
     restored: true,
+    releaseSha,
     userId,
     objectPath,
     result,

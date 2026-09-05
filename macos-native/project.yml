@@ -1,0 +1,94 @@
+name: GoalflowMac
+options:
+  bundleIdPrefix: com.mariusschober.tsurfing
+  deploymentTarget:
+    macOS: "15.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+  createIntermediateGroups: true
+  transitivelyLinkDependencies: false
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    SWIFT_EMIT_LOC_STRINGS: YES
+    MACOSX_DEPLOYMENT_TARGET: 15.0
+    CODE_SIGN_STYLE: Automatic
+    MARKETING_VERSION: 0.4.0
+    CURRENT_PROJECT_VERSION: 3
+    INFOPLIST_PREPROCESS: NO
+    ARCHS: $(ARCHS_STANDARD)
+    ONLY_ACTIVE_ARCH: NO
+
+targets:
+  GoalflowMac:
+    type: application
+    productName: Tsurfing
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: GoalflowMac
+        excludes:
+          - "**/*.md"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mariusschober.tsurfing.mac
+        PRODUCT_NAME: Tsurfing
+        PRODUCT_MODULE_NAME: GoalflowMac
+        INFOPLIST_FILE: GoalflowMac/Resources/Info.plist
+        SWIFT_VERSION: 5.0
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        LSUIElement: YES
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        DEVELOPMENT_TEAM: ""
+        COMBINE_HIDPI_IMAGES: YES
+        SUPPORTED_PLATFORMS: macosx
+        SWIFT_EMIT_LOC_STRINGS: NO
+        CODE_SIGN_ENTITLEMENTS: ""
+      configs:
+        Debug:
+          ONLY_ACTIVE_ARCH: YES
+          ENABLE_HARDENED_RUNTIME: NO
+          CODE_SIGN_ENTITLEMENTS: ""
+        Release:
+          ONLY_ACTIVE_ARCH: NO
+          ENABLE_HARDENED_RUNTIME: YES
+          CODE_SIGN_ENTITLEMENTS: ""
+          CODE_SIGN_IDENTITY: "-"
+    configFiles:
+      Debug: SUPABASE.xcconfig
+      Release: SUPABASE.xcconfig
+
+  GoalflowMacTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "15.0"
+    sources: [GoalflowMacTests]
+    dependencies:
+      - target: GoalflowMac
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mariusschober.tsurfing.mac.tests
+        SWIFT_VERSION: 5.0
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "-"
+        GENERATE_INFOPLIST_FILE: YES
+      configs:
+        Debug:
+          ONLY_ACTIVE_ARCH: YES
+
+schemes:
+  GoalflowMac:
+    build:
+      targets:
+        GoalflowMac: all
+        GoalflowMacTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - name: GoalflowMacTests
+    archive:
+      config: Release

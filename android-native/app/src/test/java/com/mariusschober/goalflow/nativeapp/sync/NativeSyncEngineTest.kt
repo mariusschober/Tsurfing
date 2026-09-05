@@ -6,9 +6,14 @@ import androidx.test.core.app.ApplicationProvider
 import com.mariusschober.goalflow.nativeapp.data.GoalflowDatabase
 import com.mariusschober.goalflow.nativeapp.data.GoalflowJson
 import com.mariusschober.goalflow.nativeapp.data.GoalflowRepository
+import com.mariusschober.goalflow.nativeapp.data.SyncConflictEntity
 import com.mariusschober.goalflow.nativeapp.domain.GoalflowTask
 import com.mariusschober.goalflow.nativeapp.domain.SchedulePrecision
 import kotlinx.coroutines.test.runTest
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
@@ -16,13 +21,17 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.io.File
 import java.net.SocketTimeoutException
+import java.net.URI
 import java.time.Instant
 import java.time.LocalDate
+import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 class NativeSyncEngineTest {
@@ -96,6 +105,7 @@ class NativeSyncEngineTest {
                                     .put("record", JSONObject()
                                         .put("entityType", mutation.getString("entityType"))
                                         .put("entityId", mutation.getString("entityId"))
+                                        .put("deviceId", mutation.getString("deviceId"))
                                         .put("version", mutation.getLong("version"))
                                         .put("serverVersion", 1)
                                         .put("payload", mutation.get("payload"))
@@ -143,6 +153,89 @@ class NativeSyncEngineTest {
         }
 
         assertEquals(mutationId, repository.pendingSyncMutations().single { it.entityType == "tasks" }.mutationId)
+    }
+
+    @Test
+    fun `MFA required preserves the login and queued mutation until elevation`() = runTest {
+        repository.createTask(
+            title = "Keep while owner verifies MFA", notes = "",
+            schedulePrecision = SchedulePrecision.DAY,
+            scheduledFor = LocalDate.now().toString(), scheduledTime = null, isFrog = false
+        )
+        val originalIds = repository.pendingSyncMutations().map { it.mutationId }.toSet()
+        var currentSession = validSession
+        val acknowledgedIds = mutableSetOf<String>()
+        val engine = engine(
+            transport = NativeSyncTransport { path, token, _, body ->
+                if (currentSession.assuranceLevel != "aal2") {
+                    NativeHttpResponse(403, "{\"error\":{\"code\":\"mfa_required\"}}")
+                } else if (path == "/api/v1/sync/push") {
+                    assertEquals("elevated-access-token", token)
+                    acknowledgedIds += JSONObject(body!!).getJSONArray("mutations")
+                        .getJSONObject(0).getString("mutationId")
+                    acceptedPush(body)
+                } else if (path.startsWith("/api/v1/sync/pull")) emptyPull()
+                else throw AssertionError("Unexpected request: $path")
+            },
+            sessionProvider = NativeSessionProvider { currentSession }
+        )
+        try {
+            engine.synchronize()
+            fail("MFA must block sync")
+        } catch (error: IllegalStateException) {
+            assertTrue("MFA is not session expiry", error is NativeSyncMfaRequired)
+        }
+        assertEquals(validSession, currentSession)
+        assertEquals(originalIds, repository.pendingSyncMutations().map { it.mutationId }.toSet())
+        currentSession = validSession.copy(accessToken = "elevated-access-token", assuranceLevel = "aal2")
+        engine.synchronize()
+        assertEquals(originalIds, acknowledgedIds)
+        assertTrue(repository.pendingSyncMutations().isEmpty())
+    }
+
+    @Test
+    fun `MFA denial during account verification stops before any sync data is sent`() = runTest {
+        var requests = 0
+        val engine = NativeSyncEngine(
+            repository = repository,
+            sessionProvider = NativeSessionProvider { validSession },
+            cloudAvailable = { true },
+            transport = NativeSyncTransport { path, _, _, _ ->
+                requests += 1
+                assertEquals("/api/v1/sync/status", path)
+                NativeHttpResponse(403, "{\"error\":{\"code\":\"mfa_required\"}}")
+            }
+        )
+        try {
+            engine.synchronize()
+            fail("MFA must block sync")
+        } catch (error: IllegalStateException) {
+            assertTrue("MFA is not session expiry", error is NativeSyncMfaRequired)
+        }
+        assertEquals(1, requests)
+    }
+
+    @Test
+    fun `non MFA access denials still invalidate synchronization authentication`() = runTest {
+        for (response in listOf(
+            NativeHttpResponse(401, "{\"error\":{\"code\":\"mfa_required\"}}"),
+            NativeHttpResponse(403, "{\"error\":{\"code\":\"account_inactive\"}}"),
+            NativeHttpResponse(403, "{}"),
+            NativeHttpResponse(403, "invalid")
+        )) {
+            val engine = NativeSyncEngine(
+                repository = repository,
+                sessionProvider = NativeSessionProvider { validSession },
+                cloudAvailable = { true },
+                transport = NativeSyncTransport { _, _, _, _ -> response }
+            )
+            try {
+                engine.synchronize()
+                fail("Access denial must remain an authentication failure")
+            } catch (error: IllegalStateException) {
+                assertTrue(error is AuthenticationExpiredDuringSync)
+            }
+        }
     }
 
     @Test
@@ -316,6 +409,193 @@ class NativeSyncEngineTest {
         assertNull(repository.syncMetadata("_cursor"))
     }
 
+    @Test
+    fun `pull record without durable timestamp cannot advance the cursor`() = runTest {
+        val remote = GoalflowTask(
+            id = "00000000-0000-4000-8000-000000000003",
+            title = "Missing server timestamp",
+            schedulePrecision = SchedulePrecision.DAY,
+            scheduledFor = LocalDate.now().toString(),
+            createdAt = 1,
+            updatedAt = 2
+        )
+        val response = JSONObject()
+            .put(
+                "records",
+                JSONArray().put(
+                    JSONObject()
+                        .put("entityType", "tasks")
+                        .put("entityId", remote.id)
+                        .put("version", 1)
+                        .put("serverVersion", 1)
+                        .put("deviceId", "device-b")
+                        .put("payload", GoalflowJson.taskPayload(remote))
+                        .put("deletedAt", JSONObject.NULL)
+                )
+            )
+            .put("nextCursor", 1)
+            .put("hasMore", false)
+        val engine = engine(NativeSyncTransport { path, _, _, _ ->
+            if (path.startsWith("/api/v1/sync/pull")) NativeHttpResponse(200, response.toString())
+            else throw AssertionError("Unexpected request: $path")
+        })
+
+        try {
+            engine.synchronize()
+            fail("A record without its durable timestamp must be rejected")
+        } catch (_: NativeSyncProtocolException) {
+            // The record and cursor remain unapplied.
+        }
+
+        assertNull(database.taskDao().get(remote.id))
+        assertNull(repository.syncMetadata("_cursor"))
+    }
+
+    @Test
+    fun `cloud conflict requires an exact durable server acknowledgement`() = runTest {
+        val conflict = SyncConflictEntity(
+            id = "99999999-9999-4999-8999-999999999999",
+            entityType = "tasks",
+            entityId = "00000000-0000-4000-8000-000000000004",
+            mutationId = "88888888-8888-4888-8888-888888888888",
+            localPayload = "{\"id\":\"00000000-0000-4000-8000-000000000004\",\"title\":\"local\"}",
+            serverPayload = "{\"id\":\"00000000-0000-4000-8000-000000000004\",\"title\":\"cloud\"}",
+            serverVersion = 2,
+            createdAt = "2026-09-03T00:00:00Z"
+        )
+        database.syncConflictDao().insert(conflict)
+        var submitted: JSONObject? = null
+        val engine = engine(NativeSyncTransport { path, _, _, body ->
+            if (path != "/api/v1/sync/conflicts/resolve") throw AssertionError("Unexpected request: $path")
+            submitted = JSONObject(body!!)
+            NativeHttpResponse(
+                200,
+                JSONObject()
+                    .put("resolved", true)
+                    .put("conflictId", "77777777-7777-4777-8777-777777777777")
+                    .put("mutationId", conflict.mutationId)
+                    .toString()
+            )
+        })
+
+        try {
+            engine.resolveConflictWithCloud(conflict)
+            fail("A mismatched server acknowledgement must remain visible")
+        } catch (_: NativeSyncProtocolException) {
+            // Both sides remain in Room.
+        }
+
+        assertEquals(conflict.id, submitted?.getString("conflictId"))
+        assertEquals(conflict.mutationId, submitted?.getString("mutationId"))
+        assertEquals(conflict, database.syncConflictDao().get(conflict.id))
+    }
+
+    @Test
+    fun hostedBrowserRecordConvergesThroughProductionTransport() = runTest {
+        assumeTrue(
+            "The live transport proof runs only inside the explicit staging cross-client gate.",
+            System.getenv("GOALFLOW_HOSTED_TEST_CONFIRM") == "staging" &&
+                System.getenv("GOALFLOW_CROSS_CLIENT_PHASE") == "android"
+        )
+        val state = JSONObject(File(hostedEnvironment("GOALFLOW_CROSS_CLIENT_STATE_FILE")).readText())
+        assertEquals("The cross-client handoff schema is invalid.", 1, state.getInt("schemaVersion"))
+        val taskId = state.getString("taskId")
+        val browserTitle = state.getString("browserTitle")
+        val androidTitle = state.getString("androidTitle")
+        val appOrigin = hostedOrigin("GOALFLOW_STAGING_APP_ORIGIN")
+        val supabaseUrl = hostedOrigin("GOALFLOW_STAGING_SUPABASE_URL")
+        val publishableKey = hostedEnvironment("GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY")
+        assertTrue("A server credential must never enter the native gate.", publishableKey.startsWith("sb_publishable_"))
+        assertEquals(appOrigin, NativeConfig.apiOrigin)
+        assertEquals(supabaseUrl, NativeConfig.supabaseUrl)
+        assertEquals(publishableKey, NativeConfig.supabasePublicKey)
+
+        val session = hostedPasswordSession(supabaseUrl, publishableKey)
+        val expectedUserId = hostedEnvironment("GOALFLOW_STAGING_USER_A_ID")
+        assertEquals(expectedUserId, session.userId)
+        val engine = NativeSyncEngine(
+            repository = repository,
+            sessionProvider = NativeSessionProvider { session }
+        )
+
+        val initialResult = engine.synchronize()
+        assertEquals(SyncResult.Synced(conflicts = 0), initialResult)
+        val browserTask = repository.taskSnapshot(taskId)
+            ?: throw AssertionError("The production Android transport did not pull the browser task.")
+        assertEquals(browserTitle, browserTask.title)
+
+        repository.updateTask(
+            id = browserTask.id,
+            title = androidTitle,
+            notes = browserTask.notes,
+            schedulePrecision = browserTask.schedulePrecision,
+            scheduledFor = browserTask.scheduledFor,
+            scheduledTime = browserTask.scheduledTime,
+            isFrog = browserTask.isFrog,
+            goalId = browserTask.goalId
+        )
+        val pending = repository.pendingSyncMutations().single {
+            it.entityType == "tasks" && it.entityId == taskId
+        }
+        assertEquals(androidTitle, JSONObject(pending.payload).getString("title"))
+
+        val editResult = engine.synchronize()
+        assertEquals(SyncResult.Synced(conflicts = 0), editResult)
+        assertTrue(repository.pendingSyncMutations().none { it.entityId == taskId })
+        assertEquals(androidTitle, repository.taskSnapshot(taskId)?.title)
+    }
+
+    private fun hostedPasswordSession(supabaseUrl: String, publishableKey: String): NativeSession {
+        val client = OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .writeTimeout(20, TimeUnit.SECONDS)
+            .callTimeout(25, TimeUnit.SECONDS)
+            .build()
+        val body = JSONObject()
+            .put("email", hostedEnvironment("GOALFLOW_STAGING_USER_A_EMAIL"))
+            .put("password", hostedEnvironment("GOALFLOW_STAGING_USER_A_PASSWORD"))
+            .toString()
+            .toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+            .url("$supabaseUrl/auth/v1/token?grant_type=password")
+            .header("apikey", publishableKey)
+            .header("Authorization", "Bearer $publishableKey")
+            .header("Accept", "application/json")
+            .post(body)
+            .build()
+        val responseBody = client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw AssertionError("Staging password authentication failed with HTTP ${response.code}.")
+            }
+            readNativeSyncResponse(response.body, maximumBytes = 1024 * 1024)
+        }
+        val response = JSONObject(responseBody)
+        val userId = response.getJSONObject("user").getString("id")
+        val expiresInSeconds = response.getLong("expires_in")
+        assertTrue("The staging session has an unsafe lifetime.", expiresInSeconds in 60L..86_400L)
+        return NativeSession(
+            accessToken = response.getString("access_token"),
+            refreshToken = response.getString("refresh_token"),
+            expiresAtMillis = System.currentTimeMillis() + expiresInSeconds * 1_000L,
+            userId = userId
+        )
+    }
+
+    private fun hostedEnvironment(name: String): String =
+        System.getenv(name)?.trim()?.takeIf(String::isNotEmpty)
+            ?: throw AssertionError("Missing required hosted staging setting: $name")
+
+    private fun hostedOrigin(name: String): String {
+        val value = hostedEnvironment(name).trimEnd('/')
+        val uri = URI(value)
+        assertEquals("https", uri.scheme)
+        assertTrue("Hosted origins must not contain credentials.", uri.userInfo == null)
+        assertTrue("Hosted origins must not contain a path.", uri.path.isNullOrEmpty() || uri.path == "/")
+        assertTrue("Hosted origins must not contain a query or fragment.", uri.query == null && uri.fragment == null)
+        return value
+    }
+
     private fun engine(
         transport: NativeSyncTransport,
         sessionProvider: NativeSessionProvider = NativeSessionProvider { validSession },
@@ -360,6 +640,7 @@ class NativeSyncEngineTest {
                         .put("record", JSONObject()
                             .put("entityType", mutation.getString("entityType"))
                             .put("entityId", mutation.getString("entityId"))
+                            .put("deviceId", mutation.getString("deviceId"))
                             .put("version", mutation.getLong("version"))
                             .put("serverVersion", 1)
                             .put("payload", mutation.get("payload"))

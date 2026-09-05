@@ -18,6 +18,7 @@ const config = () => readConfig({
   SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test_value",
   SUPABASE_SECRET_KEY: "sb_secret_test_value",
   OWNER_USER_ID: "00000000-0000-4000-8000-000000000001",
+  RAILWAY_GIT_COMMIT_SHA: "a".repeat(40),
   LOG_LEVEL: "error"
 });
 
@@ -41,7 +42,9 @@ describe("public server boundary", () => {
     const legacy = await fetch(`${origin}/api/v1/health`);
     expect(await live.json()).toEqual({ status: "alive" });
     expect(live.status).toBe(200);
+    expect(live.headers.get("x-tsurfing-revision")).toBe("a".repeat(40));
     expect(ready.status).toBe(503);
+    expect(ready.headers.get("x-tsurfing-revision")).toBe("a".repeat(40));
     expect(await ready.json()).toMatchObject({ status: "not_ready" });
     expect(legacy.status).toBe(503);
   });
@@ -50,7 +53,17 @@ describe("public server boundary", () => {
     const { origin } = await serve(true);
     const response = await fetch(`${origin}/api/v1/health/ready`);
     expect(response.status).toBe(200);
+    expect(response.headers.get("x-tsurfing-revision")).toBe("a".repeat(40));
     expect(await response.json()).toEqual({ status: "ready" });
+  });
+
+  it("permits the configured Supabase HTTPS and secure Realtime origins", async () => {
+    const { origin } = await serve(true);
+    const response = await fetch(`${origin}/api/v1/health/live`);
+    const policy = response.headers.get("content-security-policy");
+    expect(policy).toContain("https://example.supabase.co");
+    expect(policy).toContain("wss://example.supabase.co");
+    expect(policy).not.toContain("ws://example.supabase.co");
   });
 
   it("rejects untrusted browser origins before an API route can run", async () => {
@@ -86,6 +99,19 @@ describe("public server boundary", () => {
     const body = await response.json() as { error: { code: string; requestId: string } };
     expect(response.status).toBe(400);
     expect(body.error.code).toBe("invalid_json");
+    expect(body.error.requestId).toBe(response.headers.get("x-request-id"));
+  });
+
+  it("enforces the tighter Telegram body limit with a safe public error", async () => {
+    const { origin } = await serve(true);
+    const response = await fetch(`${origin}/api/v1/telegram/webhook`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ update_id: 1, padding: "x".repeat(129 * 1024) })
+    });
+    const body = await response.json() as { error: { code: string; requestId: string } };
+    expect(response.status).toBe(413);
+    expect(body.error.code).toBe("payload_too_large");
     expect(body.error.requestId).toBe(response.headers.get("x-request-id"));
   });
 

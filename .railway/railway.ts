@@ -1,4 +1,4 @@
-import { defineRailway, fn, github, project, service } from 'railway/iac';
+import { defineRailway, github, project, service } from 'railway/iac';
 
 /**
  * Apply this definition separately to the persistent `staging` and
@@ -7,7 +7,7 @@ import { defineRailway, fn, github, project, service } from 'railway/iac';
  */
 export default defineRailway(ctx => {
   const branch = ctx.isEnvironment('production') ? 'main' : 'develop';
-  const source = github('mariusschober/Goalflow', { branch, checkSuites: true });
+  const source = github('mariusschober/Tsurfing', { branch, checkSuites: true });
   const commonServerEnvironment = {
     NODE_ENV: 'production',
     HOST: '0.0.0.0',
@@ -24,12 +24,17 @@ export default defineRailway(ctx => {
     TURNSTILE_ENABLED: 'false'
   } as const;
 
-  const web = service('goalflow-web-api', {
+  const web = service('tsurfing-web-api', {
     source,
     build: {
       builder: 'RAILPACK',
       buildEnvironment: 'V3',
-      buildCommand: 'npm ci && npm run build'
+      // Railway watch paths use gitignore syntax; `**` is the documented
+      // match-all rule. A leading slash caused valid source changes to skip.
+      watchPatterns: ['**'],
+      // Railpack installs the locked dependencies before invoking this step.
+      // Running npm ci again races its mounted node_modules cache on Railway.
+      buildCommand: 'npm run build'
     },
     start: 'npm start',
     healthcheck: '/api/v1/health/ready',
@@ -37,6 +42,10 @@ export default defineRailway(ctx => {
     replicas: 1,
     env: {
       ...commonServerEnvironment,
+      // Keep the application listener and the custom-domain target aligned.
+      // Railway otherwise injects 8080 while staging.tsurfing.com is pinned
+      // to port 3000.
+      PORT: '3000',
       BACKUPS_ENABLED: 'false',
       VITE_SUPABASE_URL: ctx.shared.SUPABASE_URL,
       VITE_SUPABASE_PUBLISHABLE_KEY: ctx.shared.SUPABASE_PUBLISHABLE_KEY,
@@ -51,12 +60,13 @@ export default defineRailway(ctx => {
     }
   });
 
-  const maintenance = fn('goalflow-maintenance', {
+  const maintenance = service('tsurfing-maintenance', {
     source,
     build: {
       builder: 'RAILPACK',
       buildEnvironment: 'V3',
-      buildCommand: 'npm ci && npm run build:server'
+      watchPatterns: ['/server/**', '/scripts/**', '/package.json', '/package-lock.json'],
+      buildCommand: 'npm run build:server'
     },
     start: 'npm run maintenance',
     env: {
@@ -71,7 +81,7 @@ export default defineRailway(ctx => {
     }
   });
 
-  return project('goalflow', {
+  return project('tsurfing', {
     environments: ['staging', 'production'],
     resources: [web, maintenance]
   });

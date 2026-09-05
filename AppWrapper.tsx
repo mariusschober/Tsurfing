@@ -3,7 +3,6 @@ import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import App from './App';
 import { Auth } from './components/Auth';
 import { MfaGate } from './components/MfaGate';
-import { PasswordRecovery } from './components/PasswordRecovery';
 import { TestAccessGate } from './components/TestAccessGate';
 import * as authService from './services/authService';
 
@@ -27,7 +26,6 @@ const AppWrapper: React.FC = () => {
   const [activationError, setActivationError] = useState<string | null>(null);
   const [mfaReady, setMfaReady] = useState(false);
   const [recoveryEmailRequired, setRecoveryEmailRequired] = useState(false);
-  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const completeMfa = useCallback(() => setMfaReady(true), []);
 
   useEffect(() => {
@@ -55,7 +53,10 @@ const AppWrapper: React.FC = () => {
 
     const rejectSession = async (error: unknown, version: number) => {
       if (!active || version !== validationVersion) return;
-      const terminal = error instanceof authService.SessionValidationError && error.status < 500;
+      const terminal = error instanceof authService.SessionValidationError
+        && error.status >= 400
+        && error.status < 500
+        && ![408, 425, 429].includes(error.status);
       setActivationError(error instanceof Error ? error.message : 'Account access could not be verified.');
       setSession(null);
       setAccount(null);
@@ -79,36 +80,21 @@ const AppWrapper: React.FC = () => {
           ? new URLSearchParams(window.location.search).get('auth')
           : null;
         if (authAction === 'recovery') {
-          if (!active) return;
-          setSession(nextSession);
-          setAccount(null);
-          setPasswordRecovery(true);
-          setIsLoading(false);
-          return;
+          throw new authService.SessionValidationError(
+            'Password links are no longer accepted. Request a new email code.',
+            400,
+            'password_recovery_disabled'
+          );
         }
-        let validatedAccount: authService.ServerAccount | null = null;
-        if (authAction === 'email') {
-          await authService.activateEmailSignup(nextSession);
-        } else if (authService.hasPendingEmailActivation(nextSession)) {
-          // Auto-confirmed signups emit SIGNED_IN without visiting the email
-          // redirect. Existing accounts can also leave a harmless preflight
-          // behind, so validate them before attempting activation.
-          try {
-            validatedAccount = await authService.validateServerSession(nextSession);
-            authService.clearPendingEmailActivation();
-          } catch (error) {
-            if (!(error instanceof authService.SessionValidationError)
-              || error.status !== 403
-              || error.code !== 'account_inactive') throw error;
-            await authService.activateEmailSignup(nextSession);
-          }
-        } else if (authAction === 'telegram') {
+        if (authAction === 'telegram') {
           setRecoveryEmailRequired(await authService.activateTelegramSignup(nextSession));
         } else if (authAction === 'telegram-link') {
           await authService.activateOwnerTelegramLink(nextSession);
+        } else {
+          await authService.resumePendingEmailOtpActivation(nextSession);
         }
         if (nextSession.user.email == null) setRecoveryEmailRequired(true);
-        validatedAccount ??= await authService.validateServerSession(nextSession);
+        const validatedAccount = await authService.validateServerSession(nextSession);
         if (!active || version !== validationVersion) return;
         setActivationError(null);
         setSession(nextSession);
@@ -121,12 +107,15 @@ const AppWrapper: React.FC = () => {
 
     const sessionChanged = (nextSession: Session | null, event: AuthChangeEvent) => {
       if (event === 'INITIAL_SESSION') return;
-      if (event === 'PASSWORD_RECOVERY' && nextSession) {
+      if (event === 'SIGNED_IN' && authService.isEmailOtpActivationInFlight()) return;
+      if (event === 'PASSWORD_RECOVERY') {
         validationVersion += 1;
-        setSession(nextSession);
+        setActivationError('Password links are no longer accepted. Request a new email code.');
+        setSession(null);
         setAccount(null);
-        setPasswordRecovery(true);
+        setMfaReady(false);
         setIsLoading(false);
+        void authService.logout().catch(() => undefined);
         return;
       }
       if (event === 'SIGNED_OUT' || !nextSession) {
@@ -134,7 +123,6 @@ const AppWrapper: React.FC = () => {
         setSession(null);
         setAccount(null);
         setMfaReady(false);
-        setPasswordRecovery(false);
         setIsLoading(false);
         return;
       }
@@ -150,13 +138,23 @@ const AppWrapper: React.FC = () => {
         .then(nextSession => acceptSession(nextSession, false))
         .catch(error => rejectSession(error, ++validationVersion));
     };
+    const emailOtpActivated = () => {
+      setIsLoading(true);
+      void authService.getSession()
+        .then(nextSession => acceptSession(nextSession, false))
+        .catch(error => rejectSession(error, ++validationVersion));
+    };
 
+    // Subscribe before the first asynchronous lookup/validation. A cross-tab
+    // sign-out or account switch must invalidate that in-flight result instead
+    // of being missed between getSession() and subscription setup.
+    unsubscribe = authService.onSessionChange(sessionChanged);
+    window.addEventListener('goalflow:session-rejected', sessionRejected);
+    window.addEventListener('goalflow:email-otp-activated', emailOtpActivated);
+    window.addEventListener('online', sessionRejected);
+    window.addEventListener('focus', sessionRejected);
     void (async () => {
       await acceptSession(await authService.getSession(), true);
-      if (active) {
-        unsubscribe = authService.onSessionChange(sessionChanged);
-        window.addEventListener('goalflow:session-rejected', sessionRejected);
-      }
     })().catch(async error => {
       const version = ++validationVersion;
       await rejectSession(error, version);
@@ -165,20 +163,14 @@ const AppWrapper: React.FC = () => {
       active = false;
       unsubscribe();
       window.removeEventListener('goalflow:session-rejected', sessionRejected);
+      window.removeEventListener('goalflow:email-otp-activated', emailOtpActivated);
+      window.removeEventListener('online', sessionRejected);
+      window.removeEventListener('focus', sessionRejected);
     };
   }, [testBuild]);
 
   if (isLoading) return <Loading />;
   if (testBuild && !testUnlocked) return <TestAccessGate onUnlock={() => setTestUnlocked(true)} />;
-  if (passwordRecovery && session) return <PasswordRecovery
-    onComplete={() => {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('auth');
-      window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`);
-      window.location.reload();
-    }}
-    onCancel={() => { void authService.logout().then(() => window.location.assign('/')); }}
-  />;
   if (!session && !localUser) return <Auth activationError={activationError} />;
   if (session && account && !mfaReady) return <MfaGate
     required={account.role === 'owner'}
@@ -198,6 +190,8 @@ const AppWrapper: React.FC = () => {
           void authService.logout().then(() => {
             setSession(null);
             setAccount(null);
+          }).catch(error => {
+            setActivationError(error instanceof Error ? error.message : 'Sign out could not be verified.');
           });
         }
       }} />

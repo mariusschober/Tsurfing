@@ -12,7 +12,7 @@ const createBody = z.object({
 
 export const createAdminInviteRouter = (admin?: SupabaseClient) => {
   const router = Router();
-  router.use((request, response, next) => {
+  router.use('/admin', (request, response, next) => {
     if (request.user?.role !== 'owner') {
       response.status(403).json({ error: { code: 'owner_required', message: 'Owner access is required.' } });
       return;
