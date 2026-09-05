@@ -95,6 +95,10 @@ class NativeForegroundSyncCoordinator(
         realtime.startOrRefresh(session) { requestSync() }
         try {
             syncEngine.synchronize()
+        } catch (_: NativeSyncMfaRequired) {
+            // AAL1 is a valid sign-in needed to complete MFA. Keep it and the
+            // Room outbox; the elevation event requests synchronization again.
+            realtime.stop()
         } catch (_: AuthenticationExpiredDuringSync) {
             runCatching { sessionStore.clear() }
             realtime.stop()

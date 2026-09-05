@@ -153,3 +153,9 @@ without a verification token. An unavailable or malformed response leaves the
 request disabled with a visible retry action. When the server requires CAPTCHA,
 the hosted challenge must succeed; HTTP failures are shown in the dialog. The
 server remains responsible for enforcing its policy on every request.
+
+Owner MFA is a step-up requirement, not session revocation. A sync response of
+HTTP 403 with `error.code = mfa_required` pauses sync while retaining the AAL1
+session and pending Room mutations. Verifying the authenticator elevates that
+same account and wakes sync. HTTP 401 and other HTTP 403 responses still follow
+the existing authentication-expiry handling.

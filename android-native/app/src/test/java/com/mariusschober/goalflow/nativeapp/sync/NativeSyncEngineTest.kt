@@ -156,6 +156,89 @@ class NativeSyncEngineTest {
     }
 
     @Test
+    fun `MFA required preserves the login and queued mutation until elevation`() = runTest {
+        repository.createTask(
+            title = "Keep while owner verifies MFA", notes = "",
+            schedulePrecision = SchedulePrecision.DAY,
+            scheduledFor = LocalDate.now().toString(), scheduledTime = null, isFrog = false
+        )
+        val originalIds = repository.pendingSyncMutations().map { it.mutationId }.toSet()
+        var currentSession = validSession
+        val acknowledgedIds = mutableSetOf<String>()
+        val engine = engine(
+            transport = NativeSyncTransport { path, token, _, body ->
+                if (currentSession.assuranceLevel != "aal2") {
+                    NativeHttpResponse(403, "{\"error\":{\"code\":\"mfa_required\"}}")
+                } else if (path == "/api/v1/sync/push") {
+                    assertEquals("elevated-access-token", token)
+                    acknowledgedIds += JSONObject(body!!).getJSONArray("mutations")
+                        .getJSONObject(0).getString("mutationId")
+                    acceptedPush(body)
+                } else if (path.startsWith("/api/v1/sync/pull")) emptyPull()
+                else throw AssertionError("Unexpected request: $path")
+            },
+            sessionProvider = NativeSessionProvider { currentSession }
+        )
+        try {
+            engine.synchronize()
+            fail("MFA must block sync")
+        } catch (error: IllegalStateException) {
+            assertTrue("MFA is not session expiry", error is NativeSyncMfaRequired)
+        }
+        assertEquals(validSession, currentSession)
+        assertEquals(originalIds, repository.pendingSyncMutations().map { it.mutationId }.toSet())
+        currentSession = validSession.copy(accessToken = "elevated-access-token", assuranceLevel = "aal2")
+        engine.synchronize()
+        assertEquals(originalIds, acknowledgedIds)
+        assertTrue(repository.pendingSyncMutations().isEmpty())
+    }
+
+    @Test
+    fun `MFA denial during account verification stops before any sync data is sent`() = runTest {
+        var requests = 0
+        val engine = NativeSyncEngine(
+            repository = repository,
+            sessionProvider = NativeSessionProvider { validSession },
+            cloudAvailable = { true },
+            transport = NativeSyncTransport { path, _, _, _ ->
+                requests += 1
+                assertEquals("/api/v1/sync/status", path)
+                NativeHttpResponse(403, "{\"error\":{\"code\":\"mfa_required\"}}")
+            }
+        )
+        try {
+            engine.synchronize()
+            fail("MFA must block sync")
+        } catch (error: IllegalStateException) {
+            assertTrue("MFA is not session expiry", error is NativeSyncMfaRequired)
+        }
+        assertEquals(1, requests)
+    }
+
+    @Test
+    fun `non MFA access denials still invalidate synchronization authentication`() = runTest {
+        for (response in listOf(
+            NativeHttpResponse(401, "{\"error\":{\"code\":\"mfa_required\"}}"),
+            NativeHttpResponse(403, "{\"error\":{\"code\":\"account_inactive\"}}"),
+            NativeHttpResponse(403, "{}"),
+            NativeHttpResponse(403, "invalid")
+        )) {
+            val engine = NativeSyncEngine(
+                repository = repository,
+                sessionProvider = NativeSessionProvider { validSession },
+                cloudAvailable = { true },
+                transport = NativeSyncTransport { _, _, _, _ -> response }
+            )
+            try {
+                engine.synchronize()
+                fail("Access denial must remain an authentication failure")
+            } catch (error: IllegalStateException) {
+                assertTrue(error is AuthenticationExpiredDuringSync)
+            }
+        }
+    }
+
+    @Test
     fun `transient server failure is bounded and preserves the pending mutation`() = runTest {
         repository.createTask(
             title = "Retry later",

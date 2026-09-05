@@ -51,6 +51,7 @@ fun interface NativeSyncTransport {
 }
 
 class AuthenticationExpiredDuringSync : IllegalStateException("Authentication expired during synchronization.")
+class NativeSyncMfaRequired : IllegalStateException("Verify the owner session before cloud synchronization.")
 class NativeSyncSessionChangedDuringSync : IllegalStateException(
     "The local cloud session changed while synchronization was running. Local changes remain pending."
 )
@@ -418,6 +419,12 @@ class NativeSyncEngine(
     }
 
     private fun ensureAuthorized(response: NativeHttpResponse) {
+        if (response.code == 403) {
+            val errorCode = runCatching {
+                JSONObject(response.body).optJSONObject("error")?.optString("code")
+            }.getOrNull()
+            if (errorCode == "mfa_required") throw NativeSyncMfaRequired()
+        }
         if (response.code == 401 || response.code == 403) throw AuthenticationExpiredDuringSync()
     }
 
