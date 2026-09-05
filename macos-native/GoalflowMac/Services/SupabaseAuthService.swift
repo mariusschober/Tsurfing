@@ -67,6 +67,21 @@ final class SupabaseAuthService: @unchecked Sendable {
         return URL(string: "/api/v1/auth/email/captcha", relativeTo: origin)?.absoluteURL
     }
 
+    func emailCaptchaRequired() async throws -> Bool {
+        struct Policy: Decodable { let captchaRequired: Bool }
+        let auth = try requireAuthenticationConfiguration()
+        guard let origin = configuration.apiOrigin,
+              let url = URL(string: "/api/v1/auth/email/config", relativeTo: origin)?.absoluteURL else {
+            throw AuthError.notConfigured
+        }
+        let (data, response) = try await request(url: url, method: "GET", body: nil, publishableKey: auth.key)
+        guard response.statusCode == 200, data.count <= 64 * 1024,
+              let policy = try? JSONDecoder().decode(Policy.self, from: data) else {
+            throw AuthError.invalidResponse
+        }
+        return policy.captchaRequired
+    }
+
     func requestEmailCode(
         email: String,
         purpose: PendingEmailOtpAttempt.Purpose,
@@ -82,9 +97,7 @@ final class SupabaseAuthService: @unchecked Sendable {
         guard purpose != .activation || (6...128).contains(cleanInvite.count) else {
             throw AuthError.invalidInvite
         }
-        guard captchaToken.range(of: #"^[A-Za-z0-9._~-]{20,4096}$"#, options: .regularExpression) != nil else {
-            throw AuthError.captchaRequired
-        }
+        // The server enforces its current CAPTCHA policy for every request.
         let auth = try requireAuthenticationConfiguration()
         guard let apiOrigin = configuration.apiOrigin,
               let url = URL(string: "/api/v1/auth/email/preflight", relativeTo: apiOrigin)?.absoluteURL else {
@@ -199,10 +212,7 @@ final class SupabaseAuthService: @unchecked Sendable {
         let telegram = try requireTelegramConfiguration()
         let cleanInvite = inviteCode.trimmingCharacters(in: .whitespacesAndNewlines)
         guard (6...128).contains(cleanInvite.count) else { throw AuthError.invalidInvite }
-        guard captchaToken.range(
-            of: #"^[A-Za-z0-9._~-]{20,4096}$"#,
-            options: .regularExpression
-        ) != nil else { throw AuthError.captchaRequired }
+        // The server enforces its current CAPTCHA policy for every request.
         guard let apiOrigin = configuration.apiOrigin,
               let url = URL(string: "/api/v1/auth/telegram/preflight", relativeTo: apiOrigin)?.absoluteURL else {
             throw AuthError.notConfigured
