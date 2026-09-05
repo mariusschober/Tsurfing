@@ -62,8 +62,11 @@ goalflowTelegramOidcProviderId=custom:telegram
 
 Only the Supabase publishable key belongs in the APK. A Supabase secret or
 service-role key must never be supplied to Gradle. Supabase Auth must allow the
-exact native redirect `tsurfing://auth/callback` in the matching staging or
-production project. When Telegram is enabled, the provider identifier must use
+native redirect `tsurfing://auth/callback` and the narrowly scoped
+`tsurfing://auth/callback?state=*` pattern in the matching staging or production
+project. Telegram requests append a random, locally verified state value; the
+bare URL alone does not allow that callback. Keep the callback scheme, host, and
+path fixed. When Telegram is enabled, the provider identifier must use
 the `custom:` prefix. Supabase owns provider OAuth state and PKCE; the native
 client retains only its one-use verifier and callback nonce in encrypted local
 storage.
@@ -141,3 +144,12 @@ provided. A successful source compile or APK assembly is not presented as
 evidence for those runtime behaviors. The target app is marked `profileable`
 and includes `ProfileInstaller` so a physical-device run is ready to collect
 startup and frame data.
+
+### Email verification availability
+
+Android reads `/api/v1/auth/email/config` before enabling a new email-code
+request. Only an explicit Boolean `captchaRequired: false` permits a request
+without a verification token. An unavailable or malformed response leaves the
+request disabled with a visible retry action. When the server requires CAPTCHA,
+the hosted challenge must succeed; HTTP failures are shown in the dialog. The
+server remains responsible for enforcing its policy on every request.

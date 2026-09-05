@@ -1079,6 +1079,7 @@ fun GoalflowRoot(
             error = authError,
             pendingAttempt = pendingEmailOtp,
             canUseTelegram = NativeConfig.canUseTelegram,
+            loadCaptchaPolicy = { NativeAuthClient(application.sessionStore).emailCaptchaRequired() },
             onDismiss = {
                 signInOpen = false
                 authError = null
@@ -2412,6 +2413,7 @@ private fun SignInDialog(
     error: String?,
     pendingAttempt: PendingEmailOtpAttempt?,
     canUseTelegram: Boolean,
+    loadCaptchaPolicy: suspend () -> Boolean,
     onDismiss: () -> Unit,
     onRequest: (String, String, String, String, (PendingEmailOtpAttempt) -> Unit, () -> Unit) -> Unit,
     onVerify: (String, String, () -> Unit, () -> Unit) -> Unit,
@@ -2430,6 +2432,18 @@ private fun SignInDialog(
     var captchaToken by rememberSaveable { mutableStateOf("") }
     var captchaRevision by rememberSaveable { mutableStateOf(0) }
     var captchaMessage by rememberSaveable { mutableStateOf("") }
+    var captchaRequired by remember { mutableStateOf<Boolean?>(null) }
+    var captchaPolicyError by remember { mutableStateOf<String?>(null) }
+    var captchaPolicyRevision by remember { mutableStateOf(0) }
+    val verificationReady = captchaRequired == false || (captchaRequired == true && captchaToken.isNotBlank())
+    LaunchedEffect(captchaPolicyRevision) {
+        captchaRequired = null
+        captchaPolicyError = null
+        runCatching { loadCaptchaPolicy() }
+            .onSuccess { captchaRequired = it }
+            .onFailure { captchaPolicyError = it.message ?: "Sign-in settings could not load." }
+    }
+
     var resendAtMillis by rememberSaveable(pendingAttempt?.attemptToken) {
         mutableStateOf(pendingAttempt?.resendAtMillis ?: 0L)
     }
@@ -2480,7 +2494,13 @@ private fun SignInDialog(
                     TextButton(onClick = { joiningBeta = !joiningBeta }, enabled = !working) {
                         Text(if (joiningBeta) "I already have an account" else "Join with a beta invite")
                     }
-                    NativeCaptchaView(
+                    if (captchaRequired == null) {
+                        Text(captchaPolicyError ?: "Loading sign-in settings…", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (captchaPolicyError != null) {
+                            TextButton(onClick = { captchaPolicyRevision += 1 }) { Text("Retry sign-in settings") }
+                        }
+                    }
+                    if (captchaRequired == true) NativeCaptchaView(
                         revision = captchaRevision,
                         onToken = {
                             captchaToken = it
@@ -2507,7 +2527,7 @@ private fun SignInDialog(
                             },
                             modifier = Modifier.fillMaxWidth().height(52.dp),
                             enabled = !working && (!joiningBeta || (
-                                inviteCode.length >= 6 && captchaToken.isNotBlank()
+                                inviteCode.length >= 6 && verificationReady
                             ))
                         ) {
                             Text(if (joiningBeta) "Join beta with Telegram" else "Continue with Telegram")
@@ -2577,7 +2597,7 @@ private fun SignInDialog(
                 enabled = !working && if (codeRequested) {
                     emailCode.length == 6
                 } else {
-                    email.isNotBlank() && captchaToken.isNotBlank() && (!joiningBeta || inviteCode.length >= 6)
+                    email.isNotBlank() && verificationReady && (!joiningBeta || inviteCode.length >= 6)
                 }
             ) { Text(if (working) "Working…" else if (codeRequested) "Verify code" else "Send email code") }
         },

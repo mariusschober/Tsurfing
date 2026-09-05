@@ -41,6 +41,23 @@ open class NativeAuthClient(
     private val telegramEnabled: () -> Boolean = { NativeConfig.canUseTelegram },
     private val telegramProviderId: String = NativeConfig.telegramOidcProviderId
 ) {
+    suspend fun emailCaptchaRequired(): Boolean = withContext(Dispatchers.IO) {
+        requireSafeAuthConfiguration()
+        val response = request(
+            url = "$apiOrigin/api/v1/auth/email/config",
+            method = "GET",
+            body = null,
+            headers = emptyMap()
+        )
+        val required = if (response.code == 200) {
+            runCatching { JSONObject(response.body).opt("captchaRequired") }.getOrNull()
+        } else null
+        if (required !is Boolean) {
+            throw NativeAuthException("Sign-in settings could not load. Check the connection and try again.")
+        }
+        required
+    }
+
     suspend fun requestEmailCode(
         email: String,
         purpose: String = "sign_in",

@@ -397,6 +397,26 @@ class NativeAuthClientTest {
     }
 
     @Test
+    fun `email verification policy accepts only explicit server booleans`(): Unit = runBlocking {
+        for (required in listOf(true, false)) {
+            val policyClient = testClient { url, method, body, headers ->
+                assertEquals("$API_ORIGIN/api/v1/auth/email/config", url)
+                assertEquals("GET", method)
+                assertNull(body)
+                assertTrue(headers.isEmpty())
+                NativeAuthClient.HttpResponse(200, "{\"captchaRequired\":$required}")
+            }
+            assertEquals(required, policyClient.emailCaptchaRequired())
+        }
+        for (body in listOf("{}", "{\"captchaRequired\":\"false\"}", "{\"captchaRequired\":null}", "invalid")) {
+            val invalidClient = testClient { _, _, _, _ -> NativeAuthClient.HttpResponse(200, body) }
+            expectAuthFailure { invalidClient.emailCaptchaRequired() }
+        }
+        val unavailable = testClient { _, _, _, _ -> NativeAuthClient.HttpResponse(404, "{}") }
+        expectAuthFailure { unavailable.emailCaptchaRequired() }
+    }
+
+    @Test
     fun `email code request uses server preflight and retains only opaque activation authority`() = runBlocking {
         var capturedUrl = ""
         var capturedBody = ""

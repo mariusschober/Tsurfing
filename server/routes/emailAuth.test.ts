@@ -91,6 +91,14 @@ const serve = async (options: ServeOptions = {}) => {
 };
 
 describe('typed email OTP preflight', () => {
+  it('advertises the disabled CAPTCHA policy without exposing credentials', async () => {
+    const { origin } = await serve();
+    const response = await fetch(`${origin}/auth/email/config`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toContain('no-store');
+    expect(await response.json()).toEqual({ captchaRequired: false });
+  });
+
   it('serves the public native challenge with a nonce-bound policy and no secret', async () => {
     const nativeConfig = readConfig({
       TURNSTILE_ENABLED: 'true',
@@ -107,6 +115,8 @@ describe('typed email OTP preflight', () => {
     });
     const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
+    const policy = await fetch(`${origin}/auth/email/config`);
+    expect(await policy.json()).toEqual({ captchaRequired: true });
     const response = await fetch(`${origin}/auth/email/captcha`);
     const page = await response.text();
 

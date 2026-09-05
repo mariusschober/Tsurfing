@@ -89,6 +89,11 @@ export const createEmailAuthRouter = (
     })
   }));
 
+  router.get('/email/config', (_request, response) => {
+    response.setHeader('Cache-Control', 'no-store');
+    response.json({ captchaRequired: config.TURNSTILE_ENABLED === 'true' });
+  });
+
   router.get('/email/captcha', (_request, response) => {
     if (config.TURNSTILE_ENABLED !== 'true' || !config.VITE_TURNSTILE_SITE_KEY) {
       response.status(404).json({ error: { code: 'captcha_not_configured' } });

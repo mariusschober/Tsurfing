@@ -6,6 +6,7 @@ import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
 import android.webkit.SslErrorHandler
 import android.webkit.WebResourceError
+import android.webkit.WebResourceResponse
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -77,6 +78,14 @@ internal fun NativeCaptchaView(
                         error: WebResourceError
                     ) {
                         if (request.isForMainFrame) onError("Human verification could not load. Check the connection.")
+                    }
+
+                    override fun onReceivedHttpError(
+                        view: WebView,
+                        request: WebResourceRequest,
+                        errorResponse: WebResourceResponse
+                    ) {
+                        if (request.isForMainFrame) onError("Human verification is unavailable. Try again later.")
                     }
 
                     override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: android.net.http.SslError) {
