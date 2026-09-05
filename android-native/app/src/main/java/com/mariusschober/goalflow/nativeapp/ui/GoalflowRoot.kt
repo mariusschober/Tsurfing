@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -229,6 +230,8 @@ fun GoalflowRoot(
     var authError by rememberSaveable { mutableStateOf<String?>(null) }
     var signInOpen by rememberSaveable { mutableStateOf(false) }
     var mfaOpen by rememberSaveable { mutableStateOf(false) }
+    var reviewedConflictId by rememberSaveable { mutableStateOf<String?>(null) }
+    val unresolvedConflicts = conflicts.filter { it.status !in setOf("resolved", "resolving_local") }
     var circadianOpen by rememberSaveable { mutableStateOf(false) }
     var focusTask by remember { mutableStateOf<GoalflowTask?>(null) }
     var focusStartedAt by remember { mutableStateOf<Long?>(null) }
@@ -547,6 +550,21 @@ fun GoalflowRoot(
             Scaffold(
             modifier = Modifier.fillMaxSize(),
             snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
+                if (unresolvedConflicts.isNotEmpty()) {
+                    Surface(color = MaterialTheme.colorScheme.secondaryContainer) {
+                        TextButton(
+                            onClick = { reviewedConflictId = unresolvedConflicts.first().id },
+                            modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp)
+                        ) {
+                            val count = unresolvedConflicts.size
+                            Text(if (count == 1) "1 sync change needs review" else "$count sync changes need review",
+                                modifier = Modifier.weight(1f))
+                            Text("Review")
+                        }
+                    }
+                }
+            },
             bottomBar = {
                 GoalflowNavigationBar(destination) { destination = it }
             }
@@ -830,35 +848,22 @@ fun GoalflowRoot(
     }
 
     if (focusTask == null) {
-        conflicts.firstOrNull { it.status !in setOf("resolved", "resolving_local") }?.let { conflict ->
-        val supportedLocally = conflict.entityType in setOf("tasks", "goals", "habits", "daily_plans", "task_events") ||
-            (conflict.entityType in NATIVE_RAW_COLLECTION_TYPES && conflict.localPayload.isNotBlank())
-        AlertDialog(
-            onDismissRequest = {},
-            title = { Text("Sync conflict — both versions are safe") },
-            text = {
-                Text(if (supportedLocally) {
-                    "This ${conflict.entityType.removeSuffix("s")} was changed in two places. " +
-                        "Choose explicitly; Tsurfing will not overwrite either version silently."
-                } else {
-                    "A cloud ${conflict.entityType} change cannot be displayed by this app version. " +
-                        "Its complete payload remains preserved until you explicitly keep the canonical cloud copy."
-                })
-            },
-            confirmButton = {
-                if (supportedLocally) {
-                    Button(onClick = { goalflowViewModel.resolveConflict(conflict, keepLocal = true) }) {
-                        Text("Keep this device")
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { goalflowViewModel.resolveConflict(conflict, keepLocal = false) }) {
-                    Text(if (supportedLocally) "Use cloud version" else "Keep canonical cloud copy")
-                }
-            }
-        )
-    }
+        unresolvedConflicts.firstOrNull { it.id == reviewedConflictId }?.let { conflict ->
+            val supportedLocally = conflict.entityType in setOf("tasks", "goals", "habits", "daily_plans", "task_events") ||
+                (conflict.entityType in NATIVE_RAW_COLLECTION_TYPES && conflict.localPayload.isNotBlank())
+            NativeConflictReviewDialog(
+                conflict = conflict,
+                onKeepDevice = if (supportedLocally) ({
+                    reviewedConflictId = null
+                    goalflowViewModel.resolveConflict(conflict, keepLocal = true)
+                }) else null,
+                onKeepCloud = {
+                    reviewedConflictId = null
+                    goalflowViewModel.resolveConflict(conflict, keepLocal = false)
+                },
+                onLater = { reviewedConflictId = null }
+            )
+        }
     }
 
     if (captureOpen) {
@@ -2532,6 +2537,11 @@ private fun SignInDialog(
                         ) {
                             Text(if (joiningBeta) "Join beta with Telegram" else "Continue with Telegram")
                         }
+                        Text(
+                            "After approving Telegram in your browser, tap Open app to return to Tsurfing if it does not reopen automatically.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 } else {
                     Text(
