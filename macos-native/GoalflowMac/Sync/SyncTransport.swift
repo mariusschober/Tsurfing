@@ -121,12 +121,14 @@ enum CloudTransportError: Error, LocalizedError {
     case notConfigured(String)
     case invalidRequest
     case authenticationExpired
+    case mfaRequired
     case sessionChanged
 
     var errorDescription: String? {
         switch self {
         case .notConfigured(let message): return message
         case .invalidRequest: return "The cloud request was invalid. Local changes remain pending."
+        case .mfaRequired: return "Verify your owner session to resume cloud sync. Local changes remain pending."
         case .authenticationExpired: return "The cloud session is no longer valid. Local changes remain pending."
         case .sessionChanged: return "The account changed during synchronization. Local changes remain pending."
         }
@@ -196,6 +198,11 @@ final class URLSessionSyncTransport: SyncTransport, @unchecked Sendable {
         guard let http = response as? HTTPURLResponse else { throw CloudTransportError.invalidRequest }
         let current = try keychain.read()
         guard current?.userId == session.userId else { throw CloudTransportError.sessionChanged }
+        if http.statusCode == 403, data.count <= 64 * 1024,
+           let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let error = object["error"] as? [String: Any], error["code"] as? String == "mfa_required" {
+            throw CloudTransportError.mfaRequired
+        }
         if http.statusCode == 401 || http.statusCode == 403 {
             try keychain.clearIfAccessTokenMatches(session.accessToken)
             NotificationCenter.default.post(name: .authDidChange, object: nil)

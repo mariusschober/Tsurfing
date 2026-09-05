@@ -13,6 +13,8 @@ struct SignInView: View {
     @State private var isSending = false
     @State private var captchaToken = ""
     @State private var captchaRevision = 0
+    @State private var captchaRequired: Bool?
+    @State private var captchaPolicyError = ""
     @State private var resendAt = Date.distantPast
     @State private var mfaCode = ""
     @State private var requiresMFA = false
@@ -24,6 +26,10 @@ struct SignInView: View {
     var onClose: (() -> Void)?
 
     private let auth = SupabaseAuthService.shared
+
+    private var verificationReady: Bool {
+        captchaRequired == false || (captchaRequired == true && !captchaToken.isEmpty)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -68,7 +74,10 @@ struct SignInView: View {
         .frame(width: 380)
         .background(RoundedRectangle(cornerRadius: 14).fill(.ultraThinMaterial))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.primary.opacity(0.08), lineWidth: 1))
-        .task { await refreshSessionState() }
+        .task {
+            await refreshSessionState()
+            await loadCaptchaPolicy()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .authDidChange)) { _ in
             Task { await refreshSessionState() }
         }
@@ -102,7 +111,15 @@ struct SignInView: View {
                 TextField("Beta invite code", text: $inviteCode)
                     .textFieldStyle(.roundedBorder).font(.system(size: 13))
             }
-            if let captchaURL = auth.nativeCaptchaURL {
+            if captchaRequired == nil {
+                if captchaPolicyError.isEmpty {
+                    Text("Loading sign-in settings…").font(.caption)
+                } else {
+                    Text(captchaPolicyError).font(.caption).foregroundStyle(.orange)
+                    Button("Retry sign-in settings") { Task { await loadCaptchaPolicy() } }
+                }
+            }
+            if captchaRequired == true, let captchaURL = auth.nativeCaptchaURL {
                 NativeCaptchaView(
                     url: captchaURL,
                     revision: captchaRevision,
@@ -121,7 +138,7 @@ struct SignInView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
-            .disabled(email.isEmpty || captchaToken.isEmpty || isSending || (purpose == .activation && inviteCode.count < 6))
+            .disabled(email.isEmpty || !verificationReady || isSending || (purpose == .activation && inviteCode.count < 6))
 
             if auth.isTelegramConfigured {
                 HStack(spacing: 8) {
@@ -134,7 +151,7 @@ struct SignInView: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-                .disabled(isSending || (purpose == .activation && (inviteCode.count < 6 || captchaToken.isEmpty)))
+                .disabled(isSending || (purpose == .activation && (inviteCode.count < 6 || !verificationReady)))
             }
         } else {
             Text("Enter the six-digit code sent to \(email). It expires in ten minutes.")
@@ -303,6 +320,16 @@ struct SignInView: View {
         } catch {
             telegramStatus = nil
             message = error.localizedDescription
+        }
+    }
+
+    private func loadCaptchaPolicy() async {
+        captchaRequired = nil
+        captchaPolicyError = ""
+        do {
+            captchaRequired = try await auth.emailCaptchaRequired()
+        } catch {
+            captchaPolicyError = "Sign-in settings could not load. Check the connection and retry."
         }
     }
 

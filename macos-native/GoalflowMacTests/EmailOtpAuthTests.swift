@@ -449,6 +449,115 @@ final class EmailOtpAuthTests: XCTestCase {
         try? store.clearPendingRequest()
     }
 
+    func test_captcha_policy_requires_an_explicit_server_boolean() async throws {
+        let store = makeStore()
+        defer { clear(store) }
+        let service = makeService(store: store)
+        for required in [false, true] {
+            setHandler { request in
+                XCTAssertEqual(request.url?.path, "/api/v1/auth/email/config")
+                XCTAssertEqual(request.httpMethod, "GET")
+                return self.response(request, object: ["captchaRequired": required])
+            }
+            let actual = try await service.emailCaptchaRequired()
+            XCTAssertEqual(actual, required)
+        }
+        for object: [String: Any] in [[:], ["captchaRequired": "false"], ["captchaRequired": 0]] {
+            setHandler { request in self.response(request, object: object) }
+            do { _ = try await service.emailCaptchaRequired(); XCTFail("Invalid policy must fail closed") }
+            catch AuthError.invalidResponse {}
+        }
+        setHandler { request in self.response(request, status: 503, object: ["captchaRequired": false]) }
+        do { _ = try await service.emailCaptchaRequired(); XCTFail("Failed policy must not enable submission") }
+        catch AuthError.invalidResponse {}
+    }
+
+    func test_sync_other_authorization_errors_still_clear_session() async throws {
+        let store = makeStore()
+        defer { clear(store) }
+        let configuration = MacCloudConfiguration(
+            apiOrigin: "https://app.tsurfing.test", supabaseURL: "https://project.supabase.co",
+            publishableKey: "sb_publishable_tsurfing_test_only_value")
+        let sessionConfiguration = URLSessionConfiguration.ephemeral
+        sessionConfiguration.protocolClasses = [AuthURLProtocolStub.self]
+        let transport = URLSessionSyncTransport(configuration: configuration, keychain: store,
+            urlSession: URLSession(configuration: sessionConfiguration))
+        for (status, object) in [(401, ["error": ["code": "mfa_required"]]),
+                                 (403, ["error": ["code": "forbidden"]]),
+                                 (403, ["message": "mfa_required"])] as [(Int, [String: Any])] {
+            try store.save(nativeSession())
+            setHandler { request in self.response(request, status: status, object: object) }
+            do {
+                _ = try await transport.request(path: "/api/v1/sync/status", method: "GET", body: nil)
+                XCTFail("Authorization failure must stop sync")
+            } catch CloudTransportError.authenticationExpired {}
+            XCTAssertNil(try store.read())
+        }
+    }
+
+    func test_email_preflight_with_no_captcha_defers_to_server_policy() async throws {
+        let store = makeStore()
+        defer { clear(store) }
+        var requests = 0
+        setHandler { request in
+            requests += 1
+            XCTAssertEqual(request.url?.path, "/api/v1/auth/email/preflight")
+            XCTAssertEqual(try Self.jsonBody(request)["captchaToken"] as? String, "")
+            return self.response(request, status: 202, object: [
+                "accepted": true, "attemptToken": self.attemptToken,
+                "expiresInSeconds": 600, "resendAfterSeconds": 60
+            ])
+        }
+        let pending = try await makeService(store: store).requestEmailCode(
+            email: "person@example.invalid", purpose: .signIn, captchaToken: "")
+        XCTAssertEqual(pending.attemptToken, attemptToken)
+        XCTAssertEqual(requests, 1)
+    }
+
+    func test_missing_captcha_server_rejection_does_not_create_pending_authority() async throws {
+        let store = makeStore()
+        defer { clear(store) }
+        var requests = 0
+        setHandler { request in
+            requests += 1
+            return self.response(request, status: 400, object: ["error": ["code": "captcha_required"]])
+        }
+        do {
+            _ = try await makeService(store: store).requestEmailCode(
+                email: "person@example.invalid", purpose: .signIn, captchaToken: "")
+            XCTFail("Expected server rejection")
+        } catch AuthError.deliveryUnconfirmed {}
+        XCTAssertEqual(requests, 1)
+        XCTAssertNil(try store.readPendingEmailOtp())
+    }
+
+    func test_sync_mfa_response_preserves_session_and_can_resume() async throws {
+        let store = makeStore()
+        defer { clear(store) }
+        let original = try nativeSession()
+        try store.save(original)
+        let configuration = MacCloudConfiguration(
+            apiOrigin: "https://app.tsurfing.test", supabaseURL: "https://project.supabase.co",
+            publishableKey: "sb_publishable_tsurfing_test_only_value")
+        let sessionConfiguration = URLSessionConfiguration.ephemeral
+        sessionConfiguration.protocolClasses = [AuthURLProtocolStub.self]
+        let transport = URLSessionSyncTransport(configuration: configuration, keychain: store,
+            urlSession: URLSession(configuration: sessionConfiguration))
+        setHandler { request in
+            self.response(request, status: 403, object: ["error": ["code": "mfa_required"]])
+        }
+        do {
+            _ = try await transport.request(path: "/api/v1/sync/status", method: "GET", body: nil)
+            XCTFail("Expected owner verification gate")
+        } catch CloudTransportError.mfaRequired {
+            XCTAssertNotNil(try store.read(), "Owner verification must retain the signed-in session")
+        }
+        XCTAssertEqual(try store.read(), original)
+        setHandler { request in self.response(request, object: ["ok": true]) }
+        let (_, response) = try await transport.request(path: "/api/v1/sync/status", method: "GET", body: nil)
+        XCTAssertEqual(response.statusCode, 200)
+    }
+
     private func makeService(store: KeychainSessionStore, telegramEnabled: Bool = false) -> SupabaseAuthService {
         let sessionConfiguration = URLSessionConfiguration.ephemeral
         sessionConfiguration.protocolClasses = [AuthURLProtocolStub.self]
