@@ -1,15 +1,29 @@
 # Tsurfing beta readiness evidence
 
-**Status: NOT READY.** This is the active release ledger as of 2026-09-05.
-The implementation and isolated staging environment are substantially proven,
-including a destructive restore round-trip. The Telegram staging bot, webhook,
-Mini App menu, and Supabase custom provider are configured and the real
-Telegram OIDC authorization has returned successfully to the existing owner
-UUID, but bot binding and the live five-surface Telegram matrix remain unproven. Turnstile,
-owner-retained signing, production isolation, promotion, and final smoke tests
-also remain open. Do not move `integration/beta` or `main`, create
-`v0.4.0-beta.1`, or describe the product as ready while any required row below
-is not `PASS`.
+**Release status: NOT READY. Owner trial: Web + Android, with Telegram login/chat.**
+
+Latest handover: `docs/handover/OWNER_TRIAL_HANDOVER_2026-09-05.md`.
+Owner requested minimal testing and will document issues during one to two weeks
+of use. Mac, signing and Mini App work are deferred. Do not resume older broad
+test instructions automatically.
+
+Staging and installed S23 source: `d5134d47735c2bfa14359989cf4273a3bdb1a43f`;
+HTTP 200 and exact deployment revision verified at handoff. Fresh S23 email OTP
+plus MFA, native Telegram login (manual browser Open app return), actual bot
+binding, and a chat-created task visible on Web/Android were observed.
+The new Android conflict-review UI is installed; fresh conflict visual QA and
+broader physical reconnect testing were not performed after the owner stopped QA.
+
+Current CI: https://github.com/mariusschober/Tsurfing/actions/runs/33997186165
+was IN PROGRESS at handover. Prior run 33995598797 at `69a67fb` passed.
+Local checks for the Android checkpoint: 333 web/server tests and 128 Android
+unit tests passed; one local hosted Android test skipped. Builds and integrity
+checks passed. Deferred Mac fixes remain on a separate branch.
+
+Turnstile, signed artifacts, deferred live platform journeys, production
+isolation/deployment, branch promotion/protection and the release tag remain
+open. The detailed evidence below is historical unless superseded here; an old
+bot-binding blocker must not override the successful live binding above.
 
 ## Telegram signed bot-ID correction — 2026-09-05
 

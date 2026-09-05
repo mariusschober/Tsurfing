@@ -1,15 +1,18 @@
-# Tsurfing personal-beta continuation prompt
+# Tsurfing owner-trial continuation prompt
 
 Open `/Users/schober/Projects/Goalflow`. Read `AGENTS.md`,
-`docs/handover/TSURFING_PERSONAL_BETA_HANDOVER_2026-09-05.md`, and
-`docs/BETA_READINESS.md` fully. Fetch all branches and tags without rewriting
-history. Verify `01f864720df7acfa211745e64edec8b5163ab612` remains an ancestor
-of `origin/chore/railway-beta-gate`, plus the remote work branch, exact-head CI,
-and staging revision. Create a tracked Goal to finish the remaining Tsurfing
-personal-beta gates. Do not merely produce a plan. Continue from the handover's
-ordered list, beginning with a fresh live Telegram staging flow and
-five-surface proof. Keep Movetrics untouched, use only free resources, never
-expose secrets, and ask for one owner action at a time. Do not merge or deploy `main`.
-Keep `integration/beta`, production, and `v0.4.0-beta.1` untouched until every
-applicable readiness row is genuinely green. Android and macOS release signing
-remain deferred for about one week.
+`docs/handover/OWNER_TRIAL_HANDOVER_2026-09-05.md`, and the latest sections of
+`docs/BETA_READINESS.md` and
+`docs/TSURFING_PERSONAL_BETA_IMPLEMENTATION_PLAN_2026-09-05.md`.
+Use `origin/codex/owner-trial-handoff-20260905` for current documentation and
+`origin/codex/personal-beta-finalization-20260904` for deployed staging source.
+Fetch and verify current state before relying on recorded revisions or CI.
+
+The owner paused additional testing and is using Web/Android for one to two
+weeks. Telegram login and chat are in scope; Mac, signing, and Mini App are
+deferred. Begin with the owner's documented issues and new request. Do not
+create a goal or resume the old five-surface/release plan automatically. Keep
+checks proportionate. Preserve data, IDs, outboxes and credentials; never
+uninstall an app to bypass a signer mismatch. Keep Movetrics, main,
+integration/beta, production and the release tag untouched. Use only free
+resources and ask for one owner-only action at a time when necessary.

@@ -1,5 +1,11 @@
 # Tsurfing personal-beta implementation context
 
+> Latest owner scope (2026-09-05): read
+> `docs/handover/OWNER_TRIAL_HANDOVER_2026-09-05.md` first. The owner has paused
+> additional testing for a Web/Android trial; Telegram login/chat remain in
+> scope, while Mac, signing and Mini App work are deferred. Older autonomous
+> five-surface instructions below are historical and must not restart work.
+
 > Active naming and infrastructure update (2026-09-04): Goalflow is now
 > Tsurfing. The GitHub repository is `mariusschober/Tsurfing`; the local folder,
 > internal Goalflow source namespaces, durable database/storage identifiers,
