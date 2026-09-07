@@ -369,7 +369,7 @@ final class HardeningTests: XCTestCase {
         let content = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
         XCTAssertTrue(content.contains("accessibilityLabel(\"Start focus"))
         XCTAssertTrue(content.contains("accessibilityIdentifier(\"action-button\")"))
-        XCTAssertTrue(content.contains("accessibilityLabel(\"Hold to complete"))
+        XCTAssertTrue(content.contains("accessibilityLabel(\"Press and hold"))
         XCTAssertTrue(content.contains("accessibilityLabel(\"Plan the day") || content.contains("gate-cta-button"))
     }
 

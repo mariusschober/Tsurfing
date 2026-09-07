@@ -4,7 +4,7 @@ final class CompletionHoldController: @unchecked Sendable {
     private var startedAt: Date?
     private let clock: any Clock
     private let lock = NSLock()
-    init(isFrog: Bool, clock: any Clock = SystemClock()) { self.duration = isFrog ? 5.0 : 3.0; self.clock = clock }
+    init(isFrog: Bool, clock: any Clock = SystemClock()) { self.duration = isFrog ? 3.0 : 1.0; self.clock = clock }
     func start(at date: Date? = nil) { lock.lock(); defer { lock.unlock() }; startedAt = date ?? clock.now() }
     func cancel() { lock.lock(); defer { lock.unlock() }; startedAt = nil }
     func progress(at date: Date? = nil) -> Double {

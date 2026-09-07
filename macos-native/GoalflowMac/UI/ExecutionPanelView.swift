@@ -619,7 +619,7 @@ final class ExecutionViewModel: ObservableObject {
 
     // MARK: - Break
 
-    var holdDuration: TimeInterval { (task?.isFrog == true) ? 5.0 : 3.0 }
+    var holdDuration: TimeInterval { (task?.isFrog == true) ? 3.0 : 1.0 }
     func beginHold() {
         guard !sharedFocusActionPending, let t = task, execution != nil, !holding else { return }
         holdController = CompletionHoldController(isFrog: t.isFrog, clock: clock)
@@ -737,6 +737,7 @@ final class ExecutionViewModel: ObservableObject {
 }
 struct ExecutionPanelView: View {
     @ObservedObject var vm: ExecutionViewModel
+    @State private var completionInstructionVisible = false
     @Environment(\.colorScheme) var colorScheme
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -760,6 +761,7 @@ struct ExecutionPanelView: View {
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.5 : 0.18), radius: 18, x: 0, y: 10)
         .padding(10)
         .overlay(rewardOverlay)
+        .onChange(of: vm.task?.id) { _ in completionInstructionVisible = false }
     }
     private var panelBackground: some View {
         Group {
@@ -1063,15 +1065,19 @@ struct ExecutionPanelView: View {
                         .overlay(Capsule().stroke(Color.indigo.opacity(0.15), lineWidth: 1))
                 }.buttonStyle(.plain)
             }
-            if !(vm.isActive || vm.isPaused || vm.isOvertime) {
+            if completionInstructionVisible && (vm.isActive || vm.isPaused) {
+                Text("Press and hold Done for \(task.isFrog ? "3 seconds" : "1 second") to mark as done. Release early to cancel.")
+                    .font(.system(size: 11, weight: .medium)).foregroundStyle(.primary)
+                    .accessibilityIdentifier("completion-hold-instruction")
+            } else if !(vm.isActive || vm.isPaused || vm.isOvertime) {
                 Text("Tap ACTION to start. The timer counts from \(task.durationMinutes) minutes — it will persist if Tsurfing restarts. Pause is low friction; overtime counts separately.")
                     .font(.system(size: 11, weight: .regular)).foregroundStyle(.secondary).lineLimit(3)
             } else if vm.isPaused {
-                Text("Paused — elapsed frozen. Resume to continue, or add time. Hold to complete (Frog 5s, others 3s).").font(.system(size: 11, weight: .regular)).foregroundStyle(.secondary)
+                Text("Paused — elapsed time is frozen. Resume when you’re ready.").font(.system(size: 11, weight: .regular)).foregroundStyle(.secondary)
             } else if vm.isOvertime {
-                Text("Overtime — planned time elapsed. Keep flowing or add +5/+15/+30. Hold to complete when done.").font(.system(size: 11, weight: .medium)).foregroundStyle(Color.orange)
+                Text("Planned time is up. Keep working or mark the task as done.").font(.system(size: 11, weight: .medium)).foregroundStyle(Color.orange)
             } else {
-                Text("Focusing — hold to mark complete (Frog 5s).").font(.system(size: 11, weight: .regular)).foregroundStyle(.secondary)
+                Text("Focusing — keep the next action small and visible.").font(.system(size: 11, weight: .regular)).foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 18)
@@ -1079,21 +1085,27 @@ struct ExecutionPanelView: View {
         .padding(.horizontal, 10)
     }
     private func holdButton(task: GoalflowTask) -> some View {
-        let dur = task.isFrog ? "5s" : "3s"
+        let dur = task.isFrog ? "3s" : "1s"
         return ZStack {
             Capsule().fill(task.isFrog ? Color.green : Color.blue).opacity(vm.holding ? 0.12 : 0.0)
-            Button(action: {}) {
+            Button(action: { completionInstructionVisible = true }) {
                 HStack(spacing: 6) {
                     Image(systemName: task.isFrog ? "checkmark.circle.fill" : "checkmark.circle").font(.system(size: 12, weight: .bold))
-                    Text("Done \(dur)").font(.system(size: 12, weight: .bold, design: .rounded))
+                    Text("Done").font(.system(size: 12, weight: .bold, design: .rounded))
                 }
                 .foregroundStyle(task.isFrog ? Color.green : Color.blue)
                 .padding(.horizontal, 14).padding(.vertical, 8)
                 .background(Capsule().stroke(task.isFrog ? Color.green : Color.blue, lineWidth: vm.holding ? 2 : 1.2))
             }
-            .buttonStyle(.plain).accessibilityLabel("Hold to complete, \(dur) hold").accessibilityIdentifier("hold-complete-button").accessibilityAddTraits(.isButton)
+            .buttonStyle(.plain).accessibilityLabel("Press and hold for \(dur) to mark as done").help("Press and hold for \(dur) to mark as done. Release early to cancel.").accessibilityIdentifier("hold-complete-button").accessibilityAddTraits(.isButton)
             .onLongPressGesture(minimumDuration: 0, pressing: { pressing in
-                if pressing { vm.beginHold() } else { vm.endHold(cancelled: vm.holdProgress < 1.0) }
+                if pressing {
+                    vm.beginHold()
+                } else {
+                    let releasedEarly = vm.holdProgress < 1.0
+                    vm.endHold(cancelled: releasedEarly)
+                    if releasedEarly { completionInstructionVisible = true }
+                }
             }, perform: {})
             if vm.holding {
                 Capsule().stroke(Color.primary.opacity(0.06), lineWidth: 1)
@@ -1103,7 +1115,7 @@ struct ExecutionPanelView: View {
                         .animation(.linear(duration: 0.02), value: vm.holdProgress)
                 }
             }
-        }.frame(height: 36).animation(.easeOut(duration: 0.2), value: vm.holding)
+        }.frame(height: 36).disabled(vm.sharedFocusActionPending).animation(.easeOut(duration: 0.2), value: vm.holding)
     }
     private var isGateWall: Bool {
         // An already running cross-client session remains actionable even if

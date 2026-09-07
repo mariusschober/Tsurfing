@@ -2,12 +2,12 @@ import XCTest
 @testable import GoalflowMac
 import Foundation
 final class CompletionHoldTests: XCTestCase {
-    func test_ordinary_3s_frog_5s() {
+    func test_ordinary_1s_frog_3s() {
         let clock = ManualClock(now: Date(timeIntervalSince1970: 1_000_000))
         let ordinary = CompletionHoldController(isFrog: false, clock: clock)
-        XCTAssertEqual(ordinary.duration, 3.0, accuracy: 0.01)
+        XCTAssertEqual(ordinary.duration, 1.0, accuracy: 0.01)
         let frog = CompletionHoldController(isFrog: true, clock: clock)
-        XCTAssertEqual(frog.duration, 5.0, accuracy: 0.01)
+        XCTAssertEqual(frog.duration, 3.0, accuracy: 0.01)
     }
     func test_hold_progress_and_completion() {
         let start = Date(timeIntervalSince1970: 2_000_000)
@@ -16,9 +16,9 @@ final class CompletionHoldTests: XCTestCase {
         hc.start(at: start)
         XCTAssertEqual(hc.progress(at: start), 0, accuracy: 0.01)
         XCTAssertFalse(hc.isCompleted(at: start))
-        XCTAssertEqual(hc.progress(at: start.addingTimeInterval(1.5)), 0.5, accuracy: 0.01)
-        XCTAssertFalse(hc.isCompleted(at: start.addingTimeInterval(2.9)))
-        XCTAssertTrue(hc.isCompleted(at: start.addingTimeInterval(3.0)))
+        XCTAssertEqual(hc.progress(at: start.addingTimeInterval(0.5)), 0.5, accuracy: 0.01)
+        XCTAssertFalse(hc.isCompleted(at: start.addingTimeInterval(0.99)))
+        XCTAssertTrue(hc.isCompleted(at: start.addingTimeInterval(1.0)))
         XCTAssertTrue(hc.isCompleted(at: start.addingTimeInterval(4.0)))
     }
     func test_hold_cancel_before_threshold() {
@@ -26,19 +26,19 @@ final class CompletionHoldTests: XCTestCase {
         let clock = ManualClock(now: start)
         let hc = CompletionHoldController(isFrog: false, clock: clock)
         hc.start(at: start)
-        XCTAssertEqual(hc.progress(at: start.addingTimeInterval(1.0)), 0.33, accuracy: 0.02)
+        XCTAssertEqual(hc.progress(at: start.addingTimeInterval(0.33)), 0.33, accuracy: 0.02)
         hc.cancel()
         XCTAssertEqual(hc.progress(at: start.addingTimeInterval(2.0)), 0, accuracy: 0.01)
         XCTAssertFalse(hc.isCompleted(at: start.addingTimeInterval(5.0)))
         XCTAssertFalse(hc.isHolding)
     }
-    func test_frog_requires_5s() {
+    func test_frog_requires_3s() {
         let start = Date(timeIntervalSince1970: 4_000_000)
         let clock = ManualClock(now: start)
         let hc = CompletionHoldController(isFrog: true, clock: clock)
         hc.start(at: start)
-        XCTAssertFalse(hc.isCompleted(at: start.addingTimeInterval(3.0)))
-        XCTAssertTrue(hc.isCompleted(at: start.addingTimeInterval(5.0)))
+        XCTAssertFalse(hc.isCompleted(at: start.addingTimeInterval(2.99)))
+        XCTAssertTrue(hc.isCompleted(at: start.addingTimeInterval(3.0)))
     }
 }
 final class FlowStateTests: XCTestCase {

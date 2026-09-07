@@ -43,7 +43,9 @@
     "202609040003_realtime_sync_wakeup.sql",
     "202609040004_database_advisor_hardening.sql",
     "202609070001_legacy_mac_numeric_projection.sql",
-      "202609070002_automatic_sync_reconciliation.sql"
+    "202609070002_automatic_sync_reconciliation.sql",
+    "20260907122729_focus_session_preservation.sql",
+    "20260907123917_focus_session_receipt_guard.sql"
   ],
   "roomSchemaFiles": [
     "1.json",
