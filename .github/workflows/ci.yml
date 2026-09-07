@@ -2,7 +2,7 @@ name: Beta Gate
 
 on:
   push:
-    branches: [main, develop, goalflow-production, "reconcile/**", "integration/**", "feat/**", "fix/**", "chore/**", "codex/s1-local-durability-20260907"]
+    branches: [main, develop, goalflow-production, "reconcile/**", "integration/**", "feat/**", "fix/**", "chore/**", "codex/s1-local-durability-20260907", "codex/s2-causal-counters-20260907"]
   pull_request:
     branches: [main, develop, goalflow-production, "reconcile/**", "integration/**"]
 

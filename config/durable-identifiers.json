@@ -45,7 +45,8 @@
     "202609070001_legacy_mac_numeric_projection.sql",
     "202609070002_automatic_sync_reconciliation.sql",
     "20260907122729_focus_session_preservation.sql",
-    "20260907123917_focus_session_receipt_guard.sql"
+    "20260907123917_focus_session_receipt_guard.sql",
+    "20260907203259_s2_sync_lock_order.sql"
   ],
   "roomSchemaFiles": [
     "1.json",
