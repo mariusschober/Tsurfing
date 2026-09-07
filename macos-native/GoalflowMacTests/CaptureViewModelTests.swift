@@ -24,7 +24,8 @@ final class CaptureViewModelTests: XCTestCase {
         window.contentView = NSHostingView(rootView: CaptureOverlayView(vm: vm, onDismiss: {}))
         window.makeKeyAndOrderFront(nil)
         defer { window.close() }
-        NSApp.activate(ignoringOtherApps: true)
+        // Exercise this window's key-equivalent/responder path without taking
+        // keyboard input away from an unrelated foreground application.
         try await Task.sleep(for: .milliseconds(150))
         let event = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber, context: nil, characters: "\r", charactersIgnoringModifiers: "\r", isARepeat: false, keyCode: 36))
         XCTAssertTrue(window.performKeyEquivalent(with: event))
