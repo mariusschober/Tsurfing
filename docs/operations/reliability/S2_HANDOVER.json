@@ -683,6 +683,47 @@
         "Causal action receipt integration, operation deduplication and cross-client terminal history remain.",
         "No installed app replacement or hosted proof."
       ]
+    },
+    {
+      "commit": "3f4a14a8cf620c29a0370acc8ce27183f2117664",
+      "scope": "Explicit counter-day establishment and selection preserving focus and historical evidence",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "config/durable-identifiers.json",
+        "scripts/test-postgres-migrations.sh",
+        "scripts/test-s2-counter-days.py",
+        "supabase/migrations/20260907234144_s2_counter_day_admission.sql",
+        "supabase/migrations/MIGRATION_SHA256_MANIFEST.json"
+      ],
+      "validation": [
+        {
+          "command": "PGHOST=127.0.0.1 PGPORT=55437 PATH=/opt/homebrew/bin:$PATH npm run test:migrations:postgres",
+          "exitCode": 0,
+          "emptyDatabase": "PASS",
+          "upgradeDatabase": "PASS"
+        },
+        {
+          "command": "npm run verify:migrations; npm run verify:migration-hashes; npm run verify:identifiers",
+          "exitCode": 0,
+          "migrations": 28,
+          "identifiers": 22
+        },
+        {
+          "command": "npx --yes supabase@2.117.0 db advisors --db-url <disposable-loopback-fixture>?sslmode=disable --type all --fail-on error",
+          "exitCode": 0,
+          "warnings": [
+            "Existing bootstrap pgcrypto extension in public."
+          ]
+        }
+      ],
+      "migrations": [
+        "20260907234144_s2_counter_day_admission.sql"
+      ],
+      "limitations": [
+        "No HTTP/client activation yet.",
+        "Historical or unattributed legacy days require explicit baseline review.",
+        "No live DDL."
+      ]
     }
   ],
   "findings": [
@@ -795,7 +836,12 @@
     "evidence/s2-mac-focus-actions-first.log",
     "evidence/s2-mac-focus-actions-final.log",
     "evidence/s2-mac-focus-actions-verified.log",
-    "evidence/s2-mac-focus-actions-final-parent.log"
+    "evidence/s2-mac-focus-actions-final-parent.log",
+    "evidence/s2-counter-days-matrix-first.log",
+    "evidence/s2-counter-days-matrix-retry.log",
+    "evidence/s2-counter-days-static.log",
+    "evidence/s2-counter-days-advisors.log",
+    "evidence/s2-counter-days-advisors-retry.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"
