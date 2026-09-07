@@ -325,3 +325,9 @@ admission and native failure tests preserve the prior task and outbox; Android
 also proves a failed new task leaves no task row or mutation. The initial Web
 type check caught an invalid test-only property access; comparing the complete
 draft fixed it. Both logs remain. No schema change, deployment or installation.
+
+## Android active focus transaction checkpoint
+
+`65ea3a26e531597d5e03b6985ee5d2230b02eed6`: **PASS_LOCAL**. The ViewModel captures target task/session and action time before launching asynchronous work. Start reads actual task eligibility and duration inside Room. Pause/resume/extend/stop transform the persisted parent inside the same transaction as the tracking and outbox write. Concurrent +300/+120 extensions compose to +420. A stale F pause cannot affect replacement G on the same task. An interrupted write retains parent and outbox, and retry succeeds. Legacy offline import now checks for an absent focus field inside Room; explicit null, terminal and malformed fields cannot be replaced by an old mirror.
+
+Full Android unit/lint/debug build: exit 0; 149 passed, one hosted skip. No schema change or installation. This fixes the active local transaction race; versioned causal action receipts, logical operation deduplication and cross-client terminal history still require integration. It is not full S2 acceptance.
