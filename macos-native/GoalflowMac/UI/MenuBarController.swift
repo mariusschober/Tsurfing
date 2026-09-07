@@ -1,8 +1,6 @@
 import AppKit
 import SwiftUI
 import Combine
-import os
-private let menuBarLogger = Logger(subsystem: "com.mariusschober.tsurfing.mac", category: "MenuBar")
 @MainActor
 final class MenuBarController: NSObject {
     private var statusItem: NSStatusItem!
@@ -91,22 +89,12 @@ final class MenuBarController: NSObject {
     private func updateStatusTitle() {
         guard let button = statusItem.button else { return }
         button.appearsDisabled = false
-        // Tahoe: menu bar is transparent Liquid Glass — isDark must reflect system dark, not NSApp aqua fallback
-        // Use AppleInterfaceStyle + button.window appearance + effectiveAppearance
-        let isDark: Bool = {
-            if let style = UserDefaults.standard.string(forKey: "AppleInterfaceStyle"), style == "Dark" { return true }
-            if let winAppearance = button.window?.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua, .vibrantDark, .vibrantLight]) {
-                return winAppearance == .vibrantDark || winAppearance == .darkAqua
-            }
-            return NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-        }()
-        #if DEBUG
-        let debugAppearance = button.effectiveAppearance.name.rawValue
-        let winAppearance = button.window?.effectiveAppearance.name.rawValue ?? "nil-window"
-        let appAppearance = NSApp.effectiveAppearance.name.rawValue
-        menuBarLogger.debug("[MenuBar] isDark=\(isDark, privacy: .public) button.effective=\(debugAppearance, privacy: .public) window=\(winAppearance, privacy: .public) app=\(appAppearance, privacy: .public)")
-        #endif
-        button.appearance = NSAppearance(named: isDark ? .vibrantDark : .vibrantLight)
+        // Let AppKit render status-item contrast for this screen's menu bar.
+        // Its background may be dark even while the application uses Aqua.
+        button.appearance = nil
+        button.contentTintColor = nil
+        button.attributedTitle = NSAttributedString(string: "")
+        button.font = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)
         // Break takes precedence — show break timer
         if viewModel.isOnBreak {
             let remaining = viewModel.breakRemaining
@@ -118,27 +106,26 @@ final class MenuBarController: NSObject {
                 timeStr = String(format: "%02d:%02d", elapsed/60, elapsed%60)
             }
             let title = "☕ \(timeStr)"
-            button.attributedTitle = NSAttributedString(string: title, attributes: [.font: NSFont.systemFont(ofSize: 12, weight: .medium), .foregroundColor: NSColor.systemTeal])
+            button.title = title
             button.imagePosition = .imageLeading
             let img = NSImage(systemSymbolName: "cup.and.saucer.fill", accessibilityDescription: nil)
             img?.isTemplate = true
             button.image = img
             button.toolTip = "On Break — \(timeStr)"
-            button.contentTintColor = .systemTeal
             return
         }
         // Respect planning gate when enabled
         if case .monthlyPlanningRequired = viewModel.gate {
-            button.attributedTitle = NSAttributedString(string: "Plan monthly", attributes: [.font: NSFont.systemFont(ofSize: 12, weight: .medium), .foregroundColor: NSColor.systemOrange])
+            button.title = "Plan monthly"
             button.imagePosition = .imageLeading
             let img = NSImage(systemSymbolName: "calendar.badge.exclamationmark", accessibilityDescription: nil); img?.isTemplate = true; button.image = img
-            button.toolTip = "Monthly planning required"; button.contentTintColor = .systemOrange; return
+            button.toolTip = "Monthly planning required"; return
         }
         if case .dailyPlanningRequired = viewModel.gate {
-            button.attributedTitle = NSAttributedString(string: "Plan the day", attributes: [.font: NSFont.systemFont(ofSize: 12, weight: .medium), .foregroundColor: NSColor.systemOrange])
+            button.title = "Plan the day"
             button.imagePosition = .imageLeading
             let img = NSImage(systemSymbolName: "calendar.badge.exclamationmark", accessibilityDescription: nil); img?.isTemplate = true; button.image = img
-            button.toolTip = "Daily planning required"; button.contentTintColor = .systemOrange; return
+            button.toolTip = "Daily planning required"; return
         }
         let task = viewModel.task
         let isPaused = viewModel?.isPaused ?? false; let isOvertime = viewModel?.isOvertime ?? false; let isActive = viewModel?.isActive ?? false
@@ -151,13 +138,11 @@ final class MenuBarController: NSObject {
             else { display = trimmed }
         } else { display = "Plan the day" }
         let iconName = isPaused ? "pause.circle.fill" : isOvertime ? "exclamationmark.circle.fill" : isActive ? "scope" : "circle.dotted"
-        let baseColor: NSColor = .systemRed
-        button.attributedTitle = NSAttributedString(string: display, attributes: [.font: NSFont.systemFont(ofSize: 12, weight: .medium), .foregroundColor: baseColor])
+        button.title = display
         button.imagePosition = .imageLeading
         let icon = NSImage(systemSymbolName: iconName, accessibilityDescription: nil)
         icon?.isTemplate = true
         button.image = icon
         button.toolTip = task?.title ?? "Tsurfing — no tasks planned"
-        button.contentTintColor = baseColor
     }
 }
