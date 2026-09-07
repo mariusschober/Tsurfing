@@ -69,3 +69,46 @@ test('an uncooperative older connection delays cutover; its final committed writ
   });
   expect(preserved.cutover.trackingValue).toEqual({ planViewCount: 28, preservedLateWrite: true });
 });
+
+test('causal local admission serializes real browser transactions and preserves an action across rollback', async ({ page }) => {
+  await load(page);
+  const result = await page.evaluate(async () => {
+    const storage = (window as any).__s1Storage;
+    const name = 's2-admission-' + crypto.randomUUID();
+    localStorage.setItem('goalflow_active_database_v2', name);
+    const accountId = crypto.randomUUID(); const sessionId = crypto.randomUUID();
+    const tracking = { date: '2026-09-07', planViewCount: 27, dailyPostponeCount: 3,
+      focusSession: { schemaVersion: 1, sessionId, taskId: 'task', phase: 'active', plannedDurationSeconds: 600,
+        startedAt: '2026-09-07T10:00:00.000Z', updatedAt: '2026-09-07T10:00:00.000Z', elapsedSeconds: 0, pausedAt: null, endedAt: null } };
+    await storage.set('tracking', accountId, tracking, 'cloud');
+    await storage.set('tasks', accountId, [{ id: 'task', completed: false }], 'cloud');
+    const action = (durationSeconds: number) => ({ schemaVersion: 1, accountId, sessionId, taskId: 'task', actorId: 'browser',
+      actionId: crypto.randomUUID(), epoch: sessionId, expectedCurrentSessionId: sessionId, kind: 'extend', durationSeconds,
+      capturedAt: '2026-09-07T10:00:30.000Z' });
+    const a = action(300); const b = action(120);
+    const admitted = await Promise.all([(window as any).__s1AdmitFocus(name, a), (window as any).__s1AdmitFocus(name, b)]);
+    const retry = await (window as any).__s1AdmitFocus(name, a);
+    const c = action(60);
+    const put = IDBObjectStore.prototype.put;
+    let failure = '';
+    IDBObjectStore.prototype.put = function(...args: Parameters<typeof put>) {
+      if (this.name === 'tracking') throw new Error('Synthetic write failure');
+      return put.apply(this, args);
+    };
+    try { await (window as any).__s1AdmitFocus(name, c); } catch (e) { failure = (e as Error).message; }
+    finally { IDBObjectStore.prototype.put = put; }
+    const db = await (window as any).__s1Fence(name);
+    const afterFailure = await db.get('causal_actions', accountId); db.close();
+    const recovered = await (window as any).__s1AdmitFocus(name, c);
+    return { admitted, retry, failure, afterFailure, recovered, a, b, c };
+  });
+  expect(result.admitted.every((item: any) => item.outcome.accepted)).toBe(true);
+  expect(result.retry.duplicate).toBe(true);
+  expect(result.failure).toBe('Synthetic write failure');
+  expect(result.afterFailure.trackingValue.focusSession.plannedDurationSeconds).toBe(1020);
+  expect(result.afterFailure.trackingValue.planViewCount).toBe(27);
+  expect(Object.keys(result.afterFailure.focusOutbox).sort()).toEqual([result.a.actionId, result.b.actionId].sort());
+  expect(result.afterFailure.focusAdmissions[result.c.actionId]).toBeUndefined();
+  expect(result.recovered.tracking.focusSession.plannedDurationSeconds).toBe(1080);
+  expect(result.recovered.command.actionId).toBe(result.c.actionId);
+});

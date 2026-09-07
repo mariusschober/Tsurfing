@@ -7,6 +7,7 @@ export interface CausalAccountState {
   schemaVersion: 1;
   accountKey: IDBValidKey;
   generation: number;
+  actionIdentities?: Record<string, { kind: string; intent: unknown }>;
   trackingPresent: boolean;
   trackingValue: unknown;
   /** Immutable structured-clone preimages, including malformed/unknown values. */
