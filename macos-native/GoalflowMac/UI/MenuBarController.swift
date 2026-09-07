@@ -105,7 +105,7 @@ final class MenuBarController: NSObject {
             } else {
                 timeStr = String(format: "%02d:%02d", elapsed/60, elapsed%60)
             }
-            let title = "☕ \(timeStr)"
+            let title = timeStr
             button.title = title
             button.imagePosition = .imageLeading
             let img = NSImage(systemSymbolName: "cup.and.saucer.fill", accessibilityDescription: nil)
@@ -132,9 +132,9 @@ final class MenuBarController: NSObject {
         let display: String
         if let t = task {
             let trimmed = t.title.count > 22 ? String(t.title.prefix(22)) + "…" : t.title
-            if isPaused { display = "⏸ \(trimmed) \(viewModel?.displayTime ?? "")" }
-            else if isOvertime { display = "● \(trimmed) \(viewModel?.displayTime ?? "")" }
-            else if isActive { display = "● \(trimmed) \(viewModel?.displayTime ?? "")" }
+            if isPaused { display = "\(trimmed) \(viewModel?.displayTime ?? "")" }
+            else if isOvertime { display = "\(trimmed) \(viewModel?.displayTime ?? "")" }
+            else if isActive { display = "\(trimmed) \(viewModel?.displayTime ?? "")" }
             else { display = trimmed }
         } else { display = "Plan the day" }
         let iconName = isPaused ? "pause.circle.fill" : isOvertime ? "exclamationmark.circle.fill" : isActive ? "scope" : "circle.dotted"

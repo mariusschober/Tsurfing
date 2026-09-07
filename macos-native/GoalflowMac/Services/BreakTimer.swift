@@ -80,3 +80,29 @@ final class BreakTimer: ObservableObject {
         return String(format: "%02d:%02d", m, s)
     }
 }
+
+/// Expiry is a state, not a new event on every timer tick or window restore.
+@MainActor
+final class BreakAlarmController {
+    private let sound: any SoundGateway
+    private var currentBreak: BreakState?
+    private var notified = false
+    init(sound: any SoundGateway) { self.sound = sound }
+
+    func update(state: BreakState?, now: Date) {
+        if state != currentBreak {
+            sound.stopAlarm()
+            currentBreak = state
+            notified = false
+        }
+        guard let state, state.isExpired(now: now), !notified else { return }
+        notified = true
+        sound.alarm(loop: false)
+    }
+
+    func stop() {
+        sound.stopAlarm()
+        currentBreak = nil
+        notified = false
+    }
+}

@@ -64,6 +64,7 @@ final class ExecutionViewModel: ObservableObject {
     private let breakTimer = BreakTimer()
     private let breakStore: BreakSessionStore
     private let sound: any SoundGateway
+    private lazy var breakAlarm = BreakAlarmController(sound: sound)
     private let dailyPlanStore: DailyPlanStore
     private let goalStore: GoalStore
     private let trueNorthStore: TrueNorthStore
@@ -121,9 +122,9 @@ final class ExecutionViewModel: ObservableObject {
         timer.$isActive.receive(on: DispatchQueue.main).sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
         breakTimer.$remainingSeconds.receive(on: DispatchQueue.main).sink { [weak self] v in self?.breakRemaining = v }.store(in: &cancellables)
         breakTimer.$elapsedSeconds.receive(on: DispatchQueue.main).sink { [weak self] v in self?.breakElapsed = v }.store(in: &cancellables)
-        breakTimer.$isActive.receive(on: DispatchQueue.main).sink { [weak self] v in self?.isOnBreak = v; if !v { self?.handleBreakExpiredIfNeeded() } }.store(in: &cancellables)
-        breakTimer.$isExpired.receive(on: DispatchQueue.main).sink { [weak self] expired in
-            if expired { self?.sound.alarm(loop: true) }
+        breakTimer.$isActive.receive(on: DispatchQueue.main).sink { [weak self] v in self?.isOnBreak = v }.store(in: &cancellables)
+        breakTimer.$isExpired.removeDuplicates().receive(on: DispatchQueue.main).sink { [weak self] expired in
+            if expired { self?.handleBreakExpiredIfNeeded() }
         }.store(in: &cancellables)
     }
     func restore() {
@@ -305,6 +306,7 @@ final class ExecutionViewModel: ObservableObject {
     }
 
     func applicationWillTerminate() {
+        breakAlarm.stop()
         foregroundSyncCoordinator.shutdown()
     }
 
@@ -405,11 +407,11 @@ final class ExecutionViewModel: ObservableObject {
                 isOnBreak = true
                 breakRemaining = bs.remainingSeconds(now: clock.now())
                 breakElapsed = bs.elapsedSeconds(now: clock.now())
-                if bs.isExpired(now: clock.now()) {
-                    sound.alarm(loop: true)
-                }
+                breakAlarm.update(state: bs, now: clock.now())
             } else {
                 breakState = nil
+                breakTimer.stop()
+                breakAlarm.stop()
                 breakRemaining = nil
                 breakElapsed = 0
                 isOnBreak = false
@@ -440,6 +442,7 @@ final class ExecutionViewModel: ObservableObject {
         do {
             try breakStore.save(bs)
             breakState = bs
+            breakAlarm.update(state: bs, now: clock.now())
             breakTimer.start(state: bs)
             isOnBreak = true
             breakRemaining = bs.remainingSeconds(now: clock.now())
@@ -453,6 +456,7 @@ final class ExecutionViewModel: ObservableObject {
 
     func endBreakEarly() {
         guard isOnBreak else { return }
+        let shouldContinue = breakState?.isExpired(now: clock.now()) == true && execution?.isPaused == true
         do { try breakStore.clear() }
         catch {
             reportLocalFailure(error)
@@ -463,19 +467,18 @@ final class ExecutionViewModel: ObservableObject {
         breakState = nil
         breakRemaining = nil
         breakElapsed = 0
-        sound.stopAlarm()
+        breakAlarm.stop()
         if let e = execution {
             remainingSeconds = e.remainingSeconds(now: clock.now())
             overtimeSeconds = e.overtimeSeconds(now: clock.now())
         }
         breakPickerVisible = false
         clearLocalFailure()
+        if shouldContinue { resume() }
     }
 
     private func handleBreakExpiredIfNeeded() {
-        if let bs = breakState, bs.isExpired(now: clock.now()) {
-            sound.alarm(loop: true)
-        }
+        breakAlarm.update(state: breakState, now: clock.now())
     }
 
     var isActive: Bool { execution?.isActive == true }
@@ -841,13 +844,13 @@ struct ExecutionPanelView: View {
 
     private var breakActiveView: some View {
         VStack(spacing: 16) {
-            Text("On Break").font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundStyle(Color.teal)
+            Text(vm.breakRemaining == 0 ? "Break complete" : "On Break").font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundStyle(Color.teal)
             Text(vm.breakState?.isOpenEnded == true ? String(format: "%02d:%02d", vm.breakElapsed/60, vm.breakElapsed%60) : String(format: "%02d:%02d", (vm.breakRemaining ?? 0)/60, (vm.breakRemaining ?? 0)%60))
                 .font(.system(size: 36, weight: .bold, design: .rounded).monospacedDigit())
                 .foregroundStyle(Color.teal)
             Text("Breathe. Relax. Reset.").font(.system(size: 11, weight: .regular)).foregroundStyle(.secondary)
-            Text("Covering all displays • Esc to End Early").font(.system(size: 10, weight: .regular)).foregroundStyle(.secondary.opacity(0.7))
-            Button("End Break Early (Esc)") { vm.endBreakEarly() }.buttonStyle(.bordered).keyboardShortcut(.cancelAction)
+            Text(vm.breakRemaining == 0 ? "Press Esc to continue work" : "Covering all displays • Esc to end break").font(.system(size: 10, weight: .regular)).foregroundStyle(.secondary.opacity(0.7))
+            Button(vm.breakRemaining == 0 ? "Continue work (Esc)" : vm.breakRemaining == nil ? "Back to Flow (Esc)" : "End Break Early (Esc)") { vm.endBreakEarly() }.buttonStyle(.bordered).keyboardShortcut(.cancelAction)
         }.padding(24).frame(maxWidth: .infinity)
     }
     private func content(task: GoalflowTask) -> some View {
