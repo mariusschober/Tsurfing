@@ -28,8 +28,13 @@ Verification: 195 Mac tests passed, zero failed, one skipped. The skipped
 live transport test belongs to the separately invoked cross-client staging
 gate. The passing tests include a real macOS keychain write/read/delete
 round trip using a unique test-only service. The subsequent Settings-only
-change was rebuilt and requires UI verification. Build 2026090704, version
-0.4.0, is the configured install candidate at /Applications/Tsurfing.app.
+change was rebuilt and verified in the installed UI. Build 2026090704,
+version 0.4.0, is installed and running at /Applications/Tsurfing.app.
+Settings displays the actual build, Staging, and staging.tsurfing.com.
+The account panel loaded the sign-in policy and successfully reached the
+six-digit email-code entry stage without a keychain error. The owner enters
+the code directly; email delivery, completed sign-in and Telegram consent
+have not yet been independently confirmed.
 Existing local task files and their identities are retained; local data was
 backed up under ~/Library/Application Support/Tsurfing-install-backups/.
 
