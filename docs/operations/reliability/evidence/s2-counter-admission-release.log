@@ -1,0 +1,282 @@
+
+> tsurfing@0.4.0-beta.1 verify:release
+> npm run lint && npm test && npm run build && npm run verify:server && npm run verify:maintenance && npm run verify:client-secrets && npm run verify:client-artifacts
+
+
+> tsurfing@0.4.0-beta.1 lint
+> tsc --noEmit
+
+
+> tsurfing@0.4.0-beta.1 test
+> vitest run
+
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+ ❯ server/routes/telegramMini.test.ts (10 tests | 10 failed) 23ms
+     × exchanges fresh initData exactly once without persisting the raw credential 12ms
+     × rejects replay and never accepts a query-string initData fallback 3ms
+     × requires a caller-generated operation UUID and returns only an exact durable acknowledgment 1ms
+     × does not report success for a task acknowledgment bound to another user 1ms
+     × rejects an expired, revoked, disabled, or unlinked cached Mini session 1ms
+     × never accepts the retired JavaScript bearer session 1ms
+     × streams only empty wake events after exact-origin cookie authentication 1ms
+     × rejects a wake stream without the exact configured origin 1ms
+     × closes an established stream before emitting a wake after revocation 1ms
+     × enforces a per-user wake connection limit 1ms
+ ❯ server/routes/emailAuth.test.ts (10 tests | 10 failed) 25ms
+     × advertises the disabled CAPTCHA policy without exposing credentials 12ms
+     × serves the public native challenge with a nonce-bound policy and no secret 3ms
+     × binds an invite request to normalized email, CAPTCHA proof, and only token hashes 1ms
+     × never creates an Auth user for an existing-account sign-in request 1ms
+     × returns the same generic envelope when cooldown or approval suppresses delivery 2ms
+     × does not disclose a Supabase delivery rejection 1ms
+     × derives identity from the verified bearer token and ignores mutable metadata 1ms
+     × refuses activation before Supabase confirms the email address 1ms
+     × refuses a valid non-OTP session so an existing login cannot skip the typed code 1ms
+     × rejects malformed or replay-incompatible request authority before database access 2ms
+ ❯ server/routes/telegram.test.ts (6 tests | 6 failed) 25ms
+     × reports success only after the exact processing lease is durably completed 14ms
+     × maps a duplicate claim without processing it again 4ms
+     × maps a busy claim without processing it again 1ms
+     × maps a collision claim without processing it again 1ms
+     × fails closed when processing succeeded but durable completion was not verified 1ms
+     × rejects an invalid webhook secret before touching deduplication state 4ms
+ ❯ server/routes/account.telegram.test.ts (4 tests | 4 failed) 16ms
+     × retains the AAL2 gate for owner linking 11ms
+     × allows a beta account to link at AAL1 while the server still binds its immutable user ID 2ms
+     × binds only the authenticated account to the verified provider identity 1ms
+     × revokes bot and cached Mini App access for only the authenticated account 1ms
+ ❯ server/routes/telegramAuth.secure.test.ts (18 tests | 5 failed) 24ms
+     × stores only a hashed opaque invite attempt and never client OAuth state or PKCE material 12ms
+     × rejects manually injected reserved provider parameters before database access 2ms
+     × derives activation identity only from the verified Supabase provider identity 1ms
+     × rejects legacy oauthState replay input before token verification 2ms
+     × reports a consumed or cross-account attempt as rejected 1ms
+ ❯ server/app.test.ts (8 tests | 8 failed) 88ms
+     × separates process liveness from dependency readiness 30ms
+     × returns ready only after the dependency probe succeeds 21ms
+     × permits the configured Supabase HTTPS and secure Realtime origins 10ms
+     × rejects untrusted browser origins before an API route can run 6ms
+     × sanitizes caller-provided request IDs and includes the safe ID in public errors 8ms
+     × returns a safe 400 response for malformed JSON 2ms
+     × enforces the tighter Telegram body limit with a safe public error 3ms
+     × trusts exactly one Railway edge proxy hop in production 7ms
+ ❯ server/auth.test.ts (7 tests | 7 failed) 21ms
+     × rejects verified claims with a wrong project issuer 15ms
+     × rejects verified claims with a wrong audience 3ms
+     × rejects verified claims with a mutable subject 1ms
+     × rejects a cryptographically valid token after its Auth session is revoked 1ms
+     × accepts only the profile belonging to the verified token user 1ms
+     × rejects a verified Auth session until one-use beta activation creates its profile 0ms
+     × rejects tokens without a valid session_id claim 0ms
+ ❯ server/routes/adminInvites.test.ts (1 test | 1 failed) 13ms
+     × denies beta users on admin paths without intercepting ordinary account paths 12ms
+macOS bundle key gate failed: a current server-only Supabase key reached the application bundle
+macOS bundle key gate failed: the configured legacy JWT is not an anonymous client key
+macOS bundle key gate failed: the configured key is neither publishable nor a legacy JWT
+macOS bundle key gate failed: the public key could not be read from the application Info.plist
+ ❯ server/routes/sync.reconciliation.test.ts (3 tests | 3 failed) 15018ms
+     × uses authenticated owner identity and accepts original UTC offset timestamps 5008ms
+     × rejects a client-supplied owner override and duplicate mutation identities 5002ms
+     × does not acknowledge a different candidate returned by the database 5006ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 54 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  server/app.test.ts > public server boundary > separates process liveness from dependency readiness
+ FAIL  server/app.test.ts > public server boundary > returns ready only after the dependency probe succeeds
+ FAIL  server/app.test.ts > public server boundary > permits the configured Supabase HTTPS and secure Realtime origins
+ FAIL  server/app.test.ts > public server boundary > rejects untrusted browser origins before an API route can run
+ FAIL  server/app.test.ts > public server boundary > sanitizes caller-provided request IDs and includes the safe ID in public errors
+ FAIL  server/app.test.ts > public server boundary > returns a safe 400 response for malformed JSON
+ FAIL  server/app.test.ts > public server boundary > enforces the tighter Telegram body limit with a safe public error
+ FAIL  server/app.test.ts > public server boundary > trusts exactly one Railway edge proxy hop in production
+ FAIL  server/auth.test.ts > authenticated API session boundary > rejects verified claims with a wrong project issuer
+ FAIL  server/auth.test.ts > authenticated API session boundary > rejects verified claims with a wrong audience
+ FAIL  server/auth.test.ts > authenticated API session boundary > rejects verified claims with a mutable subject
+ FAIL  server/auth.test.ts > authenticated API session boundary > rejects a cryptographically valid token after its Auth session is revoked
+ FAIL  server/auth.test.ts > authenticated API session boundary > accepts only the profile belonging to the verified token user
+ FAIL  server/auth.test.ts > authenticated API session boundary > rejects a verified Auth session until one-use beta activation creates its profile
+ FAIL  server/auth.test.ts > authenticated API session boundary > rejects tokens without a valid session_id claim
+ FAIL  server/routes/account.telegram.test.ts > Telegram account binding boundary > retains the AAL2 gate for owner linking
+ FAIL  server/routes/account.telegram.test.ts > Telegram account binding boundary > allows a beta account to link at AAL1 while the server still binds its immutable user ID
+ FAIL  server/routes/account.telegram.test.ts > Telegram account binding boundary > binds only the authenticated account to the verified provider identity
+ FAIL  server/routes/account.telegram.test.ts > Telegram account binding boundary > revokes bot and cached Mini App access for only the authenticated account
+ FAIL  server/routes/adminInvites.test.ts > admin router ownership boundary > denies beta users on admin paths without intercepting ordinary account paths
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP preflight > advertises the disabled CAPTCHA policy without exposing credentials
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP preflight > serves the public native challenge with a nonce-bound policy and no secret
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP preflight > binds an invite request to normalized email, CAPTCHA proof, and only token hashes
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP preflight > never creates an Auth user for an existing-account sign-in request
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP preflight > returns the same generic envelope when cooldown or approval suppresses delivery
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP preflight > does not disclose a Supabase delivery rejection
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP activation > derives identity from the verified bearer token and ignores mutable metadata
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP activation > refuses activation before Supabase confirms the email address
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP activation > refuses a valid non-OTP session so an existing login cannot skip the typed code
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP activation > rejects malformed or replay-incompatible request authority before database access
+ FAIL  server/routes/telegram.test.ts > Telegram webhook durable update claims > reports success only after the exact processing lease is durably completed
+ FAIL  server/routes/telegram.test.ts > Telegram webhook durable update claims > maps a duplicate claim without processing it again
+ FAIL  server/routes/telegram.test.ts > Telegram webhook durable update claims > maps a busy claim without processing it again
+ FAIL  server/routes/telegram.test.ts > Telegram webhook durable update claims > maps a collision claim without processing it again
+ FAIL  server/routes/telegram.test.ts > Telegram webhook durable update claims > fails closed when processing succeeded but durable completion was not verified
+ FAIL  server/routes/telegram.test.ts > Telegram webhook durable update claims > rejects an invalid webhook secret before touching deduplication state
+ FAIL  server/routes/telegramAuth.secure.test.ts > secure callback flow — telegramAuth > stores only a hashed opaque invite attempt and never client OAuth state or PKCE material
+ FAIL  server/routes/telegramAuth.secure.test.ts > secure callback flow — telegramAuth > rejects manually injected reserved provider parameters before database access
+ FAIL  server/routes/telegramAuth.secure.test.ts > secure callback flow — telegramAuth > derives activation identity only from the verified Supabase provider identity
+ FAIL  server/routes/telegramAuth.secure.test.ts > secure callback flow — telegramAuth > rejects legacy oauthState replay input before token verification
+ FAIL  server/routes/telegramAuth.secure.test.ts > secure callback flow — telegramAuth > reports a consumed or cross-account attempt as rejected
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > exchanges fresh initData exactly once without persisting the raw credential
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > rejects replay and never accepts a query-string initData fallback
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > requires a caller-generated operation UUID and returns only an exact durable acknowledgment
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > does not report success for a task acknowledgment bound to another user
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > rejects an expired, revoked, disabled, or unlinked cached Mini session
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > never accepts the retired JavaScript bearer session
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > streams only empty wake events after exact-origin cookie authentication
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > rejects a wake stream without the exact configured origin
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > closes an established stream before emitting a wake after revocation
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > enforces a per-user wake connection limit
+Error: listen EPERM: operation not permitted 127.0.0.1
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/105]⎯
+
+ FAIL  server/app.test.ts > public server boundary > separates process liveness from dependency readiness
+ FAIL  server/app.test.ts > public server boundary > returns ready only after the dependency probe succeeds
+ FAIL  server/app.test.ts > public server boundary > permits the configured Supabase HTTPS and secure Realtime origins
+ FAIL  server/app.test.ts > public server boundary > rejects untrusted browser origins before an API route can run
+ FAIL  server/app.test.ts > public server boundary > sanitizes caller-provided request IDs and includes the safe ID in public errors
+ FAIL  server/app.test.ts > public server boundary > returns a safe 400 response for malformed JSON
+ FAIL  server/app.test.ts > public server boundary > enforces the tighter Telegram body limit with a safe public error
+ FAIL  server/app.test.ts > public server boundary > trusts exactly one Railway edge proxy hop in production
+ FAIL  server/auth.test.ts > authenticated API session boundary > rejects verified claims with a wrong project issuer
+ FAIL  server/auth.test.ts > authenticated API session boundary > rejects verified claims with a wrong audience
+ FAIL  server/auth.test.ts > authenticated API session boundary > rejects verified claims with a mutable subject
+ FAIL  server/auth.test.ts > authenticated API session boundary > rejects a cryptographically valid token after its Auth session is revoked
+ FAIL  server/auth.test.ts > authenticated API session boundary > accepts only the profile belonging to the verified token user
+ FAIL  server/auth.test.ts > authenticated API session boundary > rejects a verified Auth session until one-use beta activation creates its profile
+ FAIL  server/auth.test.ts > authenticated API session boundary > rejects tokens without a valid session_id claim
+ FAIL  server/routes/account.telegram.test.ts > Telegram account binding boundary > retains the AAL2 gate for owner linking
+ FAIL  server/routes/account.telegram.test.ts > Telegram account binding boundary > allows a beta account to link at AAL1 while the server still binds its immutable user ID
+ FAIL  server/routes/account.telegram.test.ts > Telegram account binding boundary > binds only the authenticated account to the verified provider identity
+ FAIL  server/routes/account.telegram.test.ts > Telegram account binding boundary > revokes bot and cached Mini App access for only the authenticated account
+ FAIL  server/routes/adminInvites.test.ts > admin router ownership boundary > denies beta users on admin paths without intercepting ordinary account paths
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP preflight > advertises the disabled CAPTCHA policy without exposing credentials
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP preflight > serves the public native challenge with a nonce-bound policy and no secret
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP preflight > binds an invite request to normalized email, CAPTCHA proof, and only token hashes
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP preflight > never creates an Auth user for an existing-account sign-in request
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP preflight > returns the same generic envelope when cooldown or approval suppresses delivery
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP preflight > does not disclose a Supabase delivery rejection
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP activation > derives identity from the verified bearer token and ignores mutable metadata
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP activation > refuses activation before Supabase confirms the email address
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP activation > refuses a valid non-OTP session so an existing login cannot skip the typed code
+ FAIL  server/routes/emailAuth.test.ts > typed email OTP activation > rejects malformed or replay-incompatible request authority before database access
+ FAIL  server/routes/telegram.test.ts > Telegram webhook durable update claims > reports success only after the exact processing lease is durably completed
+ FAIL  server/routes/telegram.test.ts > Telegram webhook durable update claims > maps a duplicate claim without processing it again
+ FAIL  server/routes/telegram.test.ts > Telegram webhook durable update claims > maps a busy claim without processing it again
+ FAIL  server/routes/telegram.test.ts > Telegram webhook durable update claims > maps a collision claim without processing it again
+ FAIL  server/routes/telegram.test.ts > Telegram webhook durable update claims > fails closed when processing succeeded but durable completion was not verified
+ FAIL  server/routes/telegram.test.ts > Telegram webhook durable update claims > rejects an invalid webhook secret before touching deduplication state
+ FAIL  server/routes/telegramAuth.secure.test.ts > secure callback flow — telegramAuth > stores only a hashed opaque invite attempt and never client OAuth state or PKCE material
+ FAIL  server/routes/telegramAuth.secure.test.ts > secure callback flow — telegramAuth > rejects manually injected reserved provider parameters before database access
+ FAIL  server/routes/telegramAuth.secure.test.ts > secure callback flow — telegramAuth > derives activation identity only from the verified Supabase provider identity
+ FAIL  server/routes/telegramAuth.secure.test.ts > secure callback flow — telegramAuth > rejects legacy oauthState replay input before token verification
+ FAIL  server/routes/telegramAuth.secure.test.ts > secure callback flow — telegramAuth > reports a consumed or cross-account attempt as rejected
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > exchanges fresh initData exactly once without persisting the raw credential
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > rejects replay and never accepts a query-string initData fallback
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > requires a caller-generated operation UUID and returns only an exact durable acknowledgment
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > does not report success for a task acknowledgment bound to another user
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > rejects an expired, revoked, disabled, or unlinked cached Mini session
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > never accepts the retired JavaScript bearer session
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > streams only empty wake events after exact-origin cookie authentication
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > rejects a wake stream without the exact configured origin
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > closes an established stream before emitting a wake after revocation
+ FAIL  server/routes/telegramMini.test.ts > Telegram Mini App server boundary > enforces a per-user wake connection limit
+Error: Server is not running.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/105]⎯
+
+ FAIL  server/routes/sync.reconciliation.test.ts > automatic sync API boundary > uses authenticated owner identity and accepts original UTC offset timestamps
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ server/routes/sync.reconciliation.test.ts:18:3
+     16| }
+     17| describe('automatic sync API boundary',()=>{
+     18|   it('uses authenticated owner identity and accepts original UTC offse…
+       |   ^
+     19|     const body=candidate();const rpc=vi.fn().mockResolvedValue({data:{…
+     20|     const result=await fetch(await endpoint(rpc),{method:'POST',header…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/105]⎯
+
+ FAIL  server/routes/sync.reconciliation.test.ts > automatic sync API boundary > rejects a client-supplied owner override and duplicate mutation identities
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ server/routes/sync.reconciliation.test.ts:23:3
+     21|     expect(result.status).toBe(200);expect(rpc).toHaveBeenCalledWith('…
+     22|   });
+     23|   it('rejects a client-supplied owner override and duplicate mutation …
+       |   ^
+     24|     const rpc=vi.fn();const url=await endpoint(rpc);const body=candida…
+     25|     for(const invalid of [{...body,userId:'other'},{...body,localHisto…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/105]⎯
+
+ FAIL  server/routes/sync.reconciliation.test.ts > automatic sync API boundary > does not acknowledge a different candidate returned by the database
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ server/routes/sync.reconciliation.test.ts:30:3
+
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/105]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 3 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: listen EPERM: operation not permitted 127.0.0.1
+ ❯ Server.setupListenHandle [as _listen2] node:net:1917:21
+ ❯ listenInCluster node:net:1996:12
+ ❯ node:net:2205:7
+ ❯ processTicksAndRejections node:internal/process/task_queues:90:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'EPERM', errno: -1, syscall: 'listen', address: '127.0.0.1' }
+This error originated in "server/routes/sync.reconciliation.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "uses authenticated owner identity and accepts original UTC offset timestamps". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: listen EPERM: operation not permitted 127.0.0.1
+ ❯ Server.setupListenHandle [as _listen2] node:net:1917:21
+ ❯ listenInCluster node:net:1996:12
+ ❯ node:net:2205:7
+ ❯ processTicksAndRejections node:internal/process/task_queues:90:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'EPERM', errno: -1, syscall: 'listen', address: '127.0.0.1' }
+This error originated in "server/routes/sync.reconciliation.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "rejects a client-supplied owner override and duplicate mutation identities". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: listen EPERM: operation not permitted 127.0.0.1
+ ❯ Server.setupListenHandle [as _listen2] node:net:1917:21
+ ❯ listenInCluster node:net:1996:12
+ ❯ node:net:2205:7
+ ❯ processTicksAndRejections node:internal/process/task_queues:90:21
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'EPERM', errno: -1, syscall: 'listen', address: '127.0.0.1' }
+This error originated in "server/routes/sync.reconciliation.test.ts" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "does not acknowledge a different candidate returned by the database". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  9 failed | 68 passed (77)
+      Tests  54 failed | 418 passed (472)
+     Errors  3 errors
+   Start at  22:51:12
+   Duration  16.20s (transform 2.06s, setup 0ms, import 5.47s, tests 20.28s, environment 4ms)
+

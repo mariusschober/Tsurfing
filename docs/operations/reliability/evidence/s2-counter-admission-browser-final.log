@@ -1,0 +1,28 @@
+[WebServer] (node:58248) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:58263) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:58290) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 8 tests using 2 workers
+
+(node:58297) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:58296) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › tests/e2e/s2-storage-fence.spec.ts:9:1 › real S1 storage rejects a tracking flush after cutover and retains exact captured WAL (492ms)
+  ✓  3 [chromium] › tests/e2e/s2-storage-fence.spec.ts:38:1 › an uncooperative older connection delays cutover; its final committed write is preserved (406ms)
+  ✓  4 [chromium] › tests/e2e/s2-storage-fence.spec.ts:73:1 › causal local admission serializes real browser transactions and preserves an action across rollback (194ms)
+  ✓  5 [chromium] › tests/e2e/s2-storage-fence.spec.ts:116:1 › counter and focus admissions share one authority across concurrent browser transactions (213ms)
+  ✓  2 [webkit] › tests/e2e/s2-storage-fence.spec.ts:9:1 › real S1 storage rejects a tracking flush after cutover and retains exact captured WAL (1.2s)
+  ✓  6 [webkit] › tests/e2e/s2-storage-fence.spec.ts:38:1 › an uncooperative older connection delays cutover; its final committed write is preserved (757ms)
+  ✓  7 [webkit] › tests/e2e/s2-storage-fence.spec.ts:73:1 › causal local admission serializes real browser transactions and preserves an action across rollback (397ms)
+  ✓  8 [webkit] › tests/e2e/s2-storage-fence.spec.ts:116:1 › counter and focus admissions share one authority across concurrent browser transactions (380ms)
+
+  8 passed (9.1s)
