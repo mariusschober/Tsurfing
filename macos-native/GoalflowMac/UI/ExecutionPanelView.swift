@@ -16,6 +16,10 @@ enum MacCloudState: Equatable {
 final class ExecutionViewModel: ObservableObject {
     @Published var task: GoalflowTask?
     @Published var execution: ExecutionState?
+    @Published var sharedFocusSession: SharedFocusSessionRecord?
+    /// A focus action is kept out of the visible state until its tracking
+    /// mutation has been committed to the local sync WAL.
+    @Published var sharedFocusActionPending = false
     @Published var remainingSeconds: Int = 0
     @Published var overtimeSeconds: Int = 0
     @Published var isPaused: Bool = false
@@ -126,7 +130,7 @@ final class ExecutionViewModel: ObservableObject {
             if expired { self?.sound.alarm(loop: true) }
         }.store(in: &cancellables)
     }
-    func restore() {
+    func restore(allowLegacyFocusBootstrap: Bool = false) {
         do {
             let today = todayString()
             let loadedGoals = try goalStore.loadAll()
@@ -136,20 +140,47 @@ final class ExecutionViewModel: ObservableObject {
             let loadedCompletedCount = try provider.completedCount(today: today)
             let loadedQueueCount = try provider.queueCount(today: today)
             let loadedGate: PlanningGate
-            let loadedTask: GoalflowTask?
+            let queueTask: GoalflowTask?
+            let allTasks: [GoalflowTask]
             if gateEnabled {
                 let tasks = try provider.taskStore.loadAll()
+                allTasks = tasks
                 let plan = try dailyPlanStore.load(for: today)
                 loadedGate = getPlanningGate(tasks: tasks, today: today, dailyPlan: plan)
-                if case .ready(let queue) = loadedGate { loadedTask = queue.first }
-                else { loadedTask = nil }
+                if case .ready(let queue) = loadedGate { queueTask = queue.first }
+                else { queueTask = nil }
             } else {
-                loadedTask = try provider.fetchCurrent()
-                loadedGate = loadedTask.map { .ready(queue: [$0]) } ?? .empty
+                allTasks = try provider.taskStore.loadAll()
+                queueTask = try provider.fetchCurrent()
+                loadedGate = queueTask.map { .ready(queue: [$0]) } ?? .empty
             }
-            var loadedExecution = try store.load()
+            let loadedShared = try syncEngine.loadTrackingFocusSession()
+            // The shared tracking projection is authoritative once present.
+            // Keep the legacy file as a migration fallback only when no
+            // shared record exists; spelling this out also keeps `try` from
+            // being hidden inside a nil-coalescing expression.
+            var loadedExecution: ExecutionState?
+            if let loadedShared {
+                loadedExecution = loadedShared.toExecutionState()
+            } else {
+                loadedExecution = try store.load()
+            }
+            // A valid open shared session outranks the queue head. The timer
+            // may have been started on another client after this machine's
+            // queue order changed, and selecting the head would otherwise
+            // clear a valid session or display the wrong commitment.
+            let sharedTask = loadedShared.flatMap { shared -> GoalflowTask? in
+                guard shared.phase == .active || shared.phase == .paused else { return nil }
+                return allTasks.first { $0.id == shared.taskId && $0.isOpen }
+            }
+            let loadedTask = sharedTask ?? queueTask
             if let session = loadedExecution,
                loadedTask?.id != session.taskId || loadedTask?.isOpen != true {
+                try store.clear()
+                loadedExecution = nil
+            }
+            if let shared = loadedShared,
+               (shared.phase == .stopped || shared.phase == .completed || loadedTask?.id != shared.taskId || loadedTask?.isOpen != true) {
                 try store.clear()
                 loadedExecution = nil
             }
@@ -163,9 +194,16 @@ final class ExecutionViewModel: ObservableObject {
             gate = loadedGate
             task = loadedTask
             execution = loadedExecution
+            sharedFocusSession = loadedShared
+            if loadedShared != nil, let loadedExecution { try store.save(loadedExecution) }
             localError = nil
             configureTimer()
             checkCalendarCollision()
+            if allowLegacyFocusBootstrap, loadedShared == nil, let legacy = loadedExecution,
+               legacy.phase == .active || legacy.phase == .paused,
+               let recovered = sharedRecord(from: legacy) {
+                persistSharedRecord(recovered, mirror: legacy)
+            }
         } catch {
             localError = "Local data needs attention: \(error.localizedDescription)"
         }
@@ -185,6 +223,38 @@ final class ExecutionViewModel: ObservableObject {
 
     private func clearLocalFailure() {
         localError = nil
+    }
+
+    private func sharedRecord(from state: ExecutionState, now: Date? = nil) -> SharedFocusSessionRecord? {
+        let current = now ?? clock.now()
+        return sharedFocusSessionRecord(from: state, now: current)
+    }
+
+    private func commitSharedRecord(_ record: SharedFocusSessionRecord, mirror: ExecutionState?) async throws {
+        // Queue the action before exposing it to the view. If the app exits
+        // while a foreground pull holds the sync gate, the action remains in
+        // sync.json and will be pushed on the next launch.
+        try await syncEngine.stageTrackingFocusSession(record)
+        if let mirror { try store.save(mirror) }
+        sharedFocusSession = record
+        execution = mirror
+        if let mirror { timer.start(state: mirror) } else { timer.stop() }
+    }
+
+    private func persistSharedRecord(_ record: SharedFocusSessionRecord, mirror: ExecutionState? = nil) {
+        guard !sharedFocusActionPending else { return }
+        let nextExecution = mirror ?? record.toExecutionState()
+        sharedFocusActionPending = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.sharedFocusActionPending = false }
+            do {
+                try await self.commitSharedRecord(record, mirror: nextExecution)
+                self.clearLocalFailure()
+            } catch {
+                self.reportLocalFailure(error)
+            }
+        }
     }
 
     func reportCaptureStartFailure(_ error: Error) {
@@ -292,7 +362,7 @@ final class ExecutionViewModel: ObservableObject {
         do {
             try await syncEngine.synchronize()
             cloudError = nil
-            restore()
+            restore(allowLegacyFocusBootstrap: true)
         } catch {
             cloudError = error.localizedDescription
         }
@@ -377,6 +447,9 @@ final class ExecutionViewModel: ObservableObject {
             _ = try localBreakdown.breakdown(taskId: t.id, children: breakdownChildren)
             // Clear focus if breaking current active task
             if execution?.taskId == t.id {
+                if let shared = sharedFocusSession, let stopped = shared.stopped(at: clock.now()) {
+                    persistSharedRecord(stopped)
+                }
                 try store.clear()
                 execution = nil
                 timer.stop()
@@ -419,7 +492,9 @@ final class ExecutionViewModel: ObservableObject {
 
     func startBreak(durationMinutes: Int?) {
         if let e = execution, e.isActive {
-            if let paused = e.paused(at: clock.now()) {
+            if let shared = sharedFocusSession, let paused = shared.paused(at: clock.now()) {
+                persistSharedRecord(paused)
+            } else if let paused = e.paused(at: clock.now()) {
                 do {
                     try store.save(paused)
                     execution = paused
@@ -493,29 +568,47 @@ final class ExecutionViewModel: ObservableObject {
         return "--:--"
     }
     func action() {
-        guard let t = task else { return }
+        guard !sharedFocusActionPending, let t = task else { return }
         if execution?.isActive == true || execution?.isPaused == true { return }
-        let monotonic: UInt64? = (clock as? any MonotonicClock)?.monotonicNow
-        let state = ExecutionState(taskId: t.id, phase: .active, startedAt: clock.now(), startedAtMonotonic: monotonic, plannedDurationSeconds: t.plannedDurationSeconds)
-        do { try store.save(state); execution = state; timer.start(state: state); clearLocalFailure() }
-        catch { reportLocalFailure(error) }
+        guard let session = SharedFocusSessionRecord.start(
+            taskId: t.id,
+            plannedDurationSeconds: t.plannedDurationSeconds,
+            now: clock.now()
+        ) else {
+            reportLocalFailure(SyncError.validation("The focus session could not be created safely."))
+            return
+        }
+        persistSharedRecord(session)
     }
     func pause() {
+        guard !sharedFocusActionPending else { return }
         guard let e = execution, e.isActive else { return }
-        guard let next = e.paused(at: clock.now()) else { return }
-        do { try store.save(next); execution = next; timer.reflectPause(next); clearLocalFailure() }
-        catch { reportLocalFailure(error) }
+        if let shared = sharedFocusSession, let next = shared.paused(at: clock.now()) {
+            persistSharedRecord(next)
+        } else if let next = e.paused(at: clock.now()) {
+            do { try store.save(next); execution = next; timer.reflectPause(next); clearLocalFailure() }
+            catch { reportLocalFailure(error) }
+        }
     }
     func resume() {
+        guard !sharedFocusActionPending else { return }
         guard let e = execution, e.isPaused else { return }
-        guard let next = e.resumed(at: clock.now()) else { return }
-        do { try store.save(next); execution = next; timer.reflectResume(next); clearLocalFailure() }
-        catch { reportLocalFailure(error) }
+        if let shared = sharedFocusSession, let next = shared.resumed(at: clock.now()) {
+            persistSharedRecord(next)
+        } else if let next = e.resumed(at: clock.now()) {
+            do { try store.save(next); execution = next; timer.reflectResume(next); clearLocalFailure() }
+            catch { reportLocalFailure(error) }
+        }
     }
     func extend(by seconds: Int) {
-        guard let e = execution, let next = e.extended(by: seconds) else { return }
-        do { try store.save(next); execution = next; timer.reflectExtend(next); clearLocalFailure() }
-        catch { reportLocalFailure(error) }
+        guard !sharedFocusActionPending else { return }
+        guard execution != nil else { return }
+        if let shared = sharedFocusSession, let next = shared.extended(by: seconds, now: clock.now()) {
+            persistSharedRecord(next)
+        } else if let e = execution, let next = e.extended(by: seconds) {
+            do { try store.save(next); execution = next; timer.reflectExtend(next); clearLocalFailure() }
+            catch { reportLocalFailure(error) }
+        }
     }
     func add5() { extend(by: 5*60) }; func add15() { extend(by: 15*60) }; func add30() { extend(by: 30*60) }
 
@@ -523,7 +616,7 @@ final class ExecutionViewModel: ObservableObject {
 
     var holdDuration: TimeInterval { (task?.isFrog == true) ? 5.0 : 3.0 }
     func beginHold() {
-        guard let t = task, execution != nil, !holding else { return }
+        guard !sharedFocusActionPending, let t = task, execution != nil, !holding else { return }
         holdController = CompletionHoldController(isFrog: t.isFrog, clock: clock)
         holdController?.start(at: clock.now())
         holding = true; holdProgress = 0
@@ -556,27 +649,37 @@ final class ExecutionViewModel: ObservableObject {
         }
     }
     private func confirmCompletion() {
-        guard let t = task, let exec = execution else { return }
+        guard !sharedFocusActionPending, let t = task, let exec = execution else { return }
         let elapsed = exec.elapsedSeconds(now: clock.now())
         let actual = max(1, Int(ceil(Double(elapsed) / 60.0)))
-        do {
-            let completed: GoalflowTask
-            completed = try provider.completeTask(id: t.id, actualDurationMinutes: actual, flowState: nil)
-            pendingCompletedId = completed.id
-            try store.clear(); timer.stop(); execution = nil
-            sound.complete(frog: t.isFrog)
-            withAnimation(.easeOut(duration: 0.3)) { showReward = true }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { [weak self] in self?.showReward = false; self?.flowPickerVisible = true }
-            haptic(2)
-            task = try provider.fetchCurrent()
-            completedTodayCount = try provider.completedCount(today: todayString())
-            queueCount = try provider.queueCount(today: todayString())
-            clearLocalFailure()
-        } catch {
-            let message = "Local change was not confirmed: \(error.localizedDescription)"
-            holdProgress = 0; holding = false; holdController?.cancel()
-            restore()
-            localError = message
+        let completionTime = clock.now()
+        let completedSession = sharedFocusSession?.completed(at: completionTime)
+            ?? sharedRecord(from: exec, now: completionTime)?.completed(at: completionTime)
+        sharedFocusActionPending = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.sharedFocusActionPending = false }
+            do {
+                if let completedSession {
+                    try await self.commitSharedRecord(completedSession, mirror: nil)
+                }
+                let completed = try self.provider.completeTask(id: t.id, actualDurationMinutes: actual, flowState: nil)
+                self.pendingCompletedId = completed.id
+                try self.store.clear(); self.timer.stop(); self.execution = nil
+                self.sound.complete(frog: t.isFrog)
+                withAnimation(.easeOut(duration: 0.3)) { self.showReward = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { [weak self] in self?.showReward = false; self?.flowPickerVisible = true }
+                self.haptic(2)
+                self.task = try self.provider.fetchCurrent()
+                self.completedTodayCount = try self.provider.completedCount(today: self.todayString())
+                self.queueCount = try self.provider.queueCount(today: self.todayString())
+                self.clearLocalFailure()
+            } catch {
+                let message = "Local change was not confirmed: \(error.localizedDescription)"
+                self.holdProgress = 0; self.holding = false; self.holdController?.cancel()
+                self.restore()
+                self.localError = message
+            }
         }
     }
     func selectFlow(_ flow: FlowState) {
@@ -723,11 +826,11 @@ struct ExecutionPanelView: View {
             }
             if let task = vm.task, task.isFrog { FrogBadge(compact: true) }
             Menu {
-                Button(vm.isPaused ? "Resume" : "Pause") { if vm.isPaused { vm.resume() } else { vm.pause() } }.disabled(!(vm.isActive || vm.isPaused))
+                Button(vm.isPaused ? "Resume" : "Pause") { if vm.isPaused { vm.resume() } else { vm.pause() } }.disabled(vm.sharedFocusActionPending || !(vm.isActive || vm.isPaused))
                 Divider()
-                Button("+5 min") { vm.add5() }.disabled(vm.execution == nil)
-                Button("+15 min") { vm.add15() }.disabled(vm.execution == nil)
-                Button("+30 min") { vm.add30() }.disabled(vm.execution == nil)
+                Button("+5 min") { vm.add5() }.disabled(vm.sharedFocusActionPending || vm.execution == nil)
+                Button("+15 min") { vm.add15() }.disabled(vm.sharedFocusActionPending || vm.execution == nil)
+                Button("+30 min") { vm.add30() }.disabled(vm.sharedFocusActionPending || vm.execution == nil)
                 Divider()
                 Button("Toggle Frog") { vm.toggleFrog() }
                 #if DEBUG
@@ -885,19 +988,19 @@ struct ExecutionPanelView: View {
                                 Button(action: { vm.resume() }) {
                                     HStack(spacing: 6) { Image(systemName: "play.fill").font(.system(size: 11, weight: .bold)); Text("Resume").font(.system(size: 12, weight: .bold, design: .rounded)) }
                                     .foregroundStyle(.white).padding(.horizontal, 14).padding(.vertical, 10).background(Capsule().fill(Color.green)).shadow(color: Color.green.opacity(0.25), radius: 8, x: 0, y: 4)
-                                }.buttonStyle(.plain).accessibilityLabel("Resume focus").accessibilityIdentifier("resume-button")
+                                }.buttonStyle(.plain).disabled(vm.sharedFocusActionPending).accessibilityLabel("Resume focus").accessibilityIdentifier("resume-button")
                             } else {
                                 Button(action: { vm.pause() }) {
                                     HStack(spacing: 6) { Image(systemName: "pause.fill").font(.system(size: 11, weight: .bold)); Text("Pause").font(.system(size: 12, weight: .bold, design: .rounded)) }
                                     .foregroundStyle(.white).padding(.horizontal, 14).padding(.vertical, 10).background(Capsule().fill(Color.orange)).shadow(color: Color.orange.opacity(0.25), radius: 8, x: 0, y: 4)
-                                }.buttonStyle(.plain).accessibilityLabel("Pause focus").accessibilityIdentifier("pause-button")
+                                }.buttonStyle(.plain).disabled(vm.sharedFocusActionPending).accessibilityLabel("Pause focus").accessibilityIdentifier("pause-button")
                             }
                         }
                         HStack(spacing: 6) {
                             ForEach([(5,"+5"),(15,"+15"),(30,"+30")], id: \.0) { sec, label in
                                 Button(action: { if sec==5 { vm.add5() } else if sec==15 { vm.add15() } else { vm.add30() } }) {
                                     Text(label).font(.system(size: 11, weight: .semibold, design: .rounded)).foregroundStyle(.secondary).padding(.horizontal, 8).padding(.vertical, 6).background(Capsule().fill(Color.primary.opacity(0.08)))
-                                }.buttonStyle(.plain)
+                                }.buttonStyle(.plain).disabled(vm.sharedFocusActionPending)
                             }
                         }
                         holdButton(task: task)
@@ -906,7 +1009,7 @@ struct ExecutionPanelView: View {
                     Button(action: { vm.action() }) {
                         HStack(spacing: 8) { Text("ACTION").font(.system(size: 14, weight: .heavy, design: .rounded)).tracking(1.2); Image(systemName: "arrow.right").font(.system(size: 12, weight: .bold)) }
                         .foregroundStyle(.white).padding(.horizontal, 22).padding(.vertical, 12).background(Capsule().fill(task.isFrog ? Color.green : Color(red: 0.36, green: 0.36, blue: 0.84))).shadow(color: (task.isFrog ? Color.green : Color.blue).opacity(0.30), radius: 10, x: 0, y: 6)
-                    }.buttonStyle(.plain).keyboardShortcut(.defaultAction).accessibilityLabel("Start focus on \(task.title)").accessibilityIdentifier("action-button").accessibilityAddTraits(.isButton)
+                    }.buttonStyle(.plain).disabled(vm.sharedFocusActionPending).keyboardShortcut(.defaultAction).accessibilityLabel("Start focus on \(task.title)").accessibilityIdentifier("action-button").accessibilityAddTraits(.isButton)
                 }
             }.padding(.vertical, 4).animation(.easeInOut(duration: 0.35), value: vm.isActive).animation(.easeInOut(duration: 0.35), value: vm.isPaused).animation(.easeInOut(duration: 0.35), value: vm.isOvertime)
             HStack(spacing: 10) {
@@ -985,6 +1088,9 @@ struct ExecutionPanelView: View {
         }.frame(height: 36).animation(.easeOut(duration: 0.2), value: vm.holding)
     }
     private var isGateWall: Bool {
+        // An already running cross-client session remains actionable even if
+        // the queue head changed and the planning gate now points elsewhere.
+        if vm.execution?.isActive == true || vm.execution?.isPaused == true { return false }
         switch vm.gate {
         case .monthlyPlanningRequired, .dailyPlanningRequired: return true
         default: return false

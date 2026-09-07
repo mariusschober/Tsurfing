@@ -42,4 +42,86 @@ final class ExecutionStateTests: XCTestCase {
         // No loss if interval skips
         XCTAssertEqual(s.remainingSeconds(now: start.addingTimeInterval(15)), 285)
     }
+
+    func test_shared_active_record_reanchor_preserves_elapsed_once() throws {
+        let now = Date(timeIntervalSince1970: 1_700_000_600)
+        let elapsed = 600
+        let record = try XCTUnwrap(SharedFocusSessionRecord(
+            sessionId: "11111111-1111-4111-8111-111111111111",
+            taskId: "task-1",
+            phase: .active,
+            plannedDurationSeconds: 1_500,
+            startedAt: now,
+            elapsedSeconds: elapsed,
+            pausedAt: nil,
+            endedAt: nil,
+            updatedAt: now
+        ))
+        XCTAssertEqual(record.elapsedSeconds(at: now), elapsed)
+        XCTAssertEqual(record.elapsedSeconds(at: now.addingTimeInterval(10)), elapsed + 10)
+    }
+
+    func test_shared_paused_record_retains_owner_pause_elapsed() throws {
+        let started = Date(timeIntervalSince1970: 1_700_000_000)
+        let paused = started.addingTimeInterval(1_376)
+        let observedLater = paused.addingTimeInterval(300)
+        let record = try XCTUnwrap(SharedFocusSessionRecord(
+            sessionId: "22222222-2222-4222-8222-222222222222",
+            taskId: "task-1",
+            phase: .paused,
+            plannedDurationSeconds: 1_500,
+            startedAt: started,
+            elapsedSeconds: 1_376,
+            pausedAt: paused,
+            endedAt: nil,
+            updatedAt: observedLater
+        ))
+        XCTAssertEqual(record.elapsedSeconds(at: observedLater), 1_376)
+        XCTAssertEqual(record.remainingSeconds(at: observedLater), 124)
+        XCTAssertEqual(record.toExecutionState()?.elapsedSeconds(now: observedLater), 1_376)
+    }
+
+    func test_legacy_paused_migration_preserves_original_pause_and_elapsed() throws {
+        let started = Date(timeIntervalSince1970: 1_700_000_000)
+        let paused = started.addingTimeInterval(952)
+        let observedLater = paused.addingTimeInterval(900)
+        let legacy = ExecutionState(
+            taskId: "task-1",
+            phase: .paused,
+            startedAt: started,
+            plannedDurationSeconds: 1_800,
+            accumulatedPauseSeconds: 528,
+            lastPausedAt: paused
+        )
+        let migrated = try XCTUnwrap(sharedFocusSessionRecord(
+            from: legacy,
+            now: observedLater,
+            sessionId: "44444444-4444-4444-8444-444444444444"
+        ))
+        XCTAssertEqual(migrated.elapsedSeconds, 424)
+        XCTAssertEqual(migrated.remainingSeconds(at: observedLater), 1_376)
+        XCTAssertEqual(migrated.pausedAt, paused)
+        XCTAssertEqual(migrated.updatedAt, paused)
+    }
+
+    func test_legacy_active_migration_shifts_pause_accumulator_without_double_count() throws {
+        let started = Date(timeIntervalSince1970: 1_700_000_000)
+        let now = started.addingTimeInterval(1_500)
+        let legacy = ExecutionState(
+            taskId: "task-1",
+            phase: .active,
+            startedAt: started,
+            plannedDurationSeconds: 1_800,
+            accumulatedPauseSeconds: 300
+        )
+        let migrated = try XCTUnwrap(sharedFocusSessionRecord(
+            from: legacy,
+            now: now,
+            sessionId: "55555555-5555-4555-8555-555555555555"
+        ))
+        XCTAssertEqual(migrated.elapsedSeconds(at: now), 1_200)
+        XCTAssertEqual(migrated.startedAt, started.addingTimeInterval(300))
+        XCTAssertEqual(migrated.elapsedSeconds, 0)
+        XCTAssertEqual(migrated.updatedAt, started.addingTimeInterval(300))
+    }
 }

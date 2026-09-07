@@ -8,6 +8,7 @@ import { Modal } from './Modal';
 import { breakdownTaskWithGemini, getVisualizationPrompt, AiSubtask } from '../services/geminiService';
 import { playAlarmSound, playSelectSound } from '../utils/audioUtils';
 import { YellowPad } from './YellowPad';
+import type { FocusSessionRecord } from '../src/domain/focusSession';
 
 interface CurrentViewProps {
   currentTask: Task | null;
@@ -24,6 +25,12 @@ interface CurrentViewProps {
   amalgam?: string;
   trackBreakTime: (minutes: number) => void;
   onAwardXp: (amount: number, message: string, type?: 'reward' | 'milestone') => void;
+  focusSession?: FocusSessionRecord | null;
+  onStartFocusSession?: (taskId: string, plannedDurationSeconds: number) => void;
+  onPauseFocusSession?: () => void;
+  onResumeFocusSession?: () => void;
+  onStopFocusSession?: () => void;
+  onExtendFocusSession?: (deltaSeconds: number) => void;
   isAiEnabled?: boolean;
   circadianState?: CircadianState;
   isCircadianActive?: boolean;
@@ -260,7 +267,7 @@ const BreakOverlay: React.FC<{ duration: number, onEnd: (elapsedMinutes: number)
     );
 };
 
-export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, allTasks, completeTask, addSubtasks, onFrogEaten, deprioritizeTask, openEditModal, updateTask, hashtagConfigs, onSelectHashtag, amalgam, trackBreakTime, onAwardXp, isAiEnabled = false }) => {
+export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, allTasks, completeTask, addSubtasks, onFrogEaten, deprioritizeTask, openEditModal, updateTask, hashtagConfigs, onSelectHashtag, amalgam, trackBreakTime, onAwardXp, isAiEnabled = false, focusSession = null, onStartFocusSession, onPauseFocusSession, onResumeFocusSession, onStopFocusSession, onExtendFocusSession }) => {
     
     const [isExpiryModalOpen, setIsExpiryModalOpen] = useState(false);
     const [isFlowModalOpen, setIsFlowModalOpen] = useState(false);
@@ -335,7 +342,14 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
     const timer = useFocusTimer({
         taskDurationInMinutes: currentTask?.duration || 25, // Default to 25 if undefined
         onExpire: handleTimerExpire,
-        taskId: currentTask?.id
+        taskId: currentTask?.id,
+        sharedSession: !currentTask?.isBreak,
+        focusSession,
+        onStart: onStartFocusSession,
+        onPause: onPauseFocusSession,
+        onResume: onResumeFocusSession,
+        onStop: onStopFocusSession,
+        onExtend: onExtendFocusSession
     });
 
     const { displaySeconds, elapsedSeconds, isActive, timerType, toggleTimer, addTime, hasExpired } = timer;

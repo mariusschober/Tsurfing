@@ -78,6 +78,52 @@ describe('backup merge behavior', () => {
 });
 
 describe('durable storage failure boundaries', () => {
+  it('keeps a shared focus session while legacy tracking counters are staged', async () => {
+    installBrowserStorage();
+    const key = `tracking-focus-merge-${crypto.randomUUID()}`;
+    const focusSession = {
+      schemaVersion: 1,
+      sessionId: '11111111-1111-4111-8111-111111111111',
+      taskId: 'task-focus',
+      phase: 'active',
+      plannedDurationSeconds: 1_800,
+      startedAt: '2026-09-07T10:00:00.000Z',
+      elapsedSeconds: 0,
+      pausedAt: null,
+      endedAt: null,
+      updatedAt: '2026-09-07T10:00:00.000Z'
+    };
+    const previous = { date: '2026-09-07', planViewCount: 1, dailyPostponeCount: 0, focusSession };
+    const legacyNext = { date: '2026-09-07', planViewCount: 2, dailyPostponeCount: 0 };
+    await storageService.set(STORES.TRACKING, key, previous, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, previous, legacyNext);
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual({ ...legacyNext, focusSession });
+    await storageService.flushPendingLocalChanges(key);
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual({ ...legacyNext, focusSession });
+  });
+
+  it('does not let an explicit null legacy write erase a local focus session', async () => {
+    installBrowserStorage();
+    const key = `tracking-focus-null-${crypto.randomUUID()}`;
+    const focusSession = {
+      schemaVersion: 1,
+      sessionId: '22222222-2222-4222-8222-222222222222',
+      taskId: 'task-focus',
+      phase: 'completed',
+      plannedDurationSeconds: 1_800,
+      startedAt: '2026-09-07T10:00:00.000Z',
+      elapsedSeconds: 1_800,
+      pausedAt: null,
+      endedAt: '2026-09-07T10:30:00.000Z',
+      updatedAt: '2026-09-07T10:30:00.000Z'
+    };
+    const previous = { date: '2026-09-07', planViewCount: 1, dailyPostponeCount: 0, focusSession };
+    const legacyNext = { date: '2026-09-07', planViewCount: 2, dailyPostponeCount: 0, focusSession: null };
+    await storageService.set(STORES.TRACKING, key, previous, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, previous, legacyNext);
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual({ ...legacyNext, focusSession });
+  });
+
   it('recovers a new-day counter chain left behind before the daily reset was persisted', async () => {
     installBrowserStorage();
     const key = `tracking-rollover-${crypto.randomUUID()}`;

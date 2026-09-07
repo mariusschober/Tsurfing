@@ -23,6 +23,7 @@ import {
   type SyncMeta,
   type SyncMutation
 } from './syncProtocol';
+import { mergeTrackingFocusSession } from '../src/domain/focusSession';
 
 const BASE_DB_NAME = 'GoalflowDB';
 const ACTIVE_DB_KEY = 'goalflow_active_database_v2';
@@ -690,8 +691,14 @@ export const storageService = {
   stageLocalValue(storeName: string, key: string, previousValue: unknown, nextValue: unknown, preserveSourceTime = false): string | null {
     if (!SYNCABLE_STORES.has(storeName)) return null;
     const now = new Date().toISOString();
+    const storedValue = storeName === STORES.TRACKING
+      ? (latestWalValue(storeName, key).found ? latestWalValue(storeName, key).value : readLocalCopy(storeName, key))
+      : undefined;
+    const durableNextValue = storeName === STORES.TRACKING
+      ? mergeTrackingFocusSession(storedValue ?? previousValue, nextValue)
+      : nextValue;
     const transaction = buildStagedLocalTransaction(
-      storeName, key, previousValue, nextValue, nextWalOrder(), now, randomUuid, preserveSourceTime
+      storeName, key, previousValue, durableNextValue, nextWalOrder(), now, randomUuid, preserveSourceTime
     );
     if (!transaction) return null;
     const serialized = JSON.stringify(transaction);
@@ -724,7 +731,14 @@ export const storageService = {
         change.storeName,
         key,
         change.previousValue,
-        change.nextValue,
+        change.storeName === STORES.TRACKING
+          ? mergeTrackingFocusSession(
+            (latestWalValue(change.storeName, key).found
+              ? latestWalValue(change.storeName, key).value
+              : readLocalCopy(change.storeName, key)) ?? change.previousValue,
+            change.nextValue
+          )
+          : change.nextValue,
         baseOrder + index,
         now,
         randomUuid
@@ -780,8 +794,11 @@ export const storageService = {
         try {
           if (source === 'local' && SYNCABLE_STORES.has(storeName) && pending.length === 0) {
             const previous = await tx.objectStore(storeName).get(key);
+            const durableValue = storeName === STORES.TRACKING
+              ? mergeTrackingFocusSession(previous, value)
+              : value;
             const transaction = buildStagedLocalTransaction(
-              storeName, key, previous, value, nextWalOrder(), new Date().toISOString(), randomUuid
+              storeName, key, previous, durableValue, nextWalOrder(), new Date().toISOString(), randomUuid
             );
             if (transaction) {
               const entryKey = walKey(transaction);
@@ -813,8 +830,11 @@ export const storageService = {
         }
       } else {
         if (source === 'local' && SYNCABLE_STORES.has(storeName) && pending.length === 0) {
+          const durableValue = storeName === STORES.TRACKING
+            ? mergeTrackingFocusSession(readLocalCopy(storeName, key), value)
+            : value;
           const transaction = buildStagedLocalTransaction(
-            storeName, key, readLocalCopy(storeName, key), value,
+            storeName, key, readLocalCopy(storeName, key), durableValue,
             nextWalOrder(), new Date().toISOString(), randomUuid
           );
           if (transaction) {

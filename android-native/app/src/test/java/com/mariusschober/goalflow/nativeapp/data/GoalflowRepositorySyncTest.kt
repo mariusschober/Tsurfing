@@ -67,6 +67,30 @@ class GoalflowRepositorySyncTest {
     }
 
     @Test
+    fun `focus actions update only the tracking singleton and preserve counters`() = runTest {
+        repository.saveRawCollection(
+            "tracking",
+            "{\"date\":\"2026-09-07\",\"planViewCount\":3,\"dailyPostponeCount\":2}"
+        )
+        val active = NativeFocusSessionRecord.start(
+            taskId = "task-a",
+            plannedDurationSeconds = 1_500L,
+            now = Instant.parse("2026-09-07T10:00:00Z"),
+            sessionId = "11111111-1111-4111-8111-111111111111"
+        )
+        repository.saveFocusSession(active)
+        val paused = active.pause(Instant.parse("2026-09-07T10:05:00Z"))
+        repository.saveFocusSession(paused)
+
+        val payload = org.json.JSONObject(database.rawCollectionDao().get("tracking")!!.payload)
+        assertEquals(3, payload.getInt("planViewCount"))
+        assertEquals(2, payload.getInt("dailyPostponeCount"))
+        assertEquals(paused.toJson().toString(), payload.getJSONObject("focusSession").toString())
+        assertEquals(paused, repository.trackingFocusSession())
+        assertTrue(repository.pendingSyncMutations().all { it.entityType == "tracking" && it.entityId == "singleton" })
+    }
+
+    @Test
     fun `repository uses injected local zone for date-sensitive transitions`() = runTest {
         val provider = FixedGoalflowTimeProvider(
             Clock.fixed(Instant.parse("2024-02-29T23:59:59Z"), ZoneId.of("UTC")),

@@ -130,6 +130,8 @@ import com.mariusschober.goalflow.nativeapp.domain.BreakdownChild
 import com.mariusschober.goalflow.nativeapp.domain.PlanningGate
 import com.mariusschober.goalflow.nativeapp.domain.SchedulePrecision
 import com.mariusschober.goalflow.nativeapp.data.NATIVE_RAW_COLLECTION_TYPES
+import com.mariusschober.goalflow.nativeapp.data.NativeFocusSessionPhase
+import com.mariusschober.goalflow.nativeapp.data.NativeFocusSessionRecord
 import com.mariusschober.goalflow.nativeapp.data.BackupRestoreMode
 import com.mariusschober.goalflow.nativeapp.data.NativeBackupPreview
 import com.mariusschober.goalflow.nativeapp.sync.NativeAuthClient
@@ -141,6 +143,7 @@ import com.mariusschober.goalflow.nativeapp.sync.PendingEmailOtpAttempt
 import com.mariusschober.goalflow.nativeapp.time.datePickerMillisToLocalDate
 import com.mariusschober.goalflow.nativeapp.time.localDateToDatePickerMillis
 import java.time.LocalDate
+import java.time.Instant
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -192,6 +195,7 @@ fun GoalflowRoot(
     val circadian by goalflowViewModel.circadian.collectAsStateWithLifecycle()
     val trueNorth by goalflowViewModel.trueNorth.collectAsStateWithLifecycle()
     val amalgam by goalflowViewModel.amalgam.collectAsStateWithLifecycle()
+    val focusSession by goalflowViewModel.focusSession.collectAsStateWithLifecycle()
     val today by goalflowViewModel.today.collectAsStateWithLifecycle()
     val gate by goalflowViewModel.planningGate.collectAsStateWithLifecycle()
     val currentTask by goalflowViewModel.currentTask.collectAsStateWithLifecycle()
@@ -234,7 +238,6 @@ fun GoalflowRoot(
     val unresolvedConflicts = conflicts.filter { it.status !in setOf("resolved", "resolving_local") }
     var circadianOpen by rememberSaveable { mutableStateOf(false) }
     var focusTask by remember { mutableStateOf<GoalflowTask?>(null) }
-    var focusStartedAt by remember { mutableStateOf<Long?>(null) }
     fun readUsableStoredSession() = application.sessionStore.read()?.takeIf {
         application.sessionStore.getPendingEmailOtp() == null
             && application.sessionStore.getPendingOAuth()?.flow !in setOf(
@@ -268,17 +271,51 @@ fun GoalflowRoot(
         sessionStorageProblem?.let { snackbarHostState.showSnackbar(it, duration = SnackbarDuration.Long) }
     }
 
-    // Room is the source of truth for recovery. Query it directly before
-    // observing the task stream so an initial empty StateFlow value cannot
-    // erase a valid session during process recreation.
+    // The tracking singleton is the shared source of truth. The local store
+    // is updated only as a recovery mirror and never wins over a pulled
+    // terminal or missing cloud session.
+    LaunchedEffect(focusSession, tasks) {
+        val shared = focusSession
+        if (shared == null || shared.phase !in setOf(NativeFocusSessionPhase.ACTIVE, NativeFocusSessionPhase.PAUSED)) {
+            if (shared?.phase in setOf(NativeFocusSessionPhase.STOPPED, NativeFocusSessionPhase.COMPLETED)) {
+                focusTask = null
+                application.focusSessionStore.clear()
+            }
+            return@LaunchedEffect
+        }
+        val current = tasks.firstOrNull { it.id == shared.taskId }
+        if (current == null || current.status != com.mariusschober.goalflow.nativeapp.domain.TaskStatus.OPEN || current.deletedAt != null) {
+            focusTask = null
+            return@LaunchedEffect
+        }
+        application.focusSessionStore.saveRecord(shared)
+        focusTask = current
+    }
+
+    // A legacy anchor may still be useful for an explicitly offline native
+    // install. It is converted with its original wall-clock instant and is
+    // never used when cloud synchronization can reconcile a shared record.
     LaunchedEffect(Unit) {
-        val storedFocus = application.focusSessionStore.read() ?: return@LaunchedEffect
-        val storedTask = application.repository.taskSnapshot(storedFocus.taskId)
-        if (storedTask == null || storedTask.status.name != "OPEN" || storedTask.deletedAt != null) {
+        if (NativeConfig.canUseCloud || focusSession != null) return@LaunchedEffect
+        val legacy = application.focusSessionStore.read() ?: return@LaunchedEffect
+        val storedTask = application.repository.taskSnapshot(legacy.taskId)
+            ?: return@LaunchedEffect
+        if (storedTask.status != com.mariusschober.goalflow.nativeapp.domain.TaskStatus.OPEN || storedTask.deletedAt != null) {
             application.focusSessionStore.clear()
-        } else {
-            focusStartedAt = storedFocus.startedAtMillis
+            return@LaunchedEffect
+        }
+        val planned = org.json.JSONObject(storedTask.extraJson).optInt("duration", 25).coerceIn(1, 1_440) * 60L
+        val recovered = NativeFocusSessionRecord.start(
+            taskId = storedTask.id,
+            plannedDurationSeconds = planned,
+            now = Instant.ofEpochMilli(legacy.startedAtMillis)
+        )
+        try {
+            application.repository.saveFocusSession(recovered)
+            application.focusSessionStore.saveRecord(recovered)
             focusTask = storedTask
+        } catch (_: Exception) {
+            // The mirror remains available for the next explicitly offline recovery attempt.
         }
     }
 
@@ -338,25 +375,6 @@ fun GoalflowRoot(
                 telegramStatusMessage = it.message ?: "Telegram status could not be loaded."
             }
         telegramWorking = false
-    }
-
-    LaunchedEffect(tasks) {
-        val storedFocus = application.focusSessionStore.read() ?: return@LaunchedEffect
-        // The first StateFlow value can be an empty placeholder. Only update
-        // recovery state once the task stream actually contains this task.
-        val currentTask = tasks.firstOrNull { it.id == storedFocus.taskId } ?: return@LaunchedEffect
-        if (currentTask.status.name != "OPEN" || currentTask.deletedAt != null) {
-            application.focusSessionStore.clear()
-            if (focusTask?.id == storedFocus.taskId) {
-                focusTask = null
-                focusStartedAt = null
-            }
-        } else if (focusTask?.id == storedFocus.taskId) {
-            focusTask = currentTask
-        } else if (focusTask == null) {
-            focusStartedAt = storedFocus.startedAtMillis
-            focusTask = currentTask
-        }
     }
 
     fun closeCapture() {
@@ -584,8 +602,10 @@ fun GoalflowRoot(
                         onPlanning = { destination = RootDestination.PLANNING },
                         onFocus = {
                             localView.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                            focusStartedAt = application.focusSessionStore.beginOrResume(it.id).startedAtMillis
-                            focusTask = it
+                            goalflowViewModel.startFocus(it) { session ->
+                                application.focusSessionStore.saveRecord(session)
+                                focusTask = it
+                            }
                         },
                         onComplete = { task ->
                             goalflowViewModel.completeTask(task) {
@@ -914,18 +934,24 @@ fun GoalflowRoot(
     focusTask?.let { task ->
         FocusTimerSheet(
             task = task,
-            startedAtMillis = focusStartedAt
-                ?: application.focusSessionStore.read()?.startedAtMillis
-                ?: System.currentTimeMillis(),
+            session = focusSession?.takeIf { it.taskId == task.id },
             error = error,
             onBreakDown = { breakdownTask = it },
+            onPause = { goalflowViewModel.pauseFocus { application.focusSessionStore.saveRecord(it) } },
+            onResume = { goalflowViewModel.resumeFocus { application.focusSessionStore.saveRecord(it) } },
+            onStop = {
+                goalflowViewModel.stopFocus {
+                    application.focusSessionStore.clear()
+                    focusTask = null
+                }
+            },
+            onExtend = { seconds -> goalflowViewModel.extendFocus(seconds) { application.focusSessionStore.saveRecord(it) } },
             onComplete = { actualDuration, flowState ->
-                goalflowViewModel.completeTask(task, actualDuration, flowState) {
+                goalflowViewModel.completeFocus(task, actualDuration, flowState) {
                     // Keep the timer anchor until the task transaction has
                     // succeeded. A storage failure must remain recoverable.
                     application.focusSessionStore.clear()
                     focusTask = null
-                    focusStartedAt = null
                     localView.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                     application.soundController.playCompletion(task.isFrog)
                 }
@@ -987,7 +1013,6 @@ fun GoalflowRoot(
                     breakdownTask = null
                     application.focusSessionStore.clear()
                     focusTask = null
-                    focusStartedAt = null
                 }
             }
         )
@@ -1470,26 +1495,34 @@ private fun CircadianStatusCard(
 @Composable
 private fun FocusTimerSheet(
     task: GoalflowTask,
-    startedAtMillis: Long,
+    session: NativeFocusSessionRecord?,
     error: String?,
     onBreakDown: (GoalflowTask) -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onStop: () -> Unit,
+    onExtend: (Long) -> Unit,
     onComplete: (actualDurationMinutes: Int, flowState: String?) -> Unit
 ) {
-    val startedAt = rememberSaveable(task.id, startedAtMillis) { startedAtMillis }
-    var now by remember(task.id) { mutableStateOf(System.currentTimeMillis()) }
+    var now by remember(task.id, session?.sessionId) { mutableStateOf(System.currentTimeMillis()) }
     var flowState by rememberSaveable(task.id) { mutableStateOf("") }
     var completing by rememberSaveable(task.id) { mutableStateOf(false) }
-    val plannedMinutes = runCatching {
-        org.json.JSONObject(task.extraJson).optInt("duration", 25)
-    }.getOrDefault(25).coerceIn(1, 1_440)
-    val elapsedSeconds = ((now - startedAt) / 1_000L).coerceAtLeast(0L)
+    val fallbackMinutes = runCatching { org.json.JSONObject(task.extraJson).optInt("duration", 25) }
+        .getOrDefault(25).coerceIn(1, 1_440)
+    val instantNow = Instant.ofEpochMilli(now)
+    val plannedMinutes = ((session?.plannedDurationSeconds ?: fallbackMinutes * 60L) / 60L).toInt().coerceIn(1, 1_440)
+    val elapsedSeconds = session?.elapsedSeconds(instantNow) ?: 0L
     val plannedSeconds = plannedMinutes * 60L
+    val remainingSeconds = session?.remainingSeconds(instantNow) ?: plannedSeconds.toLong()
+    val overtimeSeconds = session?.overtimeSeconds(instantNow) ?: 0L
     val progress = (elapsedSeconds.toFloat() / plannedSeconds.toFloat()).coerceIn(0f, 1f)
     val minutes = elapsedSeconds / 60L
     val seconds = elapsedSeconds % 60L
+    val sessionActive = session?.phase == NativeFocusSessionPhase.ACTIVE
+    val isPaused = session?.phase == NativeFocusSessionPhase.PAUSED
 
-    LaunchedEffect(task.id, startedAt) {
-        while (isActive) {
+    LaunchedEffect(task.id, session?.sessionId, session?.updatedAt, sessionActive) {
+        while (isActive && sessionActive) {
             now = System.currentTimeMillis()
             delay(1_000L)
         }
@@ -1523,9 +1556,10 @@ private fun FocusTimerSheet(
                 textAlign = TextAlign.Center
             )
             Text(
-                String.format(Locale.ROOT, "%02d:%02d", minutes, seconds),
+                if (overtimeSeconds > 0L) String.format(Locale.ROOT, "+%02d:%02d", overtimeSeconds / 60L, overtimeSeconds % 60L)
+                else String.format(Locale.ROOT, "%02d:%02d", remainingSeconds / 60L, remainingSeconds % 60L),
                 style = MaterialTheme.typography.displayLarge,
-                color = goalflowFocusAccent(),
+                color = if (overtimeSeconds > 0L) MaterialTheme.colorScheme.error else goalflowFocusAccent(),
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
             )
@@ -1536,12 +1570,31 @@ private fun FocusTimerSheet(
                 trackColor = Color.White.copy(alpha = 0.28f)
             )
             Text(
-                if (elapsedSeconds >= plannedSeconds) "Planned focus reached. Finish when the commitment is truly done."
-                else "$plannedMinutes minute target · keep the next action small and visible.",
+                when {
+                    isPaused -> "Paused · elapsed time is frozen until you resume."
+                    overtimeSeconds > 0L -> "Planned focus reached. Finish when the commitment is truly done."
+                    else -> "$plannedMinutes minute target · keep the next action small and visible."
+                },
                 color = goalflowFocusOnSurface(),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
+            if (sessionActive || isPaused) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = if (isPaused) onResume else onPause,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (isPaused) "Resume" else "Pause")
+                    }
+                    OutlinedButton(onClick = onStop, modifier = Modifier.weight(1f)) { Text("Stop") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    listOf(300L to "+5 min", 900L to "+15 min", 1_800L to "+30 min").forEach { (delta, label) ->
+                        OutlinedButton(onClick = { onExtend(delta) }, modifier = Modifier.weight(1f)) { Text(label) }
+                    }
+                }
+            }
             Text("How did the session feel?", style = MaterialTheme.typography.labelLarge, color = goalflowFocusOnSurface())
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                 listOf("distracted" to "Distracted", "good" to "Good", "flow" to "Flow").forEach { (value, label) ->
@@ -1575,7 +1628,7 @@ private fun FocusTimerSheet(
                 Text("Stop and break down")
             }
             Text(
-                "This session stays open until you complete it or turn it into smaller actions.",
+                "This session stays open until you complete it, pause it, or stop it.",
                 style = MaterialTheme.typography.bodySmall,
                 color = goalflowFocusOnSurface(),
                 textAlign = TextAlign.Center

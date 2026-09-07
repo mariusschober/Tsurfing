@@ -4,8 +4,18 @@ import { useState, useEffect, useCallback, useRef, useMemo, type Dispatch, type 
 import { Task, Stats, Session, Goal, UserProgress, FlowState, HashtagConfig, Habit, AccountabilityConfig, TrueNorthGoal, GamificationEvent, CircadianState } from '../types';
 import { getTodayYYYYMMDD } from '../utils/dateUtils';
 import { parseTitleForExtras } from '../utils/timeAndTagParser';
-import { storageService, STORES } from '../services/storage';
+import { storageService, STORES, type LocalValueChange } from '../services/storage';
 import { assertSchedule, compareQueueCandidates } from '../src/domain/scheduling';
+import {
+  completeFocusSession,
+  extendFocusSession,
+  normalizeFocusSession,
+  pauseFocusSession,
+  resumeFocusSession,
+  startFocusSession,
+  stopFocusSession,
+  type FocusSessionRecord
+} from '../src/domain/focusSession';
 import { v5 as uuidv5 } from 'uuid';
 
 const HABIT_TASK_NAMESPACE = 'c3e4bcbb-9f56-4ff5-a3a8-9f7478284169';
@@ -38,6 +48,7 @@ interface DailyTracking {
     date: string;
     planViewCount: number;
     dailyPostponeCount: number;
+    focusSession?: FocusSessionRecord | null;
 }
 
 export interface DurableDailyPlan {
@@ -210,7 +221,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
   const [stats, setStats, allStats, setAllStatsFromStorage, getAllStats] = useDurableDailyStats(USER_KEY);
   
   const [userProgress, setUserProgress, setUserProgressFromStorage, getUserProgress] = useDurableStoredState<UserProgress>({ level: 1, xp: 0, xpToNextLevel: BASE_XP_FOR_LEVEL }, STORES.PROGRESS, USER_KEY);
-  const [dailyTracking, setDailyTracking, setDailyTrackingFromStorage, getDailyTracking] = useDurableStoredState<DailyTracking>({ date: getTodayYYYYMMDD(), planViewCount: 0, dailyPostponeCount: 0 }, STORES.TRACKING, USER_KEY);
+  const [dailyTracking, setDailyTracking, setDailyTrackingFromStorage, getDailyTracking] = useDurableStoredState<DailyTracking>({ date: getTodayYYYYMMDD(), planViewCount: 0, dailyPostponeCount: 0, focusSession: null }, STORES.TRACKING, USER_KEY);
   const [accountabilityConfig, setAccountabilityConfig, setAccountabilityConfigFromStorage] = useDurableStoredState<AccountabilityConfig>({ enabled: false, partners: [], scope: 'all', targetHashtags: [] }, STORES.ACCOUNTABILITY, USER_KEY);
   const [circadianState, setCircadianState, setCircadianStateFromStorage, getCircadianState] = useDurableStoredState<CircadianState>({
       lastCheckIn: '', score: 0, mode: 'maintenance', metrics: { sunrise: false, sleepHours: 0, energy: 0, clarity: 0, interest: 0 }
@@ -311,7 +322,10 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
         // initial React value already uses today and is not the saved value.
         setDailyTrackingFromStorage(lDaily);
         if (lDaily.date !== today) {
-            setDailyTracking({ date: today, planViewCount: 0, dailyPostponeCount: 0 });
+            // A running focus session can span midnight. Reset only the
+            // date-scoped counters while preserving the authoritative action
+            // record, and let the storage merge keep unknown future fields.
+            setDailyTracking({ ...lDaily, date: today, planViewCount: 0, dailyPostponeCount: 0 });
         }
 
         setAccountabilityConfigFromStorage(lAccountability);
@@ -567,6 +581,56 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
       });
       setGamificationEvent({ type, amount, message });
   }, []);
+
+  const focusSession = normalizeFocusSession(dailyTracking.focusSession);
+
+  const commitFocusSession = useCallback((nextSession: FocusSessionRecord): FocusSessionRecord => {
+      const previousTracking = getDailyTracking();
+      const nextTracking: DailyTracking = { ...previousTracking, focusSession: nextSession };
+      storageService.stageLocalValue(STORES.TRACKING, USER_KEY, previousTracking, nextTracking);
+      setDailyTrackingFromStorage(nextTracking);
+      void storageService.flushPendingLocalChanges(USER_KEY).catch(error => {
+          console.error('Failed to flush the durable focus-session action.', error);
+      });
+      return nextSession;
+  }, [USER_KEY, getDailyTracking, setDailyTrackingFromStorage]);
+
+  const startFocusSessionForTask = useCallback((taskId: string, plannedDurationSeconds: number): FocusSessionRecord | null => {
+      const task = getTasks().find(candidate => candidate.id === taskId);
+      if (!task || task.completed || task.wontDo || task.deletedAt) return null;
+      const previousSession = normalizeFocusSession(getDailyTracking().focusSession);
+      if (previousSession && previousSession.taskId === taskId
+          && (previousSession.phase === 'active' || previousSession.phase === 'paused')) {
+          return previousSession;
+      }
+      return commitFocusSession(startFocusSession(taskId, plannedDurationSeconds));
+  }, [commitFocusSession, getDailyTracking, getTasks]);
+
+  const pauseFocusSessionForCurrentTask = useCallback((): FocusSessionRecord | null => {
+      const current = normalizeFocusSession(getDailyTracking().focusSession);
+      if (!current || current.phase !== 'active') return current;
+      return commitFocusSession(pauseFocusSession(current));
+  }, [commitFocusSession, getDailyTracking]);
+
+  const resumeFocusSessionForCurrentTask = useCallback((): FocusSessionRecord | null => {
+      const current = normalizeFocusSession(getDailyTracking().focusSession);
+      if (!current || current.phase !== 'paused') return current;
+      const task = getTasks().find(candidate => candidate.id === current.taskId);
+      if (!task || task.completed || task.wontDo || task.deletedAt) return current;
+      return commitFocusSession(resumeFocusSession(current));
+  }, [commitFocusSession, getDailyTracking, getTasks]);
+
+  const stopFocusSessionForCurrentTask = useCallback((): FocusSessionRecord | null => {
+      const current = normalizeFocusSession(getDailyTracking().focusSession);
+      if (!current || current.phase === 'stopped' || current.phase === 'completed') return current;
+      return commitFocusSession(stopFocusSession(current));
+  }, [commitFocusSession, getDailyTracking]);
+
+  const extendFocusSessionForCurrentTask = useCallback((deltaSeconds: number): FocusSessionRecord | null => {
+      const current = normalizeFocusSession(getDailyTracking().focusSession);
+      if (!current) return null;
+      return commitFocusSession(extendFocusSession(current, deltaSeconds));
+  }, [commitFocusSession, getDailyTracking]);
 
   const trackPlanVisit = () => {
       setDailyTracking(prev => {
@@ -879,13 +943,27 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
         xpToNextLevel: progressResult.next
     };
 
-    storageService.stageLocalValues(USER_KEY, [
+    const previousTracking = getDailyTracking();
+    const previousFocusSession = normalizeFocusSession(previousTracking.focusSession);
+    const nextFocusSession = previousFocusSession && previousFocusSession.taskId === taskId
+        && previousFocusSession.phase !== 'completed'
+        ? completeFocusSession(previousFocusSession)
+        : previousFocusSession;
+    const nextTracking: DailyTracking = nextFocusSession === previousFocusSession
+        ? previousTracking
+        : { ...previousTracking, focusSession: nextFocusSession };
+
+    const logicalChanges = [
         { storeName: STORES.TASKS, previousValue: previousTasks, nextValue: nextTasks },
         { storeName: STORES.STATS, previousValue: previousAllStats, nextValue: nextAllStats },
         { storeName: STORES.GOALS, previousValue: previousGoals, nextValue: nextGoals },
         { storeName: STORES.HABITS, previousValue: previousHabits, nextValue: nextHabits },
         { storeName: STORES.PROGRESS, previousValue: previousProgress, nextValue: nextProgress }
-    ]);
+    ] as LocalValueChange[];
+    if (nextTracking !== previousTracking) {
+        logicalChanges.push({ storeName: STORES.TRACKING, previousValue: previousTracking, nextValue: nextTracking });
+    }
+    storageService.stageLocalValues(USER_KEY, logicalChanges);
     // React only sees the completion after the complete logical action exists
     // in one read-verified WAL entry. A quota/error leaves every state untouched
     // and the completion tap retryable.
@@ -894,6 +972,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
     if (nextGoals !== previousGoals) setGoalsFromStorage(nextGoals);
     if (nextHabits !== previousHabits) setHabitsFromStorage(nextHabits);
     setUserProgressFromStorage(nextProgress);
+    if (nextTracking !== previousTracking) setDailyTrackingFromStorage(nextTracking);
     completedTaskIds.current.add(taskId);
     if (progressResult.leveledUp) setJustLeveledUp(true);
     if (dayComplete) {
@@ -902,8 +981,8 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
     void storageService.flushPendingLocalChanges(USER_KEY).catch(error => {
         console.error('Failed to flush the durable completion transaction.', error);
     });
-  }, [getAllStats, getGoals, getHabits, getTasks, getUserProgress, setAllStatsFromStorage,
-      setGoalsFromStorage, setHabitsFromStorage, setTasksFromStorage, setUserProgressFromStorage, USER_KEY]);
+  }, [getAllStats, getDailyTracking, getGoals, getHabits, getTasks, getUserProgress, setAllStatsFromStorage,
+      setDailyTrackingFromStorage, setGoalsFromStorage, setHabitsFromStorage, setTasksFromStorage, setUserProgressFromStorage, USER_KEY]);
 
   const trackBreakTime = useCallback((minutes: number) => {
       setStats(prev => ({ ...prev, totalBreakMinutes: (prev.totalBreakMinutes || 0) + minutes }));
@@ -1110,7 +1189,13 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
   ).sort((a, b) => a.dateAssigned.localeCompare(b.dateAssigned) || a.createdAt - b.createdAt), [uncompletedTasks, todayStr]);
   const recentCompletedTasks = useMemo(() => tasks.filter(t => t && t.completed && !t.deletedAt).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)).slice(0, 20), [tasks]);
   const allCompletedTasks = useMemo(() => tasks.filter(t => t && (t.completed || t.wontDo) && !t.deletedAt).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0)), [tasks]);
-  const currentTask = useMemo(() => todayTasks.length > 0 ? todayTasks[0] : null, [todayTasks]);
+  const focusedTask = useMemo(() => {
+      if (!focusSession || !['active', 'paused'].includes(focusSession.phase)) return null;
+      return uncompletedTasks.find(task => task.id === focusSession.taskId) ?? null;
+  }, [focusSession, uncompletedTasks]);
+  // A valid shared session keeps its task visible even if another client has
+  // reordered today's queue. Rendering must never stop or replace that session.
+  const currentTask = useMemo(() => focusedTask ?? (todayTasks.length > 0 ? todayTasks[0] : null), [focusedTask, todayTasks]);
 
   return {
     isLoading,
@@ -1120,6 +1205,12 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
     dailyPlans, confirmDailyPlan, clearDailyPlan,
     currentTask, todayTasks, upcomingTasks, overdueTasks, recentCompletedTasks, allCompletedTasks, 
     stats, userProgress, hashtagConfigs, accountabilityConfig, justLeveledUp, setJustLeveledUp,
+    focusSession,
+    startFocusSession: startFocusSessionForTask,
+    pauseFocusSession: pauseFocusSessionForCurrentTask,
+    resumeFocusSession: resumeFocusSessionForCurrentTask,
+    stopFocusSession: stopFocusSessionForCurrentTask,
+    extendFocusSession: extendFocusSessionForCurrentTask,
     gamificationEvent, setGamificationEvent, planningWarning, setPlanningWarning,
     trackPlanVisit, rescheduleTask, awardSessionXp,
     addTask, addSubtasks, updateTask, deleteTask, markWontDo, setFrog, moveTaskToTopToday, completeTask,

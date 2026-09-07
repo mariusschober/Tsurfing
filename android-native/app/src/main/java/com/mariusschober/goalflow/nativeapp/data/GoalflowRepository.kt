@@ -148,8 +148,37 @@ class GoalflowRepository(
     }
     val amalgamStream: Flow<String> = rawCollectionStream("amalgam").map(::parseAmalgam)
 
+    /** Raw daily tracking is intentionally exposed so the focus overlay can
+     * render the server-shaped action record without inventing a local clock
+     * anchor. */
+    val trackingStream: Flow<String?> = rawCollectionStream("tracking")
+
     fun rawCollectionStream(entityType: String): Flow<String?> =
         rawCollections.observe(entityType).map { it?.payload }
+
+    suspend fun trackingFocusSession(): NativeFocusSessionRecord? =
+        NativeFocusSessionRecord.fromTrackingPayload(rawCollections.get("tracking")?.payload)
+
+    /** Applies one focus action to the tracking singleton and queues one raw
+     * collection mutation. The ticker never calls this method. */
+    suspend fun saveFocusSession(session: NativeFocusSessionRecord) {
+        database.withTransaction {
+            val existing = rawCollections.get("tracking")?.payload
+            val root = if (existing == null) {
+                JSONObject()
+                    .put("date", timeProvider.today().toString())
+                    .put("planViewCount", 0)
+                    .put("dailyPostponeCount", 0)
+            } else {
+                val parsed = parseJsonValue(existing) as? JSONObject
+                    ?: throw IllegalArgumentException("Daily tracking is damaged; the focus action was not applied.")
+                parsed
+            }
+            root.put("focusSession", session.toJson())
+            upsertRawCollectionInTransaction("tracking", root.toString())
+        }
+        onMutation()
+    }
 
     fun planStream(localDate: String): Flow<DailyPlan?> = plans.observe(localDate).map { row -> row?.let(::toDomain) }
 

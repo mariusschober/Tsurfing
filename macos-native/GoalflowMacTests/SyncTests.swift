@@ -731,6 +731,42 @@ final class ServerConflictTests: XCTestCase {
         XCTAssertNotNil(meta.lastSuccessfulSync)
     }
 
+    func test_staging_focus_action_commits_tracking_and_outbox_before_return() async throws {
+        let suite = "goalflow.sync.focus-stage.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let metaStore = SyncMetaStore(fileURL: directory.appendingPathComponent("sync.json"), defaults: defaults)
+        let bridge = FileSyncStoreBridge(baseDir: directory, defaults: defaults)
+        let engine = SyncEngine(
+            metaStore: metaStore,
+            deviceIdStore: DeviceIdStore(defaults: defaults),
+            transport: MockSyncTransport(),
+            storeBridge: bridge
+        )
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        let session = try XCTUnwrap(SharedFocusSessionRecord.start(
+            taskId: "task-1",
+            plannedDurationSeconds: 1_500,
+            now: now,
+            sessionId: "33333333-3333-4333-8333-333333333333"
+        ))
+
+        try await engine.stageTrackingFocusSession(session)
+
+        let tracking = try XCTUnwrap(try bridge.loadValues()["tracking"] as? [String: Any])
+        let stored = try XCTUnwrap(tracking["focusSession"] as? [String: Any])
+        XCTAssertEqual(stored["sessionId"] as? String, session.sessionId)
+        XCTAssertEqual(stored["phase"] as? String, "active")
+        let meta = try metaStore.load()
+        XCTAssertEqual(meta.outbox.count, 1)
+        XCTAssertEqual(meta.outbox.first?.entityType, "tracking")
+        XCTAssertEqual(meta.outbox.first?.entityId, "singleton")
+        XCTAssertEqual(meta.outbox.first?.payload.value as? [String: Any] != nil, true)
+    }
+
     func test_cloud_resolution_without_exact_ack_preserves_local_and_cloud_sides() async throws {
         let suite = "goalflow.sync.resolve-failure.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

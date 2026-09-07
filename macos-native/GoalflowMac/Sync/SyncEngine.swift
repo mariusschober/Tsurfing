@@ -112,6 +112,74 @@ final class SyncEngine: @unchecked Sendable {
         try metaStore.bind(to: userId)
     }
 
+    /// Reads the shared focus projection from the tracking singleton. A
+    /// malformed nested record is treated as damaged local state so the
+    /// execution UI cannot silently revive a different timer anchor.
+    func loadTrackingFocusSession() throws -> SharedFocusSessionRecord? {
+        let values = try storeBridge.loadValues()
+        guard let tracking = values["tracking"] as? [String: Any],
+              let raw = tracking["focusSession"] else { return nil }
+        if raw is NSNull { return nil }
+        guard let object = raw as? [String: Any],
+              let session = SharedFocusSessionRecord(dictionary: object) else {
+            throw SyncError.corruptStorage("The shared focus session is damaged. Nothing was replaced.")
+        }
+        return session
+    }
+
+    /// Stages one action-level focus record as a normal tracking mutation.
+    /// The display ticker never calls this method; acquiring the sync gate
+    /// keeps an action from racing a pull or another local action.
+    func stageTrackingFocusSession(_ session: SharedFocusSessionRecord) async throws {
+        await gate.acquire()
+        do {
+            var meta = try metaStore.load()
+            var values = try storeBridge.loadValues()
+            let previous = values["tracking"]
+            var tracking: [String: Any]
+            if let previous {
+                guard let object = previous as? [String: Any] else {
+                    throw SyncError.corruptStorage("The daily tracking projection is damaged. Nothing was replaced.")
+                }
+                tracking = object
+                if let raw = tracking["focusSession"], !(raw is NSNull) {
+                    guard let record = raw as? [String: Any], SharedFocusSessionRecord(dictionary: record) != nil else {
+                        throw SyncError.corruptStorage("The shared focus session is damaged. Nothing was replaced.")
+                    }
+                }
+            } else {
+                tracking = [
+                    "date": Self.todayString(),
+                    "planViewCount": 0,
+                    "dailyPostponeCount": 0
+                ]
+            }
+            tracking["focusSession"] = session.toDictionary()
+            values["tracking"] = tracking
+            let now = ISO8601DateFormatter().string(from: Date())
+            guard let transaction = try buildStagedLocalTransaction(
+                storeName: "tracking",
+                userKey: meta.accountUserId ?? "unbound-local-workspace",
+                previousValue: previous,
+                nextValue: tracking,
+                order: Int(Date().timeIntervalSince1970 * 1000),
+                now: now,
+                randomUuid: { UUID().uuidString.lowercased() }
+            ) else {
+                await gate.release()
+                return
+            }
+            meta = try appendStagedTransactions(meta, transactions: [transaction], deviceId: deviceIdStore.deviceId)
+            let writes = try storeBridge.preparedWrites(values, stores: ["tracking"])
+            try metaStore.commitLocalValues(writes, nextMeta: meta)
+            NotificationCenter.default.post(name: .syncMutationCommitted, object: nil)
+            await gate.release()
+        } catch {
+            await gate.release()
+            throw error
+        }
+    }
+
     func resolveConflict(id: String, useLocal: Bool) async throws {
         await gate.acquire()
         do {
@@ -495,6 +563,14 @@ final class SyncEngine: @unchecked Sendable {
             .callIsActive,
             .dataNotAllowed
         ].contains(urlError.code)
+    }
+
+    private static func todayString() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = .current
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter.string(from: Date())
     }
 }
 

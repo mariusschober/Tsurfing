@@ -110,4 +110,57 @@ describe('tranche2 E: two-client convergence', () => {
     expect(extra.unknownField).toBe('preserve-me');
     expect(extra.newField).toBe(123);
   });
+
+  it('remote tracking payload remains authoritative when it omits focusSession', () => {
+    const focusSession = {
+      schemaVersion: 1,
+      sessionId: '11111111-1111-4111-8111-111111111111',
+      taskId: 'task-focus',
+      phase: 'paused',
+      plannedDurationSeconds: 1_800,
+      startedAt: iso(10),
+      elapsedSeconds: 92,
+      pausedAt: iso(102),
+      endedAt: null,
+      updatedAt: iso(102)
+    };
+    const current = { date: '2099-01-01', planViewCount: 1, dailyPostponeCount: 2, focusSession };
+    const legacyRemote = { date: '2099-01-01', planViewCount: 2, dailyPostponeCount: 2 };
+    const result = applyRemotePage(
+      emptySyncMeta(),
+      { tracking: current },
+      [{
+        entityType: 'tracking', entityId: 'singleton', version: 1, serverVersion: 1,
+        deviceId: 'device-b', payload: legacyRemote, deletedAt: null
+      }],
+      1,
+      'device-a',
+      iso(103)
+    );
+    // Server-side record preservation decides whether an omission is legacy
+    // and should retain focus. The pull client must apply the exact durable
+    // server payload and never hide a genuinely missing cloud field behind a
+    // stale local session.
+    expect(result.values.tracking).toEqual(legacyRemote);
+  });
+
+  it('explicit tracking focusSession null clears the shared session', () => {
+    const current = {
+      date: '2099-01-01', planViewCount: 1, dailyPostponeCount: 2,
+      focusSession: { schemaVersion: 1 }
+    };
+    const remote = { date: '2099-01-01', planViewCount: 2, dailyPostponeCount: 2, focusSession: null };
+    const result = applyRemotePage(
+      emptySyncMeta(),
+      { tracking: current },
+      [{
+        entityType: 'tracking', entityId: 'singleton', version: 1, serverVersion: 1,
+        deviceId: 'device-b', payload: remote, deletedAt: null
+      }],
+      1,
+      'device-a',
+      iso(103)
+    );
+    expect(result.values.tracking).toEqual(remote);
+  });
 });

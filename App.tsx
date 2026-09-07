@@ -71,6 +71,12 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
     recentCompletedTasks,
     allCompletedTasks,
     stats,
+    focusSession,
+    startFocusSession,
+    pauseFocusSession,
+    resumeFocusSession,
+    stopFocusSession,
+    extendFocusSession,
     userProgress,
     hashtagConfigs,
     accountabilityConfig,
@@ -624,6 +630,12 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
                 trackBreakTime={trackBreakTime}
                 onAwardXp={awardSessionXp}
                 isAiEnabled={userSettings.enableAi}
+                focusSession={focusSession}
+                onStartFocusSession={startFocusSession}
+                onPauseFocusSession={pauseFocusSession}
+                onResumeFocusSession={resumeFocusSession}
+                onStopFocusSession={stopFocusSession}
+                onExtendFocusSession={extendFocusSession}
             />
             }
             {currentView === 'current' && !dailyPlanConfirmed && (
