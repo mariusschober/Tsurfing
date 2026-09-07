@@ -1,0 +1,50 @@
+
+> tsurfing@0.4.0-beta.1 test:s1:browser
+> playwright test --config playwright.s1.config.ts --grep S1.2:|local.*retry|newer.*error --repeat-each=3
+
+[WebServer] (node:42466) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:42491) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:42517) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 18 tests using 2 workers
+
+(node:42524) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:42523) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [chromium] › tests/e2e/s1-local-storage.spec.ts:241:1 › status: an obsolete async commit read cannot overwrite a newer permanent error (1.2s)
+  ✓   2 [chromium] › tests/e2e/s1-local-storage.spec.ts:241:1 › status: an obsolete async commit read cannot overwrite a newer permanent error (1.2s)
+  ✓   4 [chromium] › tests/e2e/s1-local-storage.spec.ts:498:1 › local retry: a captured action commits after storage recovery without a cloud client (871ms)
+  ✓   3 [chromium] › tests/e2e/s1-local-storage.spec.ts:498:1 › local retry: a captured action commits after storage recovery without a cloud client (999ms)
+  ✓   5 [chromium] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error (422ms)
+  ✓   6 [chromium] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error (381ms)
+(node:42559) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:42560) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   7 [chromium] › tests/e2e/s1-local-storage.spec.ts:241:1 › status: an obsolete async commit read cannot overwrite a newer permanent error (613ms)
+  ✓   9 [chromium] › tests/e2e/s1-local-storage.spec.ts:498:1 › local retry: a captured action commits after storage recovery without a cloud client (734ms)
+  ✓   8 [webkit] › tests/e2e/s1-local-storage.spec.ts:241:1 › status: an obsolete async commit read cannot overwrite a newer permanent error (1.4s)
+  ✓  10 [chromium] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error (380ms)
+(node:42587) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  11 [webkit] › tests/e2e/s1-local-storage.spec.ts:498:1 › local retry: a captured action commits after storage recovery without a cloud client (1.2s)
+  ✓  13 [webkit] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error (686ms)
+  ✓  12 [webkit] › tests/e2e/s1-local-storage.spec.ts:241:1 › status: an obsolete async commit read cannot overwrite a newer permanent error (1.0s)
+(node:42602) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  14 [webkit] › tests/e2e/s1-local-storage.spec.ts:498:1 › local retry: a captured action commits after storage recovery without a cloud client (1.1s)
+  ✓  15 [webkit] › tests/e2e/s1-local-storage.spec.ts:241:1 › status: an obsolete async commit read cannot overwrite a newer permanent error (896ms)
+  ✓  16 [webkit] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error (631ms)
+  ✓  17 [webkit] › tests/e2e/s1-local-storage.spec.ts:498:1 › local retry: a captured action commits after storage recovery without a cloud client (972ms)
+  ✓  18 [webkit] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error (599ms)
+
+  18 passed (16.4s)

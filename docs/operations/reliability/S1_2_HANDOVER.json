@@ -1,0 +1,101 @@
+{
+  "stageId": "S1.2",
+  "status": "PASS_LOCAL",
+  "baselineCommit": "85f1c68e46c2577bb56d3cf5dbebb51fdb40673d",
+  "finalCommit": "262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d",
+  "prerequisites": [
+    {
+      "stageId": "S1",
+      "implementationCommit": "09245261b6174ec878f0296ca61682c603f54304"
+    }
+  ],
+  "changedFiles": [
+    "components/SyncStatus.tsx",
+    "tests/e2e/s1-local-storage.spec.ts"
+  ],
+  "findings": [
+    {
+      "id": "S1.2-R1",
+      "disposition": "PASS_LOCAL",
+      "summary": "Independent cloud error survives a later local failure and recovery."
+    }
+  ],
+  "commands": [
+    {
+      "command": "npm run test:s1:browser -- --grep S1.2:",
+      "commit": "85f1c68e46c2577bb56d3cf5dbebb51fdb40673d",
+      "exitCode": 1,
+      "counts": "2 failed (expected reproduction; added regression only)",
+      "evidence": "evidence/s1_2-status-baseline.log"
+    },
+    {
+      "command": "npm run verify:release",
+      "commit": "262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d",
+      "exitCode": 0,
+      "counts": "426 tests / 70 files passed",
+      "evidence": "evidence/s1_2-release.log"
+    },
+    {
+      "command": "npm run test:s1:browser -- --grep 'S1.2:|local.*retry|newer.*error' --repeat-each=3",
+      "commit": "262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d",
+      "exitCode": 0,
+      "counts": "18 passed; Chromium and WebKit",
+      "evidence": "evidence/s1_2-status-final.log"
+    }
+  ],
+  "buildIdentity": {
+    "commit": "262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d",
+    "files": {
+      "dist/client/workbox-2cde83c0.js": "608ae279c74a052d7055964c39316e482af468b4e1a1b7918670d5e254773ad2",
+      "dist/client/index.html": "9f66424e8af04ce9e6b5aa861a714b216a4e04a287f52aada8b0beaaa58c3734",
+      "dist/client/manifest.webmanifest": "ddd17754b4a575d249b07612292a7d66311f54453a49895b7cc2825786f83b50",
+      "dist/client/sw.js": "0743e7e04fc3075d5c84ba821e78579fe9d41a4d556f48662b20fa9c2367c295",
+      "dist/client/icons/apple-touch-icon.png": "f69f5f61de33604e287749f32e114ec63d025c6d74b5a49bd5f665f16f7c9a29",
+      "dist/client/icons/maskable.svg": "c994d910464613bc5d162a9e1291c25f61b385e490fe0ec8ad2c61caf243e59e",
+      "dist/client/icons/icon-192.png": "5d6e8f6fb524a8bdf2afa9386b544d2bc79b6be67daeca0b3230eab7ae77d9b1",
+      "dist/client/icons/icon.svg": "1896114e677498f9bf5cb5c829745f7efe788edd80ce48b195e68730ad6a4ac6",
+      "dist/client/icons/maskable-512.png": "0cb755972294399461d0a5d8e96f486281e1310a2da702e5a52273882e268f4d",
+      "dist/client/icons/icon-512.png": "056c42c44b0505f4210c959b6a17de9bf9bfbb50ac69773a1baa688616f4a375",
+      "dist/client/assets/inter-greek-wght-normal-CkhJZR-_.woff2": "1be3448e292fbf05ffe176fe1e43f135013d50b1e7d324ad1a558f623d3bb6f6",
+      "dist/client/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2": "ca157063339ac4ad418f214f3abfed119b0798ab4d377386ce5c9e5a7a435ebd",
+      "dist/client/assets/SettingsModal-Dpbjd224.js": "eb54f9188970e0483d66bab3e9614a6120a0d9af0ffb81c9fb8268a50f0ffc37",
+      "dist/client/assets/vendor-DJZdsJVD.js": "29059db4b3c1bd0185e6ca9ed1ce4cc53001b3e29cdb288f57ff3e94e1614024",
+      "dist/client/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2": "5c66f9e07e90c6d4ac4922cc68d60de26c17b1858e677fb5e603fce3952b3ff2",
+      "dist/client/assets/index-CC_r4PqB.js": "4d8aab3f7e6f302f3d918addfc19aeeaba357e832708cff912b4f13b83390ddb",
+      "dist/client/assets/index-CQUcnpey.css": "c01833038ea19ff643702bd38e6061f2db32e04b05cc49ae556e9e16fad5d801",
+      "dist/client/assets/react-ChIBbzMz.js": "b05d1b0254068c453f6b3f57638c49dc3f476fb2bc58fde76b3c17745f3116de",
+      "dist/client/assets/s1Harness-D8Dfgbff.js": "032a66eae943b12e8d23c1b83d29af689eb9fb5b08ada3acbbd13b57fb8154a1",
+      "dist/client/assets/drag-and-drop-CaLBcZWB.js": "8cdd67fb28df72dbbf301f66a5e7caaab24269fbb2073de01dd8ca6c1db297ca",
+      "dist/client/assets/GamificationView-BXpcz99r.js": "b50e94652fa7ff9c79706074fdba9e907ec62a5153a6489736aaef360854630e",
+      "dist/client/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2": "71d5ee93cc1e9f1d520a3a8b66456de18c7879d8df09d57fcd2eaff75fef0075",
+      "dist/client/assets/StatsView-YftWMHW0.js": "270756e2aca669974b12a7819503fe8403ee609f994071a03ccbaf047857b220",
+      "dist/client/assets/GoalsView-BLnUdP7A.js": "b3909c48a73facfe66be5a193e358413a53ea8432493f9b8e4446befc7d34305",
+      "dist/client/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2": "34b9c504cab7a73e37b746343a449132e56cf7b5481af2cb81dc74dcff25c956",
+      "dist/client/assets/vendor-CJjU_8H4.css": "259a406e116e5440ccc9c8137c48a1550942609f31628599226080e78fb1f9f5",
+      "dist/client/assets/inter-latin-wght-normal-Dx4kXJAl.woff2": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+      "dist/client/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2": "6e9e020a25f9b56d418f2c085b1d3c09725a4da23fe693a5b463064606732190"
+    }
+  },
+  "migrations": [],
+  "compatibilityNotes": [
+    "No storage or wire changes. No owner data modified."
+  ],
+  "blockers": [
+    {
+      "scope": "hosted/native rollout",
+      "status": "BLOCKED",
+      "reason": "No deployment or installation authorized by this stage."
+    }
+  ],
+  "permittedNextStage": {
+    "stageId": "S2",
+    "sourceCommit": "262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d",
+    "productionReleaseAuthorized": false
+  },
+  "evidencePaths": [
+    "evidence/s1_2-status-baseline.log",
+    "evidence/s1_2-status-corrected.log",
+    "evidence/s1_2-status-final.log",
+    "evidence/s1_2-release.log"
+  ]
+}

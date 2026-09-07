@@ -1,0 +1,93 @@
+
+> tsurfing@0.4.0-beta.1 test:s1:browser
+> playwright test --config playwright.s1.config.ts --grep S1.2:
+
+[WebServer] (node:42253) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:42282) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:42309) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 2 workers
+
+(node:42313) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:42312) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [chromium] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error (8.2s)
+  ✘  1 [webkit] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error (9.9s)
+
+
+  1) [chromium] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator: getByRole('button', { name: 'Sync error', exact: true })
+    Expected: "Immutable cloud request needs review."
+    Timeout: 7000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 7000ms
+      - waiting for getByRole('button', { name: 'Sync error', exact: true })
+
+
+      524 |     emit({ state: 'saved-locally', localRecovery: true, message: 'Local storage recovered.' });
+      525 |   }, user);
+    > 526 |   await expect(page.getByRole('button', { name: 'Sync error', exact: true })).toHaveAttribute('title', 'Immutable cloud request needs review.');
+          |                                                                               ^
+      527 | });
+      528 |
+        at /Users/schober/Projects/TSurfing/tests/e2e/s1-local-storage.spec.ts:526:79
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s1-local-storage-S1-2-loca-e9c1f-lier-unresolved-cloud-error-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s1-local-storage-S1-2-loca-e9c1f-lier-unresolved-cloud-error-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s1-local-storage-S1-2-loca-e9c1f-lier-unresolved-cloud-error-chromium/error-context.md
+
+  2) [webkit] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator: getByRole('button', { name: 'Sync error', exact: true })
+    Expected: "Immutable cloud request needs review."
+    Timeout: 7000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 7000ms
+      - waiting for getByRole('button', { name: 'Sync error', exact: true })
+
+
+      524 |     emit({ state: 'saved-locally', localRecovery: true, message: 'Local storage recovered.' });
+      525 |   }, user);
+    > 526 |   await expect(page.getByRole('button', { name: 'Sync error', exact: true })).toHaveAttribute('title', 'Immutable cloud request needs review.');
+          |                                                                               ^
+      527 | });
+      528 |
+        at /Users/schober/Projects/TSurfing/tests/e2e/s1-local-storage.spec.ts:526:79
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s1-local-storage-S1-2-loca-e9c1f-lier-unresolved-cloud-error-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s1-local-storage-S1-2-loca-e9c1f-lier-unresolved-cloud-error-webkit/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s1-local-storage-S1-2-loca-e9c1f-lier-unresolved-cloud-error-webkit/error-context.md
+
+  2 failed
+    [chromium] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error 
+    [webkit] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error 
