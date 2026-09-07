@@ -131,6 +131,22 @@ failure evidence are in the handover. Application controls, new-state readers,
 server receipts, native coordinators and atomic completion remain unconnected.
 This checkpoint does not prove cross-client causal convergence.
 
+## Local counter admission checkpoint
+
+`af60a79ca68ccc7a5a2fafa54320cc9e6a0bf427`: **PASS_LOCAL** for dormant counter admission under the
+same protected IndexedDB transaction as focus. An explicit immutable baseline
+and stable event identity produce 28/4 then 29/5 from 27/3; replay adds nothing.
+Concurrent focus extension and counter increments preserve each other's fields.
+Delayed previous-day events retain their day without changing today's projection.
+Failed projection writes roll back the event and outbox; retries reuse identity.
+Baseline mismatches and historical evidence replay fail closed.
+
+Four new unit cases and all eight Chromium/WebKit causal-storage journeys passed.
+Full Web release checks passed with 472 tests. Initial sandbox attempts could not
+bind localhost; successful authorized retries and failure logs are retained.
+This helper accepts an explicitly supplied baseline; trusted baseline acquisition,
+UI activation, day selection, server acceptance and native integration remain.
+
 ## Remaining acceptance work
 
 Implement/prove the private counter/action ledger, baseline/legacy ambiguities,

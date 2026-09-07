@@ -279,6 +279,45 @@
         "Exact original observed WAL retained; historical counter ambiguity not inferred away",
         "Historical fingerprints produced by old own-prototype-field omission may now fail closed; no attempted request was rewritten"
       ]
+    },
+    {
+      "commit": "af60a79ca68ccc7a5a2fafa54320cc9e6a0bf427",
+      "scope": "Dormant transactional browser counter admission",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "services/causalCounterCoordinator.ts",
+        "services/causalCounterCoordinator.test.ts",
+        "tests/browser/s1Harness.ts",
+        "tests/e2e/s2-storage-fence.spec.ts"
+      ],
+      "validation": [
+        {
+          "command": "npx vitest run services/causalCounterCoordinator.test.ts",
+          "exitCode": 0,
+          "testsPassed": 4
+        },
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "testsPassed": 472,
+          "environment": "localhost-enabled retry; sandbox attempt failed server binds"
+        },
+        {
+          "command": "npx playwright test --config playwright.s2.config.ts",
+          "exitCode": 0,
+          "testsPassed": 8,
+          "engines": [
+            "chromium",
+            "webkit"
+          ],
+          "environment": "localhost-enabled retry; sandbox attempt failed EPERM bind"
+        }
+      ],
+      "compatibility": [
+        "Explicit supplied baseline only; no inference from historical WAL or receipt snapshots",
+        "Local event and outbox are not server acceptance",
+        "No production activation; baseline authentication, day selection and native/server integration remain"
+      ]
     }
   ],
   "findings": [
@@ -335,7 +374,13 @@
     "evidence/s2-admission-unit.log",
     "evidence/s2-admission-release.log",
     "evidence/s2-admission-identifiers.log",
-    "evidence/s2-admission-browser-final.log"
+    "evidence/s2-admission-browser-final.log",
+    "evidence/s2-counter-admission-unit.log",
+    "evidence/s2-counter-admission-lint.log",
+    "evidence/s2-counter-admission-browser.log",
+    "evidence/s2-counter-admission-browser-final.log",
+    "evidence/s2-counter-admission-release.log",
+    "evidence/s2-counter-admission-release-final.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"
