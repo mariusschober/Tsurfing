@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { type SyncState } from '../services/cloudSync';
 import { storageService, STORES } from '../services/storage';
 
 interface StatusDetail {
   state: SyncState;
+  userKey?: string;
   lastSuccessfulSync?: string;
   conflictCount?: number;
   message?: string;
@@ -13,18 +14,76 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
   const [status, setStatus] = useState<StatusDetail>({ state: navigator.onLine ? 'saved-locally' : 'offline' });
   const [conflicts, setConflicts] = useState<Array<{ id: string; entityType: string; entityId: string; localPayload?: any }>>([]);
   const [open, setOpen] = useState(false);
+  const renderedGeneration = useRef(-1);
+  const pendingSynced = useRef<{ detail: StatusDetail; generation: number } | null>(null);
 
   useEffect(() => {
+    let stateRevision = 0;
     const onState = async (event: Event) => {
       const detail = (event as CustomEvent<StatusDetail>).detail;
-      setStatus(detail);
+      if (detail.userKey !== userKey) return;
+      const revision = ++stateRevision;
+      if (detail.state === 'synced') {
+        const snapshot = await storageService.readCommittedSnapshot(userKey).catch(error => {
+          setStatus({ state: 'error', message: error instanceof Error ? error.message : 'Local state could not be verified.' });
+          return null;
+        });
+        if (!snapshot || revision !== stateRevision) return;
+        if (snapshot.pendingCount || snapshot.meta.outbox.length || snapshot.meta.conflicts.length
+          || Object.keys(snapshot.meta.localState?.blocked ?? {}).length) {
+          setStatus({ ...detail, state: Object.keys(snapshot.meta.localState?.blocked ?? {}).length ? 'error' : 'saved-locally' });
+          return;
+        }
+        // The commit is durable, but React acknowledges visibility separately.
+        setStatus({ ...detail, state: renderedGeneration.current >= snapshot.generation ? 'synced' : 'syncing' });
+        pendingSynced.current = { detail, generation: snapshot.generation };
+      } else {
+        pendingSynced.current = null;
+        setStatus(detail);
+      }
       if (detail.conflictCount) {
         const meta = await storageService.get<{ conflicts?: Array<{ id: string; entityType: string; entityId: string; localPayload?: any }> }>(STORES.SYNC, userKey);
         setConflicts(meta?.conflicts || []);
       } else setConflicts([]);
     };
+    const onHydrated = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.userKey !== userKey) return;
+      renderedGeneration.current = detail.generation;
+      if (pendingSynced.current && detail.generation >= pendingSynced.current.generation) {
+        void onState(new CustomEvent('goalflow:sync-state', { detail: pendingSynced.current.detail }));
+      }
+    };
+    const onCaptured = (event: Event) => {
+      if ((event as CustomEvent).detail?.userKey !== userKey) return;
+      stateRevision++;
+      pendingSynced.current = null;
+      setStatus(previous => previous.state === 'error' ? previous : { state: 'saved-locally', message: 'Captured locally; committing.' });
+    };
+    const onCommit = async (event: Event) => {
+      if ((event as CustomEvent).detail?.userKey !== userKey) return;
+      stateRevision++;
+      pendingSynced.current = null;
+      setStatus(previous => previous.state === 'synced' ? { ...previous, state: 'syncing', message: 'Updating local view.' } : previous);
+      const snapshot = await storageService.readCommittedSnapshot(userKey).catch(error => {
+          setStatus({ state: 'error', message: error instanceof Error ? error.message : 'Local state could not be verified.' });
+          return null;
+        });
+        if (!snapshot) return;
+      const blocked = Object.values<string>(snapshot.meta.localState?.blocked ?? {});
+      if (blocked.length) setStatus({ state: 'error', message: blocked[0] });
+      else if (snapshot.pendingCount || snapshot.meta.outbox.length || snapshot.meta.conflicts.length) setStatus(previous => previous.state === 'error' ? previous : { state: 'saved-locally', message: 'Waiting for cloud acknowledgment.' });
+    };
     window.addEventListener('goalflow:sync-state', onState);
-    return () => window.removeEventListener('goalflow:sync-state', onState);
+    window.addEventListener('goalflow:view-hydrated', onHydrated);
+    window.addEventListener('goalflow:captured', onCaptured);
+    window.addEventListener('goalflow:committed', onCommit);
+    return () => {
+      window.removeEventListener('goalflow:sync-state', onState);
+      window.removeEventListener('goalflow:view-hydrated', onHydrated);
+      window.removeEventListener('goalflow:captured', onCaptured);
+      window.removeEventListener('goalflow:committed', onCommit);
+    };
   }, [userKey]);
 
   const labels: Record<SyncState, string> = {
@@ -34,14 +93,14 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
 
   return (
     <div className="relative">
-      <button type="button" onClick={() => setOpen(value => !value)} className="flex items-center gap-2 rounded-lg px-2 py-2 text-xs font-bold text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-700" title={status.lastSuccessfulSync ? `Last synced ${new Date(status.lastSuccessfulSync).toLocaleString()}` : status.message}>
+      <button type="button" onClick={() => setOpen(value => !value)} className="flex items-center gap-2 rounded-lg px-2 py-2 text-xs font-bold text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-700" title={status.message || (status.lastSuccessfulSync ? `Last synced ${new Date(status.lastSuccessfulSync).toLocaleString()}` : undefined)}>
         <span className={`h-2 w-2 rounded-full ${color} ${status.state === 'syncing' ? 'animate-pulse' : ''}`} />
         <span className="hidden lg:inline">{labels[status.state]}</span>
       </button>
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-80 rounded-xl border border-gray-200 bg-white p-4 shadow-lg dark:border-slate-700 dark:bg-slate-800">
           <p className="font-bold text-gray-900 dark:text-white">{labels[status.state]}</p>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{status.lastSuccessfulSync ? `Last successful sync: ${new Date(status.lastSuccessfulSync).toLocaleString()}` : status.message || 'Changes remain available on this device.'}</p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{status.message || (status.lastSuccessfulSync ? `Last successful sync: ${new Date(status.lastSuccessfulSync).toLocaleString()}` : 'Changes remain available on this device.')}</p>
           {status.state === 'error' && <button type="button"
             onClick={() => window.dispatchEvent(new Event('goalflow:sync-retry'))}
             className="mt-3 rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 dark:border-slate-600 dark:text-gray-200">

@@ -229,7 +229,10 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
   }, STORES.CIRCADIAN, USER_KEY);
   const [userSettings, setUserSettings, setUserSettingsFromStorage] = useDurableStoredState<UserSettings>({ enableAi: false, penaltyMode: 'off' }, STORES.SETTINGS, USER_KEY);
   const [dailyPlans, setDailyPlans, setDailyPlansFromStorage] = useDurableStoredState<DurableDailyPlan[]>([], STORES.DAILY_PLANS, USER_KEY);
-  const cloudAppliedStores = useRef(new Set<string>());
+  const [renderedGeneration, setRenderedGeneration] = useState(-1);
+  useEffect(() => {
+      if (renderedGeneration >= 0) window.dispatchEvent(new CustomEvent('goalflow:view-hydrated', { detail: { userKey: USER_KEY, generation: renderedGeneration } }));
+  }, [USER_KEY, renderedGeneration]);
 
   // Transient State
   const [justLeveledUp, setJustLeveledUp] = useState(false);
@@ -283,29 +286,29 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
                 const plans = Array.from(migrated.values());
                 if (plans.length) {
                     storageService.stageLocalValue(STORES.DAILY_PLANS, USER_KEY, undefined, plans);
-                    await storageService.set(STORES.DAILY_PLANS, USER_KEY, plans);
+                    await storageService.flushPendingLocalChanges(USER_KEY);
                 }
                 return plans;
             })(),
         ]);
 
         await storageService.createLocalSnapshot(USER_KEY, 'before-migration');
-        const normalizedTasks = lTasks.map(task => {
+        const normalizedTasks = await storageService.migrateCollectionV1<Task[]>(USER_KEY, STORES.TASKS, 'web-task-defaults-v1', current => current.map(task => {
             const migratedLoopNote = task.isRepetitive
                 ? `${task.description ? `${task.description}\n\n` : ''}This was migrated from a Loop task. Complete it consciously, then create the next occurrence or convert it to a habit.`
                 : task.description;
             return {
                 ...task,
                 description: migratedLoopNote,
-                isRepetitive: false,
-                schedulePrecision: task.schedulePrecision || 'day',
-                scheduledFor: task.scheduledFor || task.dateAssigned,
-                plannedOrder: task.plannedOrder ?? task.createdAt,
-                frogFailures: task.frogFailures ?? task.rescheduleCount ?? 0,
-                source: task.source || 'migration',
-                lifecycleStatus: task.lifecycleStatus || (task.completed ? 'completed' : task.wontDo ? 'dropped' : 'open')
+                isRepetitive: task.isRepetitive === null ? null : false,
+                schedulePrecision: task.schedulePrecision === undefined ? 'day' : task.schedulePrecision,
+                scheduledFor: task.scheduledFor === undefined ? task.dateAssigned : task.scheduledFor,
+                plannedOrder: task.plannedOrder === undefined ? task.createdAt : task.plannedOrder,
+                frogFailures: task.frogFailures === undefined ? task.rescheduleCount ?? 0 : task.frogFailures,
+                source: task.source === undefined ? 'migration' : task.source,
+                lifecycleStatus: task.lifecycleStatus === undefined ? (task.completed ? 'completed' : task.wontDo ? 'dropped' : 'open') : task.lifecycleStatus
             } as Task;
-        });
+        }));
         setTasksFromStorage(normalizedTasks);
         setGoalsFromStorage(lGoals);
         setHabitsFromStorage(lHabits);
@@ -317,7 +320,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
         const today = getTodayYYYYMMDD();
 
         // Ensure Progress calculations
-        setUserProgressFromStorage({ ...lProgress, xpToNextLevel: calculateXpToNextLevel(lProgress.level) });
+        setUserProgressFromStorage(await storageService.migrateCollectionV1<UserProgress>(USER_KEY, STORES.PROGRESS, 'web-progress-threshold-v1', current => ({ ...current, xpToNextLevel: calculateXpToNextLevel(current.level) })));
         
         // Hydrate the durable baseline before staging a new-day reset. The
         // initial React value already uses today and is not the saved value.
@@ -343,46 +346,41 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
     loadData();
   }, [userKey, legacyUserKey, hydrationAttempt]);
 
-  // --- Persistence Wrappers ---
-  // Using useRef to prevent effect loops when saving, saving is triggered by state changes.
-  // We use a custom hook-like structure inside useEffect to handle debouncing.
+  // Rendering and hydration never admit mutations. Capture signals only drain
+  // the account queue, so coalescing stores cannot discard another store.
+  useEffect(() => {
+      if (isLoading) return;
+      let active = false;
+      let dirty = true;
+      let stopped = false;
+      const drain = async () => {
+          dirty = true;
+          if (active) return;
+          active = true;
+          try {
+              while (dirty && !stopped) {
+                  dirty = false;
+                  await storageService.flushPendingLocalChanges(USER_KEY);
+              }
+          } catch (error) {
+              window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: {
+                  userKey: USER_KEY, state: 'error', message: error instanceof Error ? error.message : 'Local commit failed; captured changes remain recoverable.'
+              } }));
+          } finally { active = false; }
+      };
+      const captured = (event: Event) => {
+          if ((event as CustomEvent).detail?.userKey === USER_KEY) void drain();
+      };
+      window.addEventListener('goalflow:captured', captured);
+      void drain();
+      return () => { stopped = true; window.removeEventListener('goalflow:captured', captured); };
+  }, [USER_KEY, isLoading]);
 
-  const persist = useCallback(async (store: string, data: any) => {
-      try {
-          await storageService.set(store, USER_KEY, data);
-      } catch (e) {
-          console.error(`Failed to persist ${store}`, e);
-      }
-  }, [USER_KEY]);
-
-  const debouncedPersist = useDebouncedCallback((store: string, data: any) => {
-      void persist(store, data);
-  }, 300);
-
-  const persistLocalState = useCallback((store: string, data: any) => {
-      if (cloudAppliedStores.current.delete(store)) return;
-      debouncedPersist(store, data);
-  }, [debouncedPersist]);
-
-  // Watchers
-  useEffect(() => { if (!isLoading) persistLocalState(STORES.TASKS, tasks); }, [tasks, isLoading, persistLocalState]);
-  useEffect(() => { if (!isLoading) persistLocalState(STORES.GOALS, goals); }, [goals, isLoading, persistLocalState]);
-  useEffect(() => { if (!isLoading) persistLocalState(STORES.HABITS, habits); }, [habits, isLoading, persistLocalState]);
-  useEffect(() => { if (!isLoading) persistLocalState(STORES.TRUE_NORTH, trueNorthGoals); }, [trueNorthGoals, isLoading, persistLocalState]);
-  useEffect(() => { if (!isLoading) persistLocalState(STORES.AMALGAM, amalgam); }, [amalgam, isLoading, persistLocalState]);
-  useEffect(() => { if (!isLoading) persistLocalState(STORES.HASHTAGS, hashtagConfigs); }, [hashtagConfigs, isLoading, persistLocalState]);
-  useEffect(() => { if (!isLoading) persistLocalState(STORES.PROGRESS, userProgress); }, [userProgress, isLoading, persistLocalState]);
-  useEffect(() => { if (!isLoading) persistLocalState(STORES.TRACKING, dailyTracking); }, [dailyTracking, isLoading, persistLocalState]);
-  useEffect(() => { if (!isLoading) persistLocalState(STORES.ACCOUNTABILITY, accountabilityConfig); }, [accountabilityConfig, isLoading, persistLocalState]);
-  useEffect(() => { if (!isLoading) persistLocalState(STORES.CIRCADIAN, circadianState); }, [circadianState, isLoading, persistLocalState]);
-  useEffect(() => { if (!isLoading) persistLocalState(STORES.SETTINGS, userSettings); }, [userSettings, isLoading, persistLocalState]);
-  useEffect(() => { if (!isLoading) persistLocalState(STORES.STATS, allStats); }, [allStats, isLoading, persistLocalState]);
-  useEffect(() => { if (!isLoading) persistLocalState(STORES.DAILY_PLANS, dailyPlans); }, [dailyPlans, isLoading, persistLocalState]);
 
   useEffect(() => {
       const applyCloudChange = (event: Event) => {
-          const { storeName, value } = (event as CustomEvent<{ storeName: string; value: any }>).detail;
-          cloudAppliedStores.current.add(storeName);
+          const { userKey: owner, storeName, value } = (event as CustomEvent<{ userKey: string; storeName: string; value: any }>).detail;
+          if (owner !== USER_KEY) return;
           if (storeName === STORES.TASKS) setTasksFromStorage(value || []);
           else if (storeName === STORES.GOALS) setGoalsFromStorage(value || []);
           else if (storeName === STORES.HABITS) setHabitsFromStorage(value || []);
@@ -399,9 +397,17 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
               setAllStatsFromStorage(value || {});
           }
       };
-      window.addEventListener('goalflow:cloud-change', applyCloudChange);
-      return () => window.removeEventListener('goalflow:cloud-change', applyCloudChange);
-  }, [setAllStatsFromStorage, setTasksFromStorage, setGoalsFromStorage, setHabitsFromStorage,
+      if (isLoading) return;
+      let generation = -1;
+      return storageService.subscribeCommitted(USER_KEY, snapshot => {
+          if (snapshot.userKey !== USER_KEY || snapshot.generation < generation) return;
+          generation = snapshot.generation;
+          for (const [storeName, value] of Object.entries(snapshot.values)) {
+              if (value !== undefined || [STORES.TASKS, STORES.GOALS, STORES.HABITS, STORES.TRUE_NORTH, STORES.DAILY_PLANS].includes(storeName as any)) applyCloudChange(new CustomEvent('goalflow:cloud-change', { detail: { userKey: USER_KEY, storeName, value } }));
+          }
+          setRenderedGeneration(snapshot.generation);
+      });
+  }, [USER_KEY, isLoading, setAllStatsFromStorage, setTasksFromStorage, setGoalsFromStorage, setHabitsFromStorage,
       setTrueNorthGoalsFromStorage, setAmalgamFromStorage, setHashtagConfigsFromStorage,
       setUserProgressFromStorage, setDailyTrackingFromStorage, setAccountabilityConfigFromStorage,
       setCircadianStateFromStorage, setUserSettingsFromStorage, setDailyPlansFromStorage]);

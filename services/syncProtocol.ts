@@ -67,6 +67,14 @@ export interface SyncMeta {
   outbox: SyncMutation[];
   conflicts: LocalConflict[];
   lastSuccessfulSync?: string;
+  /** Browser-local evidence; never sent as a wire mutation. */
+  localState?: {
+    generation: number;
+    journal: Record<string, StagedLocalTransaction>;
+    receipts: Record<string, { request: SyncMutation; result: PushResult }>;
+    blocked?: Record<string, string>;
+    migrations?: Record<string, string | null>;
+  };
 }
 
 export interface StagedEntityChange {
@@ -89,6 +97,7 @@ export interface StagedLocalTransaction {
   changes: StagedEntityChange[];
   order: number;
   createdAt: string;
+  admission?: { kind: 'focus-transition'; sessionId: string | null; taskId: string | null };
 }
 
 export interface PushResult {
@@ -300,12 +309,18 @@ export const normalizeSyncMeta = (value: unknown): SyncMeta => {
   if (new Set(representedMutationIds).size !== representedMutationIds.length) {
     throw new Error('A pending mutation identity appears more than once in durable synchronization state. Nothing was discarded.');
   }
+  if (value.localState !== undefined && (!isRecord(value.localState)
+    || typeof value.localState.generation !== 'number' || !Number.isSafeInteger(value.localState.generation) || value.localState.generation < 0
+    || !isRecord(value.localState.journal) || !isRecord(value.localState.receipts))) {
+    throw new Error('Local synchronization evidence is damaged. It was not discarded.');
+  }
   return {
     schemaVersion: SYNC_META_SCHEMA_VERSION,
     cursor: finiteVersion(value.cursor),
     versions,
     outbox,
     conflicts,
+    localState: value.localState as SyncMeta['localState'],
     lastSuccessfulSync: typeof value.lastSuccessfulSync === 'string' ? value.lastSuccessfulSync : undefined
   };
 };
@@ -412,6 +427,7 @@ export const buildStagedLocalTransaction = (
 
 const cloneMeta = (meta: SyncMeta): SyncMeta => ({
   ...meta,
+  localState: meta.localState ? structuredClone(meta.localState) : undefined,
   versions: Object.fromEntries(Object.entries(meta.versions).map(([key, value]) => [key, { ...value }])),
   outbox: meta.outbox.map(item => ({ ...item })),
   conflicts: meta.conflicts.map(item => ({ ...item, localHistory: item.localHistory.map(entry => ({ ...entry })) }))

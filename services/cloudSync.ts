@@ -119,9 +119,10 @@ export const isPermanentSyncFailure = (error: unknown): boolean =>
   || error instanceof DurableStorageError
   || error instanceof SessionAccountMismatchError;
 
-const emit = (state: SyncState, meta: SyncMeta, message?: string): void => {
+const emit = (userKey: string, state: SyncState, meta: SyncMeta, message?: string): void => {
   window.dispatchEvent(new CustomEvent('goalflow:sync-state', {
     detail: {
+      userKey,
       state,
       lastSuccessfulSync: meta.lastSuccessfulSync,
       conflictCount: meta.conflicts.length,
@@ -437,16 +438,16 @@ export const startCloudSync = (userKey: string): (() => void) => {
       try {
         const before = normalizeSyncMeta(await storageService.get(STORES.SYNC, userKey));
         if (!navigator.onLine) {
-          emit('offline', before);
+          emit(userKey, 'offline', before);
           return;
         }
-        emit('syncing', before);
+        emit(userKey, 'syncing', before);
         const run = async () => {
           if (stopped) return;
           await ensureLocalDataSeeded();
           const meta = await synchronizeCloudOnce(userKey, lifecycleDependencies, { seedLocalData: false });
-          const state: SyncState = meta.conflicts.length ? 'conflict' : 'synced';
-          emit(state, meta);
+          const state: SyncState = Object.keys(meta.localState?.blocked ?? {}).length ? 'error' : meta.conflicts.length ? 'conflict' : meta.outbox.length ? 'saved-locally' : 'synced';
+          emit(userKey, state, meta);
           channel?.postMessage({
             type: 'complete', state, lastSuccessfulSync: meta.lastSuccessfulSync,
             conflictCount: meta.conflicts.length
@@ -468,7 +469,7 @@ export const startCloudSync = (userKey: string): (() => void) => {
         if (stopped && (error instanceof DOMException || lifecycleController.signal.aborted)) return;
         if (isPermanentSyncFailure(error)) {
           blockedByPermanentError = true;
-          if (error instanceof SyncHttpError && (error.status === 401 || error.status === 403)) {
+          if (error instanceof SyncHttpError && error.status === 401) {
             window.dispatchEvent(new CustomEvent('goalflow:session-rejected', {
               detail: { status: error.status, code: error.code }
             }));
@@ -480,7 +481,7 @@ export const startCloudSync = (userKey: string): (() => void) => {
         } catch (_) {
           meta = emptySyncMeta();
         }
-        emit(navigator.onLine ? 'error' : 'offline', meta, error instanceof Error ? error.message : 'Synchronization failed.');
+        emit(userKey, navigator.onLine ? 'error' : 'offline', meta, error instanceof Error ? error.message : 'Synchronization failed.');
       }
     }
   );
@@ -496,10 +497,10 @@ export const startCloudSync = (userKey: string): (() => void) => {
     });
   };
   const onOnline = () => void synchronize();
-  const onRetry = () => { blockedByPermanentError = false; void synchronize(); };
+  const onRetry = () => { void storageService.retryAtomicStorage().then(() => { blockedByPermanentError = false; void synchronize(); }).catch(error => emit(userKey, 'error', emptySyncMeta(), error instanceof Error ? error.message : 'Storage recovery failed.')); };
   const onFocus = () => { if (document.visibilityState === 'visible') void synchronize(); };
   const onChannel = (event: MessageEvent) => {
-    if (event.data?.type === 'complete') window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: event.data }));
+    if (event.data?.type === 'complete') window.dispatchEvent(new CustomEvent('goalflow:peer-hint', { detail: { userKey } }));
   };
   const stopRealtimeWakeups = subscribeToSyncWakeups(supabase, userKey, () => void synchronize());
 
@@ -539,7 +540,7 @@ export const resolveLocalConflict = async (
   if (!conflict) return;
   if (choice === 'local') {
     const meta = await storageService.resolveConflictLocally(userKey, conflictId);
-    emit('conflict', meta, 'The local version remains preserved until its retry is accepted.');
+    emit(userKey, 'conflict', meta, 'The local version remains preserved until its retry is accepted.');
     window.dispatchEvent(new Event('online'));
     return;
   }
@@ -563,6 +564,6 @@ export const resolveLocalConflict = async (
       throw new SyncProtocolError('The server did not acknowledge the exact conflict. Both versions remain preserved.');
     }
   }
-  const meta = await storageService.resolveConflictWithCloud(userKey, conflictId);
-  emit(meta.conflicts.length ? 'conflict' : 'saved-locally', meta);
+  const meta = await storageService.resolveConflictWithCloud(userKey, conflictId, conflict);
+  emit(userKey, meta.conflicts.length ? 'conflict' : 'saved-locally', meta);
 };

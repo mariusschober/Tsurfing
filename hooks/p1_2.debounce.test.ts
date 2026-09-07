@@ -3,11 +3,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 describe('P1-2 useGoalflow persistLocalState debounce', () => {
-  it('hooks/useGoalflow.ts uses useDebouncedCallback with 300ms', () => {
+  it('S1 effects drain account intents without persisting React snapshots', () => {
     const file = fs.readFileSync(path.resolve('hooks/useGoalflow.ts'), 'utf8');
     expect(file).toMatch(/useDebouncedCallback/);
-    expect(file).toMatch(/300/);
-    expect(file).toMatch(/debouncedPersist|debounce/);
+    // Retired snapshot-debounce assertions are recorded in S1_REPORT.md.
+    expect(file).toMatch(/goalflow:captured/);
+    expect(file).toMatch(/while \(dirty && !stopped\)/);
+    expect(file).not.toMatch(/storageService\.set\(store, USER_KEY, data\)/);
   });
 
   it('debounces rapid calls via plain debounce logic (behavioral)', async () => {

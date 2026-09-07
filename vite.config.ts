@@ -1,9 +1,17 @@
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const localSyncContext = 's1-v1-' + createHash('sha256').update(
+  ['services/storage.ts', 'services/syncProtocol.ts', 'services/cloudSync.ts', 'hooks/useGoalflow.ts']
+    .map(file => readFileSync(path.resolve(__dirname, file), 'utf8')).join('\n')
+).digest('hex').slice(0, 16);
+
 export default defineConfig({
+  define: { 'import.meta.env.VITE_LOCAL_SYNC_CONTEXT': JSON.stringify(localSyncContext) },
   server: { port: 3000, host: '0.0.0.0' },
   build: {
     outDir: 'dist/client',

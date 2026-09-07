@@ -461,8 +461,9 @@ describe('durable storage failure boundaries', () => {
     await storageService.set(STORES.GOALS, key, goals, 'cloud');
 
     const backup = await storageService.exportBackup(key);
-    await storageService.clear(STORES.TASKS);
-    await storageService.clear(STORES.GOALS);
+    const fixtureDb = await openDB('GoalflowDB');
+    await fixtureDb.delete(STORES.TASKS, key);
+    await fixtureDb.delete(STORES.GOALS, key);
     expect(await storageService.get(STORES.TASKS, key)).toBeUndefined();
     expect(await storageService.get(STORES.GOALS, key)).toBeUndefined();
 
@@ -483,8 +484,9 @@ describe('durable storage failure boundaries', () => {
 
     // A clean client for the same authenticated account uses the same owner
     // key. Remove the local copy to model a new browser profile, then restore.
-    await storageService.delete(STORES.TASKS, sourceKey);
-    await storageService.delete(STORES.SYNC, sourceKey);
+    const fixtureDb = await openDB('GoalflowDB');
+    await fixtureDb.delete(STORES.TASKS, sourceKey);
+    await fixtureDb.delete(STORES.SYNC, sourceKey);
     await storageService.importBackup(sourceKey, backup, 'replace');
     expect(await storageService.get(STORES.TASKS, sourceKey)).toEqual(tasks);
     const restoredMeta = await storageService.get<{ outbox: Array<{ mutationId: string }> }>(STORES.SYNC, sourceKey);
@@ -570,7 +572,7 @@ describe('durable storage failure boundaries', () => {
       .toEqual({ id: 'local', title: 'local' });
   });
 
-  it('P1-1 memoizes listWal + latestWalValue within 200ms and idles >50 entries', async () => {
+  it('S1 scans current WAL content even within 200ms with more than 50 entries', async () => {
     const localStorage = installBrowserStorage();
     const key = `storage-p1-1-${crypto.randomUUID()}`;
     for (let i = 0; i < 60; i++) {
@@ -588,8 +590,9 @@ describe('durable storage failure boundaries', () => {
     keyCalls = 0;
     const second = await storageService.get(STORES.TASKS, key);
     expect(second).toEqual(first);
-    // second call within debounce window should be memoized (no localStorage.key scan)
-    expect(keyCalls).toBeLessThan(callsAfterFirst);
-    expect(keyCalls).toBeLessThan(20);
+    // A same-length peer replacement cannot be detected by the old memo.
+    // The retired performance assertions are retained in S1_REPORT.md.
+    expect(keyCalls).toBe(callsAfterFirst);
+    expect(keyCalls).toBeGreaterThanOrEqual(60);
   });
 });

@@ -13,3 +13,5 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <AppWrapper />
 );
+
+if (import.meta.env.MODE === 'test') void import('./tests/browser/s1Harness');

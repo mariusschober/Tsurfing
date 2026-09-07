@@ -275,6 +275,8 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
     const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
     const [showYellowPad, setShowYellowPad] = useState(false);
     const [padContent, setPadContent] = useState('');
+    const noteDrafts = useRef(new Map<string, { text: string; base: string }>());
+    const noteTaskId = useRef<string | null>(null);
     const [isTimeAdjOpen, setIsTimeAdjOpen] = useState(false);
     const [customDurationInput, setCustomDurationInput] = useState('');
     
@@ -480,7 +482,16 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
     
     useEffect(() => {
         if (currentTask) {
-             setPadContent(currentTask.description || '');
+             const priorId = noteTaskId.current;
+             if (priorId && priorId !== currentTask.id) {
+                 const draft = noteDrafts.current.get(priorId);
+                 if (draft) draft.text = padContentRef.current;
+             }
+             const draft = noteDrafts.current.get(currentTask.id) ?? { text: currentTask.description || '', base: currentTask.description || '' };
+             noteDrafts.current.set(currentTask.id, draft);
+             noteTaskId.current = currentTask.id;
+             padContentRef.current = draft.text;
+             setPadContent(draft.text);
              if (currentTask.description) setShowYellowPad(true);
              setVisualizationPrompt(null);
         }

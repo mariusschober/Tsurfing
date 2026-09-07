@@ -164,6 +164,7 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, initialData, goals
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
     if (!parseNaturalSchedule(title).cleanTitle.trim()) {
         setSubmissionError('A task needs an actionable title.');
         return;
@@ -222,9 +223,13 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, initialData, goals
       onSubmit({ title, description, dateAssigned: schedulePrecision === 'day' ? dateAssigned : `${scheduledMonth}-01`, goalId, isFrog: Boolean(initialData?.isFrog || isFrog), isRepetitive: false, schedulePrecision, scheduledFor: targetSchedule });
       onClose();
     }
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : 'The action was not captured. Your input is still here.');
+    }
   };
 
   const handleForceSubmit = () => {
+      try {
       const targetSchedule = schedulePrecision === 'day' ? dateAssigned : scheduledMonth;
       const originalSchedule = initialData?.scheduledFor || initialData?.dateAssigned;
       if (initialData?.isFrog && originalSchedule && targetSchedule > originalSchedule) {
@@ -233,6 +238,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, initialData, goals
       }
       onSubmit({ title, description, dateAssigned: schedulePrecision === 'day' ? dateAssigned : `${scheduledMonth}-01`, goalId, isFrog: Boolean(initialData?.isFrog || isFrog), isRepetitive: false, schedulePrecision, scheduledFor: targetSchedule });
       onClose();
+      } catch (error) {
+        setSubmissionError(error instanceof Error ? error.message : 'The action was not captured. Your input is still here.');
+      }
   };
 
   const useSuggestion = (suggestion: string) => {
