@@ -4,6 +4,7 @@ import type { Root } from 'react-dom/client';
 import App from '../../App';
 import { storageService } from '../../services/storage';
 import { synchronizeCloudOnce } from '../../services/cloudSync';
+import { admitLocalCounter } from '../../services/causalCounterCoordinator';
 import { admitLocalFocus } from '../../services/causalFocusCoordinator';
 import { fenceLegacyTracking } from '../../services/causalStorage';
 import { reconciliationCandidate } from '../../services/syncProtocol';
@@ -14,6 +15,7 @@ export const installS1Harness = (root: Root) => {
     __s1Storage: storageService,
     __s1Fence: fenceLegacyTracking,
     __s1AdmitFocus: admitLocalFocus,
+    __s1AdmitCounter: admitLocalCounter,
     __s1Sync: synchronizeCloudOnce,
     __s1Candidate: reconciliationCandidate,
     __s1RenderAccount: (user: string) => root.render(React.createElement(App, {

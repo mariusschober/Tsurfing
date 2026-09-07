@@ -112,3 +112,38 @@ test('causal local admission serializes real browser transactions and preserves 
   expect(result.recovered.tracking.focusSession.plannedDurationSeconds).toBe(1080);
   expect(result.recovered.command.actionId).toBe(result.c.actionId);
 });
+
+test('counter and focus admissions share one authority across concurrent browser transactions', async ({ page }) => {
+  await load(page);
+  const result = await page.evaluate(async () => {
+    const api = window as any;
+    const name = 's2-mixed-' + crypto.randomUUID();
+    localStorage.setItem('goalflow_active_database_v2', name);
+    const accountId = crypto.randomUUID(); const sessionId = crypto.randomUUID();
+    const baseline = { schemaVersion: 1, baselineId: crypto.randomUUID(), accountId, day: '2026-09-07',
+      counts: { planViewCount: 27, dailyPostponeCount: 3 }, evidenceIds: [] };
+    await api.__s1Storage.set('tracking', accountId, { date: baseline.day, ...baseline.counts, unknown: 'preserved',
+      focusSession: { schemaVersion: 1, sessionId, taskId: 'task', phase: 'active', plannedDurationSeconds: 600,
+        startedAt: '2026-09-07T10:00:00.000Z', updatedAt: '2026-09-07T10:00:00.000Z', elapsedSeconds: 0, pausedAt: null, endedAt: null } }, 'cloud');
+    await api.__s1Storage.set('tasks', accountId, [{ id: 'task', completed: false }], 'cloud');
+    const events = ['planViewCount', 'dailyPostponeCount', 'planViewCount', 'dailyPostponeCount'].map(counter => ({ schemaVersion: 1,
+      accountId, actionId: crypto.randomUUID(), actorId: 'browser', day: baseline.day, timeZone: 'Atlantic/Canary', counter, delta: 1,
+      capturedAt: '2026-09-07T10:00:30.000Z', businessActionId: null, correctionOf: null }));
+    const focus = { schemaVersion: 1, accountId, sessionId, taskId: 'task', actorId: 'browser', actionId: crypto.randomUUID(),
+      epoch: sessionId, expectedCurrentSessionId: sessionId, kind: 'extend', durationSeconds: 300, capturedAt: '2026-09-07T10:00:30.000Z' };
+    await Promise.all([...events.map(e => api.__s1AdmitCounter(name, e, baseline)), api.__s1AdmitFocus(name, focus)]);
+    await Promise.all(events.map(e => api.__s1AdmitCounter(name, e, baseline)));
+    let collision = '';
+    try { await api.__s1AdmitCounter(name, { ...events[0], actionId: focus.actionId }, baseline); }
+    catch (e) { collision = (e as Error).message; }
+    const db = await api.__s1Fence(name); const state = await db.get('causal_actions', accountId); db.close();
+    return { state, collision };
+  });
+  expect(result.state.trackingValue.planViewCount).toBe(29);
+  expect(result.state.trackingValue.dailyPostponeCount).toBe(5);
+  expect(result.state.trackingValue.focusSession.plannedDurationSeconds).toBe(900);
+  expect(result.state.trackingValue.unknown).toBe('preserved');
+  expect(result.state.generation).toBe(5);
+  expect(Object.keys(result.state.counterOutbox)).toHaveLength(4);
+  expect(result.collision).toContain('different intent');
+});
