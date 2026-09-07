@@ -214,3 +214,15 @@ it.each(['before', 'during', 'after'] as const)('D: reconciliation with a %s adm
   expect((await (await openDB(name)).get('sync', user)).localState).toEqual(meta.localState);
   expect((await storage.flushPendingLocalChanges(user)).outbox).toEqual(meta.outbox);
 });
+
+it('bootstrap: concurrent day rollover preserves newer focus and optional fields exactly once', async () => {
+  const { user } = fixture();
+  const latest = { date: '2026-09-06', planViewCount: 3, dailyPostponeCount: 1, focusSession: null, future: { retained: true } };
+  await storage.set('tracking', user, latest, 'cloud');
+  await Promise.all([storage.rolloverTrackingDay(user, '2026-09-07'), storage.rolloverTrackingDay(user, '2026-09-07')]);
+  expect(await storage.get('tracking', user)).toEqual({ ...latest, date: '2026-09-07', planViewCount: 0, dailyPostponeCount: 0 });
+  const first = await storage.get<any>('sync', user);
+  expect(first.outbox).toHaveLength(1);
+  await storage.rolloverTrackingDay(user, '2026-09-07');
+  expect((await storage.get<any>('sync', user)).outbox).toEqual(first.outbox);
+});

@@ -326,15 +326,11 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
         if (stopped) return;
         setUserProgressFromStorage(migratedProgress);
         
-        // Hydrate the durable baseline before staging a new-day reset. The
-        // initial React value already uses today and is not the saved value.
-        setDailyTrackingFromStorage(lDaily);
-        if (lDaily.date !== today) {
-            // A running focus session can span midnight. Reset only the
-            // date-scoped counters while preserving the authoritative action
-            // record, and let the storage merge keep unknown future fields.
-            setDailyTracking({ ...lDaily, date: today, planViewCount: 0, dailyPostponeCount: 0 });
-        }
+        // This explicit day-boundary action reads the current tracking record
+        // inside IDB; an earlier hydration snapshot has no write authority.
+        const currentTracking = await storageService.rolloverTrackingDay(USER_KEY, today) as DailyTracking;
+        if (stopped) return;
+        setDailyTrackingFromStorage(currentTracking);
 
         setAccountabilityConfigFromStorage(lAccountability);
         setCircadianStateFromStorage(lCircadian);

@@ -1345,6 +1345,40 @@ export const storageService = {
     });
   },
 
+  /** An explicit local-day boundary, evaluated against the latest projection. */
+  async rolloverTrackingDay(userKey: string, today: string): Promise<unknown> {
+    return queueMutation(async () => {
+      const db = await getDB();
+      if (!db) throw new DurableStorageError('The day boundary awaits atomic storage.');
+      const tx = db.transaction([...DATA_STORES, STORES.SYNC], 'readwrite');
+      let meta: SyncMeta;
+      let next: unknown;
+      try {
+        meta = await materializeWal(tx, userKey, normalizeSyncMeta(await tx.objectStore(STORES.SYNC).get(userKey)));
+        const current = await tx.objectStore(STORES.TRACKING).get(userKey);
+        if (!isRecord(current) || typeof current.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(today)) throw new DurableStorageError('The day boundary has an invalid tracking baseline.');
+        next = current.date === today ? current : { ...current, date: today, planViewCount: 0, dailyPostponeCount: 0 };
+        const action = buildStagedLocalTransaction(STORES.TRACKING, userKey, current, next, nextWalOrder(), new Date().toISOString(), randomUuid);
+        if (action) {
+          meta = appendStagedTransactions(meta, [action], readDeviceId());
+          localEvidence(meta).journal[action.id] = action;
+          localEvidence(meta).migrations ??= {};
+          localEvidence(meta).migrations![`web-day-boundary-v1:${current.date}:${today}:${action.id}`] = action.id;
+          await tx.objectStore(STORES.TRACKING).put(next, userKey);
+        }
+        await putMeta(tx, userKey, meta);
+        await tx.done;
+      } catch (error) {
+        try { tx.abort(); } catch (_) {}
+        try { await tx.done; } catch (_) {}
+        throw error;
+      }
+      retireMaterializedWal(userKey, meta);
+      publishCommit(userKey, meta, DATA_STORES);
+      return next;
+    });
+  },
+
   /** Initial cloud seeding reads both ownership and projection in one transaction. */
   async seedUnsynchronizedLocalData(userKey: string): Promise<void> {
     await this.flushPendingLocalChanges(userKey);
