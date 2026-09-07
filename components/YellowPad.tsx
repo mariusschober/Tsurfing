@@ -14,6 +14,7 @@ interface YellowPadProps {
 
 export const YellowPad: React.FC<YellowPadProps> = ({ content, onChange, onBlur, placeholder, className = "", readOnly = false, autoFocus = false }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -32,10 +33,20 @@ export const YellowPad: React.FC<YellowPadProps> = ({ content, onChange, onBlur,
     }
   }, [isEditing]);
 
+  const save = (): boolean => {
+      try {
+          onBlur?.();
+          setSaveError(null);
+          return true;
+      } catch (error) {
+          setSaveError(error instanceof Error ? error.message : 'The note was not captured. Your text is still here.');
+          return false;
+      }
+  };
+
   const handleMouseLeave = () => {
       if (!isEditing) return;
-      setIsEditing(false);
-      if (onBlur) onBlur();
+      if (save()) setIsEditing(false);
   };
 
   const handleClick = () => {
@@ -164,6 +175,7 @@ export const YellowPad: React.FC<YellowPadProps> = ({ content, onChange, onBlur,
               ref={textareaRef}
               value={content}
               onChange={(e) => onChange(e.target.value)}
+              onBlur={() => { save(); }}
               onKeyDown={handleKeyDown}
               className="w-full min-h-full bg-transparent text-gray-900 dark:text-gray-100 text-lg leading-[32px] focus:outline-none resize-none font-handwriting placeholder-gray-300 dark:placeholder-slate-600 py-0 -ml-1 pb-32"
               placeholder={placeholder || "Type here... (Markdown supported, use _text_ to highlight)"}
@@ -214,6 +226,7 @@ export const YellowPad: React.FC<YellowPadProps> = ({ content, onChange, onBlur,
           )}
         </div>
       </div>
+      {saveError && <p role="alert" className="px-6 py-2 text-sm text-red-700 dark:text-red-300">{saveError}</p>}
       
       {/* Helper Footer */}
       <div className="absolute bottom-2 right-6 text-[9px] text-gray-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none select-none">

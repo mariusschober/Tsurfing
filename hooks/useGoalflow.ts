@@ -242,6 +242,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
 
   // --- Initialization (Hydration) ---
   useEffect(() => {
+    let stopped = false;
     const loadData = async () => {
       setHydrationError(false);
       try {
@@ -285,13 +286,13 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
                 }
                 const plans = Array.from(migrated.values());
                 if (plans.length) {
-                    storageService.stageLocalValue(STORES.DAILY_PLANS, USER_KEY, undefined, plans);
-                    await storageService.flushPendingLocalChanges(USER_KEY);
+                    return await storageService.initializeIfAbsent(STORES.DAILY_PLANS, USER_KEY, plans, true);
                 }
                 return plans;
             })(),
         ]);
 
+        if (stopped) return;
         await storageService.createLocalSnapshot(USER_KEY, 'before-migration');
         const normalizedTasks = await storageService.migrateCollectionV1<Task[]>(USER_KEY, STORES.TASKS, 'web-task-defaults-v1', current => current.map(task => {
             const migratedLoopNote = task.isRepetitive
@@ -309,6 +310,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
                 lifecycleStatus: task.lifecycleStatus === undefined ? (task.completed ? 'completed' : task.wontDo ? 'dropped' : 'open') : task.lifecycleStatus
             } as Task;
         }));
+        if (stopped) return;
         setTasksFromStorage(normalizedTasks);
         setGoalsFromStorage(lGoals);
         setHabitsFromStorage(lHabits);
@@ -320,7 +322,9 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
         const today = getTodayYYYYMMDD();
 
         // Ensure Progress calculations
-        setUserProgressFromStorage(await storageService.migrateCollectionV1<UserProgress>(USER_KEY, STORES.PROGRESS, 'web-progress-threshold-v1', current => ({ ...current, xpToNextLevel: calculateXpToNextLevel(current.level) })));
+        const migratedProgress = await storageService.migrateCollectionV1<UserProgress>(USER_KEY, STORES.PROGRESS, 'web-progress-threshold-v1', current => ({ ...current, xpToNextLevel: calculateXpToNextLevel(current.level) }));
+        if (stopped) return;
+        setUserProgressFromStorage(migratedProgress);
         
         // Hydrate the durable baseline before staging a new-day reset. The
         // initial React value already uses today and is not the saved value.
@@ -338,12 +342,14 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
         setDailyPlansFromStorage(lDailyPlans);
         setIsLoading(false);
       } catch (err) {
+          if (stopped) return;
           setHydrationError(true);
           console.error("Failed to hydrate data. Persistence remains blocked so existing data is not overwritten.", err);
       }
     };
 
-    loadData();
+    void loadData();
+    return () => { stopped = true; };
   }, [userKey, legacyUserKey, hydrationAttempt]);
 
   // Rendering and hydration never admit mutations. Capture signals only drain
@@ -366,7 +372,10 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
               window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: {
                   userKey: USER_KEY, state: 'error', message: error instanceof Error ? error.message : 'Local commit failed; captured changes remain recoverable.'
               } }));
-          } finally { active = false; }
+          } finally {
+              active = false;
+              if (dirty && !stopped) queueMicrotask(() => void drain());
+          }
       };
       const captured = (event: Event) => {
           if ((event as CustomEvent).detail?.userKey === USER_KEY) void drain();
@@ -440,9 +449,6 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
       ]);
       setCircadianStateFromStorage(nextCircadian);
       setAllStatsFromStorage(nextAllStats);
-      void storageService.flushPendingLocalChanges(USER_KEY).catch(error => {
-          console.error('Failed to flush the durable biological check-in transaction.', error);
-      });
   }, [USER_KEY, getAllStats, getCircadianState, setAllStatsFromStorage, setCircadianStateFromStorage]);
 
   const resetCircadianState = useCallback(() => {
@@ -596,9 +602,6 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
       const nextTracking: DailyTracking = { ...previousTracking, focusSession: nextSession };
       storageService.stageLocalValue(STORES.TRACKING, USER_KEY, previousTracking, nextTracking);
       setDailyTrackingFromStorage(nextTracking);
-      void storageService.flushPendingLocalChanges(USER_KEY).catch(error => {
-          console.error('Failed to flush the durable focus-session action.', error);
-      });
       return nextSession;
   }, [USER_KEY, getDailyTracking, setDailyTrackingFromStorage]);
 
@@ -692,9 +695,6 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
       ]);
       setTasksFromStorage(nextTasks);
       setDailyTrackingFromStorage(nextTracking);
-      void storageService.flushPendingLocalChanges(USER_KEY).catch(error => {
-          console.error('Failed to flush the durable reschedule transaction.', error);
-      });
       return true;
   };
 
@@ -873,9 +873,6 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
     ]);
     setTasksFromStorage(nextTasks);
     if (nextHabits !== previousHabits) setHabitsFromStorage(nextHabits);
-    void storageService.flushPendingLocalChanges(USER_KEY).catch(error => {
-        console.error('Failed to flush the durable task deletion transaction.', error);
-    });
   }, [USER_KEY, getHabits, getTasks, setHabitsFromStorage, setTasksFromStorage]);
 
   const markWontDo = useCallback((taskId: string) => {
@@ -991,9 +988,6 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
     if (dayComplete) {
         setTimeout(() => setGamificationEvent({ type: 'reward', amount: 50, message: "Day Complete!" }), 500);
     }
-    void storageService.flushPendingLocalChanges(USER_KEY).catch(error => {
-        console.error('Failed to flush the durable completion transaction.', error);
-    });
   }, [getAllStats, getDailyTracking, getGoals, getHabits, getTasks, getUserProgress, setAllStatsFromStorage,
       setDailyTrackingFromStorage, setGoalsFromStorage, setHabitsFromStorage, setTasksFromStorage, setUserProgressFromStorage, USER_KEY]);
 
@@ -1026,9 +1020,6 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
       setHabitsFromStorage(nextHabits);
       setUserProgressFromStorage(nextProgress);
       if (leveledUp) setJustLeveledUp(true);
-      void storageService.flushPendingLocalChanges(USER_KEY).catch(error => {
-          console.error('Failed to flush the durable habit creation transaction.', error);
-      });
   }, [USER_KEY, getHabits, getUserProgress, setHabitsFromStorage, setUserProgressFromStorage]);
 
   const deleteHabit = useCallback((id: string) => {
@@ -1043,9 +1034,6 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
       ]);
       setHabitsFromStorage(nextHabits);
       setTasksFromStorage(nextTasks);
-      void storageService.flushPendingLocalChanges(USER_KEY).catch(error => {
-          console.error('Failed to flush the durable habit deletion transaction.', error);
-      });
   }, [USER_KEY, getHabits, getTasks, setHabitsFromStorage, setTasksFromStorage]);
 
   const updateHabit = useCallback((id: string, updates: any) => {
@@ -1082,9 +1070,6 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
     setGoalsFromStorage(nextGoals);
     setTasksFromStorage(nextTasks);
     setHabitsFromStorage(nextHabits);
-    void storageService.flushPendingLocalChanges(USER_KEY).catch(error => {
-        console.error('Failed to flush the durable goal deletion transaction.', error);
-    });
   }, [USER_KEY, getGoals, getHabits, getTasks, setGoalsFromStorage, setHabitsFromStorage, setTasksFromStorage]);
 
   const addTrueNorthGoal = useCallback((data: any) => {
@@ -1109,9 +1094,6 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
     setTrueNorthGoalsFromStorage(nextTrueNorthGoals);
     setTasksFromStorage(nextTasks);
     setHabitsFromStorage(nextHabits);
-    void storageService.flushPendingLocalChanges(USER_KEY).catch(error => {
-        console.error('Failed to flush the durable True North deletion transaction.', error);
-    });
   }, [USER_KEY, getHabits, getTasks, getTrueNorthGoals, setHabitsFromStorage,
       setTasksFromStorage, setTrueNorthGoalsFromStorage]);
 

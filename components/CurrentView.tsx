@@ -952,7 +952,12 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                                 <YellowPad 
                                     key={currentTask.id} 
                                     content={padContent} 
-                                    onChange={setPadContent} 
+                                    onChange={text => {
+                                        padContentRef.current = text;
+                                        const draft = noteDrafts.current.get(currentTask.id);
+                                        if (draft) draft.text = text;
+                                        setPadContent(text);
+                                    }}
                                     onBlur={savePadContent}
                                     className="h-full"
                                     placeholder="Add session notes..."

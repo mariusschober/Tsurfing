@@ -19,16 +19,21 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
 
   useEffect(() => {
     let stateRevision = 0;
+    let stopped = false;
+    renderedGeneration.current = -1;
+    pendingSynced.current = null;
+    setStatus({ state: navigator.onLine ? 'saved-locally' : 'offline' });
+    setConflicts([]);
     const onState = async (event: Event) => {
       const detail = (event as CustomEvent<StatusDetail>).detail;
-      if (detail.userKey !== userKey) return;
+      if (stopped || detail.userKey !== userKey) return;
       const revision = ++stateRevision;
       if (detail.state === 'synced') {
         const snapshot = await storageService.readCommittedSnapshot(userKey).catch(error => {
-          setStatus({ state: 'error', message: error instanceof Error ? error.message : 'Local state could not be verified.' });
+          if (!stopped && revision === stateRevision) setStatus({ state: 'error', message: error instanceof Error ? error.message : 'Local state could not be verified.' });
           return null;
         });
-        if (!snapshot || revision !== stateRevision) return;
+        if (stopped || !snapshot || revision !== stateRevision) return;
         if (snapshot.pendingCount || snapshot.meta.outbox.length || snapshot.meta.conflicts.length
           || Object.keys(snapshot.meta.localState?.blocked ?? {}).length) {
           setStatus({ ...detail, state: Object.keys(snapshot.meta.localState?.blocked ?? {}).length ? 'error' : 'saved-locally' });
@@ -43,12 +48,13 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
       }
       if (detail.conflictCount) {
         const meta = await storageService.get<{ conflicts?: Array<{ id: string; entityType: string; entityId: string; localPayload?: any }> }>(STORES.SYNC, userKey);
-        setConflicts(meta?.conflicts || []);
+        if (!stopped && revision === stateRevision) setConflicts(meta?.conflicts || []);
       } else setConflicts([]);
     };
     const onHydrated = (event: Event) => {
       const detail = (event as CustomEvent).detail;
       if (detail?.userKey !== userKey) return;
+      if (!Number.isSafeInteger(detail.generation) || detail.generation < renderedGeneration.current) return;
       renderedGeneration.current = detail.generation;
       if (pendingSynced.current && detail.generation >= pendingSynced.current.generation) {
         void onState(new CustomEvent('goalflow:sync-state', { detail: pendingSynced.current.detail }));
@@ -62,14 +68,14 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
     };
     const onCommit = async (event: Event) => {
       if ((event as CustomEvent).detail?.userKey !== userKey) return;
-      stateRevision++;
+      const revision = ++stateRevision;
       pendingSynced.current = null;
       setStatus(previous => previous.state === 'synced' ? { ...previous, state: 'syncing', message: 'Updating local view.' } : previous);
       const snapshot = await storageService.readCommittedSnapshot(userKey).catch(error => {
-          setStatus({ state: 'error', message: error instanceof Error ? error.message : 'Local state could not be verified.' });
+          if (!stopped && revision === stateRevision) setStatus({ state: 'error', message: error instanceof Error ? error.message : 'Local state could not be verified.' });
           return null;
         });
-        if (!snapshot) return;
+        if (stopped || !snapshot || revision !== stateRevision) return;
       const blocked = Object.values<string>(snapshot.meta.localState?.blocked ?? {});
       if (blocked.length) setStatus({ state: 'error', message: blocked[0] });
       else if (snapshot.pendingCount || snapshot.meta.outbox.length || snapshot.meta.conflicts.length) setStatus(previous => previous.state === 'error' ? previous : { state: 'saved-locally', message: 'Waiting for cloud acknowledgment.' });
@@ -79,6 +85,8 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
     window.addEventListener('goalflow:captured', onCaptured);
     window.addEventListener('goalflow:committed', onCommit);
     return () => {
+      stopped = true;
+      stateRevision++;
       window.removeEventListener('goalflow:sync-state', onState);
       window.removeEventListener('goalflow:view-hydrated', onHydrated);
       window.removeEventListener('goalflow:captured', onCaptured);
