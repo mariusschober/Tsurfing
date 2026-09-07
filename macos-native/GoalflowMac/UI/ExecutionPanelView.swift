@@ -1023,7 +1023,6 @@ struct ExecutionPanelView: View {
                                 }.buttonStyle(.plain).disabled(vm.sharedFocusActionPending)
                             }
                         }
-                        holdButton(task: task)
                     }
                 } else {
                     Button(action: { vm.action() }) {
@@ -1032,6 +1031,10 @@ struct ExecutionPanelView: View {
                     }.buttonStyle(.plain).disabled(vm.sharedFocusActionPending).keyboardShortcut(.defaultAction).accessibilityLabel("Start focus on \(task.title)").accessibilityIdentifier("action-button").accessibilityAddTraits(.isButton)
                 }
             }.padding(.vertical, 4).animation(.easeInOut(duration: 0.35), value: vm.isActive).animation(.easeInOut(duration: 0.35), value: vm.isPaused).animation(.easeInOut(duration: 0.35), value: vm.isOvertime)
+            if vm.isActive || vm.isPaused {
+                holdButton(task: task)
+                    .padding(.vertical, 6)
+            }
             HStack(spacing: 10) {
                 Button(action: { vm.tickingEnabled.toggle() }) {
                     Image(systemName: vm.tickingEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
@@ -1065,11 +1068,7 @@ struct ExecutionPanelView: View {
                         .overlay(Capsule().stroke(Color.indigo.opacity(0.15), lineWidth: 1))
                 }.buttonStyle(.plain)
             }
-            if completionInstructionVisible && (vm.isActive || vm.isPaused) {
-                Text("Press and hold Done for \(task.isFrog ? "3 seconds" : "1 second") to mark as done. Release early to cancel.")
-                    .font(.system(size: 11, weight: .medium)).foregroundStyle(.primary)
-                    .accessibilityIdentifier("completion-hold-instruction")
-            } else if !(vm.isActive || vm.isPaused || vm.isOvertime) {
+            if !(vm.isActive || vm.isPaused || vm.isOvertime) {
                 Text("Tap ACTION to start. The timer counts from \(task.durationMinutes) minutes — it will persist if Tsurfing restarts. Pause is low friction; overtime counts separately.")
                     .font(.system(size: 11, weight: .regular)).foregroundStyle(.secondary).lineLimit(3)
             } else if vm.isPaused {
@@ -1089,12 +1088,21 @@ struct ExecutionPanelView: View {
         return ZStack {
             Capsule().fill(task.isFrog ? Color.green : Color.blue).opacity(vm.holding ? 0.12 : 0.0)
             Button(action: { completionInstructionVisible = true }) {
-                HStack(spacing: 6) {
-                    Image(systemName: task.isFrog ? "checkmark.circle.fill" : "checkmark.circle").font(.system(size: 12, weight: .bold))
-                    Text("Done").font(.system(size: 12, weight: .bold, design: .rounded))
+                VStack(spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: task.isFrog ? "checkmark.circle.fill" : "checkmark.circle").font(.system(size: 12, weight: .bold))
+                        Text("Done").font(.system(size: 12, weight: .bold, design: .rounded))
+                    }
+                    if completionInstructionVisible {
+                        Text("Press and hold for \(task.isFrog ? "3 seconds" : "1 second") to mark as done")
+                            .font(.system(size: 11, weight: .medium))
+                            .multilineTextAlignment(.center)
+                            .accessibilityIdentifier("completion-hold-instruction")
+                    }
                 }
                 .foregroundStyle(task.isFrog ? Color.green : Color.blue)
-                .padding(.horizontal, 14).padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 14).padding(.vertical, 10)
                 .background(Capsule().stroke(task.isFrog ? Color.green : Color.blue, lineWidth: vm.holding ? 2 : 1.2))
             }
             .buttonStyle(.plain).accessibilityLabel("Press and hold for \(dur) to mark as done").help("Press and hold for \(dur) to mark as done. Release early to cancel.").accessibilityIdentifier("hold-complete-button").accessibilityAddTraits(.isButton)
@@ -1115,7 +1123,7 @@ struct ExecutionPanelView: View {
                         .animation(.linear(duration: 0.02), value: vm.holdProgress)
                 }
             }
-        }.frame(height: 36).disabled(vm.sharedFocusActionPending).animation(.easeOut(duration: 0.2), value: vm.holding)
+        }.frame(height: completionInstructionVisible ? 60 : 38).disabled(vm.sharedFocusActionPending).animation(.easeOut(duration: 0.2), value: vm.holding)
     }
     private var isGateWall: Bool {
         // An already running cross-client session remains actionable even if

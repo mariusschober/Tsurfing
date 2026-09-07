@@ -51,6 +51,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TaskAlt
 import androidx.compose.material.icons.rounded.Timeline
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -1587,11 +1588,11 @@ private fun FocusTimerSheet(
                     ) {
                         Text(if (isPaused) "Resume" else "Pause")
                     }
-                    OutlinedButton(onClick = onStop, modifier = Modifier.weight(1f)) { Text("Stop") }
+                    OutlinedButton(onClick = onStop, colors = ButtonDefaults.outlinedButtonColors(contentColor = goalflowFocusOnSurface()), modifier = Modifier.weight(1f)) { Text("Stop") }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     listOf(300L to "+5 min", 900L to "+15 min", 1_800L to "+30 min").forEach { (delta, label) ->
-                        OutlinedButton(onClick = { onExtend(delta) }, modifier = Modifier.weight(1f)) { Text(label) }
+                        OutlinedButton(onClick = { onExtend(delta) }, colors = ButtonDefaults.outlinedButtonColors(contentColor = goalflowFocusOnSurface()), modifier = Modifier.weight(1f)) { Text(label) }
                     }
                 }
             }
