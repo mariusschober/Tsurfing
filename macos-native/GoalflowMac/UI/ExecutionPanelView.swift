@@ -1057,7 +1057,15 @@ struct ExecutionPanelView: View {
     }
     private var footer: some View {
         HStack {
-            Text("Tsurfing • Execution").font(.system(size: 10, weight: .medium, design: .rounded)).foregroundStyle(.tertiary)
+            Button(action: { NSApplication.shared.terminate(nil) }) {
+                Label("Quit App", systemImage: "power")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .keyboardShortcut("q", modifiers: .command)
+            .accessibilityIdentifier("quit-app-button")
+            .help("Quit Tsurfing (⌘Q)")
             Spacer()
             if vm.queueCount > 0 {
                 Text("\(vm.completedTodayCount) / \(vm.completedTodayCount + vm.queueCount)").font(.system(size: 10, weight: .medium, design: .rounded)).foregroundStyle(.secondary)
