@@ -1,4 +1,5 @@
 import XCTest
+import AVFoundation
 @testable import GoalflowMac
 
 final class ExecutionTimerTests: XCTestCase {
@@ -41,5 +42,24 @@ final class AudibleExecutionTimerTests: XCTestCase {
         timer.reflectPause(paused)
         clock.advance(by: 2); timer.tick(); XCTAssertEqual(timer.audibleTick, 2)
         timer.stop(); clock.advance(by: 1); timer.tick(); XCTAssertEqual(timer.audibleTick, 2)
+    }
+}
+
+final class RecordedClockAudioTests: XCTestCase {
+    func test_installed_bundle_contains_distinct_decodable_tick_and_tock() throws {
+        let sounds = try TickSoundGateway.loadRecordedTicks(bundle: Bundle(for: TickSoundGateway.self))
+        XCTAssertEqual(sounds.count, 2)
+        for sound in sounds {
+            XCTAssertEqual(sound.format.sampleRate, 44_100)
+            XCTAssertEqual(sound.format.channelCount, 1)
+            XCTAssertEqual(sound.frameLength, 22_050)
+            let samples = try XCTUnwrap(sound.floatChannelData?[0])
+            let peak = (0..<Int(sound.frameLength)).map { abs(samples[$0]) }.max() ?? 0
+            XCTAssertGreaterThan(peak, 0.1, "Recording must contain audible samples")
+            XCTAssertLessThan(peak, 0.9, "Recording must have clipping headroom")
+        }
+        let tick = try XCTUnwrap(sounds[0].floatChannelData?[0])
+        let tock = try XCTUnwrap(sounds[1].floatChannelData?[0])
+        XCTAssertTrue((0..<22_050).contains { tick[$0] != tock[$0] })
     }
 }

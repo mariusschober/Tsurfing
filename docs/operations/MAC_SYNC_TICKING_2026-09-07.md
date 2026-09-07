@@ -21,3 +21,28 @@ TickSoundGateway existed, but MenuBarController constructed the execution model 
 - UI tools could read the original failing popover, but cannot bind the new menu-bar-only app while its panel is closed. The owner was asked to leave the panel open. Audible output and final panel appearance remain NOT MEASURED at this checkpoint; no microphone recording or owner task edit was used as a substitute.
 
 This patch is based on the configured Mac staging branch, which retains the earlier Mac keychain, staging-origin, menu-bar contrast, and daily-plan fixes. It is not a promotion of this branch over the newer web finalization branch and does not redeploy web/Android or production.
+
+## Recorded clock follow-up
+
+The owner requested an actual clock recording after hearing the synthetic tick.
+The ticking path now plays two alternating PCM recordings bundled in the app;
+the noise/oscillator generator has been removed from that path. The source is
+Joseph SARDIN's CC0 “Clock” (0007), verified on the publisher's download page.
+See GoalflowMac/Resources/CLOCK_AUDIO_LICENSE.md for source, license, original
+checksum, exact excerpts, and processing. No runtime download is required.
+
+The cached recordings use the retained audio graph and existing volume, preview,
+countdown, overtime, mute and pause behavior. A bundle-level regression test
+loads both actual WAV resources and checks format, duration, distinct samples,
+audible peaks and clipping headroom.
+
+Recorded-clock validation: 207 macOS tests passed, 0 failed, 1 explicit live
+cross-client test skipped. Installed and relaunched version 0.4.0 build
+2026090709; strict signature verification passed. Both installed WAV hashes
+match the checked-in resources. All six public staging configuration values
+are unchanged. Existing account data was retained; after relaunch the local
+sync ledger has 0 outbox entries, 0 conflicts, cursor 1567.
+Backup: ~/Library/Application Support/Tsurfing-install-backups/20260907-125620-recorded-clock.
+The menu-bar-only app remains unavailable to native UI inspection; acoustic
+output through the owner's speakers is NOT MEASURED by the agent. Preview is
+available in the timer panel for the owner's listening check.

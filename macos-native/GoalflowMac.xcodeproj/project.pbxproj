@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C10C00000000000000000012 /* CLOCK_AUDIO_LICENSE.md in Resources */ = {isa = PBXBuildFile; fileRef = C10C00000000000000000002 /* CLOCK_AUDIO_LICENSE.md */; };
+		C10C00000000000000000011 /* clock-tock.wav in Resources */ = {isa = PBXBuildFile; fileRef = C10C00000000000000000001 /* clock-tock.wav */; };
+		C10C00000000000000000010 /* clock-tick.wav in Resources */ = {isa = PBXBuildFile; fileRef = C10C00000000000000000000 /* clock-tick.wav */; };
 		007E36C66EAF2106D3514231 /* GoalflowTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 880B660E82110CAAE59ADDFE /* GoalflowTask.swift */; };
 		0603D2747A0BF471F1D80B38 /* CalendarCollisionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 427EDB3B637D948C8298ADB3 /* CalendarCollisionService.swift */; };
 		0673FCDD5C3E69F35FE7F688 /* BreakTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5038BA3EE94A007C361CAFD /* BreakTests.swift */; };
@@ -93,6 +96,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		C10C00000000000000000002 /* CLOCK_AUDIO_LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLOCK_AUDIO_LICENSE.md; sourceTree = "<group>"; };
+		C10C00000000000000000001 /* clock-tock.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = clock-tock.wav; sourceTree = "<group>"; };
+		C10C00000000000000000000 /* clock-tick.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = clock-tick.wav; sourceTree = "<group>"; };
 		0660F5AC970BC266A22A532D /* BreakTimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakTimer.swift; sourceTree = "<group>"; };
 		07F8C01D63663071401FB667 /* FocusSessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusSessionStoreTests.swift; sourceTree = "<group>"; };
 		0A3C6E59CBBFBD818FE0FF3A /* BreakdownSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreakdownSheet.swift; sourceTree = "<group>"; };
@@ -248,6 +254,9 @@
 		8C5A79D0F4BC1B837049D959 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				C10C00000000000000000000 /* clock-tick.wav */,
+				C10C00000000000000000001 /* clock-tock.wav */,
+				C10C00000000000000000002 /* CLOCK_AUDIO_LICENSE.md */,
 				369CF2585A823B089E8A462B /* Assets.xcassets */,
 				FAE072D1C4311EFEA0DC0B39 /* Info.plist */,
 				24ECC1DE00F3C106D1516DA1 /* PrivacyInfo.xcprivacy */,
@@ -435,6 +444,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C10C00000000000000000010 /* clock-tick.wav in Resources */,
+				C10C00000000000000000011 /* clock-tock.wav in Resources */,
+				C10C00000000000000000012 /* CLOCK_AUDIO_LICENSE.md in Resources */,
 				B5A3AEF757859DD4321B851B /* Assets.xcassets in Resources */,
 				8E5668632336496C8547D658 /* PrivacyInfo.xcprivacy in Resources */,
 			);

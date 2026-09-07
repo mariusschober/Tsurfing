@@ -22,6 +22,27 @@ final class TickSoundGateway: SoundGateway, @unchecked Sendable {
     private var tickEngine: AVAudioEngine?
     private var tickPlayer: AVAudioPlayerNode?
     private var tickGeneration: UInt64 = 0
+    private var nextTickIndex = 0
+    private lazy var recordedTicks: [AVAudioPCMBuffer] = {
+        do { return try Self.loadRecordedTicks() }
+        catch { NSLog("Tsurfing: recorded clock audio could not be loaded: %@", error.localizedDescription); return [] }
+    }()
+
+    static func loadRecordedTicks(bundle: Bundle = .main) throws -> [AVAudioPCMBuffer] {
+        try ["clock-tick", "clock-tock"].map { name in
+            guard let url = bundle.url(forResource: name, withExtension: "wav") else {
+                throw CocoaError(.fileNoSuchFile)
+            }
+            let file = try AVAudioFile(forReading: url)
+            guard file.length > 0,
+                  let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
+                                                frameCapacity: AVAudioFrameCount(file.length)) else {
+                throw CocoaError(.fileReadCorruptFile)
+            }
+            try file.read(into: buffer)
+            return buffer
+        }
+    }
     init() {}
     func setEnabled(_ enabled: Bool) { lock.lock(); defer { lock.unlock() }; isEnabled = enabled }
     func setVolume(_ volume: Float) { lock.lock(); defer { lock.unlock() }; self.volume = max(0, min(1, volume)) }
@@ -37,19 +58,9 @@ final class TickSoundGateway: SoundGateway, @unchecked Sendable {
         audioQueue.async { [weak self] in self?.playCompletion(frog: frog, volume: baseVol) }
     }
     private func playTick(volume: Float) {
-        let sampleRate: Double = 44_100; let duration: Double = 0.05
-        let frames = AVAudioFrameCount(sampleRate * duration)
-        guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1) else { return }
-        guard let buf = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames) else { return }
-        buf.frameLength = frames
-        guard let ptr = buf.floatChannelData?[0] else { return }
-        for i in 0..<Int(frames) {
-            let noise = Float.random(in: -1...1)
-            let t = Float(i) / Float(sampleRate)
-            let band = sin(2 * .pi * 1500 * t) * 0.5
-            let envelope: Float = (i < Int(frames) * 4 / 5) ? 1.0 : exp(-Float(i - Int(frames)*4/5) * 0.02)
-            ptr[i] = (noise * 0.3 + band * 0.7) * envelope * volume * 0.18
-        }
+        guard !recordedTicks.isEmpty else { return }
+        let buf = recordedTicks[nextTickIndex]
+        let format = buf.format
         // Retain the output graph across ticks. A temporary engine can be
         // released before playback, and stopping from its callback is unsafe.
         let engine: AVAudioEngine
@@ -63,7 +74,9 @@ final class TickSoundGateway: SoundGateway, @unchecked Sendable {
         }
         do {
             if !engine.isRunning { try engine.start() }
+            player.volume = max(0, min(1, volume))
             player.scheduleBuffer(buf, at: nil, options: .interrupts)
+            nextTickIndex = (nextTickIndex + 1) % recordedTicks.count
             if !player.isPlaying { player.play() }
             tickGeneration &+= 1
             let generation = tickGeneration
