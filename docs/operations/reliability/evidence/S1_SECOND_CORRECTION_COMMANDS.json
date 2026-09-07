@@ -1,0 +1,162 @@
+[
+  {
+    "name": "install",
+    "command": [
+      "npm",
+      "ci"
+    ],
+    "exitCode": 0,
+    "commit": "cefd94457d975e7b96f90f0cba178b6397725439",
+    "durationSeconds": 5.07,
+    "counts": [],
+    "evidence": "docs/operations/reliability/evidence/correction-install.log"
+  },
+  {
+    "name": "release",
+    "command": [
+      "npm",
+      "run",
+      "verify:release"
+    ],
+    "exitCode": 0,
+    "commit": "cefd94457d975e7b96f90f0cba178b6397725439",
+    "durationSeconds": 21.6,
+    "counts": [
+      "Test Files  70 passed (70)",
+      "Tests  426 passed (426)"
+    ],
+    "evidence": "docs/operations/reliability/evidence/correction-release.log"
+  },
+  {
+    "name": "identifiers",
+    "command": [
+      "npm",
+      "run",
+      "verify:identifiers"
+    ],
+    "exitCode": 0,
+    "commit": "cefd94457d975e7b96f90f0cba178b6397725439",
+    "durationSeconds": 0.16,
+    "counts": [],
+    "evidence": "docs/operations/reliability/evidence/correction-identifiers.log"
+  },
+  {
+    "name": "migrations",
+    "command": [
+      "npm",
+      "run",
+      "verify:migrations"
+    ],
+    "exitCode": 0,
+    "commit": "cefd94457d975e7b96f90f0cba178b6397725439",
+    "durationSeconds": 0.15,
+    "counts": [],
+    "evidence": "docs/operations/reliability/evidence/correction-migrations.log"
+  },
+  {
+    "name": "migration-hashes",
+    "command": [
+      "npm",
+      "run",
+      "verify:migration-hashes"
+    ],
+    "exitCode": 0,
+    "commit": "cefd94457d975e7b96f90f0cba178b6397725439",
+    "durationSeconds": 0.15,
+    "counts": [],
+    "evidence": "docs/operations/reliability/evidence/correction-migration-hashes.log"
+  },
+  {
+    "name": "room-hashes",
+    "command": [
+      "npm",
+      "run",
+      "verify:room-hashes"
+    ],
+    "exitCode": 0,
+    "commit": "cefd94457d975e7b96f90f0cba178b6397725439",
+    "durationSeconds": 0.15,
+    "counts": [],
+    "evidence": "docs/operations/reliability/evidence/correction-room-hashes.log"
+  },
+  {
+    "name": "storage-1",
+    "command": [
+      "npm",
+      "run",
+      "test:s1:storage"
+    ],
+    "exitCode": 0,
+    "commit": "cefd94457d975e7b96f90f0cba178b6397725439",
+    "durationSeconds": 0.71,
+    "counts": [
+      "Test Files  5 passed (5)",
+      "Tests  38 passed (38)"
+    ],
+    "evidence": "docs/operations/reliability/evidence/correction-storage-1.log"
+  },
+  {
+    "name": "storage-2",
+    "command": [
+      "npm",
+      "run",
+      "test:s1:storage"
+    ],
+    "exitCode": 0,
+    "commit": "cefd94457d975e7b96f90f0cba178b6397725439",
+    "durationSeconds": 0.71,
+    "counts": [
+      "Test Files  5 passed (5)",
+      "Tests  38 passed (38)"
+    ],
+    "evidence": "docs/operations/reliability/evidence/correction-storage-2.log"
+  },
+  {
+    "name": "storage-3",
+    "command": [
+      "npm",
+      "run",
+      "test:s1:storage"
+    ],
+    "exitCode": 0,
+    "commit": "cefd94457d975e7b96f90f0cba178b6397725439",
+    "durationSeconds": 0.72,
+    "counts": [
+      "Test Files  5 passed (5)",
+      "Tests  38 passed (38)"
+    ],
+    "evidence": "docs/operations/reliability/evidence/correction-storage-3.log"
+  },
+  {
+    "name": "e2e",
+    "command": [
+      "npm",
+      "run",
+      "test:e2e"
+    ],
+    "exitCode": 0,
+    "commit": "cefd94457d975e7b96f90f0cba178b6397725439",
+    "durationSeconds": 45.19,
+    "counts": [
+      "64 passed (44.4s)"
+    ],
+    "evidence": "docs/operations/reliability/evidence/correction-e2e.log"
+  },
+  {
+    "name": "browser-repeat",
+    "command": [
+      "npm",
+      "run",
+      "test:s1:browser",
+      "--",
+      "--repeat-each=3"
+    ],
+    "exitCode": 1,
+    "commit": "cefd94457d975e7b96f90f0cba178b6397725439",
+    "durationSeconds": 81.44,
+    "counts": [
+      "119 passed (1.3m)"
+    ],
+    "evidence": "docs/operations/reliability/evidence/correction-browser-repeat.log"
+  }
+]

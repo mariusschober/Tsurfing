@@ -1,0 +1,80 @@
+
+> tsurfing@0.4.0-beta.1 test:s1:browser
+> playwright test --config playwright.s1.config.ts --grep visibility: missed hints --repeat-each=10
+
+[WebServer] (node:31740) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:31766) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:31792) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 20 tests using 2 workers
+
+(node:31795) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:31794) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   2 [chromium] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.9s)
+  ✓   1 [chromium] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (2.0s)
+(node:31840) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:31839) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   3 [chromium] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.5s)
+  ✓   4 [chromium] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.5s)
+(node:31857) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:31858) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   6 [chromium] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.4s)
+  ✓   5 [chromium] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.5s)
+(node:31879) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:31880) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   8 [chromium] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.5s)
+  ✓   7 [chromium] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.5s)
+(node:31909) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:31910) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  10 [chromium] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.7s)
+  ✓   9 [chromium] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.9s)
+(node:31930) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:31931) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  11 [webkit] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (2.6s)
+  ✓  12 [webkit] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (2.6s)
+(node:31966) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:31967) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  13 [webkit] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (2.0s)
+  ✓  14 [webkit] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (2.1s)
+(node:32003) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:32004) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  15 [webkit] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (2.0s)
+  ✓  16 [webkit] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (2.0s)
+(node:32041) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:32042) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  17 [webkit] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.9s)
+  ✓  18 [webkit] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.8s)
+(node:32080) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:32081) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  19 [webkit] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.8s)
+  ✓  20 [webkit] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.9s)
+
+  20 passed (31.4s)

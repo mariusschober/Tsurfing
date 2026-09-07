@@ -1,0 +1,11 @@
+{
+  "reviewAssertionsUnchangedSince": "9c0710489393746645ca3ad98fe0d70a45dad4bf",
+  "implementationCommit": "09245261b6174ec878f0296ca61682c603f54304",
+  "sourceWhitespaceCheckExitCode": 0,
+  "scopeReview": [
+    "No SQL/Room/IndexedDB schema or wire identifier changes.",
+    "Transaction awaits limited to IDB requests; network and hashing outside transaction.",
+    "Test harness mode guard and production marker exclusion verified by release build.",
+    "No deployment trigger, native installation or historical checkout modification."
+  ]
+}

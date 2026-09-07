@@ -1,0 +1,29 @@
+{
+  "node": "v22.16.0",
+  "npm": "10.9.2",
+  "git": "git version 2.50.1 (Apple Git-155)",
+  "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "branch": "codex/s1-local-durability-20260907",
+  "commit": "09245261b6174ec878f0296ca61682c603f54304",
+  "nativeRoots": [
+    "android",
+    "android-native",
+    "macos-native"
+  ],
+  "historicalDirectories": {
+    "/Users/schober/Projects/Goalflow": "absent",
+    "/private/tmp/tsurfing-focus-integrated": {
+      "commit": "bfb94c77c178d05dcba297dc1056dc25dcc999af",
+      "modified": [
+        ".github/workflows/ci.yml",
+        "index.tsx",
+        "tests/e2e/web-critical.spec.ts"
+      ],
+      "untracked": [
+        "components/AppUpdateNotice.tsx"
+      ],
+      "changedByThisWork": false
+    }
+  },
+  "runningOwnerBuild": "NOT MEASURED; no owner tab or installed app was inspected or modified"
+}

@@ -1,0 +1,13 @@
+
+> tsurfing@0.4.0-beta.1 test:s1:storage
+> vitest run services/storage.s1.test.ts services/storage.s1-fallback.test.ts services/storage.s1-completion.test.ts docs/operations/reliability/s1-review-regression.test.ts docs/operations/reliability/connection-regression.test.ts
+
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+
+ Test Files  5 passed (5)
+      Tests  38 passed (38)
+   Start at  18:38:17
+   Duration  338ms (transform 461ms, setup 0ms, import 672ms, tests 189ms, environment 0ms)
+

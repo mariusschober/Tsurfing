@@ -14,7 +14,7 @@ Correction baseline: `8a7000d040a68cba4ce352e821430fbf1e70370a`. Review evidence
 | R1 review counterexample | get + shared pending overlay | original review assertion retained; independent records + retired WAL coverage | Must pass unchanged |
 | R2 review counterexample | explicit set separate from drain | original note assertion retained; same-store/identical write/restart/abort cases | Must pass unchanged |
 | Bootstrap | initializeIfAbsent, versioned collection migration, transactional day rollover, atomic cloud seed | concurrent initialization/migration/day tests; two real tabs import/reload one legacy plan; existing account migration/backup tests | No stale bootstrap snapshot writer |
-| Status | lifecycle/revision-checked async reads, rendered generation, account scope | browser newer error vs old read, wrong account, missed hints, no BroadcastChannel, note quota failure | Peer hints do not clear error or certify this view |
+| Status | lifecycle/revision-checked async reads, rendered generation, account scope, local-only recovery | browser newer error vs old read, wrong account, missed hints, no BroadcastChannel, note quota failure, local retry without cloud | Peer hints do not clear error or certify this view |
 | Product/auth preservation | existing domain scheduling and authenticated fetch boundaries | scheduling tests preserve confirmation after add/complete/reorder and overdue gates; auth/session/cross-user tests remain in release suite | No product, credential, or durable-ID change |
 | Compatibility | additive localState groups, fallbackCopies, resolvedConflicts, reconciliations | legacy WAL exact bytes, null/unknown fields, backup/restore, connection replacement | Wire, SQL, Room, DB version unchanged |
 

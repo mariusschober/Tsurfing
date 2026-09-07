@@ -1,0 +1,150 @@
+[
+  {
+    "name": "release",
+    "command": [
+      "npm",
+      "run",
+      "verify:release"
+    ],
+    "exitCode": 0,
+    "commit": "fdfa8a249262e378afb6a32267766d14cf91a9f6",
+    "durationSeconds": 20.35,
+    "counts": [
+      "Test Files  70 passed (70)",
+      "Tests  425 passed (425)"
+    ],
+    "evidence": "docs/operations/reliability/evidence/correction-release.log"
+  },
+  {
+    "name": "identifiers",
+    "command": [
+      "npm",
+      "run",
+      "verify:identifiers"
+    ],
+    "exitCode": 0,
+    "commit": "fdfa8a249262e378afb6a32267766d14cf91a9f6",
+    "durationSeconds": 0.16,
+    "counts": [],
+    "evidence": "docs/operations/reliability/evidence/correction-identifiers.log"
+  },
+  {
+    "name": "migrations",
+    "command": [
+      "npm",
+      "run",
+      "verify:migrations"
+    ],
+    "exitCode": 0,
+    "commit": "fdfa8a249262e378afb6a32267766d14cf91a9f6",
+    "durationSeconds": 0.15,
+    "counts": [],
+    "evidence": "docs/operations/reliability/evidence/correction-migrations.log"
+  },
+  {
+    "name": "migration-hashes",
+    "command": [
+      "npm",
+      "run",
+      "verify:migration-hashes"
+    ],
+    "exitCode": 0,
+    "commit": "fdfa8a249262e378afb6a32267766d14cf91a9f6",
+    "durationSeconds": 0.15,
+    "counts": [],
+    "evidence": "docs/operations/reliability/evidence/correction-migration-hashes.log"
+  },
+  {
+    "name": "room-hashes",
+    "command": [
+      "npm",
+      "run",
+      "verify:room-hashes"
+    ],
+    "exitCode": 0,
+    "commit": "fdfa8a249262e378afb6a32267766d14cf91a9f6",
+    "durationSeconds": 0.15,
+    "counts": [],
+    "evidence": "docs/operations/reliability/evidence/correction-room-hashes.log"
+  },
+  {
+    "name": "storage-1",
+    "command": [
+      "npm",
+      "run",
+      "test:s1:storage"
+    ],
+    "exitCode": 0,
+    "commit": "fdfa8a249262e378afb6a32267766d14cf91a9f6",
+    "durationSeconds": 0.73,
+    "counts": [
+      "Test Files  5 passed (5)",
+      "Tests  37 passed (37)"
+    ],
+    "evidence": "docs/operations/reliability/evidence/correction-storage-1.log"
+  },
+  {
+    "name": "storage-2",
+    "command": [
+      "npm",
+      "run",
+      "test:s1:storage"
+    ],
+    "exitCode": 0,
+    "commit": "fdfa8a249262e378afb6a32267766d14cf91a9f6",
+    "durationSeconds": 0.7,
+    "counts": [
+      "Test Files  5 passed (5)",
+      "Tests  37 passed (37)"
+    ],
+    "evidence": "docs/operations/reliability/evidence/correction-storage-2.log"
+  },
+  {
+    "name": "storage-3",
+    "command": [
+      "npm",
+      "run",
+      "test:s1:storage"
+    ],
+    "exitCode": 0,
+    "commit": "fdfa8a249262e378afb6a32267766d14cf91a9f6",
+    "durationSeconds": 0.72,
+    "counts": [
+      "Test Files  5 passed (5)",
+      "Tests  37 passed (37)"
+    ],
+    "evidence": "docs/operations/reliability/evidence/correction-storage-3.log"
+  },
+  {
+    "name": "e2e",
+    "command": [
+      "npm",
+      "run",
+      "test:e2e"
+    ],
+    "exitCode": 0,
+    "commit": "fdfa8a249262e378afb6a32267766d14cf91a9f6",
+    "durationSeconds": 44.1,
+    "counts": [
+      "62 passed (43.6s)"
+    ],
+    "evidence": "docs/operations/reliability/evidence/correction-e2e.log"
+  },
+  {
+    "name": "browser-repeat",
+    "command": [
+      "npm",
+      "run",
+      "test:s1:browser",
+      "--",
+      "--repeat-each=3"
+    ],
+    "exitCode": 0,
+    "commit": "fdfa8a249262e378afb6a32267766d14cf91a9f6",
+    "durationSeconds": 70.56,
+    "counts": [
+      "114 passed (1.2m)"
+    ],
+    "evidence": "docs/operations/reliability/evidence/correction-browser-repeat.log"
+  }
+]

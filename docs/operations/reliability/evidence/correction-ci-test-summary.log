@@ -1,0 +1,10 @@
+web-release	Run Playwright web-critical journeys (chromium + webkit)	2026-09-07T17:43:52.4809560Z   64 passed (3.2m)
+web-release	Repeat S1 browser interleavings	2026-09-07T17:49:39.0995138Z   120 passed (5.8m)
+native-android	Run native emulator journey	2026-09-07T18:09:41.9920035Z UPGRADE_PRESERVED_LAUNCH_UI=PASS
+native-android	Run native emulator journey	2026-09-07T18:09:41.9921338Z UPGRADE_PRESERVED_LAUNCH=PASS
+native-android	Run native emulator journey	2026-09-07T18:10:43.0439793Z UPGRADE_CURRENT_LAUNCH_UI=PASS
+native-android	Run native emulator journey	2026-09-07T18:10:43.0440499Z UPGRADE_CURRENT_LAUNCH=PASS
+native-android	Run native emulator journey	2026-09-07T18:10:46.9950166Z UPGRADE_INSTALL_LAUNCH=PASS
+native-android	Run native emulator journey	2026-09-07T18:10:46.9950566Z UPGRADE_DATA_PRESERVATION=PASS
+native-android	Run native emulator journey	2026-09-07T18:10:46.9952201Z UPGRADE_MATRIX=PASS
+native-android	Run native emulator journey	2026-09-07T18:10:46.9952708Z EMULATOR_GATE=PASS

@@ -794,3 +794,7 @@ token, or session material in chat. After Telegram live proof, configure
 Turnstile and repeat the post-restore email-code plus TOTP journey on Web, TCL
 and macOS. Android and macOS release signing remain deferred for about one week.
 Movetrics remains an absolute exclusion.
+
+## 2026-09-07: corrected S1 local acceptance
+
+S1 is PASS_LOCAL at `09245261b6174ec878f0296ca61682c603f54304`. Both review regressions, 426 unit/property tests, three 38-test storage runs, 64 E2E executions and 120 repeated Chromium/WebKit S1 executions pass. See `docs/operations/reliability/S1_REPORT.md` and `S1_HANDOVER.json` for exact commands, artifacts and CI outcomes. Initial incomplete acceptance and intermediate failures remain preserved. Hosted candidate is undeployed and dedicated account authorization is unverified; aggregate Beta Gate is not green. No deployment or native installation performed. Cross-device counter conservation remains S2; overall beta **NOT READY**, production release not authorized.

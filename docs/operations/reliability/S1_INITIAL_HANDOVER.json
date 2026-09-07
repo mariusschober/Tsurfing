@@ -1,0 +1,329 @@
+{
+  "stageId": "S1",
+  "status": "PASS_LOCAL",
+  "baselineCommit": "6f750a712f253754bfac840d8edc5d846b360b7d",
+  "finalCommit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+  "implementationCommit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+  "evidenceCommit": "This documentation-only follow-up is identified by git log; it does not change the tested production source.",
+  "integrationBranch": "codex/s1-local-durability-20260907",
+  "prerequisites": [],
+  "referenceCommits": {
+    "originalAudit": "4ea2ab5edb7e07fb9f9f91ceea99b3ba197ea977",
+    "originalHandover": "01f864720df7acfa211745e64edec8b5163ab612",
+    "alreadyIntegratedDraftFix": "35cda299d38eafb706f6680981d25845daf5cd0b"
+  },
+  "changedFiles": [
+    "components/CurrentView.tsx",
+    "components/SyncStatus.tsx",
+    "components/TaskForm.tsx",
+    "hooks/p1_2.debounce.test.ts",
+    "hooks/useGoalflow.ts",
+    "index.tsx",
+    "package.json",
+    "playwright.s1.config.ts",
+    "services/cloudSync.ts",
+    "services/storage.s1-fallback.test.ts",
+    "services/storage.s1.test.ts",
+    "services/storage.test.ts",
+    "services/storage.ts",
+    "services/syncProtocol.ts",
+    "tests/browser/s1Harness.ts",
+    "tests/e2e/s1-local-storage.spec.ts",
+    "vite.config.ts",
+    "docs/operations/reliability/S1_REPORT.md",
+    "docs/operations/reliability/S1_HANDOVER.json",
+    "docs/operations/reliability/SYNC_INVARIANTS.md",
+    "docs/operations/reliability/connection-regression.test.ts",
+    "docs/operations/reliability/evidence/"
+  ],
+  "findings": [
+    {
+      "id": "S1-A",
+      "disposition": "PASS_LOCAL",
+      "summary": "Peer rendering refreshed from coherent account snapshots; focus baseline refs follow committed state; stale new focus intent is preserved as blocked."
+    },
+    {
+      "id": "S1-B",
+      "disposition": "PASS_LOCAL",
+      "summary": "All six metadata-only/manual writers use latest readwrite transaction state; independent outbox evidence survives the controlled peer transaction."
+    },
+    {
+      "id": "S1-C",
+      "disposition": "PASS_LOCAL",
+      "summary": "Deferred React snapshot persistence removed; old callbacks admit zero new actions."
+    },
+    {
+      "id": "S1-D",
+      "disposition": "PASS_LOCAL",
+      "summary": "Inbound and reconciliation materialize WAL in the atomic transaction; before/during/after admissions preserve intent; abort rolls back grouped materialization and cursor."
+    },
+    {
+      "id": "S1-E",
+      "disposition": "PASS_LOCAL",
+      "summary": "Account drain retains all stores and grouped actions; independent note text is preserved. Grouped WAL atomicity already existed and was retained."
+    },
+    {
+      "id": "S1-F",
+      "disposition": "PASS_LOCAL",
+      "summary": "No inbound cursor advance without atomic IndexedDB; optional mirror faults do not retire WAL or certify records."
+    },
+    {
+      "id": "S1-G",
+      "disposition": "PASS_LOCAL",
+      "summary": "Removed key-count/time WAL caches and stale idle cache callbacks; reads inspect actual content."
+    },
+    {
+      "id": "S1-OWNERSHIP",
+      "disposition": "PASS_LOCAL",
+      "summary": "Original materialized intents and exact accepted receipts remain durable; leftover WAL replay cannot recreate accepted actions. Bootstrap normalization is versioned."
+    },
+    {
+      "id": "S1-RECOVERY",
+      "disposition": "PASS_LOCAL",
+      "summary": "Connection replacement retains incompatible WAL and original database. Unsafe automatic shadow activation and unscoped clearing fail closed."
+    }
+  ],
+  "commands": [
+    {
+      "name": "release",
+      "command": [
+        "npm",
+        "run",
+        "verify:release"
+      ],
+      "exitCode": 0,
+      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+      "durationSeconds": 21.04,
+      "counts": [
+        "Test Files  67 passed (67)",
+        "Tests  403 passed (403)"
+      ],
+      "evidence": "evidence/release.log"
+    },
+    {
+      "name": "identifiers",
+      "command": [
+        "npm",
+        "run",
+        "verify:identifiers"
+      ],
+      "exitCode": 0,
+      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+      "durationSeconds": 0.16,
+      "counts": [],
+      "evidence": "evidence/identifiers.log"
+    },
+    {
+      "name": "migrations",
+      "command": [
+        "npm",
+        "run",
+        "verify:migrations"
+      ],
+      "exitCode": 0,
+      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+      "durationSeconds": 0.16,
+      "counts": [],
+      "evidence": "evidence/migrations.log"
+    },
+    {
+      "name": "migration-hashes",
+      "command": [
+        "npm",
+        "run",
+        "verify:migration-hashes"
+      ],
+      "exitCode": 0,
+      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+      "durationSeconds": 0.16,
+      "counts": [],
+      "evidence": "evidence/migration-hashes.log"
+    },
+    {
+      "name": "room-hashes",
+      "command": [
+        "npm",
+        "run",
+        "verify:room-hashes"
+      ],
+      "exitCode": 0,
+      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+      "durationSeconds": 0.15,
+      "counts": [],
+      "evidence": "evidence/room-hashes.log"
+    },
+    {
+      "name": "s1-storage-1",
+      "command": [
+        "npm",
+        "run",
+        "test:s1:storage"
+      ],
+      "exitCode": 0,
+      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+      "durationSeconds": 0.7,
+      "counts": [
+        "Test Files  2 passed (2)",
+        "Tests  15 passed (15)"
+      ],
+      "evidence": "evidence/s1-storage-1.log"
+    },
+    {
+      "name": "s1-storage-2",
+      "command": [
+        "npm",
+        "run",
+        "test:s1:storage"
+      ],
+      "exitCode": 0,
+      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+      "durationSeconds": 0.67,
+      "counts": [
+        "Test Files  2 passed (2)",
+        "Tests  15 passed (15)"
+      ],
+      "evidence": "evidence/s1-storage-2.log"
+    },
+    {
+      "name": "s1-storage-3",
+      "command": [
+        "npm",
+        "run",
+        "test:s1:storage"
+      ],
+      "exitCode": 0,
+      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+      "durationSeconds": 0.73,
+      "counts": [
+        "Test Files  2 passed (2)",
+        "Tests  15 passed (15)"
+      ],
+      "evidence": "evidence/s1-storage-3.log"
+    },
+    {
+      "name": "existing-e2e",
+      "command": [
+        "npm",
+        "run",
+        "test:e2e"
+      ],
+      "exitCode": 0,
+      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+      "durationSeconds": 27.64,
+      "counts": [
+        "34 passed (27.0s)"
+      ],
+      "evidence": "evidence/existing-e2e.log"
+    },
+    {
+      "name": "s1-browser-repeat",
+      "command": [
+        "npm",
+        "run",
+        "test:s1:browser",
+        "--",
+        "--repeat-each=3"
+      ],
+      "exitCode": 0,
+      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+      "durationSeconds": 30.16,
+      "counts": [
+        "30 passed (29.5s)"
+      ],
+      "evidence": "evidence/s1-browser-repeat.log"
+    },
+    {
+      "name": "connection-regression",
+      "command": [
+        "npx",
+        "vitest",
+        "run",
+        "docs/operations/reliability/connection-regression.test.ts"
+      ],
+      "exitCode": 0,
+      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+      "counts": [
+        "2 passed (2)"
+      ],
+      "evidence": "evidence/connection-regression.log",
+      "note": "Evidence-only additional fixtures; production source is the tested commit."
+    }
+  ],
+  "testBuildIdentities": [
+    "evidence/production-build.json",
+    "evidence/test-build.json",
+    "evidence/inventory.json"
+  ],
+  "migrations": {
+    "postgres": [],
+    "room": [],
+    "indexedDbSchemaVersionChanged": false,
+    "browserDataMigrations": [
+      "web-task-defaults-v1",
+      "web-progress-threshold-v1"
+    ]
+  },
+  "compatibilityNotes": [
+    "Durable database, bundle, account, session, URL and wire identifiers unchanged.",
+    "Optional browser sync.localState evidence is additive and included in backups.",
+    "Existing legacy ambiguous WAL is preserved without ID/time/payload rewriting.",
+    "Old running binaries require an eventual authorized update; their writer implementation cannot be retroactively changed."
+  ],
+  "evidencePaths": [
+    "evidence/S1_COMMANDS.json",
+    "evidence/baseline-browser.log",
+    "evidence/baseline-ci.json",
+    "evidence/baseline-expanded.log",
+    "evidence/baseline-metadata-cache.log",
+    "evidence/connection-regression.log",
+    "evidence/existing-e2e.log",
+    "evidence/identifiers.log",
+    "evidence/inventory.json",
+    "evidence/migration-hashes.log",
+    "evidence/migrations.log",
+    "evidence/production-build.json",
+    "evidence/release.log",
+    "evidence/room-hashes.log",
+    "evidence/s1-browser-repeat.log",
+    "evidence/s1-ci.json",
+    "evidence/s1-storage-1.log",
+    "evidence/s1-storage-2.log",
+    "evidence/s1-storage-3.log",
+    "evidence/test-build.json"
+  ],
+  "blockers": [
+    {
+      "scope": "S2",
+      "status": "BLOCKED",
+      "reason": "Cross-device counter conservation and historical counter ambiguity are not repaired by S1; run S2 before any complete sync claim."
+    },
+    {
+      "scope": "hosted/native rollout",
+      "status": "BLOCKED",
+      "reason": "No deployment or native installation authorized or executed. Repaired web builds must replace older running binaries; staging/native matrix, signer and release gates remain separate."
+    },
+    {
+      "scope": "automatic database activation",
+      "status": "BLOCKED",
+      "reason": "No atomic fence across database pointer replacement and old-tab admission; verified shadow is retained without activation."
+    },
+    {
+      "scope": "new commit CI",
+      "status": "BLOCKED",
+      "reason": "No GitHub Actions run is listed for the new S1 branch commit. Local verification is complete; hosted CI is not claimed."
+    }
+  ],
+  "permittedNextStage": {
+    "stageId": "S2",
+    "sourceCommit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+    "scope": "Counter conservation and wire reconciliation; preserve S1 local ownership invariants.",
+    "productionReleaseAuthorized": false
+  },
+  "publication": {
+    "branchPushed": true,
+    "deploymentPerformed": false,
+    "nativeInstallationPerformed": false,
+    "productionReleaseAuthorized": false
+  },
+  "ciSnapshot": []
+}

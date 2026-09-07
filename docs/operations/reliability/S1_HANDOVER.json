@@ -1,89 +1,115 @@
 {
   "stageId": "S1",
   "status": "PASS_LOCAL",
-  "baselineCommit": "6f750a712f253754bfac840d8edc5d846b360b7d",
-  "finalCommit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
-  "implementationCommit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+  "baselineCommit": "8a7000d040a68cba4ce352e821430fbf1e70370a",
+  "finalCommit": "09245261b6174ec878f0296ca61682c603f54304",
+  "implementationCommit": "09245261b6174ec878f0296ca61682c603f54304",
   "evidenceCommit": "This documentation-only follow-up is identified by git log; it does not change the tested production source.",
   "integrationBranch": "codex/s1-local-durability-20260907",
-  "prerequisites": [],
+  "prerequisites": [
+    "Node 22.16.0, npm 10.9.2; installed Chromium and WebKit; synthetic same-origin BrowserContext profiles; loopback permission.",
+    "No owner profile, live account, deployment, native installation or production promotion used."
+  ],
   "referenceCommits": {
     "originalAudit": "4ea2ab5edb7e07fb9f9f91ceea99b3ba197ea977",
     "originalHandover": "01f864720df7acfa211745e64edec8b5163ab612",
     "alreadyIntegratedDraftFix": "35cda299d38eafb706f6680981d25845daf5cd0b"
   },
   "changedFiles": [
+    ".github/workflows/ci.yml",
     "components/CurrentView.tsx",
     "components/SyncStatus.tsx",
-    "components/TaskForm.tsx",
-    "hooks/p1_2.debounce.test.ts",
+    "components/YellowPad.tsx",
+    "docs/operations/reliability/S1_REQUIREMENT_MATRIX.md",
+    "docs/operations/reliability/S1_REVIEW.md",
+    "docs/operations/reliability/S1_REVIEW_HANDOVER.json",
+    "docs/operations/reliability/evidence/S1_review-browser.log",
+    "docs/operations/reliability/evidence/S1_review-regressions.log",
+    "docs/operations/reliability/evidence/S1_review-release.log",
+    "docs/operations/reliability/s1-review-regression.test.ts",
     "hooks/useGoalflow.ts",
     "index.tsx",
     "package.json",
-    "playwright.s1.config.ts",
+    "scripts/verify-client-artifacts.mjs",
     "services/cloudSync.ts",
-    "services/storage.s1-fallback.test.ts",
+    "services/storage.s1-completion.test.ts",
     "services/storage.s1.test.ts",
     "services/storage.test.ts",
     "services/storage.ts",
     "services/syncProtocol.ts",
     "tests/browser/s1Harness.ts",
-    "tests/e2e/s1-local-storage.spec.ts",
-    "vite.config.ts",
-    "docs/operations/reliability/S1_REPORT.md",
-    "docs/operations/reliability/S1_HANDOVER.json",
-    "docs/operations/reliability/SYNC_INVARIANTS.md",
-    "docs/operations/reliability/connection-regression.test.ts",
-    "docs/operations/reliability/evidence/"
+    "tests/e2e/s1-local-storage.spec.ts"
   ],
   "findings": [
     {
+      "id": "S1-R1",
+      "disposition": "PASS_LOCAL",
+      "summary": "Committed IDB plus validated unjournaled intent is authoritative; fallback cannot shadow or resurrect tombstones."
+    },
+    {
+      "id": "S1-R2",
+      "disposition": "PASS_LOCAL",
+      "summary": "Explicit set commits its supplied request after existing intent, or rejects; drain-only callers use flush."
+    },
+    {
       "id": "S1-A",
       "disposition": "PASS_LOCAL",
-      "summary": "Peer rendering refreshed from coherent account snapshots; focus baseline refs follow committed state; stale new focus intent is preserved as blocked."
+      "summary": "Actual synchronization cycle with empty synthetic pull and paused/completed peer; display and next baseline asserted."
     },
     {
       "id": "S1-B",
       "disposition": "PASS_LOCAL",
-      "summary": "All six metadata-only/manual writers use latest readwrite transaction state; independent outbox evidence survives the controlled peer transaction."
+      "summary": "Latest transaction metadata preserved across writer barriers with nonempty receipts/conflicts and recovery."
     },
     {
       "id": "S1-C",
       "disposition": "PASS_LOCAL",
-      "summary": "Deferred React snapshot persistence removed; old callbacks admit zero new actions."
+      "summary": "Actual deferred React callback, account switch and unmount admit zero obsolete actions."
     },
     {
       "id": "S1-D",
       "disposition": "PASS_LOCAL",
-      "summary": "Inbound and reconciliation materialize WAL in the atomic transaction; before/during/after admissions preserve intent; abort rolls back grouped materialization and cursor."
+      "summary": "Before/during/after inbound and reconciliation admissions preserve original intent across abort/reopen."
     },
     {
       "id": "S1-E",
       "disposition": "PASS_LOCAL",
-      "summary": "Account drain retains all stores and grouped actions; independent note text is preserved. Grouped WAL atomicity already existed and was retained."
+      "summary": "Whole group prevalidation, original envelope retention, real completion plus independent note."
     },
     {
       "id": "S1-F",
       "disposition": "PASS_LOCAL",
-      "summary": "No inbound cursor advance without atomic IndexedDB; optional mirror faults do not retire WAL or certify records."
+      "summary": "Fallback, tombstone, unavailable IDB, optional mirror and concurrent replacement assertions pass."
     },
     {
       "id": "S1-G",
       "disposition": "PASS_LOCAL",
-      "summary": "Removed key-count/time WAL caches and stale idle cache callbacks; reads inspect actual content."
+      "summary": "Equal-count two-tab WAL replacement and repeated hints use current content without duplicate action."
     },
     {
-      "id": "S1-OWNERSHIP",
+      "id": "S1-STATUS",
       "disposition": "PASS_LOCAL",
-      "summary": "Original materialized intents and exact accepted receipts remain durable; leftover WAL replay cannot recreate accepted actions. Bootstrap normalization is versioned."
+      "summary": "Lifecycle/revision-safe reads, capture failure input retention, local-only retry and permanent-error boundaries."
     },
     {
-      "id": "S1-RECOVERY",
+      "id": "S1-BOOTSTRAP",
       "disposition": "PASS_LOCAL",
-      "summary": "Connection replacement retains incompatible WAL and original database. Unsafe automatic shadow activation and unscoped clearing fail closed."
+      "summary": "Transactional initialization, versioned migration, seed and day boundary; malformed rollover fails closed."
     }
   ],
   "commands": [
+    {
+      "name": "install",
+      "command": [
+        "npm",
+        "ci"
+      ],
+      "exitCode": 0,
+      "commit": "09245261b6174ec878f0296ca61682c603f54304",
+      "durationSeconds": 4.84,
+      "counts": [],
+      "evidence": "docs/operations/reliability/evidence/correction-install.log"
+    },
     {
       "name": "release",
       "command": [
@@ -92,13 +118,13 @@
         "verify:release"
       ],
       "exitCode": 0,
-      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
-      "durationSeconds": 21.04,
+      "commit": "09245261b6174ec878f0296ca61682c603f54304",
+      "durationSeconds": 20.71,
       "counts": [
-        "Test Files  67 passed (67)",
-        "Tests  403 passed (403)"
+        "Test Files  70 passed (70)",
+        "Tests  426 passed (426)"
       ],
-      "evidence": "evidence/release.log"
+      "evidence": "docs/operations/reliability/evidence/correction-release.log"
     },
     {
       "name": "identifiers",
@@ -108,10 +134,10 @@
         "verify:identifiers"
       ],
       "exitCode": 0,
-      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
-      "durationSeconds": 0.16,
+      "commit": "09245261b6174ec878f0296ca61682c603f54304",
+      "durationSeconds": 0.15,
       "counts": [],
-      "evidence": "evidence/identifiers.log"
+      "evidence": "docs/operations/reliability/evidence/correction-identifiers.log"
     },
     {
       "name": "migrations",
@@ -121,10 +147,10 @@
         "verify:migrations"
       ],
       "exitCode": 0,
-      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
-      "durationSeconds": 0.16,
+      "commit": "09245261b6174ec878f0296ca61682c603f54304",
+      "durationSeconds": 0.14,
       "counts": [],
-      "evidence": "evidence/migrations.log"
+      "evidence": "docs/operations/reliability/evidence/correction-migrations.log"
     },
     {
       "name": "migration-hashes",
@@ -134,10 +160,10 @@
         "verify:migration-hashes"
       ],
       "exitCode": 0,
-      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
-      "durationSeconds": 0.16,
+      "commit": "09245261b6174ec878f0296ca61682c603f54304",
+      "durationSeconds": 0.14,
       "counts": [],
-      "evidence": "evidence/migration-hashes.log"
+      "evidence": "docs/operations/reliability/evidence/correction-migration-hashes.log"
     },
     {
       "name": "room-hashes",
@@ -147,76 +173,76 @@
         "verify:room-hashes"
       ],
       "exitCode": 0,
-      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
-      "durationSeconds": 0.15,
+      "commit": "09245261b6174ec878f0296ca61682c603f54304",
+      "durationSeconds": 0.14,
       "counts": [],
-      "evidence": "evidence/room-hashes.log"
+      "evidence": "docs/operations/reliability/evidence/correction-room-hashes.log"
     },
     {
-      "name": "s1-storage-1",
+      "name": "storage-1",
       "command": [
         "npm",
         "run",
         "test:s1:storage"
       ],
       "exitCode": 0,
-      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
-      "durationSeconds": 0.7,
-      "counts": [
-        "Test Files  2 passed (2)",
-        "Tests  15 passed (15)"
-      ],
-      "evidence": "evidence/s1-storage-1.log"
-    },
-    {
-      "name": "s1-storage-2",
-      "command": [
-        "npm",
-        "run",
-        "test:s1:storage"
-      ],
-      "exitCode": 0,
-      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+      "commit": "09245261b6174ec878f0296ca61682c603f54304",
       "durationSeconds": 0.67,
       "counts": [
-        "Test Files  2 passed (2)",
-        "Tests  15 passed (15)"
+        "Test Files  5 passed (5)",
+        "Tests  38 passed (38)"
       ],
-      "evidence": "evidence/s1-storage-2.log"
+      "evidence": "docs/operations/reliability/evidence/correction-storage-1.log"
     },
     {
-      "name": "s1-storage-3",
+      "name": "storage-2",
       "command": [
         "npm",
         "run",
         "test:s1:storage"
       ],
       "exitCode": 0,
-      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
-      "durationSeconds": 0.73,
+      "commit": "09245261b6174ec878f0296ca61682c603f54304",
+      "durationSeconds": 0.66,
       "counts": [
-        "Test Files  2 passed (2)",
-        "Tests  15 passed (15)"
+        "Test Files  5 passed (5)",
+        "Tests  38 passed (38)"
       ],
-      "evidence": "evidence/s1-storage-3.log"
+      "evidence": "docs/operations/reliability/evidence/correction-storage-2.log"
     },
     {
-      "name": "existing-e2e",
+      "name": "storage-3",
+      "command": [
+        "npm",
+        "run",
+        "test:s1:storage"
+      ],
+      "exitCode": 0,
+      "commit": "09245261b6174ec878f0296ca61682c603f54304",
+      "durationSeconds": 0.66,
+      "counts": [
+        "Test Files  5 passed (5)",
+        "Tests  38 passed (38)"
+      ],
+      "evidence": "docs/operations/reliability/evidence/correction-storage-3.log"
+    },
+    {
+      "name": "e2e",
       "command": [
         "npm",
         "run",
         "test:e2e"
       ],
       "exitCode": 0,
-      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
-      "durationSeconds": 27.64,
+      "commit": "09245261b6174ec878f0296ca61682c603f54304",
+      "durationSeconds": 44.25,
       "counts": [
-        "34 passed (27.0s)"
+        "64 passed (43.5s)"
       ],
-      "evidence": "evidence/existing-e2e.log"
+      "evidence": "docs/operations/reliability/evidence/correction-e2e.log"
     },
     {
-      "name": "s1-browser-repeat",
+      "name": "browser-repeat",
       "command": [
         "npm",
         "run",
@@ -225,34 +251,18 @@
         "--repeat-each=3"
       ],
       "exitCode": 0,
-      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
-      "durationSeconds": 30.16,
+      "commit": "09245261b6174ec878f0296ca61682c603f54304",
+      "durationSeconds": 71.51,
       "counts": [
-        "30 passed (29.5s)"
+        "120 passed (1.2m)"
       ],
-      "evidence": "evidence/s1-browser-repeat.log"
-    },
-    {
-      "name": "connection-regression",
-      "command": [
-        "npx",
-        "vitest",
-        "run",
-        "docs/operations/reliability/connection-regression.test.ts"
-      ],
-      "exitCode": 0,
-      "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
-      "counts": [
-        "2 passed (2)"
-      ],
-      "evidence": "evidence/connection-regression.log",
-      "note": "Evidence-only additional fixtures; production source is the tested commit."
+      "evidence": "docs/operations/reliability/evidence/correction-browser-repeat.log"
     }
   ],
   "testBuildIdentities": [
-    "evidence/production-build.json",
-    "evidence/test-build.json",
-    "evidence/inventory.json"
+    "evidence/correction-release-build.json",
+    "evidence/correction-browser-repeat-build.json",
+    "evidence/correction-inventory.json"
   ],
   "migrations": {
     "postgres": [],
@@ -271,16 +281,68 @@
   ],
   "evidencePaths": [
     "evidence/S1_COMMANDS.json",
+    "evidence/S1_CORRECTION_COMMANDS.json",
+    "evidence/S1_FIRST_CORRECTION_COMMANDS.json",
+    "evidence/S1_SECOND_CORRECTION_COMMANDS.json",
+    "evidence/S1_review-browser.log",
+    "evidence/S1_review-regressions.log",
+    "evidence/S1_review-release.log",
     "evidence/baseline-browser.log",
     "evidence/baseline-ci.json",
     "evidence/baseline-expanded.log",
     "evidence/baseline-metadata-cache.log",
+    "evidence/candidate-cefd944-correction-browser-repeat.log",
+    "evidence/candidate-cefd944-correction-e2e.log",
+    "evidence/candidate-cefd944-correction-identifiers.log",
+    "evidence/candidate-cefd944-correction-install.log",
+    "evidence/candidate-cefd944-correction-migration-hashes.log",
+    "evidence/candidate-cefd944-correction-migrations.log",
+    "evidence/candidate-cefd944-correction-release.log",
+    "evidence/candidate-cefd944-correction-room-hashes.log",
+    "evidence/candidate-cefd944-correction-storage-1.log",
+    "evidence/candidate-cefd944-correction-storage-2.log",
+    "evidence/candidate-cefd944-correction-storage-3.log",
+    "evidence/candidate-fdfa8a2-browser-repeat-build.json",
+    "evidence/candidate-fdfa8a2-browser-repeat.log",
+    "evidence/candidate-fdfa8a2-e2e.log",
+    "evidence/candidate-fdfa8a2-identifiers.log",
+    "evidence/candidate-fdfa8a2-migration-hashes.log",
+    "evidence/candidate-fdfa8a2-migrations.log",
+    "evidence/candidate-fdfa8a2-release-build.json",
+    "evidence/candidate-fdfa8a2-release.log",
+    "evidence/candidate-fdfa8a2-room-hashes.log",
+    "evidence/candidate-fdfa8a2-storage-1.log",
+    "evidence/candidate-fdfa8a2-storage-2.log",
+    "evidence/candidate-fdfa8a2-storage-3.log",
     "evidence/connection-regression.log",
+    "evidence/correction-browser-repeat-build.json",
+    "evidence/correction-browser-repeat.log",
+    "evidence/correction-ci-artifacts.json",
+    "evidence/correction-ci-test-summary.log",
+    "evidence/correction-ci.json",
+    "evidence/correction-diff-review.json",
+    "evidence/correction-e2e.log",
+    "evidence/correction-identifiers.log",
+    "evidence/correction-install.log",
+    "evidence/correction-inventory.json",
+    "evidence/correction-migration-hashes.log",
+    "evidence/correction-migrations.log",
+    "evidence/correction-release-build.json",
+    "evidence/correction-release.log",
+    "evidence/correction-resume-isolated.log",
+    "evidence/correction-room-hashes.log",
+    "evidence/correction-storage-1.log",
+    "evidence/correction-storage-2.log",
+    "evidence/correction-storage-3.log",
+    "evidence/day-validation-baseline.log",
     "evidence/existing-e2e.log",
+    "evidence/group-block-baseline.log",
     "evidence/identifiers.log",
     "evidence/inventory.json",
+    "evidence/local-retry-baseline.log",
     "evidence/migration-hashes.log",
     "evidence/migrations.log",
+    "evidence/note-blur-baseline.log",
     "evidence/production-build.json",
     "evidence/release.log",
     "evidence/room-hashes.log",
@@ -295,27 +357,27 @@
     {
       "scope": "S2",
       "status": "BLOCKED",
-      "reason": "Cross-device counter conservation and historical counter ambiguity are not repaired by S1; run S2 before any complete sync claim."
+      "reason": "Cross-device counter conservation and historical scalar ambiguity require S2; no max/sum repair."
     },
     {
-      "scope": "hosted/native rollout",
+      "scope": "hosted acceptance",
       "status": "BLOCKED",
-      "reason": "No deployment or native installation authorized or executed. Repaired web builds must replace older running binaries; staging/native matrix, signer and release gates remain separate."
+      "reason": "Candidate is undeployed and dedicated hosted-account authorization is unverified. Branch-scoped preflight fails before hosted account activity; aggregate Beta Gate is not green."
+    },
+    {
+      "scope": "native rollout and production release",
+      "status": "BLOCKED",
+      "reason": "No deployment, native installation or signing performed. Exact hosted/auth/recovery/signing/release matrix remains unproven; overall beta NOT READY."
     },
     {
       "scope": "automatic database activation",
       "status": "BLOCKED",
-      "reason": "No atomic fence across database pointer replacement and old-tab admission; verified shadow is retained without activation."
-    },
-    {
-      "scope": "new commit CI",
-      "status": "BLOCKED",
-      "reason": "No GitHub Actions run is listed for the new S1 branch commit. Local verification is complete; hosted CI is not claimed."
+      "reason": "No safe atomic admission fence across pointer replacement and old tabs; preserved shadow remains inactive."
     }
   ],
   "permittedNextStage": {
     "stageId": "S2",
-    "sourceCommit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+    "sourceCommit": "09245261b6174ec878f0296ca61682c603f54304",
     "scope": "Counter conservation and wire reconciliation; preserve S1 local ownership invariants.",
     "productionReleaseAuthorized": false
   },
@@ -325,5 +387,110 @@
     "nativeInstallationPerformed": false,
     "productionReleaseAuthorized": false
   },
-  "ciSnapshot": []
+  "ciSnapshot": {
+    "conclusion": "failure",
+    "headSha": "09245261b6174ec878f0296ca61682c603f54304",
+    "jobs": [
+      {
+        "conclusion": "success",
+        "databaseId": 101825370929,
+        "name": "secrets",
+        "status": "completed",
+        "url": "https://github.com/mariusschober/Tsurfing/actions/runs/34148397092/job/101825370929"
+      },
+      {
+        "conclusion": "success",
+        "databaseId": 101825371074,
+        "name": "migrations",
+        "status": "completed",
+        "url": "https://github.com/mariusschober/Tsurfing/actions/runs/34148397092/job/101825371074"
+      },
+      {
+        "conclusion": "success",
+        "databaseId": 101825371089,
+        "name": "verify",
+        "status": "completed",
+        "url": "https://github.com/mariusschober/Tsurfing/actions/runs/34148397092/job/101825371089"
+      },
+      {
+        "conclusion": "success",
+        "databaseId": 101825371092,
+        "name": "dependency-audit",
+        "status": "completed",
+        "url": "https://github.com/mariusschober/Tsurfing/actions/runs/34148397092/job/101825371092"
+      },
+      {
+        "conclusion": "success",
+        "databaseId": 101825371143,
+        "name": "macos",
+        "status": "completed",
+        "url": "https://github.com/mariusschober/Tsurfing/actions/runs/34148397092/job/101825371143"
+      },
+      {
+        "conclusion": "success",
+        "databaseId": 101825551931,
+        "name": "native-android",
+        "status": "completed",
+        "url": "https://github.com/mariusschober/Tsurfing/actions/runs/34148397092/job/101825551931"
+      },
+      {
+        "conclusion": "success",
+        "databaseId": 101825551952,
+        "name": "android",
+        "status": "completed",
+        "url": "https://github.com/mariusschober/Tsurfing/actions/runs/34148397092/job/101825551952"
+      },
+      {
+        "conclusion": "failure",
+        "databaseId": 101825551994,
+        "name": "hosted-staging",
+        "status": "completed",
+        "url": "https://github.com/mariusschober/Tsurfing/actions/runs/34148397092/job/101825551994"
+      },
+      {
+        "conclusion": "success",
+        "databaseId": 101825552005,
+        "name": "web-release",
+        "status": "completed",
+        "url": "https://github.com/mariusschober/Tsurfing/actions/runs/34148397092/job/101825552005"
+      },
+      {
+        "conclusion": "failure",
+        "databaseId": 101831887681,
+        "name": "hosted-cross-client",
+        "status": "completed",
+        "url": "https://github.com/mariusschober/Tsurfing/actions/runs/34148397092/job/101831887681"
+      },
+      {
+        "conclusion": "failure",
+        "databaseId": 101831930253,
+        "name": "beta-gate",
+        "status": "completed",
+        "url": "https://github.com/mariusschober/Tsurfing/actions/runs/34148397092/job/101831930253"
+      },
+      {
+        "conclusion": "skipped",
+        "databaseId": 101831930807,
+        "name": "android-internal-beta",
+        "status": "completed",
+        "url": "https://github.com/mariusschober/Tsurfing/actions/runs/34148397092/job/101831930807"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/mariusschober/Tsurfing/actions/runs/34148397092"
+  },
+  "initialAcceptanceSuperseded": {
+    "report": "S1_INITIAL_REPORT.md",
+    "handover": "S1_INITIAL_HANDOVER.json",
+    "review": "S1_REVIEW.md",
+    "note": "Initial PASS_LOCAL omitted reproduced R1/R2 defects and acceptance schedules; preserved as historical evidence only."
+  },
+  "intermediateFailure": {
+    "commit": "cefd94457d975e7b96f90f0cba178b6397725439",
+    "result": "119/120 browser executions passed; one WebKit resume test remained on Current planning gate.",
+    "disposition": "Select Plan before simulating suspension, resume without navigation; unchanged target visibility assertion. Targeted test 20/20, final full repeat 120/120.",
+    "evidence": "evidence/candidate-cefd944-correction-browser-repeat.log"
+  },
+  "finalDiffReview": "evidence/correction-diff-review.json",
+  "ciArtifacts": "evidence/correction-ci-artifacts.json"
 }

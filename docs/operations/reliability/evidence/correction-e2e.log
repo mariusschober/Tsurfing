@@ -1,0 +1,91 @@
+
+> tsurfing@0.4.0-beta.1 test:e2e
+> playwright test
+
+[WebServer] (node:33493) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer]   dist/server/index.mjs        167.0kb
+[WebServer]   dist/server/maintenance.mjs   18.6kb
+[WebServer] 
+[WebServer] ⚡ Done in 9ms
+[WebServer] {"level":"error","event":"server.production_configuration_invalid","problems":["public_origin_must_use_https","supabase_url_missing","supabase_public_key_missing","supabase_server_key_missing","owner_user_id_missing"]}
+[WebServer] (node:33578) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 64 tests using 2 workers
+
+(node:33584) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:33585) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [chromium] › tests/e2e/auth-focus.spec.ts:45:1 › repeated sign-in, token refresh and focus retain view and draft, including slow and offline validation (647ms)
+  ✓   3 [chromium] › tests/e2e/auth-focus.spec.ts:62:1 › revocation removes the app (396ms)
+  ✓   4 [chromium] › tests/e2e/auth-focus.spec.ts:67:1 › new login for the same user must pass MFA again (356ms)
+  ✓   2 [chromium] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (1.6s)
+  ✓   5 [chromium] › tests/e2e/auth-focus.spec.ts:72:1 › MFA downgrade must pass the gate again (376ms)
+  ✓   6 [chromium] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (354ms)
+  ✓   7 [chromium] › tests/e2e/auth-focus.spec.ts:76:1 › sign-out invalidates pending validation (398ms)
+  ✓   9 [chromium] › tests/e2e/startup-recovery.spec.ts:10:1 › reload recovers a divergent pending task without overwriting either edit (574ms)
+  ✓  10 [chromium] › tests/e2e/startup-recovery.spec.ts:47:1 › unreadable saved data shows a retry screen instead of an endless spinner (432ms)
+  ✓   8 [chromium] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (1.5s)
+  ✓  12 [chromium] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (730ms)
+  ✓  11 [chromium] › tests/e2e/web-critical.spec.ts:100:3 › web-critical — deterministic visible UI journey › capture, schedule, reorder, confirm, complete, and reload persist exactly (2.0s)
+  ✓  13 [chromium] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (1.2s)
+  ✓  14 [chromium] › tests/e2e/web-critical.spec.ts:145:3 › web-critical — deterministic visible UI journey › service worker controls the app and supported offline behavior is durable (542ms)
+  ✓  15 [chromium] › tests/e2e/s1-local-storage.spec.ts:147:46 › A: empty production pull after peer paused refreshes the next focus baseline (1.2s)
+  ✓  16 [chromium] › tests/e2e/web-critical.spec.ts:187:3 › web-critical — deterministic visible UI journey › saved tasks are isolated between browser profiles (1.3s)
+  ✓  18 [chromium] › tests/e2e/web-critical.spec.ts:205:3 › web-critical — deterministic visible UI journey › manifest, service worker, and required icons are served (370ms)
+  ✓  17 [chromium] › tests/e2e/s1-local-storage.spec.ts:147:46 › A: empty production pull after peer completed refreshes the next focus baseline (1.3s)
+  ✓  20 [chromium] › tests/e2e/s1-local-storage.spec.ts:202:1 › C: account switch and unmount retire old React callbacks without creating actions (356ms)
+  ✓  19 [chromium] › tests/e2e/web-critical.spec.ts:233:1 › natural-language capture previews and persists month planning (680ms)
+(node:33778) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  21 [chromium] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (950ms)
+  ✓  23 [chromium] › tests/e2e/s1-local-storage.spec.ts:241:1 › status: an obsolete async commit read cannot overwrite a newer permanent error (325ms)
+  ✓  22 [webkit] › tests/e2e/auth-focus.spec.ts:45:1 › repeated sign-in, token refresh and focus retain view and draft, including slow and offline validation (1.2s)
+  ✓  25 [webkit] › tests/e2e/auth-focus.spec.ts:62:1 › revocation removes the app (624ms)
+  ✓  24 [chromium] › tests/e2e/s1-local-storage.spec.ts:260:1 › E: real grouped completion and an independent note edit remain queued (1.7s)
+  ✓  26 [webkit] › tests/e2e/auth-focus.spec.ts:67:1 › new login for the same user must pass MFA again (534ms)
+  ✓  27 [chromium] › tests/e2e/s1-local-storage.spec.ts:293:56 › D: real IndexedDB inbound retains before/during/after intent (345ms)
+  ✓  29 [chromium] › tests/e2e/s1-local-storage.spec.ts:293:56 › D: real IndexedDB reconciliation retains before/during/after intent (349ms)
+  ✓  28 [webkit] › tests/e2e/auth-focus.spec.ts:72:1 › MFA downgrade must pass the gate again (508ms)
+  ✓  30 [chromium] › tests/e2e/s1-local-storage.spec.ts:340:1 › B: real IndexedDB metadata writers preserve a queued independent transaction and exact receipts (342ms)
+  ✓  31 [webkit] › tests/e2e/auth-focus.spec.ts:76:1 › sign-out invalidates pending validation (494ms)
+  ✓  32 [chromium] › tests/e2e/s1-local-storage.spec.ts:400:42 › F: real browser unavailable IndexedDB preserves cursor and WAL, mirror fault=false (195ms)
+  ✓  33 [chromium] › tests/e2e/s1-local-storage.spec.ts:400:42 › F: real browser unavailable IndexedDB preserves cursor and WAL, mirror fault=true (195ms)
+  ✓  35 [chromium] › tests/e2e/s1-local-storage.spec.ts:428:1 › G: equal-count WAL replacement in another page invalidates content and stays idempotent (558ms)
+  ✓  36 [chromium] › tests/e2e/s1-local-storage.spec.ts:454:1 › note capture failure preserves editable text and exposes the failure at the editor (902ms)
+  ✓  34 [webkit] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (2.0s)
+  ✓  37 [chromium] › tests/e2e/s1-local-storage.spec.ts:474:1 › bootstrap: two simultaneous real app hydrations import one legacy plan without duplicate actions (552ms)
+  ✓  38 [webkit] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (930ms)
+  ✓  39 [chromium] › tests/e2e/s1-local-storage.spec.ts:498:1 › local retry: a captured action commits after storage recovery without a cloud client (730ms)
+(node:33915) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  41 [webkit] › tests/e2e/startup-recovery.spec.ts:10:1 › reload recovers a divergent pending task without overwriting either edit (1.2s)
+  ✓  40 [webkit] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (2.2s)
+  ✓  42 [webkit] › tests/e2e/startup-recovery.spec.ts:47:1 › unreadable saved data shows a retry screen instead of an endless spinner (863ms)
+  ✓  43 [webkit] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (1.2s)
+  ✓  44 [webkit] › tests/e2e/web-critical.spec.ts:100:3 › web-critical — deterministic visible UI journey › capture, schedule, reorder, confirm, complete, and reload persist exactly (2.6s)
+  ✓  45 [webkit] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (2.0s)
+  ✓  46 [webkit] › tests/e2e/web-critical.spec.ts:145:3 › web-critical — deterministic visible UI journey › service worker controls the app and supported offline behavior is durable (1.7s)
+  ✓  47 [webkit] › tests/e2e/s1-local-storage.spec.ts:147:46 › A: empty production pull after peer paused refreshes the next focus baseline (2.1s)
+  ✓  48 [webkit] › tests/e2e/web-critical.spec.ts:187:3 › web-critical — deterministic visible UI journey › saved tasks are isolated between browser profiles (2.5s)
+  ✓  49 [webkit] › tests/e2e/s1-local-storage.spec.ts:147:46 › A: empty production pull after peer completed refreshes the next focus baseline (2.1s)
+  ✓  50 [webkit] › tests/e2e/web-critical.spec.ts:205:3 › web-critical — deterministic visible UI journey › manifest, service worker, and required icons are served (713ms)
+  ✓  51 [webkit] › tests/e2e/s1-local-storage.spec.ts:202:1 › C: account switch and unmount retire old React callbacks without creating actions (804ms)
+  ✓  52 [webkit] › tests/e2e/web-critical.spec.ts:233:1 › natural-language capture previews and persists month planning (1.0s)
+  ✓  53 [webkit] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.7s)
+  ✓  54 [webkit] › tests/e2e/s1-local-storage.spec.ts:241:1 › status: an obsolete async commit read cannot overwrite a newer permanent error (655ms)
+  ✓  55 [webkit] › tests/e2e/s1-local-storage.spec.ts:260:1 › E: real grouped completion and an independent note edit remain queued (2.8s)
+  ✓  56 [webkit] › tests/e2e/s1-local-storage.spec.ts:293:56 › D: real IndexedDB inbound retains before/during/after intent (662ms)
+  ✓  57 [webkit] › tests/e2e/s1-local-storage.spec.ts:293:56 › D: real IndexedDB reconciliation retains before/during/after intent (653ms)
+  ✓  58 [webkit] › tests/e2e/s1-local-storage.spec.ts:340:1 › B: real IndexedDB metadata writers preserve a queued independent transaction and exact receipts (699ms)
+  ✓  59 [webkit] › tests/e2e/s1-local-storage.spec.ts:400:42 › F: real browser unavailable IndexedDB preserves cursor and WAL, mirror fault=false (536ms)
+  ✓  60 [webkit] › tests/e2e/s1-local-storage.spec.ts:400:42 › F: real browser unavailable IndexedDB preserves cursor and WAL, mirror fault=true (522ms)
+  ✓  61 [webkit] › tests/e2e/s1-local-storage.spec.ts:428:1 › G: equal-count WAL replacement in another page invalidates content and stays idempotent (1.2s)
+  ✓  62 [webkit] › tests/e2e/s1-local-storage.spec.ts:454:1 › note capture failure preserves editable text and exposes the failure at the editor (1.3s)
+  ✓  63 [webkit] › tests/e2e/s1-local-storage.spec.ts:474:1 › bootstrap: two simultaneous real app hydrations import one legacy plan without duplicate actions (1.1s)
+  ✓  64 [webkit] › tests/e2e/s1-local-storage.spec.ts:498:1 › local retry: a captured action commits after storage recovery without a cloud client (1.1s)
+
+  64 passed (43.5s)
