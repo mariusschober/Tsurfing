@@ -1,0 +1,44 @@
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+ ❯ services/syncCanonicalIdentity.test.ts (1 test | 1 failed) 5ms
+     × retains nested __proto__ as data for exact action and receipt identity 4ms
+ ❯ server/routes/sync.test.ts (17 tests | 1 failed) 13ms
+     × rejects a receipt which drops an own __proto__ payload field 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  services/syncCanonicalIdentity.test.ts > canonical JSON preserves every own payload key > retains nested __proto__ as data for exact action and receipt identity
+AssertionError: expected '{"nested":{"constructor":false}}' to be '{"__proto__":{"kept":true},"nested":{…' // Object.is equality
+
+Expected: "{"__proto__":{"kept":true},"nested":{"__proto__":{"value":1},"constructor":false}}"
+Received: "{"nested":{"constructor":false}}"
+
+ ❯ services/syncCanonicalIdentity.test.ts:7:33
+      5|   it('retains nested __proto__ as data for exact action and receipt id…
+      6|     const payload = JSON.parse('{"nested":{"__proto__":{"value":1},"co…
+      7|     expect(stableJson(payload)).toBe('{"__proto__":{"kept":true},"nest…
+       |                                 ^
+      8|     expect(stableJson(payload)).not.toBe(stableJson({ nested: { constr…
+      9|     expect(Object.prototype.hasOwnProperty.call(payload, '__proto__'))…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  server/routes/sync.test.ts > sync API durable acceptance boundary > rejects a receipt which drops an own __proto__ payload field
+AssertionError: expected [Function] to throw an error
+ ❯ server/routes/sync.test.ts:44:59
+     42|     const result = receipt();
+     43|     result.record.payload = { id: 'task-1' } as any;
+     44|     expect(() => assertDurableReceipt(submitted, result)).toThrow();
+       |                                                           ^
+     45|   });
+     46|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 16 passed (18)
+   Start at  22:44:21
+   Duration  280ms (transform 123ms, setup 0ms, import 244ms, tests 18ms, environment 0ms)
+

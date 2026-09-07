@@ -235,6 +235,50 @@
         "Original WAL remains in localStorage; new admission still needs durable quarantine/import",
         "Private preimages retain original sync state and all tracking keys; no backup authority integration yet"
       ]
+    },
+    {
+      "commit": "44f1a00a4196cd3836dd1c9d442dcf9ae42ee0da",
+      "includedReceiptFix": "e9d35eda2e95333cb04f67fd782ee2e79c74f1ad",
+      "scope": "Dormant transactional local focus admission and exact canonical JSON identity",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "server/routes/sync.test.ts",
+        "server/routes/sync.ts",
+        "services/causalFocusCoordinator.test.ts",
+        "services/causalFocusCoordinator.ts",
+        "services/causalStorage.ts",
+        "services/syncCanonicalIdentity.test.ts",
+        "services/syncProtocol.ts",
+        "tests/browser/s1Harness.ts",
+        "tests/e2e/s2-storage-fence.spec.ts"
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 468
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0,
+          "identifiers": 22
+        },
+        {
+          "command": "npx playwright test --config playwright.s2.config.ts",
+          "exitCode": 0,
+          "tests": 6,
+          "engines": [
+            "chromium",
+            "webkit"
+          ]
+        }
+      ],
+      "compatibility": [
+        "Actual local parent selected under one transaction; command/target identity captured before await",
+        "No UI activation, native coordinator, server action receipt or completion acceptance yet",
+        "Exact original observed WAL retained; historical counter ambiguity not inferred away",
+        "Historical fingerprints produced by old own-prototype-field omission may now fail closed; no attempted request was rewritten"
+      ]
     }
   ],
   "findings": [
@@ -249,6 +293,10 @@
     {
       "id": "S2-L01",
       "disposition": "Corrected and tested in real isolated PostgreSQL; no live application"
+    },
+    {
+      "id": "S2-I01",
+      "disposition": "Own __proto__ JSON field loss reproduced at Web/server receipt identity; fixed and locally tested"
     }
   ],
   "migrations": [
@@ -282,7 +330,12 @@
     "evidence/s2-fence-browser-final.log",
     "evidence/s2-fence-s1-browser.log",
     "evidence/s2-fence-release.log",
-    "evidence/s2-fence-identifiers.log"
+    "evidence/s2-fence-identifiers.log",
+    "evidence/s2-canonical-prototype-baseline.log",
+    "evidence/s2-admission-unit.log",
+    "evidence/s2-admission-release.log",
+    "evidence/s2-admission-identifiers.log",
+    "evidence/s2-admission-browser-final.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

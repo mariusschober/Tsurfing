@@ -108,6 +108,29 @@ failure evidence is retained. Migration is not invoked by production application
 flows yet. Durable WAL quarantine, new admission/readers, backup/import and
 server capability activation remain required before use.
 
+## Local causal admission checkpoint
+
+`44f1a00a4196cd3836dd1c9d442dcf9ae42ee0da`: **PASS_LOCAL** for a dormant browser coordinator
+that captures intent before awaiting storage, reads its actual parent and task
+eligibility inside one transaction, and writes the projection, history and
+outbox together. Repeated actions preserve identity; stale F commands never act
+on G. A failed projection write rolls back every effect and the same action can
+be retried. Exact observed legacy WAL strings are retained without inferring
+a counter delta. Completion is explicitly unavailable here until its final-notes
+logical transaction exists.
+
+S2-I01, `e9d35eda2e95333cb04f67fd782ee2e79c74f1ad`: canonical JSON sorting on Web and server
+used a normal object accumulator, dropping own `__proto__` fields. A regression
+proved that the server could accept a receipt missing that field. A null-prototype
+accumulator now preserves it as JSON data. No attempted request was rewritten;
+a historical fingerprint produced by the defect may require explicit recovery.
+
+Full Web release checks passed with 468 tests; all six causal-storage browser
+journeys passed in Chromium/WebKit and 22 identifiers passed. Exact commands and
+failure evidence are in the handover. Application controls, new-state readers,
+server receipts, native coordinators and atomic completion remain unconnected.
+This checkpoint does not prove cross-client causal convergence.
+
 ## Remaining acceptance work
 
 Implement/prove the private counter/action ledger, baseline/legacy ambiguities,
