@@ -528,6 +528,66 @@
         "evidence/s2-staged-macos-focus-retry.log",
         "evidence/s2-staged-macos-final-gates.log"
       ]
+    },
+    {
+      "commit": "17d29ab3706231ea376a0d5aac696eec18d886ed",
+      "scope": "Exact original oversized mutation transport on Web, Android and macOS",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeSyncEngine.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/ReconciliationStaging.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/sync/NativeSyncEngineTest.kt",
+        "macos-native/GoalflowMac/Sync/SyncEngine.swift",
+        "macos-native/GoalflowMacTests/SyncTests.swift",
+        "server/routes/sync.reconciliation.test.ts",
+        "server/routes/sync.ts",
+        "services/cloudSync.adversarial.test.ts",
+        "services/cloudSync.ts",
+        "services/reconciliationStaging.ts",
+        "services/storage.ts",
+        "services/syncEnvelope.test.ts",
+        "services/syncEnvelope.ts"
+      ],
+      "migrations": [],
+      "compatibility": "Deploy staged reconciliation migration and server before clients; legacy fingerprints and receipt validator unchanged. Nothing deployed.",
+      "supportedLimits": {
+        "singleMutationWireBytes": 4194304,
+        "chunkBytes": 65536,
+        "chunkCount": 64
+      },
+      "validation": [
+        {
+          "command": "VERIFY_PORT=43973 npm run verify:release",
+          "exitCode": 0,
+          "passedTests": 490
+        },
+        {
+          "command": "npx vitest run services/syncEnvelope.test.ts",
+          "exitCode": 0,
+          "passedTests": 4,
+          "note": "Added exact 4 MiB boundary test after full run."
+        },
+        {
+          "command": "JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native testProductionDebugUnitTest lintProductionDebug assembleProductionDebug -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": 147,
+          "skipped": 1,
+          "failures": 0,
+          "errors": 0
+        },
+        {
+          "command": "xcodebuild test -project macos-native/GoalflowMac.xcodeproj -scheme GoalflowMac -configuration Debug -destination 'platform=macOS' -derivedDataPath /private/tmp/s2-macos-tests CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0,
+          "tests": 225,
+          "skipped": 1,
+          "failures": 0
+        }
+      ],
+      "limitations": [
+        "No hosted transport or installation proof.",
+        "New edit admission beyond supported size remains unfinished.",
+        "macOS carrier and selector native tests passed; no live end-to-end campaign."
+      ]
     }
   ],
   "findings": [
@@ -620,7 +680,16 @@
     "evidence/s2-staged-android-verified.log",
     "evidence/s2-staged-macos-verified.log",
     "evidence/s2-staged-macos-focus-retry.log",
-    "evidence/s2-staged-macos-final-gates.log"
+    "evidence/s2-staged-macos-final-gates.log",
+    "evidence/s2-staged-push-api.log",
+    "evidence/s2-staged-push-web.log",
+    "evidence/s2-staged-push-web-retry.log",
+    "evidence/s2-staged-push-release.log",
+    "evidence/s2-staged-push-boundary.log",
+    "evidence/s2-staged-push-android.log",
+    "evidence/s2-staged-push-android-final.log",
+    "evidence/s2-staged-push-android-retry.log",
+    "evidence/s2-staged-push-macos.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

@@ -273,3 +273,35 @@ one hosted skip. An initial AppKit test received unrelated extra keyboard text;
 assertions. Its targeted test and full suite passed afterward. The first SQL
 staging attempt lacked extension-digest permission; built-in PostgreSQL SHA-256
 now verifies hashes without widening extension privileges. Failed logs remain.
+
+## Oversized captured mutation checkpoint
+
+`17d29ab3706231ea376a0d5aac696eec18d886ed`: **PASS_LOCAL** for staged legacy
+push transport. Web, Android and macOS select an oversized first mutation alone,
+mark its original identity attempted before upload, and reuse the verified chunk
+carrier. `/sync/push-staged` accepts exactly one assembled mutation and invokes
+the existing hardened push RPC and exact receipt validator. Payload, device,
+entity, version and timestamps remain unchanged; staging is not acceptance.
+Only the ordinary verified receipt retires the outbox mutation.
+
+Supported single-mutation wire body: 4 MiB, at most 64 chunks of 64 KiB. Larger
+captured changes remain intact with an explicit error and no network attempt.
+This supersedes the preceding checkpoint's single-mutation transport limitation.
+New-edit admission above the supported size still needs implementation. No new
+migration, deployment or native installation occurred. Deploy the staging
+migration and updated server before upgrading clients.
+
+Browser and Android Room tests interrupt an upload at chunk 1, retain the
+original request, replay identical chunk 0 and then retire only the original
+acknowledged mutation. HTTP tests reject altered accepted payloads and reject
+assembled multi-mutation bodies. Swift native tests reconstruct the exact
+oversized body from its chunks. This is not hosted end-to-end evidence.
+
+`VERIFY_PORT=43973 npm run verify:release`: exit 0, 490 tests passed. An additional
+exact 4 MiB boundary test passed afterward (4 envelope tests). Android final:
+146 passed, one hosted skip; lint and debug build passed. macOS: 224 passed,
+one hosted skip. The first HTTP attempt was sandbox-blocked from binding a
+loopback socket; the permitted rerun passed. Initial recovery-test assertions
+incorrectly compared attempt metadata and assumed Android's notes field name;
+corrected assertions verify immutable wire fields and the complete native payload.
+Failed and successful logs are retained in `evidence/s2-staged-push-*.log`.
