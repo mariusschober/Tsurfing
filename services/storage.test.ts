@@ -77,6 +77,34 @@ describe('backup merge behavior', () => {
 });
 
 describe('durable storage failure boundaries', () => {
+  it('recovers pending tracking when the server reordered identical object fields', async () => {
+    installBrowserStorage();
+    const key = `tracking-key-order-${crypto.randomUUID()}`;
+    const previous = { date: '2026-09-07', planViewCount: 1, dailyPostponeCount: 0 };
+    const next = { ...previous, planViewCount: 2 };
+    await storageService.set(STORES.TRACKING, key,
+      { dailyPostponeCount: 0, planViewCount: 1, date: '2026-09-07' }, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, previous, next);
+    const meta = await storageService.flushPendingLocalChanges(key);
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual(next);
+    expect(meta.outbox).toHaveLength(1);
+    expect(meta.outbox[0].payload).toEqual(next);
+    const repeated = await storageService.flushPendingLocalChanges(key);
+    expect(repeated.outbox).toEqual(meta.outbox);
+  });
+
+  it('still preserves a genuinely divergent tracking record and its pending write', async () => {
+    const local = installBrowserStorage();
+    const key = `tracking-divergence-${crypto.randomUUID()}`;
+    await storageService.set(STORES.TRACKING, key, { planViewCount: 7 }, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, { planViewCount: 1 }, { planViewCount: 2 });
+    const before = Array.from({ length: local.length }, (_, i) => local.key(i))
+      .filter(k => k?.startsWith('goalflow_wal_v2_')).map(k => local.getItem(k!));
+    await expect(storageService.flushPendingLocalChanges(key)).rejects.toThrow(/Neither version was overwritten/);
+    expect(Array.from({ length: local.length }, (_, i) => local.key(i))
+      .filter(k => k?.startsWith('goalflow_wal_v2_')).map(k => local.getItem(k!))).toEqual(before);
+  });
+
   it('recovers every store in a grouped UI mutation after a simulated process kill', async () => {
     installBrowserStorage();
     const key = `storage-group-kill-${crypto.randomUUID()}`;

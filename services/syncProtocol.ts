@@ -311,7 +311,7 @@ export const normalizeSyncMeta = (value: unknown): SyncMeta => {
 };
 
 /** JSONB and HTTP are insensitive to object-key insertion order. */
-const stableJson = (value: unknown): string => JSON.stringify(value, (_key, candidate) => {
+export const stableJson = (value: unknown): string => JSON.stringify(value, (_key, candidate) => {
   if (!isRecord(candidate)) return candidate;
   return Object.keys(candidate).sort().reduce<Record<string, unknown>>((ordered, key) => {
     ordered[key] = candidate[key];

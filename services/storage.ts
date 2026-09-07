@@ -11,6 +11,7 @@ import {
   normalizeSyncMeta,
   RECORD_LEVEL_STORES,
   readyOutbox,
+  stableJson,
   resolveConflictWithLocal,
   type LocalConflict,
   type PushResult,
@@ -514,7 +515,7 @@ const mergeRestoredSyncMeta = (currentValue: unknown, incomingValue: unknown): S
   };
 };
 
-const jsonEqual = (left: unknown, right: unknown): boolean => JSON.stringify(left) === JSON.stringify(right);
+const jsonEqual = (left: unknown, right: unknown): boolean => stableJson(left) === stableJson(right);
 
 const mapRecordsForRecovery = (
   value: unknown,

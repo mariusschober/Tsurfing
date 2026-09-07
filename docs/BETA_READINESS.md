@@ -1,5 +1,16 @@
 # Tsurfing beta readiness evidence
 
+## Focused owner-trial fix — 2026-09-07
+
+The owner reported an endless startup spinner. Staging health was HTTP 200 at
+`d5134d4`; the browser reported a pending tracking recovery divergence. A focused
+regression reproduced that exact error when a server JSON object had identical
+values in a different key order. Storage recovery now uses the same canonical
+JSON comparison as mutation staging. Genuine value divergence remains blocked
+with the original pending write preserved. No browser storage, session or task
+was cleared. Broader testing and deferred Mac/Mini App work remain paused.
+
+
 **Status: NOT READY.** This is the active release ledger as of 2026-09-05.
 The implementation and isolated staging environment are substantially proven,
 including a destructive restore round-trip. The Telegram staging bot, webhook,
