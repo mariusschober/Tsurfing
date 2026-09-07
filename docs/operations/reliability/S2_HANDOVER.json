@@ -588,6 +588,50 @@
         "New edit admission beyond supported size remains unfinished.",
         "macOS carrier and selector native tests passed; no live end-to-end campaign."
       ]
+    },
+    {
+      "commit": "31e216cb4d92a918e79ad8f3598f724ed5a16230",
+      "scope": "New-record admission rejects encoded payloads above 3 MiB before local success on all clients",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowRepository.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/sync/NativeSyncEngineTest.kt",
+        "macos-native/GoalflowMac/Sync/BuildStaging.swift",
+        "macos-native/GoalflowMacTests/SyncTests.swift",
+        "services/cloudSync.adversarial.test.ts",
+        "services/storage.ts",
+        "services/syncEnvelope.test.ts",
+        "services/syncEnvelope.ts"
+      ],
+      "migrations": [],
+      "compatibility": "Historical outbox replay retains the 4 MiB staging envelope; Web legacy WAL recovery bypasses new admission. Android oversized fresh import fails atomically while preserving original source and current database.",
+      "validation": [
+        {
+          "command": "VERIFY_PORT=43973 npm run verify:release",
+          "exitCode": 0,
+          "passedTests": 493
+        },
+        {
+          "command": "JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native testProductionDebugUnitTest lintProductionDebug assembleProductionDebug -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": 148,
+          "skipped": 1,
+          "failures": 0,
+          "errors": 0
+        },
+        {
+          "command": "xcodebuild test -project macos-native/GoalflowMac.xcodeproj -scheme GoalflowMac -configuration Debug -destination 'platform=macOS' -derivedDataPath /private/tmp/s2-macos-tests CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0,
+          "tests": 225,
+          "skipped": 1,
+          "failures": 0
+        }
+      ],
+      "limitations": [
+        "Encoded size uses each platform JSON serializer.",
+        "Histories exceeding the separately documented 4 MiB or 100,000-entry envelope remain an explicit recovery blocker.",
+        "No live deployment or installation."
+      ]
     }
   ],
   "findings": [
@@ -689,7 +733,12 @@
     "evidence/s2-staged-push-android.log",
     "evidence/s2-staged-push-android-final.log",
     "evidence/s2-staged-push-android-retry.log",
-    "evidence/s2-staged-push-macos.log"
+    "evidence/s2-staged-push-macos.log",
+    "evidence/s2-admission-web.log",
+    "evidence/s2-admission-android.log",
+    "evidence/s2-admission-macos.log",
+    "evidence/s2-admission-release.log",
+    "evidence/s2-admission-release-retry.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

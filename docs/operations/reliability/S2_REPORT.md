@@ -305,3 +305,23 @@ loopback socket; the permitted rerun passed. Initial recovery-test assertions
 incorrectly compared attempt metadata and assumed Android's notes field name;
 corrected assertions verify immutable wire fields and the complete native payload.
 Failed and successful logs are retained in `evidence/s2-staged-push-*.log`.
+
+## New-record admission checkpoint
+
+`31e216cb4d92a918e79ad8f3598f724ed5a16230`: **PASS_LOCAL**. New changed records
+are limited to 3 MiB of platform-serialized UTF-8 JSON payload, reserving room
+for metadata within the 4 MiB staged transport. Web validates before capturing
+the action or group WAL; Android validates inside the same Room transaction as
+task/event/outbox writes; macOS validates before its atomic local commit.
+Errors do not report durable success or truncate the draft. Previously captured
+outbox requests retain the 4 MiB recovery path. Web WAL replay does not reapply
+this admission gate. An oversized fresh Android import fails atomically and
+retains its source and the current database. Larger historical queues and
+reconciliation histories remain intact with their documented recovery errors.
+
+Full Web release checks: exit 0, 493 passed. Android: 147 passed, one hosted skip,
+lint and debug build passed. macOS: 224 passed, one hosted skip. Browser grouped
+admission and native failure tests preserve the prior task and outbox; Android
+also proves a failed new task leaves no task row or mutation. The initial Web
+type check caught an invalid test-only property access; comparing the complete
+draft fixed it. Both logs remain. No schema change, deployment or installation.
