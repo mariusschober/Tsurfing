@@ -347,7 +347,7 @@ export const stableJson = (value: unknown): string => JSON.stringify(value, (_ke
   return Object.keys(candidate).sort().reduce<Record<string, unknown>>((ordered, key) => {
     ordered[key] = candidate[key];
     return ordered;
-  }, {});
+  }, Object.create(null));
 });
 
 const sameInstant = (left: string | null | undefined, right: string | null | undefined): boolean => {

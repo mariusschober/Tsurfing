@@ -37,6 +37,13 @@ const receipt = () => ({
 });
 
 describe('sync API durable acceptance boundary', () => {
+  it('rejects a receipt which drops an own __proto__ payload field', () => {
+    const submitted = { ...mutation, payload: JSON.parse('{"id":"task-1","__proto__":{"preserved":true}}') };
+    const result = receipt();
+    result.record.payload = { id: 'task-1' } as any;
+    expect(() => assertDurableReceipt(submitted, result)).toThrow();
+  });
+
   it('verifies the immutable protocol once and retries a failed first check', async () => {
     const rpc = vi.fn()
       .mockResolvedValueOnce({ data: null, error: new Error('temporarily unavailable') })
