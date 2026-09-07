@@ -696,11 +696,12 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
     const { title, description, dateAssigned, goalId, isFrog, isRepetitive, session, duration, isBreak, schedulePrecision = 'day', scheduledFor } = taskData;
     if (!title.trim()) return;
 
-    const { cleanTitle, duration: pDur, hashtags, dateAssigned: pDate, session: pSess, isFrog: pFrog, isQuickie } = parseTitleForExtras(title);
+    const { cleanTitle, duration: pDur, hashtags, dateAssigned: pDate, scheduledFor: pSchedule, schedulePrecision: pPrecision, session: pSess, isFrog: pFrog, isQuickie } = parseTitleForExtras(title);
     
+    if (!cleanTitle.trim()) return;
     const finalDate = pDate || dateAssigned || getTodayYYYYMMDD();
-    const finalSchedulePrecision: 'day' | 'month' = pDate ? 'day' : schedulePrecision;
-    const finalScheduledFor = pDate || scheduledFor || (finalSchedulePrecision === 'month' ? finalDate.slice(0, 7) : finalDate);
+    const finalSchedulePrecision: 'day' | 'month' = pPrecision || (pDate ? 'day' : schedulePrecision);
+    const finalScheduledFor = pSchedule || pDate || scheduledFor || (finalSchedulePrecision === 'month' ? finalDate.slice(0, 7) : finalDate);
     assertSchedule(finalSchedulePrecision, finalScheduledFor, getTodayYYYYMMDD());
     const finalIsFrog = !!isFrog || !!pFrog;
     const finalDuration = duration || pDur || 25; 

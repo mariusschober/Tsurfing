@@ -1,4 +1,6 @@
 import XCTest
+import SwiftUI
+import AppKit
 @testable import GoalflowMac
 
 @MainActor
@@ -12,6 +14,31 @@ final class CaptureViewModelTests: XCTestCase {
         let svc = LocalCaptureService(taskStore: store, clock: clock)
         let vm = CaptureViewModel(taskStore: store, captureService: svc, clock: clock, privacy: NoopPrivacyGateway())
         return (vm, store, tmp, defaults)
+    }
+
+    func testCommandReturnFocusesNotesEditor() async throws {
+        let (vm, _, tmp, _) = makeVM()
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 400), styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = NSHostingView(rootView: CaptureOverlayView(vm: vm, onDismiss: {}))
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+        NSApp.activate(ignoringOtherApps: true)
+        try await Task.sleep(for: .milliseconds(150))
+        let event = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber, context: nil, characters: "\r", charactersIgnoringModifiers: "\r", isARepeat: false, keyCode: 36))
+        XCTAssertTrue(window.performKeyEquivalent(with: event))
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertTrue(vm.showNotes)
+        let editor = try XCTUnwrap(window.firstResponder as? NSTextView)
+        editor.insertText("Notes focus verified", replacementRange: NSRange(location: NSNotFound, length: 0))
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(vm.notes, "Notes focus verified")
+        XCTAssertEqual(vm.rawText, "")
+        XCTAssertTrue(window.performKeyEquivalent(with: event))
+        try await Task.sleep(for: .milliseconds(50))
+        XCTAssertTrue(vm.showNotes)
+        XCTAssertTrue(window.firstResponder === editor)
     }
 
     func test_needsDate_factory_default() {

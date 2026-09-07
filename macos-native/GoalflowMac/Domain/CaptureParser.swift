@@ -202,6 +202,12 @@ enum CaptureParser {
             }
         }
 
+        if scheduledFor == nil, let detected = NaturalCaptureSchedule.parse(s, today: todayStr) {
+            s = detected.title
+            scheduledFor = detected.date
+            precision = detected.precision
+        }
+
         // If scheduledFor is day and scheduledTime exists, fine; if month and scheduledTime exists, drop scheduledTime (invalid per assertSchedule)
         if precision == .month { scheduledTime = nil }
 
@@ -223,5 +229,66 @@ enum CaptureParser {
             isQuickie: isQuickie,
             notes: nil
         )
+    }
+}
+
+// Same calendar grammar as web/Telegram and Android; no clock or network inference.
+enum NaturalCaptureSchedule {
+    static func parse(_ title: String, today: String) -> (title: String, date: String, precision: SchedulePrecision)? {
+        let months = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
+        let weekdays = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
+        let pattern = #"(?<![\w/#@-])(?:in\s+([1-9]\d{0,3})\s+(days?|weeks?|months?)|next\s+(week|month)|today|tomorrow|(?:next\s+)?(?:"# + weekdays.joined(separator: "|") + #")|(?:in\s+)?(?:"# + months.joined(separator: "|") + #")(?:\s+\d{4})?)(?![\w/-])"#
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else { return nil }
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(secondsFromGMT: 0)!
+        let formatter = DateFormatter()
+        formatter.calendar = cal
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = cal.timeZone
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let base = formatter.date(from: today) else { return nil }
+        let year = cal.component(.year, from: base), month = cal.component(.month, from: base)
+        for match in regex.matches(in: title, range: NSRange(title.startIndex..., in: title)) {
+            guard let range = Range(match.range, in: title) else { continue }
+            let original = String(title[range])
+            let token = original.lowercased().split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+            var date = base
+            var precision: SchedulePrecision = .day
+            if let quantityRange = Range(match.range(at: 1), in: title), let unitRange = Range(match.range(at: 2), in: title), let count = Int(title[quantityRange]) {
+                let unit = title[unitRange].lowercased()
+                if unit.hasPrefix("month") {
+                    let first = cal.date(from: DateComponents(year: year, month: month, day: 1))!
+                    date = cal.date(byAdding: .month, value: count, to: first)!
+                    precision = .month
+                } else { date = cal.date(byAdding: .day, value: count * (unit.hasPrefix("week") ? 7 : 1), to: base)! }
+            } else if token == "next month" {
+                date = cal.date(from: DateComponents(year: year, month: month + 1, day: 1))!
+                precision = .month
+            } else if token == "next week" { date = cal.date(byAdding: .day, value: 7, to: base)! }
+            else if token == "tomorrow" { date = cal.date(byAdding: .day, value: 1, to: base)! }
+            else if token != "today" {
+                let weekdayToken = token.hasPrefix("next ") ? String(token.dropFirst(5)) : token
+                if let weekday = weekdays.firstIndex(of: weekdayToken) {
+                    let distance = (weekday - (cal.component(.weekday, from: base) - 1) + 7) % 7
+                    date = cal.date(byAdding: .day, value: distance == 0 ? 7 : distance, to: base)!
+                } else {
+                    if (token == "may" || token == "march") && original == token { continue }
+                    let name = token.hasPrefix("in ") ? String(token.dropFirst(3)) : token
+                    let parts = name.split(separator: " ")
+                    guard let index = months.firstIndex(of: String(parts[0])) else { continue }
+                    var targetYear = parts.count > 1 ? Int(parts[1]) ?? year : year
+                    if parts.count == 1 && index + 1 <= month { targetYear += 1 }
+                    guard let target = cal.date(from: DateComponents(year: targetYear, month: index + 1, day: 1)) else { continue }
+                    date = target
+                    precision = .month
+                }
+            }
+            formatter.dateFormat = precision == .month ? "yyyy-MM" : "yyyy-MM-dd"
+            var clean = title
+            clean.removeSubrange(range)
+            clean = clean.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+            return (clean, formatter.string(from: date), precision)
+        }
+        return nil
     }
 }

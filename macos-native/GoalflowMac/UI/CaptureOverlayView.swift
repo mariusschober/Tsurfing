@@ -2,7 +2,8 @@ import SwiftUI
 
 struct CaptureOverlayView: View {
     @ObservedObject var vm: CaptureViewModel
-    @FocusState private var focused: Bool
+    private enum Field: Hashable { case title, notes }
+    @FocusState private var focused: Field?
     var onDismiss: () -> Void
 
     var body: some View {
@@ -24,10 +25,13 @@ struct CaptureOverlayView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.primary.opacity(0.08), lineWidth: 1))
         .shadow(color: Color.black.opacity(0.20), radius: 24, x: 0, y: 12)
-        .onAppear { focused = true; vm.checkPrivacy() }
+        .onAppear { focused = .title; vm.checkPrivacy() }
+        .onChange(of: vm.showNotes) { _, shown in
+            if !shown { focused = .title }
+        }
         .onChange(of: vm.focusRequest) { _, _ in
-            focused = false
-            DispatchQueue.main.async { focused = true }
+            focused = nil
+            DispatchQueue.main.async { focused = .title }
         }
     }
 
@@ -61,7 +65,7 @@ struct CaptureOverlayView: View {
                     .accessibilityIdentifier("capture-title-field")
                 .textFieldStyle(.plain)
                 .font(.system(size: 14, weight: .medium, design: .rounded))
-                .focused($focused)
+                .focused($focused, equals: .title)
                 .onSubmit { _ = vm.submitAdd() ? onDismiss() : () }
                 .submitLabel(.done)
             if !vm.rawText.isEmpty {
@@ -77,6 +81,9 @@ struct CaptureOverlayView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Notes / URLs").font(.system(size: 10, weight: .semibold, design: .rounded)).foregroundStyle(.secondary).tracking(0.5).textCase(.uppercase)
             TextEditor(text: $vm.notes)
+                .focused($focused, equals: .notes)
+                .accessibilityIdentifier("capture-notes-field")
+                .onAppear { focused = .notes }
                 .frame(height: 60)
                 .font(.system(size: 12))
                 .scrollContentBackground(.hidden)
@@ -189,8 +196,8 @@ struct CaptureOverlayView: View {
             .opacity((vm.parsed.cleanTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ? 0.5 : 1)
 
             Spacer()
-            Button(action: { vm.toggleNotes() }) {
-                Label(vm.showNotes ? "Hide notes" : "Notes ⌘↵", systemImage: "note.text")
+            Button(action: { vm.showNotes = true; focused = .notes }) {
+                Label("Notes ⌘↵", systemImage: "note.text")
                     .font(.system(size: 11, weight: .medium, design: .rounded)).foregroundStyle(.secondary)
             }.buttonStyle(.plain).keyboardShortcut(.return, modifiers: [.command])
         }

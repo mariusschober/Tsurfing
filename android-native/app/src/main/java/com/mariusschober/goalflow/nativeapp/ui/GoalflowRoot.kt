@@ -3,6 +3,7 @@ package com.mariusschober.goalflow.nativeapp.ui
 import android.content.Intent
 import android.net.Uri
 import android.view.HapticFeedbackConstants
+import com.mariusschober.goalflow.nativeapp.domain.parseNaturalCaptureSchedule
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.BackHandler
 import androidx.activity.result.contract.ActivityResultContracts
@@ -2767,17 +2768,28 @@ private fun CaptureSheet(
         if (error != null) saving = false
     }
 
+    LaunchedEffect(title, today) {
+        parseNaturalCaptureSchedule(title, LocalDate.parse(today))?.let { detected ->
+            precision = detected.precision
+            selectedDate = if (precision == SchedulePrecision.MONTH) "${detected.scheduledFor}-01" else detected.scheduledFor
+        }
+    }
+
     fun submit() {
-        if (saving || title.isBlank()) return
+        val detected = parseNaturalCaptureSchedule(title, LocalDate.parse(today))
+        val cleanTitle = detected?.title ?: title
+        val finalPrecision = detected?.precision ?: precision
+        val finalDate = detected?.scheduledFor ?: if (precision == SchedulePrecision.DAY) selectedDate else selectedDate.substring(0, 7)
+        if (saving || cleanTitle.isBlank()) return
         saving = true
         localError = null
         focusManager.clearFocus()
         onSave(
-            title,
+            cleanTitle,
             notes,
-            precision,
-            if (precision == SchedulePrecision.DAY) selectedDate else selectedDate.substring(0, 7),
-            scheduledTime?.takeIf { precision == SchedulePrecision.DAY && it.isNotBlank() },
+            finalPrecision,
+            finalDate,
+            scheduledTime?.takeIf { finalPrecision == SchedulePrecision.DAY && it.isNotBlank() },
             frog,
             selectedGoalId,
             duration

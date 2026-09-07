@@ -1,27 +1,5 @@
+import { parseNaturalSchedule } from '../../utils/naturalSchedule';
 import { SchedulingError, assertSchedule, type SchedulePrecision } from "../../src/domain/scheduling";
-
-const monthNames = [
-  "january", "february", "march", "april", "may", "june",
-  "july", "august", "september", "october", "november", "december"
-];
-
-const weekdayNames = [
-  "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"
-];
-
-const addDays = (localDate: string, days: number): string => {
-  const [year, month, day] = localDate.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day + days));
-  return date.toISOString().slice(0, 10);
-};
-
-const nextWeekday = (today: string, weekday: number): string => {
-  const [year, month, day] = today.split("-").map(Number);
-  const current = new Date(Date.UTC(year, month - 1, day));
-  let distance = (weekday - current.getUTCDay() + 7) % 7;
-  if (distance === 0) distance = 7;
-  return addDays(today, distance);
-};
 
 export interface ParsedCapture {
   title: string;
@@ -78,35 +56,13 @@ export const parseTelegramCapture = (text: string, today: string): ParsedCapture
     scheduledFor = explicitDay[1];
     title = title.slice(0, explicitDay.index).trim();
     defaultedToToday = false;
-  } else if (/\s+today$/i.test(title)) {
-    title = title.replace(/\s+today$/i, "").trim();
-    defaultedToToday = false;
-  } else if (/\s+tomorrow$/i.test(title)) {
-    scheduledFor = addDays(today, 1);
-    title = title.replace(/\s+tomorrow$/i, "").trim();
-    defaultedToToday = false;
   } else {
-    const weekday = title.match(/\s+(?:next\s+)?(sunday|monday|tuesday|wednesday|thursday|friday|saturday)$/i);
-    if (weekday) {
-      scheduledFor = nextWeekday(today, weekdayNames.indexOf(weekday[1].toLowerCase()));
-      title = title.slice(0, weekday.index).trim();
+    const natural = parseNaturalSchedule(title, today);
+    if (natural.scheduledFor) {
+      title = natural.cleanTitle;
+      scheduledFor = natural.scheduledFor;
+      schedulePrecision = natural.schedulePrecision!;
       defaultedToToday = false;
-    } else {
-      // Requiring "in" avoids treating verbs such as "may" as dates.
-      const month = title.match(/\s+in\s+([a-z]+)(?:\s+(\d{4}))?$/i);
-      if (month) {
-        const monthIndex = monthNames.indexOf(month[1].toLowerCase());
-        if (monthIndex >= 0) {
-          const currentYear = Number(today.slice(0, 4));
-          let year = month[2] ? Number(month[2]) : currentYear;
-          const candidate = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
-          if (!month[2] && candidate <= today.slice(0, 7)) year += 1;
-          schedulePrecision = "month";
-          scheduledFor = `${year}-${String(monthIndex + 1).padStart(2, "0")}`;
-          title = title.slice(0, month.index).trim();
-          defaultedToToday = false;
-        }
-      }
     }
   }
 
