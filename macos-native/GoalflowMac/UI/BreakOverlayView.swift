@@ -4,6 +4,8 @@ struct BreakOverlayView: View {
     var remainingSeconds: Int? // nil = open
     var elapsedSeconds: Int
     var isOpenEnded: Bool { remainingSeconds == nil }
+    var isExpired: Bool { remainingSeconds == 0 }
+    var endButtonTitle: String { isExpired ? "Continue work" : isOpenEnded ? "Back to Flow" : "End Break Early" }
     var durationMinutes: Int? // for title
     var onEndEarly: () -> Void
 
@@ -11,7 +13,7 @@ struct BreakOverlayView: View {
         ZStack {
             Color(red: 0.05, green: 0.05, blue: 0.05).ignoresSafeArea()
             VStack(spacing: 24) {
-                Text(isOpenEnded ? "BREAK TIME" : "RECHARGE")
+                Text(isExpired ? "BREAK COMPLETE" : isOpenEnded ? "BREAK TIME" : "RECHARGE")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .tracking(6)
                     .foregroundStyle(Color(red: 0.45, green: 0.55, blue: 0.95))
@@ -23,19 +25,19 @@ struct BreakOverlayView: View {
                     )
                     .shadow(color: .black.opacity(0.4), radius: 20, x: 0, y: 10)
 
-                Text(isOpenEnded ? "Taking a moment..." : "Breathe. Relax. Reset.")
+                Text(isExpired ? "Ready when you are." : isOpenEnded ? "Taking a moment..." : "Breathe. Relax. Reset.")
                     .font(.system(size: 18, weight: .light))
                     .foregroundStyle(Color.white.opacity(0.6))
 
                 VStack(spacing: 12) {
-                    Text("Press Esc to End Break Early")
+                    Text("Press Esc to \(endButtonTitle)")
                         .font(.system(size: 11, weight: .bold, design: .rounded))
                         .tracking(1.4)
                         .textCase(.uppercase)
                         .foregroundStyle(Color.white.opacity(0.35))
 
                     Button(action: onEndEarly) {
-                        Text(isOpenEnded ? "Back to Flow" : "End Break Early")
+                        Text(endButtonTitle)
                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                             .foregroundStyle(Color.white.opacity(0.85))
                             .padding(.horizontal, 24).padding(.vertical, 12)
@@ -43,7 +45,7 @@ struct BreakOverlayView: View {
                     }
                     .buttonStyle(.plain)
                     .keyboardShortcut(.cancelAction)
-                    .accessibilityLabel("End break early")
+                    .accessibilityLabel(endButtonTitle)
                     .accessibilityIdentifier("end-break-button")
                 }
                 .padding(.top, 8)

@@ -138,3 +138,48 @@ final class BreakReturnTests: XCTestCase {
         XCTAssertEqual(bs.elapsedSeconds(now: clock.now()), 600)
     }
 }
+
+private final class BreakSoundSpy: SoundGateway, @unchecked Sendable {
+    var alarms: [Bool] = []
+    var stops = 0
+    func tick(volume: Float) {}
+    func complete(frog: Bool) {}
+    func alarm(loop: Bool) { alarms.append(loop) }
+    func stopAlarm() { stops += 1 }
+    func setEnabled(_ enabled: Bool) {}
+    func setVolume(_ volume: Float) {}
+}
+
+@MainActor
+final class BreakAlarmRegressionTests: XCTestCase {
+    func test_expired_ticks_and_restores_only_notify_once_and_dismissal_stops() {
+        let sound = BreakSoundSpy()
+        let controller = BreakAlarmController(sound: sound)
+        let start = Date(timeIntervalSince1970: 7_000_000)
+        let state = BreakState(durationSeconds: 60, startedAt: start, sourcePhase: .paused, taskId: "t")
+        controller.update(state: state, now: start)
+        XCTAssertTrue(sound.alarms.isEmpty)
+        for second in 60...180 { controller.update(state: state, now: start.addingTimeInterval(Double(second))) }
+        XCTAssertEqual(sound.alarms, [false], "Expiry must produce a single finite alert, not queue alarms every second")
+        let stopsBefore = sound.stops
+        controller.update(state: nil, now: start.addingTimeInterval(180))
+        XCTAssertEqual(sound.stops, stopsBefore + 1)
+        controller.update(state: nil, now: start.addingTimeInterval(181))
+        XCTAssertEqual(sound.alarms, [false])
+        let next = BreakState(durationSeconds: 60, startedAt: start.addingTimeInterval(200), sourcePhase: .paused, taskId: "t")
+        controller.update(state: next, now: start.addingTimeInterval(260))
+        XCTAssertEqual(sound.alarms, [false, false], "A later break must still notify")
+    }
+
+    func test_open_break_does_not_alarm_and_stop_cancels_output() {
+        let sound = BreakSoundSpy()
+        let controller = BreakAlarmController(sound: sound)
+        let start = Date(timeIntervalSince1970: 8_000_000)
+        let state = BreakState(durationSeconds: nil, startedAt: start, sourcePhase: .paused, taskId: "t")
+        controller.update(state: state, now: start.addingTimeInterval(86_400))
+        XCTAssertTrue(sound.alarms.isEmpty)
+        let stopsBefore = sound.stops
+        controller.stop()
+        XCTAssertEqual(sound.stops, stopsBefore + 1)
+    }
+}
