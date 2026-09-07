@@ -12,8 +12,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-createdb "${empty_database}"
-createdb "${upgrade_database}"
+createdb -T template0 -E UTF8 "${empty_database}"
+createdb -T template0 -E UTF8 "${upgrade_database}"
 
 psql -v ON_ERROR_STOP=1 -d "${empty_database}" -f "${repository_root}/scripts/supabase-test-bootstrap.sql" >/dev/null
 for migration in "${repository_root}"/supabase/migrations/*.sql; do
@@ -52,7 +52,8 @@ for migration in \
   "${repository_root}/supabase/migrations/20260907123917_focus_session_receipt_guard.sql" \
   "${repository_root}/supabase/migrations/20260907203259_s2_sync_lock_order.sql" \
   "${repository_root}/supabase/migrations/20260907205825_s2_counter_projection.sql" \
-  "${repository_root}/supabase/migrations/20260907211939_s2_focus_transitions.sql"; do
+  "${repository_root}/supabase/migrations/20260907211939_s2_focus_transitions.sql" \
+  "${repository_root}/supabase/migrations/20260907220709_s2_private_action_ledger.sql"; do
   psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${migration}" >/dev/null
 done
 psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${repository_root}/scripts/migration-integrity-assertions.sql" >/dev/null
@@ -94,4 +95,8 @@ done
 
 for test_database in "${empty_database}" "${upgrade_database}"; do
   PGDATABASE="${test_database}" python3 "${repository_root}/scripts/test-s2-domain-fixtures.py"
+done
+
+for test_database in "${empty_database}" "${upgrade_database}"; do
+  PGDATABASE="${test_database}" python3 "${repository_root}/scripts/test-s2-action-ledger.py"
 done
