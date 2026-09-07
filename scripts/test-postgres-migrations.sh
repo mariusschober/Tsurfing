@@ -54,7 +54,8 @@ for migration in \
   "${repository_root}/supabase/migrations/20260907205825_s2_counter_projection.sql" \
   "${repository_root}/supabase/migrations/20260907211939_s2_focus_transitions.sql" \
   "${repository_root}/supabase/migrations/20260907220709_s2_private_action_ledger.sql" \
-  "${repository_root}/supabase/migrations/20260907222904_s2_staged_reconciliation.sql"; do
+  "${repository_root}/supabase/migrations/20260907222904_s2_staged_reconciliation.sql" \
+  "${repository_root}/supabase/migrations/20260907234144_s2_counter_day_admission.sql"; do
   psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${migration}" >/dev/null
 done
 psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${repository_root}/scripts/migration-integrity-assertions.sql" >/dev/null
@@ -104,4 +105,8 @@ done
 
 for test_database in "${empty_database}" "${upgrade_database}"; do
   PGDATABASE="${test_database}" python3 "${repository_root}/scripts/test-s2-staged-reconciliation.py"
+done
+
+for test_database in "${empty_database}" "${upgrade_database}"; do
+  PGDATABASE="${test_database}" python3 "${repository_root}/scripts/test-s2-counter-days.py"
 done
