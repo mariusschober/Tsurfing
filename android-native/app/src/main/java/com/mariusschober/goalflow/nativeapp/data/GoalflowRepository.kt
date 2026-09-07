@@ -2266,6 +2266,78 @@ class GoalflowRepository(
         }
     }
 
+    suspend fun automaticSyncCandidates(): List<SyncConflictEntity> =
+        conflicts.getAll().filter { it.status != "resolving_local" }
+
+    fun automaticSyncRequest(conflict: SyncConflictEntity): String = JSONObject().apply {
+        put("conflictId", conflict.id)
+        put("sourceMutationId", conflict.mutationId?.takeIf {
+            runCatching { UUID.fromString(it) }.isSuccess
+        } ?: JSONObject.NULL)
+        put("entityType", conflict.entityType)
+        put("entityId", conflict.entityId)
+        put("localHistory", JSONArray(conflict.localHistory))
+    }.toString()
+
+    suspend fun commitAutomaticSync(conflictSnapshot: SyncConflictEntity, request: String, response: String) {
+        val reply = JSONObject(response)
+        require(reply.opt("reconciled") == true && reply.opt("serverMissing") is Boolean
+            && runCatching { UUID.fromString(reply.getString("receiptId")) }.isSuccess
+            && jsonEquivalent(canonicalJson(reply.opt("candidate")), request)) {
+            "Automatic sync did not acknowledge the exact saved change."
+        }
+        val record = if (reply.getBoolean("serverMissing")) {
+            require(!reply.has("record") || reply.isNull("record")) { "Automatic sync returned an ambiguous cloud record." }
+            null
+        } else {
+            val wire = reply.getJSONObject("record")
+            fun positiveLong(key: String): Long {
+                val value = wire.opt(key)
+                require(value is Number && value.toDouble() == value.toLong().toDouble() && value.toLong() > 0) {
+                    "Automatic sync returned an invalid cloud revision."
+                }
+                return value.toLong()
+            }
+            require(wire.opt("entity_type") == conflictSnapshot.entityType
+                && wire.opt("entity_id") == conflictSnapshot.entityId
+                && wire.opt("device_id") is String && wire.opt("updated_at") is String
+                && wire.has("payload") && wire.has("deleted_at")
+                && (wire.isNull("deleted_at") || wire.opt("deleted_at") is String)) {
+                "Automatic sync returned a different cloud item."
+            }
+            NativeRemoteRecord(
+                entityType = wire.getString("entity_type"), entityId = wire.getString("entity_id"),
+                version = positiveLong("version"), serverVersion = positiveLong("server_version"),
+                deviceId = wire.getString("device_id"), payload = canonicalJson(wire.opt("payload")),
+                updatedAt = wire.getString("updated_at"),
+                deletedAt = if (wire.isNull("deleted_at")) null else wire.getString("deleted_at")
+            ).also(::validateRemoteRecord)
+        }
+        database.withTransaction {
+            val currentConflict = conflicts.get(conflictSnapshot.id) ?: return@withTransaction
+            if (!jsonEquivalent(automaticSyncRequest(currentConflict), request)) return@withTransaction
+            val key = syncMetaKey(currentConflict.entityType, currentConflict.entityId)
+            val meta = syncMeta.get(key)
+            require((record?.serverVersion ?: 0L) >= (meta?.serverVersion ?: 0L)) {
+                "Automatic sync returned an older cloud revision. Your saved change remains available."
+            }
+            conflicts.delete(currentConflict.id)
+            val hasPending = outbox.getForEntity(currentConflict.entityType, currentConflict.entityId).isNotEmpty()
+            val hasOtherConflicts = conflicts.getAll().any {
+                it.entityType == currentConflict.entityType && it.entityId == currentConflict.entityId
+            }
+            if (!hasPending && !hasOtherConflicts) {
+                if (record == null) deleteEntityInTransaction(currentConflict.entityType, currentConflict.entityId)
+                else applyRemoteRecordInTransaction(record)
+            }
+            syncMeta.insert(SyncMetaEntity(
+                entityType = key, cursor = meta?.cursor ?: 0L,
+                localVersion = maxOf(meta?.localVersion ?: 0L, record?.version ?: 0L),
+                serverVersion = record?.serverVersion ?: 0L, lastSuccessfulSync = meta?.lastSuccessfulSync
+            ))
+        }
+    }
+
     suspend fun resolveConflictLocally(conflictId: String) {
         database.withTransaction {
             val conflict = conflicts.get(conflictId) ?: return@withTransaction

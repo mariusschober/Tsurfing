@@ -55,7 +55,8 @@ private fun reviewValue(key: String, value: Any?): String = when (value) {
     is Number -> if (key == "duration") "$value min" else value.toString()
     is String -> value.ifBlank { "Empty" }
     is JSONArray -> (0 until value.length()).joinToString { reviewValue("", value.opt(it)) }.ifBlank { "None" }
-    else -> reviewJson(value)
+    is JSONObject -> if (value.length() == 0) "No saved details" else "${value.length()} saved details"
+    else -> "Saved content"
 }.let { if (it.length > 500) it.take(500) + "… (more saved content)" else it }
 
 /** Presentation only: this never merges records or changes the acknowledgment policy. */

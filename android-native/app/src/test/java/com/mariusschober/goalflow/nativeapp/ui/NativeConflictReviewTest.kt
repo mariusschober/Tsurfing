@@ -54,4 +54,11 @@ class NativeConflictReviewTest {
         assertFalse(result.summary.contains("contents match"))
         assertTrue(result.summary.contains("cannot be fully compared"))
     }
+    @Test fun `nested sync data never exposes raw JSON to the user`() {
+        val result = nativeConflictReview(conflict(
+            """{"bioLog":{"energy":4,"notes":"steady"}}""", """{"bioLog":{"energy":2}}"""))
+        assertEquals("2 saved details", result.differences.single().device)
+        assertEquals("1 saved details", result.differences.single().cloud)
+        assertFalse(result.differences.any { it.device.contains("{") || it.cloud.contains("{") })
+    }
 }

@@ -323,7 +323,7 @@ class GoalflowViewModel(
                 if (result.hadConfirmedPlan) repository.confirmPlan(result.localDate, result.previousIds)
             }.onSuccess {
                 _reorderUndo.value = null
-                _notice.value = "Previous order restored locally"
+                _notice.value = "Previous order restored"
             }.onFailure { failure -> _error.value = failure.message ?: "The previous order could not be restored safely." }
         }
     }

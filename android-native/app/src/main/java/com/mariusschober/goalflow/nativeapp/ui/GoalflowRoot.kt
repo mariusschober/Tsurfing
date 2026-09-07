@@ -536,7 +536,7 @@ fun GoalflowRoot(
     LaunchedEffect(reorderUndo) {
         val change = reorderUndo ?: return@LaunchedEffect
         val result = snackbarHostState.showSnackbar(
-            message = "Order updated locally",
+            message = "Order updated",
             actionLabel = "Undo",
             withDismissAction = true,
             duration = SnackbarDuration.Short
@@ -554,13 +554,13 @@ fun GoalflowRoot(
                 if (unresolvedConflicts.isNotEmpty()) {
                     Surface(color = MaterialTheme.colorScheme.secondaryContainer) {
                         TextButton(
-                            onClick = { reviewedConflictId = unresolvedConflicts.first().id },
+                            onClick = { application.foregroundSyncCoordinator.requestSync() },
                             modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 16.dp)
                         ) {
                             val count = unresolvedConflicts.size
-                            Text(if (count == 1) "1 sync change needs review" else "$count sync changes need review",
+                            Text(if (count == 1) "1 saved change waiting to sync" else "$count saved changes waiting to sync",
                                 modifier = Modifier.weight(1f))
-                            Text("Review")
+                            Text("Retry sync")
                         }
                     }
                 }
@@ -1846,6 +1846,7 @@ private fun PlanningScreen(
                     }
                     PlannedTaskRow(
                         task = task,
+                        position = index + 1,
                         timeline = timelineById[task.id],
                         isFirst = queue.firstOrNull()?.id == task.id,
                         isLast = queue.lastOrNull()?.id == task.id,
@@ -1954,6 +1955,7 @@ private fun OverdueTaskRow(
 @Composable
 private fun PlannedTaskRow(
     task: GoalflowTask,
+    position: Int,
     timeline: GoalflowTimelineBlock?,
     isFirst: Boolean,
     isLast: Boolean,
@@ -2048,7 +2050,7 @@ private fun PlannedTaskRow(
                 .padding(start = 18.dp, top = 12.dp, bottom = 12.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("${task.plannedOrder + 1}", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+            Text("$position", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(

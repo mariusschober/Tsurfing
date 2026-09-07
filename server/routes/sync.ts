@@ -285,6 +285,38 @@ export const createSyncRouter = (admin?: SupabaseClient) => {
     }
   });
 
+  router.post('/sync/conflicts/reconcile', async (request, response) => {
+    try {
+      const database = requireDatabase(admin);
+      const historyEntry = z.object({
+        mutationId: z.string().uuid(), version: z.number().int().positive(),
+        payload: z.unknown(), updatedAt: z.string().datetime({ offset: true }), deletedAt: z.string().datetime({ offset: true }).nullable()
+      }).strict();
+      const candidate = z.object({
+        conflictId: z.string().min(1).max(600), sourceMutationId: z.string().uuid().nullable(),
+        entityType: syncEntityType, entityId: z.string().min(1).max(240),
+        localHistory: z.array(historyEntry).max(1000)
+      }).strict().parse(request.body);
+      if (new Set(candidate.localHistory.map(item => item.mutationId)).size !== candidate.localHistory.length) {
+        response.status(400).json({ error: { code: 'invalid_request', message: 'Sync history contains duplicate changes.' } });
+        return;
+      }
+      const { data, error } = await database.rpc('reconcile_goalflow_sync_change', {
+        target_user_id: request.user!.id, target_candidate: candidate
+      });
+      if (error) throw error;
+      if (!isRecord(data) || data.reconciled !== true || canonicalJson(data.candidate) !== canonicalJson(candidate)
+        || typeof data.receiptId !== 'string' || typeof data.serverMissing !== 'boolean'
+        || (!data.serverMissing && (!isRecord(data.record)
+          || data.record.entity_type !== candidate.entityType || data.record.entity_id !== candidate.entityId))) {
+        throw new Error('Automatic reconciliation did not acknowledge the exact saved change.');
+      }
+      response.json(data);
+    } catch (error) {
+      invalidRequest(response, error);
+    }
+  });
+
   router.post('/sync/conflicts/resolve', async (request, response) => {
     try {
       const database = requireDatabase(admin);

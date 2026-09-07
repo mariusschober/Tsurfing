@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { resolveLocalConflict, type SyncState } from '../services/cloudSync';
+import { type SyncState } from '../services/cloudSync';
 import { storageService, STORES } from '../services/storage';
 
 interface StatusDetail {
@@ -28,7 +28,7 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
   }, [userKey]);
 
   const labels: Record<SyncState, string> = {
-    'saved-locally': 'Saved locally', syncing: 'Syncing', synced: 'Synced', offline: 'Offline', error: 'Sync error', conflict: 'Review sync conflict'
+    'saved-locally': 'Saved locally', syncing: 'Syncing', synced: 'Synced', offline: 'Offline', error: 'Sync error', conflict: 'Syncing saved changes'
   };
   const color = status.state === 'synced' ? 'bg-emerald-500' : status.state === 'error' || status.state === 'conflict' ? 'bg-amber-500' : status.state === 'offline' ? 'bg-gray-400' : 'bg-indigo-500';
 
@@ -47,19 +47,12 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
             className="mt-3 rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 dark:border-slate-600 dark:text-gray-200">
             Retry sync
           </button>}
-          {conflicts.map(conflict => (
-            <div key={conflict.id} className="mt-3 border-t border-gray-100 pt-3 dark:border-slate-700">
-              <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
-                Conflicting {conflict.entityType === STORES.TASKS ? 'task' : conflict.entityType}
-                {conflict.localPayload?.title ? `: ${conflict.localPayload.title}` : ''}
-              </p>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Both versions are preserved until you choose.</p>
-              <div className="mt-2 flex gap-2">
-                <button type="button" onClick={() => void resolveLocalConflict(userKey, conflict.id, 'local')} className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white">Keep this device</button>
-                <button type="button" onClick={() => void resolveLocalConflict(userKey, conflict.id, 'cloud')} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 dark:border-slate-600 dark:text-gray-200">Use cloud</button>
-              </div>
-            </div>
-          ))}
+          {conflicts.length > 0 && <div className="mt-3 border-t border-gray-100 pt-3 dark:border-slate-700">
+            <p className="text-sm text-gray-700 dark:text-gray-200">{conflicts.length} saved {conflicts.length === 1 ? 'change is' : 'changes are'} waiting to sync.</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">The cloud keeps the newest version automatically. You can keep working.</p>
+            {status.state !== 'error' && <button type="button" onClick={() => window.dispatchEvent(new Event('goalflow:sync-retry'))}
+              className="mt-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 dark:border-slate-600 dark:text-gray-200">Retry sync</button>}
+          </div>}
         </div>
       )}
     </div>

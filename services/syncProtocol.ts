@@ -351,9 +351,16 @@ export const buildStagedLocalTransaction = (
   nextValue: unknown,
   order: number,
   now: string,
-  randomUuid: () => string
+  randomUuid: () => string,
+  preserveSourceTime = false
 ): StagedLocalTransaction | null => {
   if (stableJson(previousValue) === stableJson(nextValue)) return null;
+  const sourceTime = (value: unknown): string => {
+    if (!preserveSourceTime) return now;
+    const source = isRecord(value) ? value.updatedAt ?? value.createdAt : undefined;
+    const time = typeof source === 'number' ? source : typeof source === 'string' ? Date.parse(source) : NaN;
+    return Number.isFinite(time) && time >= 0 && time <= Date.parse(now) ? new Date(time).toISOString() : new Date(0).toISOString();
+  };
   const changes: StagedEntityChange[] = [];
   const previousRecords = RECORD_LEVEL_STORES.has(storeName) ? recordMap(previousValue) : null;
   const nextRecords = RECORD_LEVEL_STORES.has(storeName) ? recordMap(nextValue) : null;
@@ -371,7 +378,7 @@ export const buildStagedLocalTransaction = (
         entityType: storeName,
         entityId: id,
         payload: after ?? before,
-        updatedAt: now,
+        updatedAt: sourceTime(after ?? before),
         deletedAt: after
           ? (typeof after.deletedAt === 'string' && after.deletedAt ? after.deletedAt : null)
           : now
@@ -385,7 +392,7 @@ export const buildStagedLocalTransaction = (
       // `undefined` disappears from JSON request bodies. An explicit null keeps
       // singleton deletion retryable and fingerprint-stable across the wire.
       payload: nextValue === undefined ? null : nextValue,
-      updatedAt: now,
+      updatedAt: sourceTime(nextValue),
       deletedAt: nextValue === undefined ? now : null
     });
   }
@@ -1005,4 +1012,66 @@ export const applyConflictCloudValue = (value: unknown, conflict: LocalConflict)
     : RECORD_LEVEL_STORES.has(conflict.entityType)
       ? upsertRecord(value, conflict.entityId, conflict.serverPayload, conflict.serverDeletedAt)
       : conflict.serverDeletedAt ? undefined : conflict.serverPayload;
+};
+
+export interface ReconciliationCandidate {
+  conflictId: string;
+  sourceMutationId: string | null;
+  entityType: string;
+  entityId: string;
+  localHistory: ConflictHistoryEntry[];
+}
+
+export const reconciliationCandidate = (conflict: LocalConflict): ReconciliationCandidate => ({
+  conflictId: conflict.id,
+  sourceMutationId: conflict.mutationId && UUID_PATTERN.test(conflict.mutationId) ? conflict.mutationId : null,
+  entityType: conflict.entityType,
+  entityId: conflict.entityId,
+  localHistory: conflict.localHistory.map(entry => ({ ...entry }))
+});
+
+export const applyAutomaticReconciliation = (
+  input: SyncMeta, currentValue: unknown, candidate: ReconciliationCandidate, reply: unknown
+): { meta: SyncMeta; value: unknown; changed: boolean } => {
+  if (!isRecord(reply) || reply.reconciled !== true
+    || typeof reply.receiptId !== 'string' || !UUID_PATTERN.test(reply.receiptId)
+    || stableJson(reply.candidate) !== stableJson(candidate) || typeof reply.serverMissing !== 'boolean') {
+    throw new Error('Automatic sync did not acknowledge the exact saved change.');
+  }
+  const record = reply.record;
+  if ((!reply.serverMissing && (!isRecord(record)
+    || record.entity_type !== candidate.entityType || record.entity_id !== candidate.entityId
+    || typeof record.device_id !== 'string' || !record.device_id
+    || !Number.isSafeInteger(record.version) || Number(record.version) <= 0
+    || !Number.isSafeInteger(record.server_version) || Number(record.server_version) <= 0
+    || typeof record.updated_at !== 'string' || !Number.isFinite(Date.parse(record.updated_at))
+    || !Object.prototype.hasOwnProperty.call(record, 'payload')
+    || !Object.prototype.hasOwnProperty.call(record, 'deleted_at')
+    || (record.deleted_at !== null && (typeof record.deleted_at !== 'string' || !Number.isFinite(Date.parse(record.deleted_at))))))
+    || (reply.serverMissing && record != null)) {
+    throw new Error('Automatic sync returned an invalid cloud record.');
+  }
+  const meta = cloneMeta(input);
+  const conflict = meta.conflicts.find(item => item.id === candidate.conflictId);
+  if (!conflict || stableJson(reconciliationCandidate(conflict)) !== stableJson(candidate)) {
+    return { meta, value: currentValue, changed: false };
+  }
+  const key = syncEntityKey(candidate.entityType, candidate.entityId);
+  const cloud = record as Record<string, unknown> | null;
+  const serverVersion = Number(cloud?.server_version ?? 0);
+  if (serverVersion < (meta.versions[key]?.server ?? 0)) {
+    throw new Error('Automatic sync returned an older cloud revision. The saved change remains available.');
+  }
+  meta.conflicts = meta.conflicts.filter(item => item.id !== candidate.conflictId);
+  meta.versions[key] = { local: Math.max(meta.versions[key]?.local ?? 0, Number(cloud?.version ?? 0)), server: serverVersion };
+  // A newer edit can arrive while the request is in flight. It stays visible
+  // and queued; the next cycle reconciles it against this cloud revision.
+  if (meta.outbox.some(item => item.entityType === candidate.entityType && item.entityId === candidate.entityId)
+    || meta.conflicts.some(item => item.entityType === candidate.entityType && item.entityId === candidate.entityId)) {
+    return { meta, value: currentValue, changed: false };
+  }
+  const value = RECORD_LEVEL_STORES.has(candidate.entityType)
+    ? upsertRecord(currentValue, candidate.entityId, cloud?.payload, reply.serverMissing ? 'missing' : cloud?.deleted_at as string | null)
+    : reply.serverMissing || cloud?.deleted_at ? undefined : cloud?.payload;
+  return { meta, value, changed: stableJson(value) !== stableJson(currentValue) };
 };

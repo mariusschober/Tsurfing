@@ -414,8 +414,14 @@ class NativeSyncEngine(
         }
         conflicts += repository.mergeServerConflicts(serverConflicts)
 
+        for (conflict in repository.automaticSyncCandidates()) {
+            val request = repository.automaticSyncRequest(conflict)
+            val response = requestForSession(session, "/api/v1/sync/conflicts/reconcile", "POST", request)
+            ensureSuccessful(response, "Automatic sync will retry. Your changes remain saved.")
+            repository.commitAutomaticSync(conflict, request, response.body)
+        }
         repository.markSyncSuccessful()
-        SyncResult.Synced(conflicts)
+        SyncResult.Synced(repository.automaticSyncCandidates().size)
     }
 
     private fun ensureAuthorized(response: NativeHttpResponse) {

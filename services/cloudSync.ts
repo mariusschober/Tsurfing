@@ -10,6 +10,7 @@ import {
   normalizeSyncMeta,
   type PushResult,
   type RemoteServerConflict,
+  reconciliationCandidate,
   type RemoteSyncRecord,
   type SyncMeta,
   type SyncMutation
@@ -249,7 +250,7 @@ const seedUnsynchronizedLocalData = async (userKey: string): Promise<void> => {
     if (hasSyncState) continue;
     const value = await storageService.get(storeName, userKey);
     if (value === undefined) continue;
-    storageService.stageLocalValue(storeName, userKey, undefined, value);
+    storageService.stageLocalValue(storeName, userKey, undefined, value, true);
   }
   await storageService.flushPendingLocalChanges(userKey);
 };
@@ -320,6 +321,15 @@ export const synchronizeCloudOnce = async (
     throw new SyncProtocolError('Sync conflict response was invalid. Existing local state was not changed.');
   }
   meta = await storageService.mergeServerConflicts(userKey, conflictBody.conflicts);
+
+  for (const conflict of meta.conflicts.filter(item => item.status === 'unresolved')) {
+    const candidate = reconciliationCandidate(conflict);
+    const response = await fetchSyncWithRetry('/api/v1/sync/conflicts/reconcile', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(candidate)
+    }, dependencies);
+    const reply = await parseJson<unknown>(response, 'Automatic sync will retry. Your changes remain saved.');
+    meta = await storageService.commitAutomaticReconciliation(userKey, candidate, reply);
+  }
 
   meta = await storageService.markSyncSuccessful(userKey);
   return meta;

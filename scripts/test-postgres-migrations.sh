@@ -46,7 +46,8 @@ for migration in \
   "${repository_root}/supabase/migrations/202609040002_telegram_oidc_activation.sql" \
   "${repository_root}/supabase/migrations/202609040003_realtime_sync_wakeup.sql" \
   "${repository_root}/supabase/migrations/202609040004_database_advisor_hardening.sql" \
-  "${repository_root}/supabase/migrations/202609070001_legacy_mac_numeric_projection.sql"; do
+  "${repository_root}/supabase/migrations/202609070001_legacy_mac_numeric_projection.sql" \
+  "${repository_root}/supabase/migrations/202609070002_automatic_sync_reconciliation.sql"; do
   psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${migration}" >/dev/null
 done
 psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${repository_root}/scripts/migration-integrity-assertions.sql" >/dev/null
@@ -70,4 +71,8 @@ echo '{"status":"PASS","emptyDatabase":"PASS","currentSchemaUpgrade":"PASS","ide
 
 for test_database in "${empty_database}" "${upgrade_database}"; do
   psql -v ON_ERROR_STOP=1 -d "${test_database}" -f "${repository_root}/scripts/migration-legacy-mac-numeric-assertions.sql" >/dev/null
+done
+
+for test_database in "${empty_database}" "${upgrade_database}"; do
+  psql -v ON_ERROR_STOP=1 -d "${test_database}" -f "${repository_root}/scripts/migration-auto-sync-assertions.sql" >/dev/null
 done

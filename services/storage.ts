@@ -1,6 +1,8 @@
 import { openDB, IDBPDatabase } from 'idb';
 import {
   appendStagedTransactions,
+  applyAutomaticReconciliation,
+  type ReconciliationCandidate,
   applyConflictCloudValue,
   applyPushResults as transitionPushResults,
   applyRemotePage as transitionRemotePage,
@@ -652,11 +654,11 @@ const recoverFallbackState = async (userKey: string): Promise<void> => {
 };
 
 export const storageService = {
-  stageLocalValue(storeName: string, key: string, previousValue: unknown, nextValue: unknown): string | null {
+  stageLocalValue(storeName: string, key: string, previousValue: unknown, nextValue: unknown, preserveSourceTime = false): string | null {
     if (!SYNCABLE_STORES.has(storeName)) return null;
     const now = new Date().toISOString();
     const transaction = buildStagedLocalTransaction(
-      storeName, key, previousValue, nextValue, nextWalOrder(), now, randomUuid
+      storeName, key, previousValue, nextValue, nextWalOrder(), now, randomUuid, preserveSourceTime
     );
     if (!transaction) return null;
     const serialized = JSON.stringify(transaction);
@@ -965,6 +967,29 @@ export const storageService = {
       if (db) await db.put(STORES.SYNC, next, userKey);
       else writeFallback(STORES.SYNC, userKey, next);
       return next;
+    });
+  },
+
+  async commitAutomaticReconciliation(userKey: string, candidate: ReconciliationCandidate, reply: unknown): Promise<SyncMeta> {
+    return queueMutation(async () => {
+      const db = await getDB();
+      if (!db) throw new DurableStorageError('Automatic sync needs durable storage. Your changes remain saved.');
+      const tx = db.transaction([candidate.entityType, STORES.SYNC], 'readwrite');
+      const store = tx.objectStore(candidate.entityType);
+      const meta = normalizeSyncMeta(await tx.objectStore(STORES.SYNC).get(userKey));
+      const transition = applyAutomaticReconciliation(meta, await store.get(userKey), candidate, reply);
+      if (transition.changed) {
+        if (transition.value === undefined) await store.delete(userKey);
+        else await store.put(transition.value, userKey);
+      }
+      await tx.objectStore(STORES.SYNC).put(transition.meta, userKey);
+      await tx.done;
+      if (transition.changed) {
+        if (transition.value === undefined) safeLocalStorageRemove(recoveryKey(candidate.entityType, userKey));
+        else writeRecovery(candidate.entityType, userKey, transition.value);
+        announceCloudChange(candidate.entityType, transition.value);
+      }
+      return transition.meta;
     });
   },
 

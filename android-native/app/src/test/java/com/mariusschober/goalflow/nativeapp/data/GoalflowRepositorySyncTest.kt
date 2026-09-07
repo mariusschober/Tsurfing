@@ -1098,4 +1098,56 @@ class GoalflowRepositorySyncTest {
             recordUpdatedAt = mutation.updatedAt,
             recordDeletedAt = mutation.deletedAt
         )
+
+    private suspend fun autoConflict(): SyncConflictEntity {
+        val history = JSONArray().put(org.json.JSONObject().apply {
+            put("mutationId", "11111111-1111-4111-8111-111111111111")
+            put("payload", org.json.JSONObject("{\"theme\":\"offline\"}"))
+            put("updatedAt", "2026-09-05T10:00:00Z"); put("deletedAt", org.json.JSONObject.NULL); put("version", 2)
+        })
+        val conflict = SyncConflictEntity("pull:settings:singleton:3", "settings", "singleton", null,
+            "{\"theme\":\"offline\"}", null, history.toString(), "{\"theme\":\"cloud\"}", null, 3, "2026-09-07T10:00:00Z")
+        database.syncConflictDao().insert(conflict)
+        database.rawCollectionDao().insert(RawCollectionEntity("settings", conflict.localPayload, "2026-09-05T10:00:00Z", null))
+        return conflict
+    }
+
+    private fun autoReply(request: String) = org.json.JSONObject().apply {
+        put("reconciled", true); put("receiptId", "22222222-2222-4222-8222-222222222222")
+        put("candidate", org.json.JSONObject(request)); put("serverMissing", false)
+        put("record", org.json.JSONObject().apply {
+            put("entity_type", "settings"); put("entity_id", "singleton"); put("device_id", "cloud")
+            put("version", 3); put("server_version", 4); put("updated_at", "2026-09-07T10:00:00Z")
+            put("deleted_at", org.json.JSONObject.NULL); put("payload", org.json.JSONObject("{\"theme\":\"newest\"}"))
+        })
+    }
+
+    @Test fun `automatic sync applies cloud and consumes only the acknowledged conflict`() = runTest {
+        val conflict = autoConflict()
+        val request = repository.automaticSyncRequest(conflict)
+        repository.commitAutomaticSync(conflict, request, autoReply(request).toString())
+        assertTrue(database.syncConflictDao().getAll().isEmpty())
+        assertEquals("newest", org.json.JSONObject(database.rawCollectionDao().get("settings")!!.payload).getString("theme"))
+    }
+
+    @Test fun `automatic sync retains a newer edit queued during the request`() = runTest {
+        val conflict = autoConflict()
+        val request = repository.automaticSyncRequest(conflict)
+        val pending = SyncOutboxEntity("33333333-3333-4333-8333-333333333333", "device-a", "settings", "singleton",
+            3, 3, "{\"theme\":\"just edited\"}", "2026-09-07T10:01:00Z", null)
+        database.syncOutboxDao().insert(pending)
+        database.rawCollectionDao().insert(RawCollectionEntity("settings", pending.payload, pending.updatedAt, null))
+        repository.commitAutomaticSync(conflict, request, autoReply(request).toString())
+        assertEquals(pending.payload, database.rawCollectionDao().get("settings")!!.payload)
+        assertEquals(listOf(pending), repository.pendingSyncMutations())
+    }
+
+    @Test fun `automatic sync rejects an acknowledgment for another item`() = runTest {
+        val conflict = autoConflict()
+        val request = repository.automaticSyncRequest(conflict)
+        val response = autoReply(request).apply { getJSONObject("record").put("entity_id", "other") }
+        try { repository.commitAutomaticSync(conflict, request, response.toString()); fail("Wrong record acknowledged") }
+        catch (_: IllegalArgumentException) { }
+        assertEquals(conflict, database.syncConflictDao().get(conflict.id))
+    }
 }
