@@ -253,6 +253,15 @@ const verifiedSessionIdentity = (session: Session): { userId: string; sessionId:
   }
 };
 
+// This only decides whether to preserve mounted UI. Server validation remains
+// authoritative; decoded token claims never grant account access.
+export const isSameAuthSession = (previous: Session | null, next: Session): boolean => {
+  if (!previous || previous.user.id !== next.user.id) return false;
+  const before = verifiedSessionIdentity(previous);
+  const after = verifiedSessionIdentity(next);
+  return before != null && after != null && before.sessionId === after.sessionId;
+};
+
 const attemptMatchesVerifiedSession = (pending: PendingEmailOtpAttempt, session: Session): boolean => {
   const identity = verifiedSessionIdentity(session);
   return identity != null

@@ -49,6 +49,8 @@ const AppWrapper: React.FC = () => {
     }
     let active = true;
     let validationVersion = 0;
+    let acceptedSession: Session | null = null;
+    let acceptedAccount: authService.ServerAccount | null = null;
     let unsubscribe = () => undefined;
 
     const rejectSession = async (error: unknown, version: number) => {
@@ -58,6 +60,13 @@ const AppWrapper: React.FC = () => {
         && error.status < 500
         && ![408, 425, 429].includes(error.status);
       setActivationError(error instanceof Error ? error.message : 'Account access could not be verified.');
+      if (!terminal && acceptedSession) {
+        // A temporary connectivity failure must not destroy an authenticated draft.
+        setIsLoading(false);
+        return;
+      }
+      acceptedSession = null;
+      acceptedAccount = null;
       setSession(null);
       setAccount(null);
       setMfaReady(false);
@@ -69,11 +78,22 @@ const AppWrapper: React.FC = () => {
       const version = ++validationVersion;
       if (!nextSession) {
         if (!active || version !== validationVersion) return;
+        acceptedSession = null;
+        acceptedAccount = null;
         setSession(null);
         setAccount(null);
         setMfaReady(false);
         setIsLoading(false);
         return;
+      }
+      if (!authService.isSameAuthSession(acceptedSession, nextSession)) {
+        acceptedSession = null;
+        acceptedAccount = null;
+        setSession(null);
+        setAccount(null);
+        setMfaReady(false);
+        setRecoveryEmailRequired(false);
+        setIsLoading(true);
       }
       try {
         const authAction = handleRedirect
@@ -96,6 +116,12 @@ const AppWrapper: React.FC = () => {
         if (nextSession.user.email == null) setRecoveryEmailRequired(true);
         const validatedAccount = await authService.validateServerSession(nextSession);
         if (!active || version !== validationVersion) return;
+        if (acceptedAccount && (acceptedAccount.role !== validatedAccount.role
+          || (acceptedAccount.assuranceLevel === 'aal2' && validatedAccount.assuranceLevel !== 'aal2'))) {
+          setMfaReady(false);
+        }
+        acceptedSession = nextSession;
+        acceptedAccount = validatedAccount;
         setActivationError(null);
         setSession(nextSession);
         setAccount(validatedAccount);
@@ -111,6 +137,8 @@ const AppWrapper: React.FC = () => {
       if (event === 'PASSWORD_RECOVERY') {
         validationVersion += 1;
         setActivationError('Password links are no longer accepted. Request a new email code.');
+        acceptedSession = null;
+        acceptedAccount = null;
         setSession(null);
         setAccount(null);
         setMfaReady(false);
@@ -120,16 +148,16 @@ const AppWrapper: React.FC = () => {
       }
       if (event === 'SIGNED_OUT' || !nextSession) {
         validationVersion += 1;
+        acceptedSession = null;
+        acceptedAccount = null;
         setSession(null);
         setAccount(null);
         setMfaReady(false);
         setIsLoading(false);
         return;
       }
-      if (event === 'SIGNED_IN') {
-        setMfaReady(false);
-        setIsLoading(true);
-      }
+      // SIGNED_IN also fires when an existing browser tab regains focus.
+      // acceptSession resets the gate only for a different login session.
       void acceptSession(nextSession, false);
     };
 
