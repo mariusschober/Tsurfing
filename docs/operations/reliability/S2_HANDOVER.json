@@ -737,7 +737,7 @@
     "evidence/s2-admission-web.log",
     "evidence/s2-admission-android.log",
     "evidence/s2-admission-macos.log",
-    "evidence/s2-admission-release.log",
+    "evidence/s2-new-record-admission-release-initial.log",
     "evidence/s2-admission-release-retry.log"
   ],
   "blockers": [

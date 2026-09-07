@@ -1,0 +1,9 @@
+
+> tsurfing@0.4.0-beta.1 verify:release
+> npm run lint && npm test && npm run build && npm run verify:server && npm run verify:maintenance && npm run verify:client-secrets && npm run verify:client-artifacts
+
+
+> tsurfing@0.4.0-beta.1 lint
+> tsc --noEmit
+
+services/cloudSync.adversarial.test.ts(317,18): error TS2339: Property 'notes' does not exist on type '{ id: string; title: string; scheduledFor: string; dateAssigned: string; schedulePrecision: string; createdAt: number; updatedAt: number; completed: boolean; lifecycleStatus: string; }'.
