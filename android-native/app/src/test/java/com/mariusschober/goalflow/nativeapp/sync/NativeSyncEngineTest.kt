@@ -57,6 +57,13 @@ class NativeSyncEngineTest {
             fail("Oversized request must remain pending")
         } catch (_: NativeSyncProtocolException) { }
         assertNull(oversized.attemptedAt)
+        val (stagedBatch, stagedBody) = NativeSyncEngine.boundedPush(listOf(oversized, item), allowStaged = true)
+        assertEquals(listOf(oversized), stagedBatch)
+        val upload = ReconciliationUpload.prepareBody(stagedBody)
+        assertTrue(upload.manifest != null)
+        val restored = upload.chunks.flatMap { java.util.Base64.getDecoder().decode(it.getString("data")).asIterable() }.toByteArray()
+        assertEquals(stagedBody, restored.toString(Charsets.UTF_8))
+        assertEquals(oversized.mutationId, JSONObject(stagedBody).getJSONArray("mutations").getJSONObject(0).getString("mutationId"))
     }
 
     @Test
@@ -109,6 +116,54 @@ class NativeSyncEngineTest {
     @After
     fun tearDown() {
         database.close()
+    }
+
+    @Test
+    fun `interrupted staged mutation resumes its original payload and receipt`() = runTest {
+        repository.createTask(title = "Large saved task", notes = "🧭".repeat(70_000),
+            schedulePrecision = SchedulePrecision.DAY, scheduledFor = LocalDate.now().toString(),
+            scheduledTime = null, isFrog = false)
+        val original = repository.pendingSyncMutations().single { it.entityType == "tasks" }
+        val chunks = sortedMapOf<Int, String>()
+        var interrupt = true
+        var replays = 0
+        val sync = engine(NativeSyncTransport { path, _, _, body ->
+            when {
+                path == "/api/v1/sync/conflicts/stage" -> {
+                    val chunk = JSONObject(body!!)
+                    val index = chunk.getInt("chunkIndex")
+                    assertTrue(body.toByteArray(Charsets.UTF_8).size <= 262144)
+                    if (interrupt && index == 1) {
+                        interrupt = false
+                        NativeHttpResponse(200, "{\"staged\":false}")
+                    } else {
+                        chunks[index]?.let { assertEquals(it, body); replays++ }
+                        chunks[index] = body
+                        NativeHttpResponse(200, JSONObject().put("staged", true).put("manifest", chunk.get("manifest"))
+                            .put("chunkIndex", index).put("chunkSha256", chunk.get("chunkSha256")).toString())
+                    }
+                }
+                path == "/api/v1/sync/push-staged" -> {
+                    assertEquals(JSONObject(body!!).getInt("chunkCount"), chunks.size)
+                    val restored = chunks.values.flatMap { java.util.Base64.getDecoder().decode(JSONObject(it).getString("data")).asIterable() }
+                        .toByteArray().toString(Charsets.UTF_8)
+                    val mutation = JSONObject(restored).getJSONArray("mutations").getJSONObject(0)
+                    assertEquals(original.mutationId, mutation.getString("mutationId"))
+                    assertEquals(com.mariusschober.goalflow.nativeapp.data.ActionJson.canonical(JSONObject(original.payload)),
+                        com.mariusschober.goalflow.nativeapp.data.ActionJson.canonical(mutation.getJSONObject("payload")))
+                    acceptedPush(restored)
+                }
+                path == "/api/v1/sync/push" -> acceptedPush(body!!)
+                path.startsWith("/api/v1/sync/pull") -> emptyPull()
+                else -> throw AssertionError("Unexpected request: $path")
+            }
+        })
+        try { sync.synchronize(); fail("Wrong chunk acknowledgement must retain the mutation") }
+        catch (_: NativeSyncProtocolException) { }
+        assertEquals(original.payload, repository.pendingSyncMutations().single { it.mutationId == original.mutationId }.payload)
+        sync.synchronize()
+        assertEquals(1, replays)
+        assertTrue(repository.pendingSyncMutations().isEmpty())
     }
 
     @Test

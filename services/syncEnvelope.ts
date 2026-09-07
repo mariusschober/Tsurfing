@@ -3,6 +3,7 @@ import type { SyncMutation } from './syncProtocol';
 /** Express's 256kb limit counts the decoded HTTP body, excluding headers. */
 export const SYNC_REQUEST_BODY_BYTES = 256 * 1024;
 export const SYNC_BATCH_COUNT = 50;
+export const SYNC_STAGED_BODY_BYTES = 4 * 1024 * 1024;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // Keep the legacy request fields and canonicalization unchanged. Attempt/local
@@ -44,4 +45,13 @@ export function boundedPushBatch(ready: SyncMutation[]): SyncMutation[] {
     size = nextSize;
   }
   return batch;
+}
+
+/** Oversized legacy intents retain their original identity and travel alone. */
+export function transportablePushBatch(ready: SyncMutation[]): SyncMutation[] {
+  try { return boundedPushBatch(ready); }
+  catch (error) {
+    if (!(error instanceof SyncMutationTooLargeError) || error.bodyBytes > SYNC_STAGED_BODY_BYTES) throw error;
+    return [ready[0]];
+  }
 }

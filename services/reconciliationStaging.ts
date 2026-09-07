@@ -23,10 +23,19 @@ export async function prepareReconciliation(candidate: ReconciliationCandidate):
   body: string; manifest: ReconciliationManifest | null; chunks: ReconciliationChunk[];
 }> {
   const body = JSON.stringify(candidate);
+  if (candidate.localHistory.length > 100000) {
+    throw new Error('Saved reconciliation exceeds 100,000 entries. The complete history remains preserved.');
+  }
+  return prepareStagedBody(body, candidate.localHistory.length > 1000);
+}
+
+/** Stage captured wire bytes without changing any logical mutation identity. */
+export async function prepareStagedBody(body: string, force = false): Promise<{
+  body: string; manifest: ReconciliationManifest | null; chunks: ReconciliationChunk[];
+}> {
   const bytes = new TextEncoder().encode(body);
-  const count = candidate.localHistory.length;
-  if (bytes.length <= 262144 && count <= 1000) return { body, manifest: null, chunks: [] };
-  if (bytes.length > MAX_RECONCILIATION_BYTES || count > 100000) {
+  if (bytes.length <= 262144 && !force) return { body, manifest: null, chunks: [] };
+  if (bytes.length > MAX_RECONCILIATION_BYTES) {
     throw new Error('Saved reconciliation exceeds the supported 4 MiB or 100,000-entry envelope. The complete history remains preserved and needs larger-record recovery.');
   }
   const chunkHashes: string[] = [];

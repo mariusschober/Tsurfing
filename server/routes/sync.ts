@@ -231,6 +231,20 @@ export const createSyncRouter = (admin?: SupabaseClient) => {
     }
   });
 
+  router.post('/sync/push-staged', async (request, response) => {
+    try {
+      const database = requireDatabase(admin);
+      if (!requireHardenedProtocol) throw new Error('Synchronization is not configured.');
+      await requireHardenedProtocol();
+      const input = await readStagedReconciliation(database, request.user!.id, request.body);
+      const body = z.object({ mutations: z.array(syncMutationSchema).length(1) }).strict().parse(input);
+      // The carrier changes only transport. The original mutation still uses
+      // the exact legacy fingerprint, audit and receipt validation boundary.
+      const results = await applySyncMutationsSequentially(database, request.user!.id, body.mutations);
+      response.json({ results });
+    } catch (error) { invalidRequest(response, error); }
+  });
+
   router.get('/sync/pull', async (request, response) => {
     try {
       const database = requireDatabase(admin);

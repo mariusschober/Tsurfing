@@ -6,7 +6,7 @@ import {
 import { readResponseBodyWithLimit, ResponseTooLargeError } from './boundedResponse';
 import { SyncMutationTooLargeError, wireMutation } from './syncEnvelope';
 import { validateConflictPage } from './conflictPages';
-import { prepareReconciliation, verifyReconciliationChunkAck } from './reconciliationStaging';
+import { prepareReconciliation, prepareStagedBody, verifyReconciliationChunkAck } from './reconciliationStaging';
 import { DurableStorageError, storageService, STORES } from './storage';
 import {
   emptySyncMeta,
@@ -246,10 +246,17 @@ export const synchronizeCloudOnce = async (
   while (true) {
     const batch = await storageService.preparePushBatch(userKey, 50);
     if (!batch.length) break;
-    const response = await fetchSyncWithRetry('/api/v1/sync/push', {
+    const upload = await prepareStagedBody(JSON.stringify({ mutations: batch.map(wireMutation) }));
+    for (const chunk of upload.chunks) {
+      const staged = await fetchSyncWithRetry('/api/v1/sync/conflicts/stage', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(chunk)
+      }, dependencies);
+      verifyReconciliationChunkAck(chunk, await parseJson<unknown>(staged, 'Upload will resume. Your original change remains saved.'));
+    }
+    const response = await fetchSyncWithRetry(upload.manifest ? '/api/v1/sync/push-staged' : '/api/v1/sync/push', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ mutations: batch.map(wireMutation) })
+      body: upload.manifest ? JSON.stringify(upload.manifest) : upload.body
     }, dependencies);
     const body = await parseJson<{ results?: PushResult[] }>(response, 'Sync push failed. Local changes remain pending.');
     if (!Array.isArray(body.results)) throw new SyncProtocolError('Sync push response was invalid. Local changes remain pending.');

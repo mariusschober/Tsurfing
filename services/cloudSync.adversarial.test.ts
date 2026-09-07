@@ -8,7 +8,7 @@ import {
 } from './cloudSync';
 import { storageService, STORES } from './storage';
 import { emptySyncMeta, normalizeSyncMeta } from './syncProtocol';
-import { SyncMutationTooLargeError } from './syncEnvelope';
+import { SyncMutationTooLargeError, wireMutation } from './syncEnvelope';
 
 class TestLocalStorage {
   private values = new Map<string, string>();
@@ -192,6 +192,49 @@ const task = (title: string, id = 'task-1', extra: Record<string, unknown> = {})
 describe('adversarial cloud synchronization', () => {
   beforeEach(() => installBrowser());
 
+  it('resumes an oversized captured mutation and verifies its original receipt after chunk interruption', async () => {
+    const key = `staged-push-${crypto.randomUUID()}`;
+    storageService.stageLocalValue(STORES.TASKS, key, [], [task('preserved', 'large', { notes: '🧭'.repeat(70_000) })]);
+    await storageService.flushPendingLocalChanges(key);
+    const original = normalizeSyncMeta(await storageService.get(STORES.SYNC, key)).outbox[0];
+    const server = new DurableFakeServer();
+    const runtime = dependencies(server);
+    const chunks = new Map<number, string>();
+    let interrupt = true;
+    let replays = 0;
+    runtime.fetch = async (input, init) => {
+      const path = String(input);
+      if (path.endsWith('/sync/conflicts/stage')) {
+        const raw = String(init?.body);
+        expect(Buffer.byteLength(raw)).toBeLessThanOrEqual(262144);
+        const chunk = JSON.parse(raw);
+        if (interrupt && chunk.chunkIndex === 1) { interrupt = false; return Response.json({ staged: false }); }
+        if (chunks.has(chunk.chunkIndex)) { expect(chunks.get(chunk.chunkIndex)).toBe(raw); replays++; }
+        chunks.set(chunk.chunkIndex, raw);
+        return Response.json({ staged: true, manifest: chunk.manifest, chunkIndex: chunk.chunkIndex, chunkSha256: chunk.chunkSha256 });
+      }
+      if (path.endsWith('/sync/push-staged')) {
+        const manifest = JSON.parse(String(init?.body));
+        expect(chunks.size).toBe(manifest.chunkCount);
+        const body = Buffer.concat([...chunks].sort((a,b) => a[0]-b[0]).map(([,raw]) => Buffer.from(JSON.parse(raw).data, 'base64'))).toString('utf8');
+        const submitted = JSON.parse(body).mutations[0];
+        expect(submitted.mutationId).toBe(original.mutationId);
+        expect(submitted.payload).toEqual(original.payload);
+        expect(submitted.updatedAt).toBe(original.updatedAt);
+        return server.fetch('/api/v1/sync/push', { method: 'POST', body });
+      }
+      return server.fetch(path, init);
+    };
+    await expect(synchronizeCloudOnce(key, runtime, { seedLocalData: false })).rejects.toThrow(/chunk/);
+    const interrupted = normalizeSyncMeta(await storageService.get(STORES.SYNC, key));
+    expect(wireMutation(interrupted.outbox[0])).toEqual(wireMutation(original));
+    expect(server.receipts.size).toBe(0);
+    const done = await synchronizeCloudOnce(key, runtime, { seedLocalData: false });
+    expect(replays).toBe(1);
+    expect(done.outbox).toHaveLength(0);
+    expect(server.receipts.has(original.mutationId)).toBe(true);
+  });
+
   it('resumes a complete staged history after an interrupted chunk without dropping evidence', async () => {
     const key = `staged-history-${crypto.randomUUID()}`;
     const server = new DurableFakeServer();
@@ -238,7 +281,7 @@ describe('adversarial cloud synchronization', () => {
 
   it('preserves an oversize captured change without marking an unmade network attempt', async () => {
     const key = `oversize-${crypto.randomUUID()}`;
-    storageService.stageLocalValue(STORES.TASKS, key, [], [task('preserved', 'large', { notes: '🧭'.repeat(70_000) })]);
+    storageService.stageLocalValue(STORES.TASKS, key, [], [task('preserved', 'large', { notes: '🧭'.repeat(1_050_000) })]);
     await storageService.flushPendingLocalChanges(key);
     const before = normalizeSyncMeta(await storageService.get(STORES.SYNC, key));
     let requests = 0;

@@ -165,14 +165,20 @@ class NativeSyncEngine(
 
         var conflicts = 0
         while (true) {
-            val (batch, requestBody) = boundedPush(repository.readySyncMutations(50))
+            val (batch, requestBody) = boundedPush(repository.readySyncMutations(50), allowStaged = true)
             if (batch.isEmpty()) break
             repository.markSyncAttempted(batch.map { it.mutationId })
+            val upload = ReconciliationUpload.prepareBody(requestBody)
+            for (chunk in upload.chunks) {
+                val staged = requestForSession(session, "/api/v1/sync/conflicts/stage", "POST", chunk.toString())
+                ensureSuccessful(staged, "Upload will resume. Your original change remains saved.")
+                ReconciliationUpload.verifyAck(chunk, staged.body)
+            }
             val response = requestForSession(
                 session,
-                "/api/v1/sync/push",
+                if (upload.manifest == null) "/api/v1/sync/push" else "/api/v1/sync/push-staged",
                 "POST",
-                requestBody
+                upload.manifest?.toString() ?: requestBody
             )
             ensureSuccessful(response, "Sync push failed. Local changes remain pending.")
             val body = parseObject(response.body, "Sync push response is not valid JSON.")
@@ -518,7 +524,7 @@ class NativeSyncEngine(
 
     internal companion object {
 
-        internal fun boundedPush(ready: List<SyncOutboxEntity>): Pair<List<SyncOutboxEntity>, String> {
+        internal fun boundedPush(ready: List<SyncOutboxEntity>, allowStaged: Boolean = false): Pair<List<SyncOutboxEntity>, String> {
             val batch = mutableListOf<SyncOutboxEntity>()
             var body = JSONObject().put("mutations", JSONArray()).toString()
             for (next in ready.take(50)) {
@@ -542,6 +548,9 @@ class NativeSyncEngine(
 
                 val candidateBody = JSONObject().put("mutations", mutations).toString()
                 if (candidateBody.toByteArray(StandardCharsets.UTF_8).size > 256 * 1024) {
+                    if (batch.isEmpty() && allowStaged && candidateBody.toByteArray(StandardCharsets.UTF_8).size <= 4 * 1024 * 1024) {
+                        return candidate to candidateBody
+                    }
                     if (batch.isEmpty()) throw NativeSyncProtocolException(
                         "A preserved change exceeds the sync request limit. It remains saved locally; retry after large-record recovery is available."
                     )

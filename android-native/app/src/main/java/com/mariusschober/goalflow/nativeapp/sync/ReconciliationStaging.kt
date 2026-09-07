@@ -12,10 +12,15 @@ internal data class ReconciliationUpload(val manifest: JSONObject?, val chunks: 
             .joinToString("") { "%02x".format(it) }
 
         fun prepare(request: String): ReconciliationUpload {
-            val bytes = request.toByteArray(Charsets.UTF_8)
             val count = JSONObject(request).getJSONArray("localHistory").length()
-            if (bytes.size <= 262144 && count <= 1000) return ReconciliationUpload(null, emptyList())
-            if (bytes.size > 4 * 1024 * 1024 || count > 100000) {
+            if (count > 100000) throw NativeSyncProtocolException("The complete history remains preserved but exceeds 100,000 entries.")
+            return prepareBody(request, count > 1000)
+        }
+
+        fun prepareBody(request: String, force: Boolean = false): ReconciliationUpload {
+            val bytes = request.toByteArray(Charsets.UTF_8)
+            if (bytes.size <= 262144 && !force) return ReconciliationUpload(null, emptyList())
+            if (bytes.size > 4 * 1024 * 1024) {
                 throw NativeSyncProtocolException("Saved reconciliation exceeds the supported 4 MiB or 100,000-entry envelope. The full history remains preserved and needs larger-record recovery.")
             }
             val parts = (bytes.indices step 65536).map { offset -> bytes.copyOfRange(offset, minOf(offset + 65536, bytes.size)) }

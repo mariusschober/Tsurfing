@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boundedPushBatch, SYNC_REQUEST_BODY_BYTES, SyncMutationTooLargeError, wireMutation } from './syncEnvelope';
+import { boundedPushBatch, transportablePushBatch, SYNC_REQUEST_BODY_BYTES, SYNC_STAGED_BODY_BYTES, SyncMutationTooLargeError, wireMutation } from './syncEnvelope';
 import type { SyncMutation } from './syncProtocol';
 
 const mutation = (text: string): SyncMutation => ({
@@ -10,6 +10,14 @@ const mutation = (text: string): SyncMutation => ({
 const size = (items: SyncMutation[]) => new TextEncoder().encode(JSON.stringify({ mutations: items.map(wireMutation) })).byteLength;
 
 describe('exact legacy request envelope', () => {
+  it('stages one original mutation up to the exact 4 MiB boundary and preserves unsupported inputs', () => {
+    const exact = mutation('x'.repeat(SYNC_STAGED_BODY_BYTES - size([mutation('')])));
+    const snapshot = JSON.stringify(exact);
+    expect(transportablePushBatch([exact, mutation('later')])).toEqual([exact]);
+    expect(JSON.stringify(exact)).toBe(snapshot);
+    const over = mutation((exact.payload as { text: string }).text + 'x');
+    expect(() => transportablePushBatch([over])).toThrow(SyncMutationTooLargeError);
+  });
   it('accepts the exact byte boundary, rejects one byte over, and leaves nanoseconds unchanged', () => {
     const exact = mutation('x'.repeat(SYNC_REQUEST_BODY_BYTES - size([mutation('')])));
     expect(size([exact])).toBe(SYNC_REQUEST_BODY_BYTES);

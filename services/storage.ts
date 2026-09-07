@@ -24,7 +24,7 @@ import {
   type SyncMutation
 } from './syncProtocol';
 import { mergeTrackingFocusSession, normalizeFocusSession } from '../src/domain/focusSession';
-import { boundedPushBatch } from './syncEnvelope';
+import { transportablePushBatch } from './syncEnvelope';
 
 const BASE_DB_NAME = 'GoalflowDB';
 const ACTIVE_DB_KEY = 'goalflow_active_database_v2';
@@ -1149,7 +1149,7 @@ export const storageService = {
       let batch: SyncMutation[] = [];
       const attemptedAt = new Date().toISOString();
       await updateSyncMeta(userKey, meta => {
-        batch = boundedPushBatch(readyOutbox(meta, limit));
+        batch = transportablePushBatch(readyOutbox(meta, limit));
         return markMutationsAttempted(meta, batch.map(item => item.mutationId), attemptedAt);
       });
       return batch;

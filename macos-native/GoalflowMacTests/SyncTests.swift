@@ -44,6 +44,15 @@ final class SyncEnvelopeTests: XCTestCase {
         oversized.payload = AnyCodable(["notes": String(repeating: "🧭", count: 70000)])
         XCTAssertThrowsError(try boundedSyncPush([oversized]))
         XCTAssertNil(oversized.attemptedAt)
+        let (stagedBatch, stagedBody) = try boundedSyncPush([oversized, item], allowStaged: true)
+        XCTAssertEqual(stagedBatch, [oversized])
+        let upload = try ReconciliationUpload.prepare(stagedBody, historyCount: 0)
+        XCTAssertNotNil(upload.manifest)
+        var restored = Data()
+        for chunk in upload.chunks {
+            restored.append(try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(chunk["data"] as? String))))
+        }
+        XCTAssertEqual(restored, stagedBody)
     }
 }
 

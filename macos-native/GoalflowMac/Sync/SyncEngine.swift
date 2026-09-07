@@ -391,13 +391,23 @@ final class SyncEngine: @unchecked Sendable {
         // Push loop
         while true {
             let meta = try metaStore.load()
-            let (batch, body) = try boundedSyncPush(readyOutbox(meta, limit: 50))
+            let (batch, body) = try boundedSyncPush(readyOutbox(meta, limit: 50), allowStaged: true)
             if batch.isEmpty { break }
             // Mark attempted
             let now = ISO8601DateFormatter().string(from: Date())
             let metaAttempted = markMutationsAttempted(meta, ids: batch.map(\.mutationId), now: now)
             try metaStore.save(metaAttempted)
-            let (data, resp) = try await requestWithRetry(path: "/api/v1/sync/push", method: "POST", body: body)
+            let upload = try ReconciliationUpload.prepare(body, historyCount: 0)
+            for chunk in upload.chunks {
+                let chunkBody = try JSONSerialization.data(withJSONObject: chunk, options: [.sortedKeys])
+                let (staged, response) = try await requestWithRetry(path: "/api/v1/sync/conflicts/stage", method: "POST", body: chunkBody)
+                guard (200..<300).contains(response.statusCode) else {
+                    throw SyncError.validation("Upload will resume. Your original change remains saved.")
+                }
+                try ReconciliationUpload.verifyAck(chunk, staged)
+            }
+            let requestBody = try upload.manifest.map { try JSONSerialization.data(withJSONObject: $0, options: [.sortedKeys]) } ?? body
+            let (data, resp) = try await requestWithRetry(path: upload.manifest == nil ? "/api/v1/sync/push" : "/api/v1/sync/push-staged", method: "POST", body: requestBody)
             guard (200..<300).contains(resp.statusCode) else {
                 throw SyncError.validation("Sync push failed HTTP \(resp.statusCode)")
             }
@@ -721,7 +731,7 @@ func applyAutomaticReconciliation(
 
 /// The limit counts UTF-8 JSON body bytes, not HTTP headers. Return the exact
 /// serialized body that was measured; never rewrite an attempted mutation.
-func boundedSyncPush(_ ready: [SyncMutation]) throws -> (batch: [SyncMutation], body: Data) {
+func boundedSyncPush(_ ready: [SyncMutation], allowStaged: Bool = false) throws -> (batch: [SyncMutation], body: Data) {
     var batch: [SyncMutation] = []
     var body = try JSONSerialization.data(withJSONObject: ["mutations": []], options: [])
     for mutation in ready.prefix(50) {
@@ -745,6 +755,9 @@ func boundedSyncPush(_ ready: [SyncMutation]) throws -> (batch: [SyncMutation], 
 
         let candidateBody = try JSONSerialization.data(withJSONObject: ["mutations": wire], options: [])
         if candidateBody.count > 256 * 1024 {
+            if batch.isEmpty && allowStaged && candidateBody.count <= 4 * 1024 * 1024 {
+                return (candidate, candidateBody)
+            }
             if batch.isEmpty {
                 throw SyncError.validation("A preserved change exceeds the sync request limit. It remains saved locally; retry after large-record recovery is available.")
             }
