@@ -92,6 +92,23 @@ final class TaskWireAdapterTests: XCTestCase {
         XCTAssertEqual(stableJson(roundTrip["futureField"]), "{\"preserve\":true}")
     }
 
+    func test_web_and_android_terminal_removal_flags_remain_out_of_the_queue() throws {
+        for status in [TaskStatus.archived, .dropped] {
+            for completed in [false, true] {
+                var payload = try GoalflowTask(id: "removed", title: "Removed", scheduledFor: "2026-09-07", status: status).toSyncDictionary()
+                payload["completed"] = completed
+                let task = try GoalflowTask(syncDictionary: payload)
+                XCTAssertEqual(task.status, status); XCTAssertFalse(task.isOpen)
+                let emitted = try task.toSyncDictionary()
+                XCTAssertEqual(emitted["completed"] as? Bool, true)
+                XCTAssertEqual(emitted["wontDo"] as? Bool, true)
+            }
+        }
+        var open = try GoalflowTask(id: "open", title: "Open", scheduledFor: "2026-09-07").toSyncDictionary()
+        open["completed"] = true
+        XCTAssertThrowsError(try GoalflowTask(syncDictionary: open))
+    }
+
     func test_ambiguous_boolean_does_not_become_a_completion() {
         let payload: [String: Any] = [
             "id": "task-1", "title": "Shared task", "completed": 1,
@@ -684,9 +701,18 @@ final class ServerConflictTests: XCTestCase {
             let data = try JSONSerialization.data(withJSONObject: ["records": [], "nextCursor": 0, "hasMore": false])
             return (data, HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
-        transport.conflictHandler = { _, method, _ in
-            XCTAssertEqual(method, "GET")
-            let data = try JSONSerialization.data(withJSONObject: ["conflicts": [self.remoteConflict()]])
+        transport.conflictHandler = { path, method, body in
+            let object: [String: Any]
+            if method == "GET" { object = ["conflicts": [self.remoteConflict()]] }
+            else {
+                XCTAssertTrue(path.hasSuffix("/reconcile"))
+                let candidate = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(body)) as? [String: Any])
+                object = ["reconciled": true, "receiptId": UUID().uuidString, "candidate": candidate, "serverMissing": false,
+                          "record": ["entity_type": "tasks", "entity_id": "task-1", "device_id": "cloud", "version": 6,
+                                     "server_version": 6, "updated_at": "2026-09-03T10:00:00Z", "deleted_at": NSNull(),
+                                     "payload": try GoalflowTask(id: "task-1", title: "Cloud", scheduledFor: "2026-09-03").toSyncDictionary()]]
+            }
+            let data = try JSONSerialization.data(withJSONObject: object)
             return (data, HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
         let metaStore = SyncMetaStore(fileURL: directory.appendingPathComponent("sync.json"), defaults: defaults)
@@ -701,7 +727,7 @@ final class ServerConflictTests: XCTestCase {
         try await engine.synchronize()
 
         let meta = try metaStore.load()
-        XCTAssertEqual(meta.conflicts.map(\.id), [conflictId])
+        XCTAssertTrue(meta.conflicts.isEmpty)
         XCTAssertNotNil(meta.lastSuccessfulSync)
     }
 
@@ -1045,5 +1071,68 @@ final class HostedCrossClientSyncTests: XCTestCase {
         ]
         let data = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
         try data.write(to: URL(fileURLWithPath: path), options: [.atomic])
+    }
+}
+
+
+final class AutomaticReconciliationTests: XCTestCase {
+    private func fixture() -> (SyncMeta, [String: Any], [String: Any]) {
+        let id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        let mutationId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+        let history: [String: Any] = ["mutationId": mutationId, "version": 2, "payload": ["id": "task-1", "title": "Local"], "updatedAt": "2026-09-07T09:00:00.000Z", "deletedAt": NSNull()]
+        var meta = emptySyncMeta()
+        meta.versions["tasks:task-1"] = VersionPair(local: 2, server: 3)
+        meta.conflicts = [LocalConflict(id: id, entityType: "tasks", entityId: "task-1", mutationId: mutationId, baseServerVersion: 1, serverVersion: 3, localPayload: AnyCodable(history["payload"]), localDeletedAt: nil, localHistory: [AnyCodable(history)], serverPayload: AnyCodable(["id": "task-1", "title": "Older cloud"]), serverMissing: false, serverDeletedAt: nil, status: "unresolved", createdAt: nil)]
+        let candidate = try! automaticReconciliationCandidate(meta.conflicts[0])
+        let reply: [String: Any] = ["reconciled": true, "receiptId": UUID().uuidString, "candidate": candidate, "serverMissing": false, "record": ["entity_type": "tasks", "entity_id": "task-1", "device_id": "cloud", "version": 4, "server_version": 4, "payload": ["id": "task-1", "title": "Current cloud"], "updated_at": "2026-09-07T10:00:00.000Z", "deleted_at": NSNull()]]
+        return (meta, candidate, reply)
+    }
+    func test_exact_ack_applies_current_cloud_and_replay_is_noop() throws {
+        let (meta, candidate, reply) = fixture()
+        let result = try applyAutomaticReconciliation(meta, currentValues: ["tasks": [["id": "other", "title": "Keep"]]], candidate: candidate, reply: reply)
+        XCTAssertTrue(result.meta.conflicts.isEmpty)
+        XCTAssertEqual(result.meta.versions["tasks:task-1"]?.server, 4)
+        XCTAssertEqual((result.values["tasks"] as? [[String: String]])?.map { $0["title"]! }, ["Keep", "Current cloud"])
+        let replay = try applyAutomaticReconciliation(result.meta, currentValues: result.values, candidate: candidate, reply: reply)
+        XCTAssertTrue(replay.changedStores.isEmpty)
+    }
+    func test_mismatched_ack_and_stale_revision_leave_history_intact() throws {
+        let (meta, candidate, original) = fixture()
+        var reply = original; reply["candidate"] = ["conflictId": "other"]
+        XCTAssertThrowsError(try applyAutomaticReconciliation(meta, currentValues: [:], candidate: candidate, reply: reply))
+        reply = original
+        var record = reply["record"] as! [String: Any]; record["server_version"] = 2; reply["record"] = record
+        XCTAssertThrowsError(try applyAutomaticReconciliation(meta, currentValues: [:], candidate: candidate, reply: reply))
+        XCTAssertEqual(meta.conflicts.count, 1)
+    }
+    func test_edit_during_request_preserves_outbox_identity_and_visible_value() throws {
+        var (meta, candidate, reply) = fixture()
+        let payload = ["id": "task-1", "title": "New edit"]
+        let mutation = SyncMutation(mutationId: UUID().uuidString, deviceId: "mac", entityType: "tasks", entityId: "task-1", baseServerVersion: 3, version: 3, payload: AnyCodable(payload), updatedAt: "2026-09-07T11:00:00Z", deletedAt: nil, dependsOnMutationId: nil, resolvesConflictId: nil, attemptedAt: nil)
+        meta.outbox = [mutation]
+        let result = try applyAutomaticReconciliation(meta, currentValues: ["tasks": [payload]], candidate: candidate, reply: reply)
+        XCTAssertEqual(result.meta.outbox, [mutation]); XCTAssertTrue(result.changedStores.isEmpty)
+        XCTAssertEqual(stableJson(result.values["tasks"]), stableJson([payload]))
+    }
+    func test_changed_conflict_history_is_not_cleared_by_old_ack() throws {
+        var (meta, candidate, reply) = fixture()
+        var entry = meta.conflicts[0].localHistory[0].value as! [String: Any]
+        entry["updatedAt"] = "2026-09-07T11:00:00Z"
+        meta.conflicts[0].localHistory[0] = AnyCodable(entry)
+        let result = try applyAutomaticReconciliation(meta, currentValues: [:], candidate: candidate, reply: reply)
+        XCTAssertEqual(result.meta, meta); XCTAssertTrue(result.changedStores.isEmpty)
+    }
+    func test_invalid_record_identity_and_boolean_revision_are_rejected() throws {
+        let (meta, candidate, original) = fixture()
+        for malformed in [["entity_id": "other"], ["server_version": true]] as [[String: Any]] {
+            var reply = original; var record = reply["record"] as! [String: Any]
+            record.merge(malformed) { _, new in new }; reply["record"] = record
+            XCTAssertThrowsError(try applyAutomaticReconciliation(meta, currentValues: [:], candidate: candidate, reply: reply))
+        }
+    }
+    func test_duplicate_original_mutation_is_rejected() {
+        var (meta, _, _) = fixture()
+        meta.conflicts[0].localHistory.append(meta.conflicts[0].localHistory[0])
+        XCTAssertThrowsError(try automaticReconciliationCandidate(meta.conflicts[0]))
     }
 }

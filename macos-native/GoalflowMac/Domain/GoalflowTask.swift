@@ -88,8 +88,8 @@ extension GoalflowTask {
         payload["plannedOrder"] = plannedOrder
         payload["status"] = status.rawValue
         payload["lifecycleStatus"] = status.rawValue
-        payload["completed"] = status == .completed || status == .brokenDown
-        payload["wontDo"] = status == .dropped
+        payload["completed"] = status != .open
+        payload["wontDo"] = status == .dropped || status == .archived
         payload["isFrog"] = isFrog
         payload["frogFailures"] = frogFailures
         payload["beforeFrog"] = beforeFrog
@@ -153,10 +153,14 @@ extension GoalflowTask {
             status = wontDo ? .dropped : (completed ? .completed : .open)
         }
         let representsCompleted = status == .completed || status == .brokenDown
-        if statusValue != nil, payload.keys.contains("completed"), completed != representsCompleted {
+        // Web marks dropped/archived items completed to remove them from the
+        // queue; Android uses completed only for successful completion. Both
+        // shapes mean the same terminal lifecycle and must remain terminal.
+        let terminalRemoval = status == .dropped || status == .archived
+        if statusValue != nil, !terminalRemoval, payload.keys.contains("completed"), completed != representsCompleted {
             throw SyncError.validation("The synchronized task has contradictory completion state. Nothing was applied.")
         }
-        if statusValue != nil, payload.keys.contains("wontDo"), wontDo != (status == .dropped) {
+        if statusValue != nil, status != .archived, payload.keys.contains("wontDo"), wontDo != (status == .dropped) {
             throw SyncError.validation("The synchronized task has contradictory archive state. Nothing was applied.")
         }
         let sourceValue = try Self.optionalTaskString(payload, keys: ["source"], field: "source")
