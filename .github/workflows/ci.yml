@@ -2,7 +2,7 @@ name: Beta Gate
 
 on:
   push:
-    branches: [main, develop, goalflow-production, "reconcile/**", "integration/**", "feat/**", "fix/**", "chore/**"]
+    branches: [main, develop, goalflow-production, "reconcile/**", "integration/**", "feat/**", "fix/**", "chore/**", "codex/s1-local-durability-20260907"]
   pull_request:
     branches: [main, develop, goalflow-production, "reconcile/**", "integration/**"]
 
@@ -48,6 +48,9 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - name: Repeat S1 storage interleavings
+        if: github.ref_name == 'codex/s1-local-durability-20260907'
+        run: for attempt in 1 2 3; do npm run test:s1:storage || exit "$?"; done
       - run: npm run build
       - run: npm run verify:migrations
       - run: node scripts/verify-migration-hashes.mjs
@@ -358,6 +361,9 @@ jobs:
         run: npx playwright install --with-deps chromium webkit
       - name: Run Playwright web-critical journeys (chromium + webkit)
         run: npx playwright test --reporter=list
+      - name: Repeat S1 browser interleavings
+        if: github.ref_name == 'codex/s1-local-durability-20260907'
+        run: npm run test:s1:browser -- --repeat-each=3
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -479,6 +485,10 @@ jobs:
         id: preflight
         run: |
           set -euo pipefail
+          if [ "$CANDIDATE_REF" = "codex/s1-local-durability-20260907" ]; then
+            echo "BLOCKED: S1 is undeployed; dedicated hosted-account authorization is not verified for this run." >&2
+            exit 1
+          fi
           names=(
             GOALFLOW_STAGING_APP_ORIGIN
             GOALFLOW_STAGING_SUPABASE_URL
@@ -563,6 +573,10 @@ jobs:
         id: preflight
         run: |
           set -euo pipefail
+          if [ "$CANDIDATE_REF" = "codex/s1-local-durability-20260907" ]; then
+            echo "BLOCKED: S1 is undeployed; dedicated hosted-account authorization is not verified for this run." >&2
+            exit 1
+          fi
           for result in \
             "hosted-staging=${{ needs.hosted-staging.result }}" \
             "native-android=${{ needs.native-android.result }}" \
