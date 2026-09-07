@@ -29,3 +29,13 @@ Read-only inspection of the owner's existing Brave profile identified two preser
 Recovery is bounded to same-day counter updates whose focus projection is unchanged from their own baseline. A strictly newer valid stored focus projection is retained. Ambiguous counter changes or conflicting focus actions still fail closed. Every original staged change and outbox fingerprint remains unchanged, including on attempted-request replay. Existing deployed server focus preservation prevents an older counter payload from reviving a completed timer.
 
 The combined web release suite passed: 64 files, 369 tests, lint, web/Mini App/API builds, server startup, maintenance, client-secret and artifact checks. Settings rendering was inspected offscreen; all shortcut descriptions now fit without truncation. Live browser recovery and hosted deployment outcome are recorded after rollout verification.
+
+## Live recovery result
+
+- Staging commit: `4ea2ab5edb7e07fb9f9f91ceea99b3ba197ea977`.
+- Railway deployment: `93b2b61f-c00f-484e-9557-14999d9cdf6e`, SUCCESS.
+- Existing Brave error page initially remained on cached `index-DgIOoVmf.js`. The installed waiting service worker was activated through its existing `SKIP_WAITING` update handler. The error-only page had no editable draft and was then refreshed.
+- Recovered page loaded `index-Cs0tfQ12.js`, rendered the owner's current focus session, and visibly showed `Synced`.
+- Read-only local verification after convergence: 0 pending WAL transactions, 0 outbox mutations, 0 conflicts. The current focus projection reflected the owner's newer activity; the visible timer-expiry dialog was left untouched.
+- Other existing tabs were not refreshed where an unfinished edit could not be ruled out. They can be reloaded after saving any draft to load the current app.
+- Required CI for this exact candidate: `https://github.com/mariusschober/Tsurfing/actions/runs/34130889129`; do not treat an in-progress run as a pass.
