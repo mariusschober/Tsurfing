@@ -573,7 +573,11 @@ final class ExecutionViewModel: ObservableObject {
         return "--:--"
     }
     func action() {
-        guard !sharedFocusActionPending, let t = task else { return }
+        guard let t = task else { return }
+        startCapturedTask(t)
+    }
+    func startCapturedTask(_ t: GoalflowTask) {
+        guard !sharedFocusActionPending, t.isOpen else { return }
         if execution?.isActive == true || execution?.isPaused == true { return }
         guard let session = SharedFocusSessionRecord.start(
             taskId: t.id,
@@ -1228,6 +1232,14 @@ struct ExecutionPanelView: View {
     }
     private var footer: some View {
         HStack {
+            Button(action: { (AppDelegate.current)?.showSettings() }) {
+                Image(systemName: "gearshape")
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Settings")
+            .help("Settings (⌘,)")
+            .keyboardShortcut(",", modifiers: .command)
+
             Button(action: { NSApplication.shared.terminate(nil) }) {
                 Label("Quit App", systemImage: "power")
                     .font(.system(size: 11, weight: .medium, design: .rounded))

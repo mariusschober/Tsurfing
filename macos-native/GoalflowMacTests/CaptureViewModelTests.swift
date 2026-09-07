@@ -27,6 +27,23 @@ final class CaptureViewModelTests: XCTestCase {
         XCTAssertTrue(vm.showDatePicker)
     }
 
+    func testConfirmedPickerDateSurvivesClosingPicker() throws {
+        let (vm, store, tmp, _) = makeVM()
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        vm.rawText = "Captured task"
+        XCTAssertFalse(vm.submitAdd())
+        vm.dateConfirmed = true
+        vm.showDatePicker = false
+        XCTAssertTrue(vm.canSubmit)
+        XCTAssertTrue(vm.submitAdd())
+        XCTAssertEqual(try store.loadAll().count, 1)
+    }
+
+    func testCapturePanelCanReceiveKeyboardFocus() {
+        let panel = CapturePanel(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        XCTAssertTrue(panel.canBecomeKey)
+    }
+
     func test_with_parsed_date_canSubmit() {
         let (vm, _, tmp, _) = makeVM(clock: ManualClock(now: ISO8601DateFormatter().date(from: "2026-09-01T00:00:00Z")!))
         defer { try? FileManager.default.removeItem(at: tmp) }

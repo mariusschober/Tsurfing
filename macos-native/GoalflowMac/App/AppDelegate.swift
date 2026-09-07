@@ -1,9 +1,12 @@
 import AppKit
+import SwiftUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    static weak var current: AppDelegate?
     private var menuBar: MenuBarController?
-    private var hotkey: (any HotkeyGateway)?
+    private var hotkey: CarbonHotkeyGateway?
+    private var settingsWindow: NSWindow?
     private let supabaseAuth = SupabaseAuthService.shared
 
     func application(_ application: NSApplication, open urls: [URL]) {
@@ -22,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        Self.current = self
         NSApp.setActivationPolicy(.accessory)
 
         let store = CompositeFocusSessionStore(
@@ -47,6 +51,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in self?.menuBar?.toggleCapture() }
         }
         hotkey = hk
+    }
+
+    func updateCaptureShortcut(_ shortcut: CaptureShortcut) -> String? {
+        guard shortcut.isValid else { return "Choose Command, Control, or Option with a letter." }
+        if shortcut == CaptureShortcut.load() { return nil }
+        guard let hotkey, hotkey.update(shortcut) == 0 else {
+            return "That shortcut is unavailable. Your previous shortcut still works."
+        }
+        shortcut.save()
+        return nil
+    }
+
+    func showSettings() {
+        if settingsWindow == nil {
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 430, height: 400),
+                styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            window.title = "Tsurfing Settings"
+            window.isReleasedWhenClosed = false
+            window.contentView = NSHostingView(rootView: TsurfingSettingsView())
+            window.center()
+            settingsWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow?.makeKeyAndOrderFront(nil)
     }
 
     func applicationWillTerminate(_ notification: Notification) {

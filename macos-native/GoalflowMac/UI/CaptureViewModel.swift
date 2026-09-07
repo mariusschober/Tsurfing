@@ -3,11 +3,13 @@ import Combine
 
 @MainActor
 final class CaptureViewModel: ObservableObject {
+    @Published var focusRequest = 0
     @Published var rawText: String = "" { didSet { parse() } }
     @Published var parsed: ParsedCapture = ParsedCapture(cleanTitle: "", durationMinutes: nil, tags: [], urls: [], scheduledFor: nil, schedulePrecision: nil, scheduledTime: nil, isFrog: false, isQuickie: false, notes: nil)
     @Published var notes: String = ""
     @Published var showNotes: Bool = false
     @Published var showDatePicker: Bool = false
+    @Published var dateConfirmed: Bool = false
     @Published var selectedDate: Date = Date()
     @Published var selectedMonth: String = "" // YYYY-MM
     @Published var isMonthMode: Bool = false
@@ -58,7 +60,7 @@ final class CaptureViewModel: ObservableObject {
         // if parsed has scheduledFor, no need
         if parsed.scheduledFor != nil { return false }
         // if user picked date/month and picker is committed, then no need
-        if !showDatePicker { return true }
+        if !showDatePicker && !dateConfirmed { return true }
         // picker shown but not yet confirmed? still needs until confirmed
         // For simplicity, if showDatePicker is true we are in picker mode, not needsDate for Enter handling
         return false
@@ -66,7 +68,7 @@ final class CaptureViewModel: ObservableObject {
 
     var effectiveScheduledFor: String? {
         if let sf = parsed.scheduledFor { return sf }
-        if showDatePicker {
+        if showDatePicker || dateConfirmed {
             if isMonthMode {
                 if !selectedMonth.isEmpty { return selectedMonth }
                 return nil
@@ -80,7 +82,7 @@ final class CaptureViewModel: ObservableObject {
 
     var effectivePrecision: SchedulePrecision? {
         if let p = parsed.schedulePrecision { return p }
-        if showDatePicker {
+        if showDatePicker || dateConfirmed {
             return isMonthMode ? .month : .day
         }
         return nil
@@ -99,10 +101,10 @@ final class CaptureViewModel: ObservableObject {
     // Called on Enter. Returns true if creation succeeded and should dismiss.
     func handleEnter(intent: CaptureIntent = .add) -> Bool {
         // If needs date and picker not shown, show picker
-        if parsed.scheduledFor == nil && !showDatePicker {
+        if parsed.scheduledFor == nil && !showDatePicker && !dateConfirmed {
             showDatePicker = true
             // default selectedDate to today, selectedMonth to next month
-            selectedDate = Date()
+            selectedDate = clock.now()
             if let d = Calendar.current.date(byAdding: .month, value: 1, to: Date()) {
                 let f = DateFormatter(); f.dateFormat = "yyyy-MM"; f.timeZone = .current; f.locale = Locale(identifier: "en_US_POSIX")
                 selectedMonth = f.string(from: d)
@@ -128,6 +130,7 @@ final class CaptureViewModel: ObservableObject {
             notes = ""
             showNotes = false
             showDatePicker = false
+            dateConfirmed = false
             errorMessage = nil
             return true
         } catch let e as SchedulingError {
@@ -147,6 +150,7 @@ final class CaptureViewModel: ObservableObject {
         notes = ""
         showNotes = false
         showDatePicker = false
+        dateConfirmed = false
         errorMessage = nil
     }
 }

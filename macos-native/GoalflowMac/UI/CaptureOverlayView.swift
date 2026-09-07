@@ -25,6 +25,10 @@ struct CaptureOverlayView: View {
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.primary.opacity(0.08), lineWidth: 1))
         .shadow(color: Color.black.opacity(0.20), radius: 24, x: 0, y: 12)
         .onAppear { focused = true; vm.checkPrivacy() }
+        .onChange(of: vm.focusRequest) { _, _ in
+            focused = false
+            DispatchQueue.main.async { focused = true }
+        }
     }
 
     private var panelBG: some View {
@@ -100,7 +104,7 @@ struct CaptureOverlayView: View {
                 Button("Cancel") { vm.showDatePicker = false }.buttonStyle(.bordered).controlSize(.small)
                 Spacer()
                 Button("Confirm date") {
-                    // Just hides picker, keeps selection; next Enter will create
+                    vm.dateConfirmed = true
                     vm.showDatePicker = false
                 }.buttonStyle(.borderedProminent).controlSize(.small)
             }
@@ -170,8 +174,8 @@ struct CaptureOverlayView: View {
                     .padding(.horizontal, 18).padding(.vertical, 8)
                     .background(Capsule().fill(Color.accentColor))
             }.buttonStyle(.plain).keyboardShortcut(.defaultAction)
-            .disabled(!vm.canSubmit && !vm.showDatePicker)
-            .opacity((!vm.canSubmit && !vm.showDatePicker) ? 0.5 : 1)
+            .disabled(vm.parsed.cleanTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .opacity((vm.parsed.cleanTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ? 0.5 : 1)
 
             Button(action: { if vm.submitAction() { onDismiss() } }) {
                 Label("ACTION", systemImage: "bolt.fill")
@@ -180,9 +184,9 @@ struct CaptureOverlayView: View {
                     .padding(.horizontal, 18).padding(.vertical, 8)
                     .background(Capsule().fill(Color.green))
             }.buttonStyle(.plain)
-            .keyboardShortcut("a", modifiers: [.command])
-            .disabled(!vm.canSubmit && !vm.showDatePicker)
-            .opacity((!vm.canSubmit && !vm.showDatePicker) ? 0.5 : 1)
+            .keyboardShortcut(.return, modifiers: [.command, .shift])
+            .disabled(vm.parsed.cleanTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .opacity((vm.parsed.cleanTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) ? 0.5 : 1)
 
             Spacer()
             Button(action: { vm.toggleNotes() }) {
@@ -194,7 +198,7 @@ struct CaptureOverlayView: View {
 
     private var hintRow: some View {
         HStack(spacing: 8) {
-            Text("Enter → ADD  •  ⌘+Enter → Notes  •  ⌘+A → ACTION  •  Esc → Dismiss")
+            Text("Enter → ADD  •  ⌘+Enter → Notes  •  ⌘⇧+Enter → ACTION  •  Esc → Dismiss")
                 .font(.system(size: 10, weight: .regular, design: .rounded)).foregroundStyle(.tertiary)
             Spacer()
             if vm.isScreenSharing {

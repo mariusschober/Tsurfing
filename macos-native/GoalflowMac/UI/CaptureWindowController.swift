@@ -4,6 +4,11 @@ import Combine
 import QuartzCore
 
 @MainActor
+final class CapturePanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+}
+
+@MainActor
 final class CaptureWindowController: NSObject {
     private var panel: NSPanel?
     private var viewModel: CaptureViewModel?
@@ -42,10 +47,11 @@ final class CaptureWindowController: NSObject {
             panel.setFrameOrigin(origin)
         }
         let start = CACurrentMediaTime()
-        panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        panel.makeKeyAndOrderFront(nil)
+        installEscapeMonitor()
         DispatchQueue.main.async {
-            panel.makeFirstResponder(panel.contentView)
+            vm.focusRequest += 1
             let elapsed = (CACurrentMediaTime() - start) * 1000
             if elapsed > 200 { print("[Capture] show \(Int(elapsed))ms >200") }
         }
@@ -64,7 +70,7 @@ final class CaptureWindowController: NSObject {
     private func ensurePanel() {
         if panel != nil { return }
         guard let vm = viewModel else { return }
-        let p = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 260),
+        let p = CapturePanel(contentRect: NSRect(x: 0, y: 0, width: 520, height: 260),
                         styleMask: [.borderless, .nonactivatingPanel],
                         backing: .buffered, defer: false)
         p.isFloatingPanel = true
@@ -79,15 +85,18 @@ final class CaptureWindowController: NSObject {
         let hosting = NSHostingView(rootView: CaptureOverlayView(vm: vm, onDismiss: { [weak self] in self?.hide() }))
         hosting.frame = p.contentRect(forFrameRect: p.frame)
         p.contentView = hosting
-        // Esc observer (stored for removal)
+        self.panel = p
+    }
+
+    private func installEscapeMonitor() {
+        guard monitor == nil else { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 53 { // Esc
+            if event.keyCode == 53, event.window === self?.panel {
                 self?.hide()
                 return nil
             }
             return event
         }
-        self.panel = p
     }
 
     deinit { if let m = monitor { NSEvent.removeMonitor(m) } }
@@ -109,16 +118,6 @@ final class CaptureWindowController: NSObject {
     }
 
     private func startFocus(for task: GoalflowTask) {
-        guard let store = store, let clock = clock, let evm = executionVM else { return }
-        // Only start if task is open and not already started
-        if evm.isActive || evm.isPaused { return }
-        let mono: UInt64? = (clock as? any MonotonicClock)?.monotonicNow
-        let state = ExecutionState(taskId: task.id, phase: .active, startedAt: clock.now(), startedAtMonotonic: mono, plannedDurationSeconds: task.plannedDurationSeconds)
-        do {
-            try store.save(state)
-            evm.restore() // will pick up new execution
-        } catch {
-            evm.reportCaptureStartFailure(error)
-        }
+        executionVM?.startCapturedTask(task)
     }
 }
