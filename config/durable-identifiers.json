@@ -4,7 +4,9 @@
     "databaseName": "GoalflowDB",
     "activeDatabaseKey": "goalflow_active_database_v2",
     "walPrefix": "goalflow_wal_v2_",
-    "deviceIdKey": "goalflow-device-id"
+    "deviceIdKey": "goalflow-device-id",
+    "causalStore": "causal_actions",
+    "trackingKeyPath": "causalAccountKey"
   },
   "android": {
     "capacitorApplicationId": "com.mariusschober.tsurfing",

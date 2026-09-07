@@ -400,7 +400,7 @@ const openAndMigrate = async (databaseName: string, versionAttempt?: number): Pr
       }
     },
     blocking(_currentVersion, _blockedVersion, event) {
-      try { (event.target as any).result.close(); } catch (_) {}
+      try { (event.target as IDBDatabase).close(); } catch (_) {}
       dbPromise = null;
     },
     terminated() {
