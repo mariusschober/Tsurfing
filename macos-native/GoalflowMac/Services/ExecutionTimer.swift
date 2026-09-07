@@ -5,6 +5,7 @@ import AppKit
 final class ExecutionTimer: ObservableObject {
     @Published private(set) var remainingSeconds: Int
     @Published private(set) var overtimeSeconds: Int
+    @Published private(set) var audibleTick: UInt64 = 0
     @Published private(set) var isActive: Bool = false
     @Published private(set) var isPaused: Bool = false
     private var state: ExecutionState?
@@ -35,7 +36,10 @@ final class ExecutionTimer: ObservableObject {
         switch s.phase {
         case .idle: remainingSeconds = s.plannedDurationSeconds; overtimeSeconds = 0
         case .paused: remainingSeconds = s.remainingSeconds(now: clock.now()); overtimeSeconds = 0
-        case .active: remainingSeconds = s.remainingSeconds(now: clock.now()); overtimeSeconds = s.overtimeSeconds(now: clock.now())
+        case .active:
+            let previousElapsed = remainingSeconds - overtimeSeconds
+            remainingSeconds = s.remainingSeconds(now: clock.now()); overtimeSeconds = s.overtimeSeconds(now: clock.now())
+            if remainingSeconds - overtimeSeconds != previousElapsed { audibleTick &+= 1 }
         }
     }
     private func startTicker() { stopTicker(); cancellable = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect().sink { [weak self] _ in Task { @MainActor in self?.tick() } } }

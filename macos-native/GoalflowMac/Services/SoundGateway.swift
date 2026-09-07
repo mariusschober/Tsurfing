@@ -19,6 +19,9 @@ final class NoopSoundGateway: SoundGateway, @unchecked Sendable {
 final class TickSoundGateway: SoundGateway, @unchecked Sendable {
     private var isEnabled: Bool = true; private var volume: Float = 0.6; private let lock = NSLock()
     private let audioQueue = DispatchQueue(label: "com.mariusschober.goalflow.sound", qos: .userInitiated)
+    private var tickEngine: AVAudioEngine?
+    private var tickPlayer: AVAudioPlayerNode?
+    private var tickGeneration: UInt64 = 0
     init() {}
     func setEnabled(_ enabled: Bool) { lock.lock(); defer { lock.unlock() }; isEnabled = enabled }
     func setVolume(_ volume: Float) { lock.lock(); defer { lock.unlock() }; self.volume = max(0, min(1, volume)) }
@@ -47,9 +50,30 @@ final class TickSoundGateway: SoundGateway, @unchecked Sendable {
             let envelope: Float = (i < Int(frames) * 4 / 5) ? 1.0 : exp(-Float(i - Int(frames)*4/5) * 0.02)
             ptr[i] = (noise * 0.3 + band * 0.7) * envelope * volume * 0.18
         }
-        let engine = AVAudioEngine(); let player = AVAudioPlayerNode()
-        engine.attach(player); engine.connect(player, to: engine.mainMixerNode, format: format)
-        do { try engine.start(); player.play(); player.scheduleBuffer(buf, at: nil, options: .interrupts, completionHandler: { engine.stop() }) } catch {}
+        // Retain the output graph across ticks. A temporary engine can be
+        // released before playback, and stopping from its callback is unsafe.
+        let engine: AVAudioEngine
+        let player: AVAudioPlayerNode
+        if let existingEngine = tickEngine, let existingPlayer = tickPlayer {
+            engine = existingEngine; player = existingPlayer
+        } else {
+            engine = AVAudioEngine(); player = AVAudioPlayerNode()
+            engine.attach(player); engine.connect(player, to: engine.mainMixerNode, format: format)
+            tickEngine = engine; tickPlayer = player
+        }
+        do {
+            if !engine.isRunning { try engine.start() }
+            player.scheduleBuffer(buf, at: nil, options: .interrupts)
+            if !player.isPlaying { player.play() }
+            tickGeneration &+= 1
+            let generation = tickGeneration
+            audioQueue.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                guard let self, self.tickGeneration == generation else { return }
+                self.tickEngine?.pause()
+            }
+        } catch {
+            tickEngine = nil; tickPlayer = nil
+        }
     }
     func alarm(loop: Bool) {
         audioQueue.async { [weak self] in self?.playAlarm(loop: loop) }

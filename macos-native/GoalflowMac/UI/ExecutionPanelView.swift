@@ -47,6 +47,16 @@ final class ExecutionViewModel: ObservableObject {
     @Published var localError: String?
     @Published var conflicts: [LocalConflict] = []
     @Published var showConflicts: Bool = false
+    @Published var tickingEnabled = UserDefaults.standard.object(forKey: "tsurfing.ticking.enabled") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(tickingEnabled, forKey: "tsurfing.ticking.enabled") }
+    }
+    @Published var tickingVolume = UserDefaults.standard.object(forKey: "tsurfing.ticking.volume") as? Double ?? 0.6 {
+        didSet {
+            sound.setVolume(Float(tickingVolume))
+            UserDefaults.standard.set(tickingVolume, forKey: "tsurfing.ticking.volume")
+        }
+    }
+    func previewTicking() { sound.tick(volume: 1) }
     private let provider: DemoCurrentTaskProvider
     private let store: any FocusSessionStore
     private let clock: any Clock
@@ -72,7 +82,6 @@ final class ExecutionViewModel: ObservableObject {
     )
     private var verifiedProfile: GoalflowSessionProfile?
     private var cancellables: Set<AnyCancellable> = []
-    private var lastTickOvertime: Int = 0
     private var holdController: CompletionHoldController?
     private var holdTimer: AnyCancellable?
     private var pendingCompletedId: String?
@@ -86,6 +95,7 @@ final class ExecutionViewModel: ObservableObject {
         let syncFile = (provider.taskStore as? LocalTaskStore)?.fileURL.deletingLastPathComponent().appendingPathComponent("sync.json")
         self.syncMetaStore = syncMetaStore ?? SyncMetaStore(fileURL: syncFile)
         self.syncEngine = syncEngine ?? SyncEngine(metaStore: self.syncMetaStore)
+        sound.setVolume(Float(tickingVolume))
         setupTimerBindings(); restore(); restoreBreak()
         NotificationCenter.default.publisher(for: .authDidChange).receive(on: DispatchQueue.main).sink { [weak self] notification in
             if let message = notification.object as? String { self?.cloudError = message }
@@ -101,8 +111,11 @@ final class ExecutionViewModel: ObservableObject {
         timer.$remainingSeconds.receive(on: DispatchQueue.main).sink { [weak self] v in self?.remainingSeconds = v }.store(in: &cancellables)
         timer.$overtimeSeconds.receive(on: DispatchQueue.main).sink { [weak self] v in
             guard let self else { return }; self.overtimeSeconds = v
-            if self.execution?.isActive == true && v != self.lastTickOvertime { self.sound.tick(volume: 0.6) }
-            self.lastTickOvertime = v
+
+        }.store(in: &cancellables)
+        timer.$audibleTick.dropFirst().sink { [weak self] _ in
+            guard let self, self.timer.isActive, !self.timer.isPaused, self.tickingEnabled else { return }
+            self.sound.tick(volume: 1)
         }.store(in: &cancellables)
         timer.$isPaused.receive(on: DispatchQueue.main).sink { [weak self] v in self?.isPaused = v }.store(in: &cancellables)
         timer.$isActive.receive(on: DispatchQueue.main).sink { [weak self] _ in self?.objectWillChange.send() }.store(in: &cancellables)
@@ -719,12 +732,9 @@ struct ExecutionPanelView: View {
             Spacer()
             cloudControl
             if !vm.conflicts.isEmpty {
-                Button(action: { vm.showConflicts = true }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange).font(.system(size: 10))
-                        Text("\(vm.conflicts.count)").font(.system(size: 10, weight: .bold, design: .rounded)).foregroundStyle(.orange)
-                    }
-                }.buttonStyle(.plain).help("\(vm.conflicts.count) sync conflict(s)")
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 10)).foregroundStyle(.secondary)
+                    .help("Saved changes are synchronizing automatically")
             }
             if let task = vm.task, task.isFrog { FrogBadge(compact: true) }
             Menu {
@@ -914,6 +924,15 @@ struct ExecutionPanelView: View {
                     }.buttonStyle(.plain).keyboardShortcut(.defaultAction).accessibilityLabel("Start focus on \(task.title)").accessibilityIdentifier("action-button").accessibilityAddTraits(.isButton)
                 }
             }.padding(.vertical, 4).animation(.easeInOut(duration: 0.35), value: vm.isActive).animation(.easeInOut(duration: 0.35), value: vm.isPaused).animation(.easeInOut(duration: 0.35), value: vm.isOvertime)
+            HStack(spacing: 10) {
+                Button(action: { vm.tickingEnabled.toggle() }) {
+                    Image(systemName: vm.tickingEnabled ? "speaker.wave.2.fill" : "speaker.slash.fill")
+                }.buttonStyle(.plain).accessibilityLabel(vm.tickingEnabled ? "Mute ticking" : "Enable ticking")
+                Text("Ticking").font(.system(size: 11, weight: .medium))
+                Slider(value: $vm.tickingVolume, in: 0...1).accessibilityLabel("Ticking volume")
+                Button("Preview") { vm.previewTicking() }.buttonStyle(.plain).font(.system(size: 11))
+                    .accessibilityLabel("Preview ticking")
+            }.foregroundStyle(.secondary).padding(.vertical, 4)
             if vm.isActive || vm.isPaused {
                 if !vm.breakPickerVisible && !vm.isOnBreak {
                     Button(action: { vm.breakPickerVisible = true }) {

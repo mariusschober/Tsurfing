@@ -422,6 +422,21 @@ final class SyncEngine: @unchecked Sendable {
         let remoteConflicts = try parseServerConflictSet(conflictBody["conflicts"])
         let mergedMeta = try mergeServerConflicts(try metaStore.load(), conflicts: remoteConflicts)
         try metaStore.save(mergedMeta)
+        for conflict in mergedMeta.conflicts where conflict.status == "unresolved" {
+            let candidate = try automaticReconciliationCandidate(conflict)
+            let body = try JSONSerialization.data(withJSONObject: candidate, options: [.sortedKeys])
+            let (data, response) = try await requestWithRetry(path: "/api/v1/sync/conflicts/reconcile", method: "POST", body: body)
+            guard (200..<300).contains(response.statusCode), data.count <= 16 * 1024 * 1024,
+                  let reply = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                throw SyncError.validation("Automatic sync will retry. Your saved changes remain available.")
+            }
+            let current = try metaStore.load()
+            guard current.accountUserId?.lowercased() == accountUserId else { throw SyncError.accountMismatch }
+            let transition = try applyAutomaticReconciliation(current, currentValues: storeBridge.loadValues(), candidate: candidate, reply: reply)
+            let writes = try storeBridge.preparedWrites(transition.values, stores: transition.changedStores)
+            if writes.isEmpty { try metaStore.save(transition.meta) }
+            else { try metaStore.commitLocalValues(writes, nextMeta: transition.meta) }
+        }
         // Mark successful
         var finalMeta = try metaStore.load()
         finalMeta.lastSuccessfulSync = ISO8601DateFormatter().string(from: Date())
@@ -481,4 +496,97 @@ final class SyncEngine: @unchecked Sendable {
             .dataNotAllowed
         ].contains(urlError.code)
     }
+}
+
+
+func automaticReconciliationCandidate(_ conflict: LocalConflict) throws -> [String: Any] {
+    guard !conflict.localHistory.isEmpty else {
+        throw SyncError.validation("The saved sync history is unavailable. Nothing was discarded.")
+    }
+    var identities = Set<String>()
+    let history = try conflict.localHistory.map { entry -> [String: Any] in
+        guard let item = entry.value as? [String: Any],
+              let id = item["mutationId"] as? String, UUID(uuidString: id) != nil,
+              identities.insert(id.lowercased()).inserted,
+              let version = strictJSONInteger(item["version"]), version > 0,
+              let updatedAt = item["updatedAt"] as? String, validSyncInstant(updatedAt),
+              item.keys.contains("payload"), item.keys.contains("deletedAt"),
+              item["deletedAt"] is NSNull || (item["deletedAt"] as? String).map(validSyncInstant) == true else {
+            throw SyncError.validation("The saved sync history is invalid. Nothing was discarded.")
+        }
+        return item
+    }
+    return ["conflictId": conflict.id,
+            "sourceMutationId": UUID(uuidString: conflict.mutationId) != nil ? conflict.mutationId as Any : NSNull(),
+            "entityType": conflict.entityType, "entityId": conflict.entityId, "localHistory": history]
+}
+
+func applyAutomaticReconciliation(
+    _ input: SyncMeta, currentValues: [String: Any], candidate: [String: Any], reply: [String: Any]
+) throws -> (meta: SyncMeta, values: [String: Any], changedStores: Set<String>) {
+    guard strictJSONBoolean(reply["reconciled"]) == true,
+          let receiptId = reply["receiptId"] as? String, UUID(uuidString: receiptId) != nil,
+          stableJson(reply["candidate"]) == stableJson(candidate),
+          let missing = strictJSONBoolean(reply["serverMissing"]),
+          let conflictId = candidate["conflictId"] as? String,
+          let entityType = candidate["entityType"] as? String,
+          let entityId = candidate["entityId"] as? String else {
+        throw SyncError.validation("Automatic sync did not acknowledge the exact saved changes.")
+    }
+    let record = reply["record"] as? [String: Any]
+    var serverVersion = 0
+    var version = 0
+    if !missing {
+        guard let record,
+              record["entity_type"] as? String == entityType, record["entity_id"] as? String == entityId,
+              let device = record["device_id"] as? String, !device.isEmpty,
+              let recordVersion = strictJSONInteger(record["version"]), recordVersion > 0,
+              let revision = strictJSONInteger(record["server_version"]), revision > 0,
+              let updatedAt = record["updated_at"] as? String, validSyncInstant(updatedAt),
+              record.keys.contains("payload"), record.keys.contains("deleted_at"),
+              record["deleted_at"] is NSNull || (record["deleted_at"] as? String).map(validSyncInstant) == true else {
+            throw SyncError.validation("Automatic sync returned an invalid cloud record.")
+        }
+        serverVersion = revision; version = recordVersion
+        if RECORD_LEVEL_STORES.contains(entityType), record["deleted_at"] is NSNull {
+            guard let payload = record["payload"] as? [String: Any], payload["id"] as? String == entityId else {
+                throw SyncError.validation("Automatic sync returned a different task identity.")
+            }
+        }
+    } else if !(reply["record"] is NSNull) && reply["record"] != nil {
+        throw SyncError.validation("Automatic sync returned an ambiguous cloud record.")
+    }
+    var meta = input
+    var values = currentValues
+    guard let index = meta.conflicts.firstIndex(where: { $0.id == conflictId }),
+          stableJson(try automaticReconciliationCandidate(meta.conflicts[index])) == stableJson(candidate) else {
+        return (meta, values, [])
+    }
+    let key = syncEntityKey(entityType, entityId)
+    guard serverVersion >= (meta.versions[key]?.server ?? 0) else {
+        throw SyncError.validation("Automatic sync returned an older cloud revision. Your changes remain saved.")
+    }
+    meta.conflicts.remove(at: index)
+    meta.versions[key] = VersionPair(local: max(meta.versions[key]?.local ?? 0, version), server: serverVersion)
+    // Preserve any edit made during the request; its original outbox identity
+    // and visible value must survive the acknowledgment of an earlier history.
+    if meta.outbox.contains(where: { $0.entityType == entityType && $0.entityId == entityId })
+        || meta.conflicts.contains(where: { $0.entityType == entityType && $0.entityId == entityId }) {
+        return (meta, values, [])
+    }
+    let deleted = missing || record?["deleted_at"] is String
+    if RECORD_LEVEL_STORES.contains(entityType) {
+        guard values[entityType] == nil || values[entityType] is [[String: Any]] else {
+            throw SyncError.validation("Saved records could not be loaded safely. Nothing was discarded.")
+        }
+        var records = values[entityType] as? [[String: Any]] ?? []
+        records.removeAll { $0["id"] as? String == entityId }
+        if !deleted, let payload = record?["payload"] as? [String: Any] { records.append(payload) }
+        values[entityType] = records
+    } else if deleted {
+        values.removeValue(forKey: entityType)
+    } else {
+        values[entityType] = record?["payload"]
+    }
+    return (meta, values, [entityType])
 }

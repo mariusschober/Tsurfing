@@ -24,3 +24,22 @@ final class ExecutionTimerTests: XCTestCase {
         XCTAssertEqual(state.remainingSeconds(now: later), 1453)
     }
 }
+
+@MainActor
+final class AudibleExecutionTimerTests: XCTestCase {
+    func test_ticks_during_countdown_and_overtime_but_not_pause_or_repeated_time() {
+        let clock = ManualClock(now: Date(timeIntervalSince1970: 2_000_000))
+        let timer = ExecutionTimer(clock: clock)
+        let state = ExecutionState(taskId: "task", phase: .active, startedAt: clock.now(), plannedDurationSeconds: 60)
+        timer.start(state: state)
+        XCTAssertEqual(timer.audibleTick, 0)
+        clock.advance(by: 1); timer.tick(); XCTAssertEqual(timer.audibleTick, 1)
+        timer.tick(); XCTAssertEqual(timer.audibleTick, 1)
+        clock.advance(by: 60); timer.tick(); XCTAssertEqual(timer.audibleTick, 2)
+        XCTAssertEqual(timer.overtimeSeconds, 1)
+        var paused = state; paused.phase = .paused
+        timer.reflectPause(paused)
+        clock.advance(by: 2); timer.tick(); XCTAssertEqual(timer.audibleTick, 2)
+        timer.stop(); clock.advance(by: 1); timer.tick(); XCTAssertEqual(timer.audibleTick, 2)
+    }
+}

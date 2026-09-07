@@ -14,7 +14,7 @@ final class MenuBarController: NSObject {
     private var cancellables: Set<AnyCancellable> = []
     override init() { super.init() }
     func start(taskProvider: DemoCurrentTaskProvider, store: any FocusSessionStore, clock: any Clock = SystemClock(), dailyPlanStore: DailyPlanStore = DailyPlanStore(), goalStore: GoalStore = GoalStore(), trueNorthStore: TrueNorthStore = TrueNorthStore(), amalgamStore: AmalgamStore = AmalgamStore(), gateEnabled: Bool = false) {
-        self.taskProvider = taskProvider; self.store = store; self.clock = clock; self.viewModel = ExecutionViewModel(provider: taskProvider, store: store, clock: clock, dailyPlanStore: dailyPlanStore, goalStore: goalStore, trueNorthStore: trueNorthStore, amalgamStore: amalgamStore, gateEnabled: gateEnabled)
+        self.taskProvider = taskProvider; self.store = store; self.clock = clock; self.viewModel = ExecutionViewModel(provider: taskProvider, store: store, clock: clock, sound: TickSoundGateway(), dailyPlanStore: dailyPlanStore, goalStore: goalStore, trueNorthStore: trueNorthStore, amalgamStore: amalgamStore, gateEnabled: gateEnabled)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem.button {
             let img = NSImage(systemSymbolName: "scope", accessibilityDescription: "Tsurfing")
