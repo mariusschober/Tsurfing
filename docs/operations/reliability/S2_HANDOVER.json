@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues; transport checkpoint only.",
+  "acceptanceReason": "Implementation continues; transport, database lock, and shared domain checkpoints only.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -89,6 +89,100 @@
         "supabase/migrations/20260907203259_s2_sync_lock_order.sql",
         "supabase/migrations/MIGRATION_SHA256_MANIFEST.json"
       ]
+    },
+    {
+      "commit": "d310047197413b3ec794cd3eddc7ac1b64e8b158",
+      "scope": "Shared domain counter conservation and causal focus transitions; production coordinators not connected",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/CausalFocus.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/CounterLedger.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowFocusSession.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/CausalFocusTest.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/CounterLedgerTest.kt",
+        "config/durable-identifiers.json",
+        "macos-native/GoalflowMac.xcodeproj/project.pbxproj",
+        "macos-native/GoalflowMac/Domain/CausalFocus.swift",
+        "macos-native/GoalflowMac/Domain/CounterLedger.swift",
+        "macos-native/GoalflowMac/Domain/ExecutionState.swift",
+        "macos-native/GoalflowMac/Sync/StableJson.swift",
+        "macos-native/GoalflowMacTests/CausalFocusTests.swift",
+        "macos-native/GoalflowMacTests/CounterLedgerTests.swift",
+        "macos-native/GoalflowMacTests/SyncTests.swift",
+        "scripts/test-postgres-migrations.sh",
+        "scripts/test-s2-domain-fixtures.py",
+        "src/domain/causalFocus.test.ts",
+        "src/domain/causalFocus.ts",
+        "src/domain/counterLedger.test.ts",
+        "src/domain/counterLedger.ts",
+        "src/domain/focusSession.ts",
+        "supabase/migrations/20260907205825_s2_counter_projection.sql",
+        "supabase/migrations/20260907211939_s2_focus_transitions.sql",
+        "supabase/migrations/MIGRATION_SHA256_MANIFEST.json",
+        "tests/fixtures/s2/counters-v1.json",
+        "tests/fixtures/s2/focus-v1.json"
+      ],
+      "tests": {
+        "web": {
+          "passed": 458,
+          "skipped": 0
+        },
+        "macos": {
+          "passed": 223,
+          "skipped": 1
+        },
+        "androidProductionUnit": {
+          "tests": 141,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1
+        },
+        "postgres": {
+          "databaseMatrices": 2,
+          "counterScenariosPerMatrix": 12,
+          "counterOrdersPerScenario": 2,
+          "focusScenariosPerMatrix": 9
+        }
+      },
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0
+        },
+        {
+          "command": "JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native testProductionDebugUnitTest lintProductionDebug assembleProductionDebug -PgoalflowSkipSigning=true",
+          "exitCode": 0
+        },
+        {
+          "command": "xcodebuild test -project macos-native/GoalflowMac.xcodeproj -scheme GoalflowMac -configuration Debug -destination 'platform=macOS' -derivedDataPath /private/tmp/s2-macos-tests CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0
+        },
+        {
+          "command": "PGHOST=/private/tmp PGPORT=55437 bash scripts/test-postgres-migrations.sh",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:migrations",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:migration-hashes",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:room-hashes",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0
+        }
+      ],
+      "macosTestResult": "/private/tmp/s2-macos-tests/Logs/Test/Test-GoalflowMac-2026.09.07_22-24-36-+0100.xcresult",
+      "artifactSha256": {
+        "android-native/app/build/outputs/apk/production/debug/app-production-debug.apk": "5646ff3f2deb4802c733fe1ed986d05c00ca53634aad6df48c5d38292f965fd0",
+        "/private/tmp/s2-macos-tests/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib": "cadf54dfc92d6841d0d6bec1651f9ebfc102f2d7dd875f312b60d357ddc570a9"
+      }
     }
   ],
   "findings": [
@@ -106,7 +200,9 @@
     }
   ],
   "migrations": [
-    "20260907203259_s2_sync_lock_order.sql"
+    "20260907203259_s2_sync_lock_order.sql",
+    "20260907205825_s2_counter_projection.sql",
+    "20260907211939_s2_focus_transitions.sql"
   ],
   "compatibilityNotes": [
     "Legacy mutation fields and precision unchanged",
@@ -123,7 +219,13 @@
     "evidence/s2-lock-baseline.json",
     "evidence/s2-lock-final-postgres.log",
     "evidence/s2-lock-hashes.log",
-    "evidence/s2-lock-identifiers.log"
+    "evidence/s2-lock-identifiers.log",
+    "evidence/s2-domain-release.log",
+    "evidence/s2-domain-android-final.log",
+    "evidence/s2-domain-macos-final.log",
+    "evidence/s2-domain-postgres-final.log",
+    "evidence/s2-domain-swift.log",
+    "evidence/s2-domain-identifiers.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

@@ -61,6 +61,30 @@ lock/cursor regressions. The racing explicit resolution now fails safely with
 No database claim extends to a live rollout. The remaining action protocol needs
 its own lock-order audit across completion and projection writers.
 
+## Shared domain checkpoint
+
+`d310047197413b3ec794cd3eddc7ac1b64e8b158`: **PASS_LOCAL** for shared domain fixtures in TypeScript,
+Kotlin, Swift and real PostgreSQL. Twelve counter scenarios run in both orders;
+nine focus sequences cover additive extensions, retries, explicit paused-control
+semantics, terminal history and clock setbacks. These helpers do not yet admit
+application writes or establish trusted migration baselines.
+
+`npm run verify:release` exited 0 with 458 tests. Native Android unit/lint/debug
+build exited 0 (140 passed, 1 hosted test skipped).
+The macOS suite exited 0 (223 passed, one hosted test skipped). Both PostgreSQL
+empty/upgrade matrices passed with 25 migrations, including the shared fixtures
+and real lock/cursor tests. Migration, hash, Room and identifier gates passed.
+Exact commands and artifact identities are in `S2_HANDOVER.json`.
+
+The fixtures exposed Swift JSON canonicalization treating parsed numeric zero
+as boolean false. NSNumber type discrimination now retains primitive types;
+a regression covers zero, one, false, true and decimal one. Original attempted
+payloads are unchanged. The failed fixture output is retained with final logs.
+
+The two additive SQL migrations install private pure transition helpers;
+client execution is denied. No live schema was changed. Coordinator integration,
+trusted baseline admission and versioned server action receipts remain required.
+
 ## Remaining acceptance work
 
 Implement/prove the private counter/action ledger, baseline/legacy ambiguities,
