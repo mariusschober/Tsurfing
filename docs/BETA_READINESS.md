@@ -3,13 +3,19 @@
 ## Focused owner-trial fix — 2026-09-07
 
 The owner reported an endless startup spinner. Staging health was HTTP 200 at
-`d5134d4`; the browser reported a pending tracking recovery divergence. A focused
-regression reproduced that exact error when a server JSON object had identical
-values in a different key order. Storage recovery now uses the same canonical
-JSON comparison as mutation staging. Genuine value divergence remains blocked
-with the original pending write preserved. No browser storage, session or task
-was cleared. Broader testing and deferred Mac/Mini App work remain paused.
+`d5134d4`; the affected browser reported pending tracking recovery divergence.
+A read-only inspection established an older saved day with planning count 7,
+while two retained new-day mutations advanced a zero baseline to 1 and then 2.
+The daily-reset hook had not hydrated its saved baseline first, so the reset
+was treated as a no-op and subsequent visits were staged against the wrong day.
 
+The hook now hydrates before staging the date reset. Recovery recognizes only
+that precise forward-date, zero-counter transition, retains the original two
+mutation identities and payloads, and rejects same-day/newer-day divergence or
+unknown fields. Canonical JSON comparison also avoids false differences from
+object key order. Both failures have focused regression coverage. No session,
+task, database or pending write was manually cleared. Broader testing and
+Mac/Mini App work remain deferred under the owner-trial scope.
 
 **Status: NOT READY.** This is the active release ledger as of 2026-09-05.
 The implementation and isolated staging environment are substantially proven,

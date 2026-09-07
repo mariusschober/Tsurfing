@@ -77,6 +77,36 @@ describe('backup merge behavior', () => {
 });
 
 describe('durable storage failure boundaries', () => {
+  it('recovers a new-day counter chain left behind before the daily reset was persisted', async () => {
+    installBrowserStorage();
+    const key = `tracking-rollover-${crypto.randomUUID()}`;
+    const today = { date: '2026-09-07', planViewCount: 0, dailyPostponeCount: 0 };
+    await storageService.set(STORES.TRACKING, key,
+      { date: '2026-09-05', planViewCount: 7, dailyPostponeCount: 0 }, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, today, { ...today, planViewCount: 1 });
+    storageService.stageLocalValue(STORES.TRACKING, key, { ...today, planViewCount: 1 }, { ...today, planViewCount: 2 });
+    const meta = await storageService.flushPendingLocalChanges(key);
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual({ ...today, planViewCount: 2 });
+    expect(meta.outbox).toHaveLength(2);
+    expect(meta.outbox.map(item => item.payload)).toEqual([
+      { ...today, planViewCount: 1 }, { ...today, planViewCount: 2 }
+    ]);
+    expect((await storageService.flushPendingLocalChanges(key)).outbox).toEqual(meta.outbox);
+  });
+
+  it.each([
+    { date: '2026-09-07', planViewCount: 7, dailyPostponeCount: 0 },
+    { date: '2026-09-08', planViewCount: 7, dailyPostponeCount: 0 },
+    { date: '2026-09-05', planViewCount: 7, dailyPostponeCount: 0, extra: 'preserve' }
+  ])('does not treat unrelated tracking differences as a daily reset: %j', async (saved) => {
+    installBrowserStorage();
+    const key = `tracking-rollover-denial-${crypto.randomUUID()}`;
+    const previous = { date: '2026-09-07', planViewCount: 0, dailyPostponeCount: 0 };
+    await storageService.set(STORES.TRACKING, key, saved, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, previous, { ...previous, planViewCount: 1 });
+    await expect(storageService.flushPendingLocalChanges(key)).rejects.toThrow(/Neither version was overwritten/);
+  });
+
   it('recovers pending tracking when the server reordered identical object fields', async () => {
     installBrowserStorage();
     const key = `tracking-key-order-${crypto.randomUUID()}`;

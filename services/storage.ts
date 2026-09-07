@@ -538,6 +538,16 @@ const mapRecordsForRecovery = (
  * recovered from IndexedDB are retained; a same-record divergence stops
  * without selecting either version.
  */
+type DailyTrackingValue = { date: string; planViewCount: number; dailyPostponeCount: number };
+const isDailyTrackingValue = (value: unknown): value is DailyTrackingValue => {
+  if (!isRecord(value) || Object.keys(value).length !== 3
+    || typeof value.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value.date)
+    || !Number.isFinite(Date.parse(value.date))
+    || new Date(value.date).toISOString().slice(0, 10) !== value.date) return false;
+  return [value.planViewCount, value.dailyPostponeCount]
+    .every(count => typeof count === 'number' && Number.isSafeInteger(count) && count >= 0);
+};
+
 const reconcileStagedTransactions = (
   currentValue: unknown,
   transactions: StagedLocalTransaction[]
@@ -555,6 +565,19 @@ const reconcileStagedTransactions = (
       continue;
     }
     if (jsonEqual(current, transaction.value)) continue;
+    // Older clients reset the daily counters in memory before hydrating their
+    // durable baseline. Recover only that exact, forward-date reset shape.
+    // Keep the original staged mutations/IDs; same-day divergence still fails.
+    if (transaction.storeName === STORES.TRACKING && transaction.hasPreviousValue
+      && isDailyTrackingValue(current) && isDailyTrackingValue(transaction.previousValue)
+      && isDailyTrackingValue(transaction.value)
+      && current.date < transaction.previousValue.date
+      && transaction.previousValue.date === transaction.value.date
+      && transaction.previousValue.planViewCount === 0
+      && transaction.previousValue.dailyPostponeCount === 0) {
+      current = transaction.value;
+      continue;
+    }
     if (!RECORD_LEVEL_STORES.has(transaction.storeName)) {
       throw new DurableStorageError(
         `Pending ${transaction.storeName} data diverged from recovered storage. Neither version was overwritten.`

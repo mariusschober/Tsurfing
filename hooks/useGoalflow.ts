@@ -302,11 +302,11 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
         // Ensure Progress calculations
         setUserProgressFromStorage({ ...lProgress, xpToNextLevel: calculateXpToNextLevel(lProgress.level) });
         
-        // Reset daily tracking if new day
+        // Hydrate the durable baseline before staging a new-day reset. The
+        // initial React value already uses today and is not the saved value.
+        setDailyTrackingFromStorage(lDaily);
         if (lDaily.date !== today) {
             setDailyTracking({ date: today, planViewCount: 0, dailyPostponeCount: 0 });
-        } else {
-            setDailyTrackingFromStorage(lDaily);
         }
 
         setAccountabilityConfigFromStorage(lAccountability);
