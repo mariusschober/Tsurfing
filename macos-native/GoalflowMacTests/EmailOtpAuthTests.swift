@@ -27,6 +27,22 @@ private final class AuthURLProtocolStub: URLProtocol, @unchecked Sendable {
 }
 
 final class EmailOtpAuthTests: XCTestCase {
+    #if DEBUG && TSURFING_LOCAL_KEYCHAIN
+    func testLocalBuildUsesRealKeychainForPendingSignIn() throws {
+        let store = KeychainSessionStore(service: "tsurfing-local-test-" + UUID().uuidString)
+        defer { try? store.clearPendingEmailOtp() }
+        let pending = PendingEmailOtpAttempt(
+            attemptToken: String(repeating: "a", count: 43), email: "test@example.com",
+            purpose: .signIn, expiresAt: Date().addingTimeInterval(600), resendAt: Date()
+        )
+        try store.clearPendingEmailOtp()
+        try store.savePendingEmailOtp(pending)
+        XCTAssertEqual(try store.readPendingEmailOtp(), pending)
+        try store.clearPendingEmailOtp()
+        XCTAssertNil(try store.readPendingEmailOtp())
+    }
+    #endif
+
     private let userId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     private let sessionId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
     private let attemptToken = String(repeating: "A", count: 43)

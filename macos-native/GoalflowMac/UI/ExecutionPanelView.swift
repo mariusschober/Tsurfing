@@ -76,7 +76,7 @@ final class ExecutionViewModel: ObservableObject {
     private var holdController: CompletionHoldController?
     private var holdTimer: AnyCancellable?
     private var pendingCompletedId: String?
-    init(provider: DemoCurrentTaskProvider, store: any FocusSessionStore, clock: any Clock = SystemClock(), sound: any SoundGateway = NoopSoundGateway(), breakStore: BreakSessionStore = BreakSessionStore(), dailyPlanStore: DailyPlanStore = DailyPlanStore(), goalStore: GoalStore = GoalStore(), trueNorthStore: TrueNorthStore = TrueNorthStore(), amalgamStore: AmalgamStore = AmalgamStore(), calendarService: any CalendarCollisionService = NoopCalendarService(), breakdownGateway: any BreakdownGateway = StubBreakdownGateway(), gateEnabled: Bool = false, appOrigin: String = "https://app.tsurfing.com", syncMetaStore: SyncMetaStore? = nil, syncEngine: SyncEngine? = nil, authService: SupabaseAuthService = .shared) {
+    init(provider: DemoCurrentTaskProvider, store: any FocusSessionStore, clock: any Clock = SystemClock(), sound: any SoundGateway = NoopSoundGateway(), breakStore: BreakSessionStore = BreakSessionStore(), dailyPlanStore: DailyPlanStore = DailyPlanStore(), goalStore: GoalStore = GoalStore(), trueNorthStore: TrueNorthStore = TrueNorthStore(), amalgamStore: AmalgamStore = AmalgamStore(), calendarService: any CalendarCollisionService = NoopCalendarService(), breakdownGateway: any BreakdownGateway = StubBreakdownGateway(), gateEnabled: Bool = false, appOrigin: String = MacCloudConfiguration.current.apiOrigin?.absoluteString ?? "", syncMetaStore: SyncMetaStore? = nil, syncEngine: SyncEngine? = nil, authService: SupabaseAuthService = .shared) {
         self.provider = provider; self.store = store; self.clock = clock; self.sound = sound; self.breakStore = breakStore
         self.dailyPlanStore = dailyPlanStore; self.goalStore = goalStore; self.trueNorthStore = trueNorthStore; self.amalgamStore = amalgamStore
         self.calendarService = calendarService; self.breakdownGateway = breakdownGateway
@@ -186,8 +186,10 @@ final class ExecutionViewModel: ObservableObject {
     }
 
     func openWebPlan() {
-        let urlStr = "\(appOrigin)?view=planning"
-        if let url = URL(string: urlStr) { NSWorkspace.shared.open(url) }
+        guard var components = URLComponents(string: appOrigin),
+              components.scheme == "https", components.host != nil else { return }
+        components.queryItems = [URLQueryItem(name: "view", value: "planning")]
+        if let url = components.url { NSWorkspace.shared.open(url) }
     }
 
     func goal(for task: GoalflowTask) -> Goal? {

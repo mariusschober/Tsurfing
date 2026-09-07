@@ -2,31 +2,35 @@ import Foundation
 import AppKit
 #if canImport(Sparkle)
 import Sparkle
+#endif
+
 final class UpdaterService: NSObject, @unchecked Sendable {
     static let shared = UpdaterService()
+    #if canImport(Sparkle)
     private let updater: SPUStandardUpdaterController
     override init() {
-        updater = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+        updater = SPUStandardUpdaterController(
+            startingUpdater: MacCloudConfiguration.current.environment == "production",
+            updaterDelegate: nil, userDriverDelegate: nil
+        )
         super.init()
     }
-    func checkForUpdates() { updater.checkForUpdates(nil) }
-}
-#else
-final class UpdaterService: @unchecked Sendable {
-    static let shared = UpdaterService()
-    func checkForUpdates() {
-        // Fallback: open appcast URL
-        if let url = URL(string: "https://app.tsurfing.com/appcast.xml") {
-            NSWorkspace.shared.open(url)
+    #endif
+
+    @MainActor func checkForUpdates() {
+        let configuration = MacCloudConfiguration.current
+        guard configuration.environment == "production" else {
+            let alert = NSAlert()
+            alert.messageText = "Staging build"
+            alert.informativeText = "Staging updates are installed locally. This build does not use the production update channel."
+            alert.runModal()
+            return
         }
-        // Also check via simple URLSession for version
-        Task {
-            guard let feed = URL(string: "https://app.tsurfing.com/appcast.xml") else { return }
-            if let (_, resp) = try? await URLSession.shared.data(from: feed),
-               let http = resp as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
-                print("[Updater] Feed reachable")
-            }
-        }
+        #if canImport(Sparkle)
+        updater.checkForUpdates(nil)
+        #else
+        guard let origin = configuration.apiOrigin else { return }
+        NSWorkspace.shared.open(origin.appendingPathComponent("appcast.xml"))
+        #endif
     }
 }
-#endif

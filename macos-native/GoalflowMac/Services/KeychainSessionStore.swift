@@ -368,12 +368,19 @@ final class KeychainSessionStore: AuthGateway, @unchecked Sendable {
     }
 
     private func baseQuery(account: String) -> [String: Any] {
-        [
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecUseDataProtectionKeychain as String: true
+            kSecAttrAccount as String: account
         ]
+        #if DEBUG && TSURFING_LOCAL_KEYCHAIN
+        // Explicitly opted-in local, ad-hoc builds have no provisioned keychain
+        // entitlement. Keep their credentials in the macOS login keychain.
+        query[kSecUseDataProtectionKeychain as String] = false
+        #else
+        query[kSecUseDataProtectionKeychain as String] = true
+        #endif
+        return query
     }
 
     private func readData(account: String) throws -> Data? {

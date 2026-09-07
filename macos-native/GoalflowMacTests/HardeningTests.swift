@@ -53,7 +53,7 @@ final class HardeningTests: XCTestCase {
         let url = repositoryFile("macos-native/GoalflowMac/Resources/Info.plist")
         let data = try Data(contentsOf: url)
         let plist = try PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
-        XCTAssertEqual(plist?["SUFeedURL"] as? String, "https://app.tsurfing.com/appcast.xml")
+        XCTAssertEqual(plist?["SUFeedURL"] as? String, "$(API_ORIGIN)/appcast.xml")
         XCTAssertEqual(plist?["CFBundleShortVersionString"] as? String, "$(MARKETING_VERSION)")
         XCTAssertEqual(plist?["CFBundleVersion"] as? String, "$(CURRENT_PROJECT_VERSION)")
     }
