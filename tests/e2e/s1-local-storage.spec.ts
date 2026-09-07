@@ -514,3 +514,14 @@ test('local retry: a captured action commits after storage recovery without a cl
   }, user)).toBe(true);
   await expect(page.getByTitle('Synthetic local commit interruption')).toHaveCount(0);
 });
+
+test('S1.2: local recovery cannot erase an earlier unresolved cloud error', async ({ page }) => {
+  await unlock(page);
+  await page.evaluate(user => {
+    const emit = (detail: any) => window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: { userKey: user, ...detail } }));
+    emit({ state: 'error', message: 'Immutable cloud request needs review.' });
+    emit({ state: 'error', localFailure: true, message: 'Temporary local commit failure.' });
+    emit({ state: 'saved-locally', localRecovery: true, message: 'Local storage recovered.' });
+  }, user);
+  await expect(page.getByRole('button', { name: 'Sync error', exact: true })).toHaveAttribute('title', 'Immutable cloud request needs review.');
+});

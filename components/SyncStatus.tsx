@@ -23,6 +23,7 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
     let stateRevision = 0;
     let stopped = false;
     let lastErrorWasLocal = false;
+    let unresolvedCloudError: StatusDetail | null = null;
     renderedGeneration.current = -1;
     pendingSynced.current = null;
     setStatus({ state: navigator.onLine ? 'saved-locally' : 'offline' });
@@ -30,7 +31,19 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
     const onState = async (event: Event) => {
       const detail = (event as CustomEvent<StatusDetail>).detail;
       if (stopped || detail.userKey !== userKey) return;
+      // Local recovery proves only the local transition. A later local error
+      // must not replace the independent cloud error's recovery authority.
+      if (detail.localRecovery && unresolvedCloudError) {
+        stateRevision++;
+        pendingSynced.current = null;
+        lastErrorWasLocal = false;
+        setStatus(unresolvedCloudError);
+        return;
+      }
       if (detail.localRecovery && !lastErrorWasLocal) return;
+      if (!detail.localFailure && !detail.localRecovery) {
+        unresolvedCloudError = detail.state === 'error' ? detail : null;
+      }
       if (detail.state === 'error') lastErrorWasLocal = detail.localFailure === true;
       else lastErrorWasLocal = false;
       const revision = ++stateRevision;
