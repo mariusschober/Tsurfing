@@ -823,6 +823,7 @@ final class ServerConflictTests: XCTestCase {
             sessionId: "33333333-3333-4333-8333-333333333333"
         ))
 
+        try bridge.saveValues(["tasks": [try GoalflowTask(id: "task-1", title: "Synthetic focus", scheduledFor: "2026-09-07").toSyncDictionary()]])
         try await engine.stageTrackingFocusSession(session)
 
         let tracking = try XCTUnwrap(try bridge.loadValues()["tracking"] as? [String: Any])
@@ -834,6 +835,70 @@ final class ServerConflictTests: XCTestCase {
         XCTAssertEqual(meta.outbox.first?.entityType, "tracking")
         XCTAssertEqual(meta.outbox.first?.entityId, "singleton")
         XCTAssertEqual(meta.outbox.first?.payload.value as? [String: Any] != nil, true)
+        var withUnknown = tracking
+        var focusWithUnknown = stored
+        focusWithUnknown["futureField"] = ["retained": "🐸"]
+        withUnknown["focusSession"] = focusWithUnknown
+        withUnknown["futureTracking"] = "retained"
+        try bridge.saveValues(["tracking": withUnknown])
+        async let first = engine.admitFocus(.extend(sessionId: session.sessionId, taskId: session.taskId, seconds: 300, at: now.addingTimeInterval(10)))
+        async let second = engine.admitFocus(.extend(sessionId: session.sessionId, taskId: session.taskId, seconds: 120, at: now.addingTimeInterval(10)))
+        _ = try await (first, second)
+        XCTAssertEqual(try engine.loadTrackingFocusSession()?.plannedDurationSeconds, 1920)
+        let afterExtensions = try XCTUnwrap(bridge.loadValues()["tracking"] as? [String: Any])
+        XCTAssertEqual(afterExtensions["futureTracking"] as? String, "retained")
+        XCTAssertEqual(stableJson((afterExtensions["focusSession"] as? [String: Any])?["futureField"]), stableJson(focusWithUnknown["futureField"]))
+        let beforeInvalid = try metaStore.load()
+        do {
+            _ = try await engine.admitFocus(.extend(sessionId: session.sessionId, taskId: session.taskId, seconds: Int.max, at: now.addingTimeInterval(10)))
+            XCTFail("An invalid extension must be rejected before arithmetic or persistence")
+        } catch { }
+        XCTAssertEqual(try metaStore.load(), beforeInvalid)
+        _ = try await engine.admitFocus(.stop(sessionId: session.sessionId, taskId: session.taskId, at: now.addingTimeInterval(20)))
+        let replacement = try await engine.admitFocus(.start(taskId: session.taskId, sessionId: UUID().uuidString.lowercased(), at: now.addingTimeInterval(30)))
+        do {
+            _ = try await engine.admitFocus(.pause(sessionId: session.sessionId, taskId: session.taskId, at: now.addingTimeInterval(40)))
+            XCTFail("A stale pause must not act on a replacement session")
+        } catch { }
+        XCTAssertEqual(try engine.loadTrackingFocusSession(), replacement)
+    }
+
+    func test_focus_completion_recovers_task_notes_and_terminal_state_as_one_action() async throws {
+        let suite = "goalflow.sync.focus-completion.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var fail = false
+        let metaStore = SyncMetaStore(fileURL: directory.appendingPathComponent("sync.json"), defaults: defaults, failureInjector: { stage in
+            if fail, case .localReplicaWritten(0) = stage {
+                fail = false
+                throw SyncError.validation("Synthetic interrupted completion")
+            }
+        })
+        let bridge = FileSyncStoreBridge(baseDir: directory, defaults: defaults)
+        let task = GoalflowTask(id: "task-1", title: "Synthetic completion", notes: "Final notes 🐸", scheduledFor: "2026-09-07")
+        try bridge.saveValues(["tasks": [try task.toSyncDictionary()]])
+        let engine = SyncEngine(metaStore: metaStore, deviceIdStore: DeviceIdStore(defaults: defaults), transport: MockSyncTransport(), storeBridge: bridge)
+        let at = Date(timeIntervalSince1970: 1_700_000_000)
+        let session = try await engine.admitFocus(.start(taskId: task.id, sessionId: UUID().uuidString.lowercased(), at: at))
+        _ = try await engine.admitFocus(.pause(sessionId: session.sessionId, taskId: task.id, at: at.addingTimeInterval(60)))
+        _ = try await engine.admitFocus(.resume(sessionId: session.sessionId, taskId: task.id, at: at.addingTimeInterval(120)))
+        fail = true
+        let intent = LocalSharedFocusIntent.complete(sessionId: session.sessionId, taskId: task.id, at: at.addingTimeInterval(180))
+        do { _ = try await engine.admitFocus(intent); XCTFail("The injected interruption must surface") }
+        catch { XCTAssertTrue(error.localizedDescription.contains("Synthetic")) }
+        // Every normal reader completes the durable journal before exposing data.
+        let values = try bridge.loadValues()
+        let completed = try GoalflowTask(syncDictionary: XCTUnwrap((values["tasks"] as? [[String: Any]])?.first))
+        XCTAssertEqual(completed.status, .completed)
+        XCTAssertEqual(completed.notes, task.notes)
+        XCTAssertEqual(try completed.toSyncDictionary()["actualDuration"] as? Int, 2)
+        XCTAssertEqual(try engine.loadTrackingFocusSession()?.phase, .completed)
+        let beforeRetry = try metaStore.load()
+        _ = try await engine.admitFocus(intent)
+        XCTAssertEqual(try metaStore.load(), beforeRetry)
     }
 
     func test_cloud_resolution_without_exact_ack_preserves_local_and_cloud_sides() async throws {

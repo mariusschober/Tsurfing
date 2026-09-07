@@ -1,6 +1,16 @@
 import Foundation
 import CryptoKit
 
+enum LocalSharedFocusIntent: Sendable {
+    case start(taskId: String, sessionId: String, at: Date)
+    case pause(sessionId: String, taskId: String, at: Date)
+    case resume(sessionId: String, taskId: String, at: Date)
+    case extend(sessionId: String, taskId: String, seconds: Int, at: Date)
+    case stop(sessionId: String, taskId: String, at: Date)
+    case complete(sessionId: String, taskId: String, at: Date)
+    case importLegacy(SharedFocusSessionRecord)
+}
+
 struct ReconciliationUpload {
     let manifest: [String: Any]?
     let chunks: [[String: Any]]
@@ -160,53 +170,126 @@ final class SyncEngine: @unchecked Sendable {
         return session
     }
 
-    /// Stages one action-level focus record as a normal tracking mutation.
-    /// The display ticker never calls this method; acquiring the sync gate
-    /// keeps an action from racing a pull or another local action.
+    /// Legacy import is conditional; a stale mirror cannot replace a focus
+    /// field that appeared while this caller waited for the sync gate.
     func stageTrackingFocusSession(_ session: SharedFocusSessionRecord) async throws {
+        _ = try await admitFocus(.importLegacy(session))
+    }
+
+    func admitFocus(_ intent: LocalSharedFocusIntent) async throws -> SharedFocusSessionRecord {
         await gate.acquire()
         do {
-            var meta = try metaStore.load()
-            var values = try storeBridge.loadValues()
-            let previous = values["tracking"]
-            var tracking: [String: Any]
-            if let previous {
-                guard let object = previous as? [String: Any] else {
-                    throw SyncError.corruptStorage("The daily tracking projection is damaged. Nothing was replaced.")
+            let result = try metaStore.withLocalStateTransaction {
+                var meta = try metaStore.load()
+                var values = try storeBridge.loadValues()
+                let previous = values["tracking"]
+                var tracking: [String: Any]
+                if let previous {
+                    guard let object = previous as? [String: Any] else {
+                        throw SyncError.corruptStorage("The daily tracking projection is damaged. Nothing was replaced.")
+                    }
+                    tracking = object
+                } else {
+                    tracking = ["date": Self.todayString(), "planViewCount": 0, "dailyPostponeCount": 0]
                 }
-                tracking = object
+                let current: SharedFocusSessionRecord?
                 if let raw = tracking["focusSession"], !(raw is NSNull) {
-                    guard let record = raw as? [String: Any], SharedFocusSessionRecord(dictionary: record) != nil else {
+                    guard let object = raw as? [String: Any], let parsed = SharedFocusSessionRecord(dictionary: object) else {
                         throw SyncError.corruptStorage("The shared focus session is damaged. Nothing was replaced.")
                     }
+                    current = parsed
+                } else { current = nil }
+                func target(_ sessionId: String, _ taskId: String) throws -> SharedFocusSessionRecord {
+                    guard let current, current.sessionId == sessionId, current.taskId == taskId else {
+                        throw SyncError.validation("The focus session changed. The action was not applied.")
+                    }
+                    return current
                 }
-            } else {
-                tracking = [
-                    "date": Self.todayString(),
-                    "planViewCount": 0,
-                    "dailyPostponeCount": 0
-                ]
+                func task(_ id: String) throws -> GoalflowTask {
+                    guard let records = values["tasks"] as? [[String: Any]],
+                          let record = records.first(where: { $0["id"] as? String == id }) else {
+                        throw TaskStoreError.notFound
+                    }
+                    let parsed = try GoalflowTask(syncDictionary: record)
+                    let wire = try parsed.toSyncDictionary()
+                    guard wire["deletedAt"] == nil || wire["deletedAt"] is NSNull else { throw TaskStoreError.notOpen }
+                    return parsed
+                }
+                var next: SharedFocusSessionRecord?
+                var changedStores: Set<String> = ["tracking"]
+                let previousTasks = values["tasks"]
+                switch intent {
+                case let .start(taskId, sessionId, at):
+                    let requested = try task(taskId)
+                    guard requested.isOpen else { throw TaskStoreError.notOpen }
+                    if let current, current.phase == .active || current.phase == .paused,
+                       (try? task(current.taskId).isOpen) == true {
+                        guard current.taskId == taskId else { throw SyncError.validation("Another focus session is already open.") }
+                        return current
+                    }
+                    guard current?.sessionId != sessionId else { throw SyncError.validation("A terminal focus session cannot restart.") }
+                    next = SharedFocusSessionRecord.start(taskId: taskId, plannedDurationSeconds: requested.plannedDurationSeconds, now: at, sessionId: sessionId)
+                case let .pause(sessionId, taskId, at):
+                    next = try target(sessionId, taskId).paused(at: at)
+                case let .resume(sessionId, taskId, at):
+                    next = try target(sessionId, taskId).resumed(at: at)
+                case let .extend(sessionId, taskId, seconds, at):
+                    let focus = try target(sessionId, taskId)
+                    guard (focus.phase == .active || focus.phase == .paused), seconds > 0,
+                          seconds <= 86400 - focus.plannedDurationSeconds else {
+                        throw SyncError.validation("The focus extension is outside the supported duration range.")
+                    }
+                    next = focus.extended(by: seconds, now: at)
+                case let .stop(sessionId, taskId, at):
+                    next = try target(sessionId, taskId).stopped(at: at)
+                case let .complete(sessionId, taskId, at):
+                    let focus = try target(sessionId, taskId)
+                    let existingTask = try task(taskId)
+                    if focus.phase == .completed && existingTask.status == .completed { return focus }
+                    guard (focus.phase == .active || focus.phase == .paused), existingTask.isOpen else {
+                        throw SyncError.validation("This focus session cannot complete the commitment again.")
+                    }
+                    let actualMinutes = max(1, Int(ceil(Double(focus.elapsedSeconds(at: at)) / 60)))
+                    let completed = try existingTask.withCompleted(at: at, actualDurationMinutes: actualMinutes, flowState: nil)
+                    guard var records = values["tasks"] as? [[String: Any]],
+                          let index = records.firstIndex(where: { $0["id"] as? String == taskId }) else { throw TaskStoreError.notFound }
+                    records[index] = try completed.toSyncDictionary()
+                    values["tasks"] = records
+                    changedStores.insert("tasks")
+                    next = focus.completed(at: at)
+                case let .importLegacy(record):
+                    guard tracking["focusSession"] == nil else {
+                        throw SyncError.validation("A shared focus value already exists. The legacy mirror was retained.")
+                    }
+                    guard try task(record.taskId).isOpen else { throw TaskStoreError.notOpen }
+                    next = record
+                }
+                guard let next else { throw SyncError.validation("The focus action is invalid. Nothing was changed.") }
+                var projected = (current?.sessionId == next.sessionId ? tracking["focusSession"] as? [String: Any] : nil) ?? [:]
+                for (key, value) in next.toDictionary() { projected[key] = value }
+                tracking["focusSession"] = projected
+                values["tracking"] = tracking
+                let now = ISO8601DateFormatter().string(from: Date())
+                var transactions: [StagedLocalTransaction] = []
+                for store in changedStores.sorted() {
+                    if let transaction = try buildStagedLocalTransaction(
+                        storeName: store, userKey: meta.accountUserId ?? "unbound-local-workspace",
+                        previousValue: store == "tracking" ? previous : previousTasks, nextValue: values[store],
+                        order: Int(Date().timeIntervalSince1970 * 1000), now: now,
+                        randomUuid: { UUID().uuidString.lowercased() }) {
+                        transactions.append(transaction)
+                    }
+                }
+                if !transactions.isEmpty {
+                    meta = try appendStagedTransactions(meta, transactions: transactions, deviceId: deviceIdStore.deviceId)
+                    let writes = try storeBridge.preparedWrites(values, stores: changedStores)
+                    try metaStore.commitLocalValues(writes, nextMeta: meta)
+                }
+                return next
             }
-            tracking["focusSession"] = session.toDictionary()
-            values["tracking"] = tracking
-            let now = ISO8601DateFormatter().string(from: Date())
-            guard let transaction = try buildStagedLocalTransaction(
-                storeName: "tracking",
-                userKey: meta.accountUserId ?? "unbound-local-workspace",
-                previousValue: previous,
-                nextValue: tracking,
-                order: Int(Date().timeIntervalSince1970 * 1000),
-                now: now,
-                randomUuid: { UUID().uuidString.lowercased() }
-            ) else {
-                await gate.release()
-                return
-            }
-            meta = try appendStagedTransactions(meta, transactions: [transaction], deviceId: deviceIdStore.deviceId)
-            let writes = try storeBridge.preparedWrites(values, stores: ["tracking"])
-            try metaStore.commitLocalValues(writes, nextMeta: meta)
             NotificationCenter.default.post(name: .syncMutationCommitted, object: nil)
             await gate.release()
+            return result
         } catch {
             await gate.release()
             throw error

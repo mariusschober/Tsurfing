@@ -98,8 +98,11 @@ final class ExecutionViewModel: ObservableObject {
         self.gateEnabled = gateEnabled; self.appOrigin = appOrigin
         self.authService = authService
         let syncFile = (provider.taskStore as? LocalTaskStore)?.fileURL.deletingLastPathComponent().appendingPathComponent("sync.json")
-        self.syncMetaStore = syncMetaStore ?? SyncMetaStore(fileURL: syncFile)
-        self.syncEngine = syncEngine ?? SyncEngine(metaStore: self.syncMetaStore)
+        let localDefaults = (provider.taskStore as? LocalTaskStore)?.defaults ?? .standard
+        self.syncMetaStore = syncMetaStore ?? SyncMetaStore(fileURL: syncFile, defaults: localDefaults)
+        self.syncEngine = syncEngine ?? SyncEngine(metaStore: self.syncMetaStore,
+            deviceIdStore: DeviceIdStore(defaults: localDefaults),
+            storeBridge: FileSyncStoreBridge(baseDir: syncFile?.deletingLastPathComponent(), defaults: localDefaults))
         sound.setVolume(Float(tickingVolume))
         setupTimerBindings(); restore(); restoreBreak()
         NotificationCenter.default.publisher(for: .authDidChange).receive(on: DispatchQueue.main).sink { [weak self] notification in
@@ -203,7 +206,7 @@ final class ExecutionViewModel: ObservableObject {
             if allowLegacyFocusBootstrap, loadedShared == nil, let legacy = loadedExecution,
                legacy.phase == .active || legacy.phase == .paused,
                let recovered = sharedRecord(from: legacy) {
-                persistSharedRecord(recovered, mirror: legacy)
+                persistSharedIntent(.importLegacy(recovered))
             }
         } catch {
             localError = "Local data needs attention: \(error.localizedDescription)"
@@ -231,26 +234,23 @@ final class ExecutionViewModel: ObservableObject {
         return sharedFocusSessionRecord(from: state, now: current)
     }
 
-    private func commitSharedRecord(_ record: SharedFocusSessionRecord, mirror: ExecutionState?) async throws {
-        // Queue the action before exposing it to the view. If the app exits
-        // while a foreground pull holds the sync gate, the action remains in
-        // sync.json and will be pushed on the next launch.
-        try await syncEngine.stageTrackingFocusSession(record)
+    private func commitSharedIntent(_ intent: LocalSharedFocusIntent) async throws {
+        let record = try await syncEngine.admitFocus(intent)
+        let mirror = record.toExecutionState()
         if let mirror { try store.save(mirror) }
         sharedFocusSession = record
         execution = mirror
         if let mirror { timer.start(state: mirror) } else { timer.stop() }
     }
 
-    private func persistSharedRecord(_ record: SharedFocusSessionRecord, mirror: ExecutionState? = nil) {
+    private func persistSharedIntent(_ intent: LocalSharedFocusIntent) {
         guard !sharedFocusActionPending else { return }
-        let nextExecution = mirror ?? record.toExecutionState()
         sharedFocusActionPending = true
         Task { @MainActor [weak self] in
             guard let self else { return }
             defer { self.sharedFocusActionPending = false }
             do {
-                try await self.commitSharedRecord(record, mirror: nextExecution)
+                try await self.commitSharedIntent(intent)
                 self.clearLocalFailure()
             } catch {
                 self.reportLocalFailure(error)
@@ -451,8 +451,8 @@ final class ExecutionViewModel: ObservableObject {
             _ = try localBreakdown.breakdown(taskId: t.id, children: breakdownChildren)
             // Clear focus if breaking current active task
             if execution?.taskId == t.id {
-                if let shared = sharedFocusSession, let stopped = shared.stopped(at: clock.now()) {
-                    persistSharedRecord(stopped)
+                if let shared = sharedFocusSession {
+                    persistSharedIntent(.stop(sessionId: shared.sessionId, taskId: shared.taskId, at: clock.now()))
                 }
                 try store.clear()
                 execution = nil
@@ -496,8 +496,8 @@ final class ExecutionViewModel: ObservableObject {
 
     func startBreak(durationMinutes: Int?) {
         if let e = execution, e.isActive {
-            if let shared = sharedFocusSession, let paused = shared.paused(at: clock.now()) {
-                persistSharedRecord(paused)
+            if let shared = sharedFocusSession {
+                persistSharedIntent(.pause(sessionId: shared.sessionId, taskId: shared.taskId, at: clock.now()))
             } else if let paused = e.paused(at: clock.now()) {
                 do {
                     try store.save(paused)
@@ -579,21 +579,14 @@ final class ExecutionViewModel: ObservableObject {
     func startCapturedTask(_ t: GoalflowTask) {
         guard !sharedFocusActionPending, t.isOpen else { return }
         if execution?.isActive == true || execution?.isPaused == true { return }
-        guard let session = SharedFocusSessionRecord.start(
-            taskId: t.id,
-            plannedDurationSeconds: t.plannedDurationSeconds,
-            now: clock.now()
-        ) else {
-            reportLocalFailure(SyncError.validation("The focus session could not be created safely."))
-            return
-        }
-        persistSharedRecord(session)
+        persistSharedIntent(.start(taskId: t.id, sessionId: UUID().uuidString.lowercased(), at: clock.now()))
     }
+
     func pause() {
         guard !sharedFocusActionPending else { return }
         guard let e = execution, e.isActive else { return }
-        if let shared = sharedFocusSession, let next = shared.paused(at: clock.now()) {
-            persistSharedRecord(next)
+        if let shared = sharedFocusSession {
+            persistSharedIntent(.pause(sessionId: shared.sessionId, taskId: shared.taskId, at: clock.now()))
         } else if let next = e.paused(at: clock.now()) {
             do { try store.save(next); execution = next; timer.reflectPause(next); clearLocalFailure() }
             catch { reportLocalFailure(error) }
@@ -602,8 +595,8 @@ final class ExecutionViewModel: ObservableObject {
     func resume() {
         guard !sharedFocusActionPending else { return }
         guard let e = execution, e.isPaused else { return }
-        if let shared = sharedFocusSession, let next = shared.resumed(at: clock.now()) {
-            persistSharedRecord(next)
+        if let shared = sharedFocusSession {
+            persistSharedIntent(.resume(sessionId: shared.sessionId, taskId: shared.taskId, at: clock.now()))
         } else if let next = e.resumed(at: clock.now()) {
             do { try store.save(next); execution = next; timer.reflectResume(next); clearLocalFailure() }
             catch { reportLocalFailure(error) }
@@ -612,8 +605,8 @@ final class ExecutionViewModel: ObservableObject {
     func extend(by seconds: Int) {
         guard !sharedFocusActionPending else { return }
         guard execution != nil else { return }
-        if let shared = sharedFocusSession, let next = shared.extended(by: seconds, now: clock.now()) {
-            persistSharedRecord(next)
+        if let shared = sharedFocusSession {
+            persistSharedIntent(.extend(sessionId: shared.sessionId, taskId: shared.taskId, seconds: seconds, at: clock.now()))
         } else if let e = execution, let next = e.extended(by: seconds) {
             do { try store.save(next); execution = next; timer.reflectExtend(next); clearLocalFailure() }
             catch { reportLocalFailure(error) }
@@ -659,21 +652,18 @@ final class ExecutionViewModel: ObservableObject {
     }
     private func confirmCompletion() {
         guard !sharedFocusActionPending, let t = task, let exec = execution else { return }
-        let elapsed = exec.elapsedSeconds(now: clock.now())
-        let actual = max(1, Int(ceil(Double(elapsed) / 60.0)))
         let completionTime = clock.now()
-        let completedSession = sharedFocusSession?.completed(at: completionTime)
-            ?? sharedRecord(from: exec, now: completionTime)?.completed(at: completionTime)
+        let target = sharedFocusSession ?? sharedRecord(from: exec, now: completionTime)
+        let needsImport = sharedFocusSession == nil
         sharedFocusActionPending = true
         Task { @MainActor [weak self] in
             guard let self else { return }
             defer { self.sharedFocusActionPending = false }
             do {
-                if let completedSession {
-                    try await self.commitSharedRecord(completedSession, mirror: nil)
-                }
-                let completed = try self.provider.completeTask(id: t.id, actualDurationMinutes: actual, flowState: nil)
-                self.pendingCompletedId = completed.id
+                guard let target else { throw SyncError.validation("The focus session is invalid. The commitment remains open.") }
+                if needsImport { _ = try await self.syncEngine.admitFocus(.importLegacy(target)) }
+                try await self.commitSharedIntent(.complete(sessionId: target.sessionId, taskId: t.id, at: completionTime))
+                self.pendingCompletedId = t.id
                 try self.store.clear(); self.timer.stop(); self.execution = nil
                 self.sound.complete(frog: t.isFrog)
                 withAnimation(.easeOut(duration: 0.3)) { self.showReward = true }

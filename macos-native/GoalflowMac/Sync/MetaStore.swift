@@ -331,6 +331,12 @@ final class SyncMetaStore: @unchecked Sendable {
         }
     }
 
+    /// Synchronous read-transform-commit ownership for multi-store actions.
+    /// Nested loads and durable commits use this same recursive lock.
+    func withLocalStateTransaction<Value>(_ body: () throws -> Value) rethrows -> Value {
+        try withLock(body)
+    }
+
     private func withLock<Value>(_ body: () throws -> Value) rethrows -> Value {
         Self.persistenceLock.lock()
         defer { Self.persistenceLock.unlock() }
