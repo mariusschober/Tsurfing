@@ -358,29 +358,12 @@ final class SyncEngine: @unchecked Sendable {
         // Push loop
         while true {
             let meta = try metaStore.load()
-            let batch = readyOutbox(meta, limit: 50)
+            let (batch, body) = try boundedSyncPush(readyOutbox(meta, limit: 50))
             if batch.isEmpty { break }
-            let wire = batch.map { m -> [String: Any] in
-                var d: [String: Any] = [
-                    "mutationId": m.mutationId,
-                    "deviceId": m.deviceId,
-                    "entityType": m.entityType,
-                    "entityId": m.entityId,
-                    "version": m.version,
-                    "payload": m.payload.value ?? NSNull(),
-                    "updatedAt": m.updatedAt
-                ]
-                if let b = m.baseServerVersion { d["baseServerVersion"] = b } else { d["baseServerVersion"] = NSNull() }
-                if let dep = m.dependsOnMutationId { d["dependsOnMutationId"] = dep }
-                if let del = m.deletedAt { d["deletedAt"] = del } else { d["deletedAt"] = NSNull() }
-                if let rid = m.resolvesConflictId, isValidUUID(rid) { d["resolvesConflictId"] = rid }
-                return d
-            }
             // Mark attempted
             let now = ISO8601DateFormatter().string(from: Date())
             let metaAttempted = markMutationsAttempted(meta, ids: batch.map(\.mutationId), now: now)
             try metaStore.save(metaAttempted)
-            let body = try JSONSerialization.data(withJSONObject: ["mutations": wire], options: [])
             let (data, resp) = try await requestWithRetry(path: "/api/v1/sync/push", method: "POST", body: body)
             guard (200..<300).contains(resp.statusCode) else {
                 throw SyncError.validation("Sync push failed HTTP \(resp.statusCode)")
@@ -665,4 +648,41 @@ func applyAutomaticReconciliation(
         values[entityType] = record?["payload"]
     }
     return (meta, values, [entityType])
+}
+
+/// The limit counts UTF-8 JSON body bytes, not HTTP headers. Return the exact
+/// serialized body that was measured; never rewrite an attempted mutation.
+func boundedSyncPush(_ ready: [SyncMutation]) throws -> (batch: [SyncMutation], body: Data) {
+    var batch: [SyncMutation] = []
+    var body = try JSONSerialization.data(withJSONObject: ["mutations": []], options: [])
+    for mutation in ready.prefix(50) {
+        let candidate = batch + [mutation]
+        let wire = candidate.map { m -> [String: Any] in
+            var d: [String: Any] = [
+                "mutationId": m.mutationId,
+                "deviceId": m.deviceId,
+                "entityType": m.entityType,
+                "entityId": m.entityId,
+                "version": m.version,
+                "payload": m.payload.value ?? NSNull(),
+                "updatedAt": m.updatedAt
+            ]
+            if let b = m.baseServerVersion { d["baseServerVersion"] = b } else { d["baseServerVersion"] = NSNull() }
+            if let dep = m.dependsOnMutationId { d["dependsOnMutationId"] = dep }
+            if let del = m.deletedAt { d["deletedAt"] = del } else { d["deletedAt"] = NSNull() }
+            if let rid = m.resolvesConflictId, UUID(uuidString: rid) != nil { d["resolvesConflictId"] = rid }
+            return d
+        }
+
+        let candidateBody = try JSONSerialization.data(withJSONObject: ["mutations": wire], options: [])
+        if candidateBody.count > 256 * 1024 {
+            if batch.isEmpty {
+                throw SyncError.validation("A preserved change exceeds the sync request limit. It remains saved locally; retry after large-record recovery is available.")
+            }
+            break
+        }
+        batch = candidate
+        body = candidateBody
+    }
+    return (batch, body)
 }

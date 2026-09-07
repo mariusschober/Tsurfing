@@ -4,6 +4,7 @@ import {
   supabase
 } from './authService';
 import { readResponseBodyWithLimit, ResponseTooLargeError } from './boundedResponse';
+import { SyncMutationTooLargeError, wireMutation } from './syncEnvelope';
 import { DurableStorageError, storageService, STORES } from './storage';
 import {
   emptySyncMeta,
@@ -115,6 +116,7 @@ export class SyncProtocolError extends Error {
 export const isPermanentSyncFailure = (error: unknown): boolean =>
   (error instanceof SyncHttpError && error.permanent)
   || error instanceof SyncProtocolError
+  || error instanceof SyncMutationTooLargeError
   || error instanceof ResponseTooLargeError
   || error instanceof DurableStorageError
   || error instanceof SessionAccountMismatchError;
@@ -226,21 +228,6 @@ export const fetchSyncWithRetry = async (
   }
   throw lastError ?? new Error('Synchronization request failed.');
 };
-
-const wireMutation = (mutation: SyncMutation) => ({
-  mutationId: mutation.mutationId,
-  deviceId: mutation.deviceId,
-  entityType: mutation.entityType,
-  entityId: mutation.entityId,
-  baseServerVersion: mutation.baseServerVersion,
-  version: mutation.version,
-  payload: mutation.payload,
-  updatedAt: mutation.updatedAt,
-  deletedAt: mutation.deletedAt,
-  resolvesConflictId: mutation.resolvesConflictId && UUID_PATTERN.test(mutation.resolvesConflictId)
-    ? mutation.resolvesConflictId
-    : undefined
-});
 
 const seedUnsynchronizedLocalData = (userKey: string): Promise<void> => storageService.seedUnsynchronizedLocalData(userKey);
 

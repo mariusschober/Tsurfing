@@ -8,6 +8,7 @@ import {
 } from './cloudSync';
 import { storageService, STORES } from './storage';
 import { emptySyncMeta, normalizeSyncMeta } from './syncProtocol';
+import { SyncMutationTooLargeError } from './syncEnvelope';
 
 class TestLocalStorage {
   private values = new Map<string, string>();
@@ -185,6 +186,50 @@ const task = (title: string, id = 'task-1', extra: Record<string, unknown> = {})
 
 describe('adversarial cloud synchronization', () => {
   beforeEach(() => installBrowser());
+
+  it('preserves an oversize captured change without marking an unmade network attempt', async () => {
+    const key = `oversize-${crypto.randomUUID()}`;
+    storageService.stageLocalValue(STORES.TASKS, key, [], [task('preserved', 'large', { notes: '🧭'.repeat(70_000) })]);
+    await storageService.flushPendingLocalChanges(key);
+    const before = normalizeSyncMeta(await storageService.get(STORES.SYNC, key));
+    let requests = 0;
+    const runtime = { ...dependencies(new DurableFakeServer()), fetch: async () => {
+      requests++;
+      return Response.json({});
+    } };
+    for (let retry = 0; retry < 2; retry++) {
+      await expect(synchronizeCloudOnce(key, runtime, { seedLocalData: false })).rejects.toBeInstanceOf(SyncMutationTooLargeError);
+    }
+    expect(requests).toBe(0);
+    const after = normalizeSyncMeta(await storageService.get(STORES.SYNC, key));
+    expect(after.outbox).toEqual(before.outbox);
+    expect(after.cursor).toBe(before.cursor);
+  });
+
+  it('drains valid multibyte notes within the actual JSON body limit without changing receipts', async () => {
+    const key = `byte-batches-${crypto.randomUUID()}`;
+    const server = new DurableFakeServer();
+    const tasks = Array.from({ length: 7 }, (_, i) => task('large note', `large-${i}`, {
+      notes: '🧭"\\\n'.repeat(14_000)
+    }));
+    storageService.stageLocalValue(STORES.TASKS, key, [], tasks);
+    const sizes: number[] = [];
+    const runtime = dependencies(server);
+    runtime.fetch = async (path, init) => {
+      if (String(path).endsWith('/sync/push')) {
+        const bytes = new TextEncoder().encode(String(init?.body)).byteLength;
+        sizes.push(bytes);
+        if (bytes > 256 * 1024) return Response.json({ error: { code: 'too_large' } }, { status: 413 });
+      }
+      return server.fetch(String(path), init);
+    };
+    const meta = await synchronizeCloudOnce(key, runtime, { seedLocalData: false });
+    expect(meta.outbox).toHaveLength(0);
+    expect(sizes.length).toBeGreaterThan(1);
+    expect(sizes.every(size => size <= 256 * 1024)).toBe(true);
+    expect(server.receipts.size).toBe(tasks.length);
+    for (const item of tasks) expect(server.records.get(`tasks:${item.id}`)?.payload).toEqual(item);
+  });
 
   it('automatically retries the exact mutation when the server commits but the response is lost', async () => {
     const key = `timeout-after-${crypto.randomUUID()}`;

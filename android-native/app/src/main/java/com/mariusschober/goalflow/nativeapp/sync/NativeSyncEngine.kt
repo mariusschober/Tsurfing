@@ -4,6 +4,7 @@ import com.mariusschober.goalflow.nativeapp.data.GoalflowRepository
 import com.mariusschober.goalflow.nativeapp.data.NativePushResult
 import com.mariusschober.goalflow.nativeapp.data.NativeRemoteRecord
 import com.mariusschober.goalflow.nativeapp.data.NativeServerConflict
+import com.mariusschober.goalflow.nativeapp.data.SyncOutboxEntity
 import com.mariusschober.goalflow.nativeapp.data.SyncConflictEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -164,30 +165,14 @@ class NativeSyncEngine(
 
         var conflicts = 0
         while (true) {
-            val batch = repository.readySyncMutations(50)
+            val (batch, requestBody) = boundedPush(repository.readySyncMutations(50))
             if (batch.isEmpty()) break
             repository.markSyncAttempted(batch.map { it.mutationId })
-            val mutations = JSONArray().apply {
-                batch.forEach { mutation -> put(JSONObject().apply {
-                    put("mutationId", mutation.mutationId)
-                    put("deviceId", mutation.deviceId)
-                    put("entityType", mutation.entityType)
-                    put("entityId", mutation.entityId)
-                    put("baseServerVersion", mutation.baseServerVersion ?: JSONObject.NULL)
-                    put("version", mutation.version)
-                    put("payload", parseJsonValue(mutation.payload))
-                    put("updatedAt", mutation.updatedAt)
-                    put("deletedAt", mutation.deletedAt ?: JSONObject.NULL)
-                    mutation.resolvesConflictId
-                        ?.takeIf { it.matches(UUID_PATTERN) }
-                        ?.let { put("resolvesConflictId", it) }
-                }) }
-            }
             val response = requestForSession(
                 session,
                 "/api/v1/sync/push",
                 "POST",
-                JSONObject().put("mutations", mutations).toString()
+                requestBody
             )
             ensureSuccessful(response, "Sync push failed. Local changes remain pending.")
             val body = parseObject(response.body, "Sync push response is not valid JSON.")
@@ -502,7 +487,43 @@ class NativeSyncEngine(
         return userId
     }
 
-    private companion object {
+    internal companion object {
+
+        internal fun boundedPush(ready: List<SyncOutboxEntity>): Pair<List<SyncOutboxEntity>, String> {
+            val batch = mutableListOf<SyncOutboxEntity>()
+            var body = JSONObject().put("mutations", JSONArray()).toString()
+            for (next in ready.take(50)) {
+                val candidate = batch + next
+                val mutations = JSONArray().apply {
+                    candidate.forEach { mutation -> put(JSONObject().apply {
+                        put("mutationId", mutation.mutationId)
+                        put("deviceId", mutation.deviceId)
+                        put("entityType", mutation.entityType)
+                        put("entityId", mutation.entityId)
+                        put("baseServerVersion", mutation.baseServerVersion ?: JSONObject.NULL)
+                        put("version", mutation.version)
+                        put("payload", parseJsonValue(mutation.payload))
+                        put("updatedAt", mutation.updatedAt)
+                        put("deletedAt", mutation.deletedAt ?: JSONObject.NULL)
+                        mutation.resolvesConflictId
+                            ?.takeIf { it.matches(UUID_PATTERN) }
+                            ?.let { put("resolvesConflictId", it) }
+                    }) }
+                }
+
+                val candidateBody = JSONObject().put("mutations", mutations).toString()
+                if (candidateBody.toByteArray(StandardCharsets.UTF_8).size > 256 * 1024) {
+                    if (batch.isEmpty()) throw NativeSyncProtocolException(
+                        "A preserved change exceeds the sync request limit. It remains saved locally; retry after large-record recovery is available."
+                    )
+                    break
+                }
+                batch.add(next)
+                body = candidateBody
+            }
+            return batch to body
+        }
+
         const val SYNC_CURSOR_KEY = "_cursor"
         val RETRYABLE_STATUS = setOf(408, 425, 429)
         val UUID_PATTERN = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")

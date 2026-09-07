@@ -1,6 +1,28 @@
 import XCTest
 @testable import GoalflowMac
 
+final class SyncEnvelopeTests: XCTestCase {
+    func testActualUTF8EnvelopePreservesRequests() throws {
+        let item = SyncMutation(mutationId: "11111111-1111-4111-8111-111111111111",
+            deviceId: "fixture", entityType: "tasks", entityId: "fixture", baseServerVersion: nil,
+            version: 1, payload: AnyCodable(["notes": String(repeating: "🧭\"\\\n", count: 14000)]),
+            updatedAt: "2026-09-07T00:00:00.123456789Z", deletedAt: nil)
+        var second = item
+        second.mutationId = "22222222-2222-4222-8222-222222222222"
+        let (batch, body) = try boundedSyncPush([item, second])
+        XCTAssertEqual(batch, [item])
+        XCTAssertLessThanOrEqual(body.count, 256 * 1024)
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        let wire = try XCTUnwrap((object["mutations"] as? [[String: Any]])?.first)
+        XCTAssertEqual(wire["updatedAt"] as? String, item.updatedAt)
+        XCTAssertEqual(stableJson(wire["payload"]), stableJson(item.payload.value))
+        var oversized = item
+        oversized.payload = AnyCodable(["notes": String(repeating: "🧭", count: 70000)])
+        XCTAssertThrowsError(try boundedSyncPush([oversized]))
+        XCTAssertNil(oversized.attemptedAt)
+    }
+}
+
 final class StableJsonTests: XCTestCase {
     func test_sorts_keys() {
         let a: [String: Any] = ["b": 2, "a": 1]

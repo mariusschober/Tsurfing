@@ -7,6 +7,7 @@ import com.mariusschober.goalflow.nativeapp.data.GoalflowDatabase
 import com.mariusschober.goalflow.nativeapp.data.GoalflowJson
 import com.mariusschober.goalflow.nativeapp.data.GoalflowRepository
 import com.mariusschober.goalflow.nativeapp.data.SyncConflictEntity
+import com.mariusschober.goalflow.nativeapp.data.SyncOutboxEntity
 import com.mariusschober.goalflow.nativeapp.domain.GoalflowTask
 import com.mariusschober.goalflow.nativeapp.domain.SchedulePrecision
 import kotlinx.coroutines.test.runTest
@@ -35,6 +36,29 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 class NativeSyncEngineTest {
+    @Test
+    fun `push batches count actual escaped UTF8 bytes and preserve original requests`() {
+        val item = SyncOutboxEntity(
+            mutationId = "11111111-1111-4111-8111-111111111111", deviceId = "fixture",
+            entityType = "tasks", entityId = "fixture", baseServerVersion = null, version = 1,
+            payload = JSONObject().put("notes", "🧭\"\\\n".repeat(14_000)).toString(),
+            updatedAt = "2026-09-07T00:00:00.123456789Z", deletedAt = null
+        )
+        val queue = listOf(item, item.copy(mutationId = "22222222-2222-4222-8222-222222222222"))
+        val (batch, body) = NativeSyncEngine.boundedPush(queue)
+        assertEquals(listOf(item), batch)
+        assertTrue(body.toByteArray(Charsets.UTF_8).size <= 256 * 1024)
+        val wire = JSONObject(body).getJSONArray("mutations").getJSONObject(0)
+        assertEquals(item.updatedAt, wire.getString("updatedAt"))
+        assertEquals(JSONObject(item.payload).getString("notes"), wire.getJSONObject("payload").getString("notes"))
+        val oversized = item.copy(payload = JSONObject().put("notes", "🧭".repeat(70_000)).toString())
+        try {
+            NativeSyncEngine.boundedPush(listOf(oversized))
+            fail("Oversized request must remain pending")
+        } catch (_: NativeSyncProtocolException) { }
+        assertNull(oversized.attemptedAt)
+    }
+
     private lateinit var database: GoalflowDatabase
     private lateinit var repository: GoalflowRepository
 
