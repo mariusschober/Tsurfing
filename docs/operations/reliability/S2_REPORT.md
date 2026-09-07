@@ -217,3 +217,21 @@ and corrections explicitly reject until atomic effects/evidence are implemented.
 Only the initial day's baseline is established. Backup/restore of enrolled
 accounts, legacy ambiguity/import, day selection, client receipt processing
 and capability activation remain required before rollout. No live DDL occurred.
+
+## Android active completion checkpoint
+
+`b899bd5ac5f7975fca45a86e16e2c7028edac4be`: **PASS_LOCAL**. The active Android ViewModel captures its
+focus target before launching asynchronous work. The repository validates that
+session/task inside one Room transaction and commits final notes, existing task
+statistics/goal/habit/event effects, outbox changes and focus termination together.
+Mutation notification occurs after commit. Unknown fields on the same focus
+session survive the write. Duplicate completion does not award again; a terminal
+session cannot complete the task again after task undo, or target a replacement
+session. Contradictory final notes on a completed action report a recoverable error.
+
+A real Room failure trigger on the final tracking write proved complete rollback
+and successful retry with final notes intact. Two new regression tests cover
+rollback/retry/deduplication/undo and stale same-task session replacement. All
+143 native Android tests passed; one hosted test skipped. Native lint and debug
+build passed. No schema change or app installation. This fixes local atomicity;
+the current legacy multi-entity transport is not a server-atomic completion receipt.

@@ -1,0 +1,52 @@
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preProductionDebugBuild UP-TO-DATE
+> Task :app:generateProductionDebugBuildConfig UP-TO-DATE
+> Task :app:checkProductionDebugAarMetadata UP-TO-DATE
+> Task :app:generateProductionDebugResValues UP-TO-DATE
+> Task :app:mapProductionDebugSourceSetPaths UP-TO-DATE
+> Task :app:generateProductionDebugResources UP-TO-DATE
+> Task :app:mergeProductionDebugResources UP-TO-DATE
+> Task :app:packageProductionDebugResources UP-TO-DATE
+> Task :app:parseProductionDebugLocalResources UP-TO-DATE
+> Task :app:createProductionDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksProductionDebug UP-TO-DATE
+> Task :app:processProductionDebugMainManifest UP-TO-DATE
+> Task :app:processProductionDebugManifest UP-TO-DATE
+> Task :app:processProductionDebugManifestForPackage UP-TO-DATE
+> Task :app:processProductionDebugResources UP-TO-DATE
+> Task :app:javaPreCompileProductionDebug UP-TO-DATE
+> Task :app:preProductionDebugUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompileProductionDebugUnitTest UP-TO-DATE
+> Task :app:mergeProductionDebugShaders UP-TO-DATE
+> Task :app:compileProductionDebugShaders NO-SOURCE
+> Task :app:generateProductionDebugAssets UP-TO-DATE
+> Task :app:mergeProductionDebugAssets UP-TO-DATE
+> Task :app:packageProductionDebugUnitTestForUnitTest UP-TO-DATE
+> Task :app:generateProductionDebugUnitTestConfig UP-TO-DATE
+
+> Task :app:kaptGenerateStubsProductionDebugKotlin
+w: Kapt currently doesn't support language version 2.0+. Falling back to 1.9.
+
+> Task :app:kaptProductionDebugKotlin
+warning: The following options were not recognized by any processor: '[room.schemaLocation, kapt.kotlin.generated]'
+
+> Task :app:compileProductionDebugKotlin
+> Task :app:compileProductionDebugJavaWithJavac UP-TO-DATE
+> Task :app:processProductionDebugJavaRes UP-TO-DATE
+> Task :app:bundleProductionDebugClassesToCompileJar
+> Task :app:bundleProductionDebugClassesToRuntimeJar
+
+> Task :app:kaptGenerateStubsProductionDebugUnitTestKotlin
+w: Kapt currently doesn't support language version 2.0+. Falling back to 1.9.
+
+> Task :app:kaptProductionDebugUnitTestKotlin
+warning: The following options were not recognized by any processor: '[room.schemaLocation, kapt.kotlin.generated]'
+
+> Task :app:compileProductionDebugUnitTestKotlin
+> Task :app:compileProductionDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processProductionDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:testProductionDebugUnitTest
+
+BUILD SUCCESSFUL in 31s
+32 actionable tasks: 9 executed, 23 up-to-date
