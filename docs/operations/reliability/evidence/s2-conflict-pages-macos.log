@@ -1,0 +1,1251 @@
+2026-09-07 22:58:42.732 xcodebuild[59866:1880033]  DVTFilePathFSEvents: Failed to start fs event stream.
+2026-09-07 22:58:43.082 xcodebuild[59866:1880032] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input/output error". Using NSCachesDirectory instead.
+2026-09-07 22:58:43.657 xcodebuild[59866:1880034] CoreSimulatorService connection became invalid.  Simulator services will no longer be available.
+2026-09-07 22:58:43.659 xcodebuild[59866:1880063] Logging connecton invalid: <OS_xpc_error: <dictionary: 0x1fb982080> { count = 1, transaction: 0, voucher = 0x0, contents =
+	"XPCErrorDescription" => <string: 0x1fb9821c0> { string cache = 0x0, length = 18, contents = "Connection invalid" }
+}>
+2026-09-07 22:58:43.661 xcodebuild[59866:1880063] Error opening log file (/Users/schober/Library/Logs/CoreSimulator/CoreSimulator.com.apple.dt.xcodebuild.log): Operation not permitted
+[-[SimServiceContext sendRequest:]:1751] ERROR : Unable to deliver request ({
+    "developer_dir" = "/Applications/Xcode.app/Contents/Developer";
+    request = "set_developer_dir";
+}) because we are not connected to CoreSimulatorService.
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project macos-native/GoalflowMac.xcodeproj -scheme GoalflowMac -configuration Debug -destination platform=macOS -derivedDataPath /private/tmp/s2-conflict-pages-macos CODE_SIGNING_ALLOWED=NO
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+
+2026-09-07 22:58:43.753 xcodebuild[59866:1880032] [MT] DVTAssertions: Warning in DVTFrameworks/DVTFoundation/FileTypes/DVTFileDataTypeDetection.m:80
+Details:  detectedTypeIdentifier (com.apple.binary-property-list) does not conform to matchedTypeIdentifier in MagicFileDataTypeDetector extenson com.apple.property-list. When both are specified, this conformance is required unless overridden by setting allowNonInheritance. extension.identifier:Xcode.MagicFileDataTypeDetector.BinaryPlist
+Object:   <DVTFileDataTypeDetectionMagicCache: 0xbf3c8ebb0>
+Method:   -initWithExtension:
+Thread:   <_NSMainThread: 0x104aa5f90>{number = 1, name = main}
+Please file a bug at https://feedbackassistant.apple.com with this warning message and any useful information you can provide.
+2026-09-07 22:58:43.755 xcodebuild[59866:1880032] [MT] DVTAssertions: Warning in DVTFrameworks/DVTFoundation/FileTypes/DVTFileDataTypeDetection.m:80
+Details:  detectedTypeIdentifier (com.apple.xml-property-list) does not conform to matchedTypeIdentifier in MagicFileDataTypeDetector extenson com.apple.property-list. When both are specified, this conformance is required unless overridden by setting allowNonInheritance. extension.identifier:Xcode.MagicFileDataTypeDetector.XMLPlist
+Object:   <DVTFileDataTypeDetectionMagicCache: 0xbf3cb46c0>
+Method:   -initWithExtension:
+Thread:   <_NSMainThread: 0x104aa5f90>{number = 1, name = main}
+Please file a bug at https://feedbackassistant.apple.com with this warning message and any useful information you can provide.
+[-[SimServiceContext initWithDeveloperDir:connectionType:error:]:432] WARN  : Unable to discover any Simulator runtimes. Developer Directory is /Applications/Xcode.app/Contents/Developer.
+[-[SimDiskImageManager init]:175] ERROR : Could not kickstart simdiskimaged; SimDiskImageManager services will not be available: Error Domain=NSPOSIXErrorDomain Code=53 "Software caused connection abort" UserInfo={NSLocalizedDescription=Error returned in reply from CoreSimulatorService: Connection invalid}
+[-[SimDiskImageManager _onQueue_checkConnection:]:239] ERROR : simdiskimaged returned error (invalid), marking disconnected.
+[-[SimDiskImageManager _onQueue_checkConnection:]:219] ERROR : simdiskimaged connection is currently unavailable because connection became invalid
+[-[SimServiceContext initWithDeveloperDir:connectionType:error:]_block_invoke:468] ERROR : Could not get list of trusted mount directories: Error Domain=com.apple.CoreSimulator.SimError Code=409 "Cannot talk to the service used to manage runtime disk images (simdiskimaged) because its launchd job is not registered or was unloaded" UserInfo={NSLocalizedDescription=Cannot talk to the service used to manage runtime disk images (simdiskimaged) because its launchd job is not registered or was unloaded}
+[-[SimServiceContext sendRequest:reply:error:]:1771] ERROR : Unable to deliver request ({
+    request = "notification_subscription";
+    "set_path" = "/Users/schober/Library/Developer/CoreSimulator/Devices";
+}) because we are not connected to CoreSimulatorService.
+2026-09-07 22:58:43.882 xcodebuild[59866:1880066] Error Domain=NSPOSIXErrorDomain Code=61 "Connection refused" UserInfo={NSLocalizedDescription=CoreSimulatorService connection became invalid.  Simulator services will no longer be available.}
+2026-09-07 22:58:43.884 xcodebuild[59866:1880066]  iOSSimulator: [SimServiceContext defaultDeviceSetWithError:] returned nil (Error Domain=NSPOSIXErrorDomain Code=61 "Connection refused" UserInfo={NSLocalizedFailureReason=Failed to subscribe to notifications from CoreSimulatorService., NSLocalizedDescription=Failed to initialize simulator device set., NSUnderlyingError=0xbf3e355f0 {Error Domain=NSPOSIXErrorDomain Code=61 "Connection refused" UserInfo={NSLocalizedDescription=CoreSimulatorService connection became invalid.  Simulator services will no longer be available.}}}). Simulator device support disabled.
+[-[SimServiceContext sendRequest:reply:error:]:1771] ERROR : Unable to deliver request ({
+    request = "notification_subscription";
+    "set_path" = "/Users/schober/Library/Developer/CoreSimulator/Devices";
+}) because we are not connected to CoreSimulatorService.
+2026-09-07 22:58:43.884 xcodebuild[59866:1880033] Error Domain=NSPOSIXErrorDomain Code=61 "Connection refused" UserInfo={NSLocalizedDescription=CoreSimulatorService connection became invalid.  Simulator services will no longer be available.}
+2026-09-07 22:58:43.884 xcodebuild[59866:1880033]  IDESimulatorAvailability: startObservingSimulatorUpdates() FAILED to register SimDeviceSet observer
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:macOS, arch:arm64, id:00006000-0014189836D2801E, name:My Mac }
+{ platform:macOS, arch:x86_64, id:00006000-0014189836D2801E, name:My Mac }
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (2 targets)
+    Target 'GoalflowMacTests' in project 'GoalflowMac'
+        ➜ Explicit dependency on target 'GoalflowMac' in project 'GoalflowMac'
+    Target 'GoalflowMac' in project 'GoalflowMac' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: c28a2e3d454dc8fe29886a6b25f964f7
+Build description path: /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/XCBuildData/c28a2e3d454dc8fe29886a6b25f964f7.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk /tmp/s2-conflict-pages-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -o /tmp/s2-conflict-pages-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache
+
+CreateBuildDirectory /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    builtin-create-build-directory /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex
+
+CreateBuildDirectory /tmp/s2-conflict-pages-macos/Build/Products
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    builtin-create-build-directory /tmp/s2-conflict-pages-macos/Build/Products
+
+CreateBuildDirectory /tmp/s2-conflict-pages-macos/Build/Products/Debug
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    builtin-create-build-directory /tmp/s2-conflict-pages-macos/Build/Products/Debug
+
+CreateBuildDirectory /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    builtin-create-build-directory /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+CreateBuildDirectory /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/EagerLinkingTBDs/Debug
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    builtin-create-build-directory /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/EagerLinkingTBDs/Debug
+
+CreateBuildDirectory /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/ExplicitPrecompiledModules
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    builtin-create-build-directory /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac-3083011f4150d1213d93a1707dff697c-VFS/all-product-headers.yaml
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac-3083011f4150d1213d93a1707dff697c-VFS/all-product-headers.yaml
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/empty-GoalflowMacTests.plist (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/empty-GoalflowMacTests.plist
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-project-headers.hmap (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-project-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.hmap (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.hmap
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-non-framework-target-headers.hmap (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-non-framework-target-headers.hmap
+
+MkDir /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-target-headers.hmap (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_const_extract_protocols.json (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_const_extract_protocols.json
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftFileList (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftFileList
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftConstValuesFileList (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.LinkFileList (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.LinkFileList
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.DependencyStaticMetadataFileList (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-OutputFileMap.json (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-OutputFileMap.json
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.DependencyMetadataFileList (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.DependencyMetadataFileList
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-own-target-headers.hmap (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-own-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-generated-files.hmap (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-generated-files.hmap
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.hmap (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.hmap
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.DependencyStaticMetadataFileList (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.DependencyMetadataFileList (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.DependencyMetadataFileList
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-project-headers.hmap (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-project-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-own-target-headers.hmap (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-own-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-generated-files.hmap (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-generated-files.hmap
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-target-headers.hmap (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-non-framework-target-headers.hmap (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-non-framework-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-DebugDylibPath-normal-arm64.txt (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-DebugDylibPath-normal-arm64.txt
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-DebugDylibInstallName-normal-arm64.txt (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-DebugDylibInstallName-normal-arm64.txt
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftConstValuesFileList (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftFileList (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftFileList
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.LinkFileList (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.LinkFileList
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac_const_extract_protocols.json (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac_const_extract_protocols.json
+
+WriteAuxiliaryFile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-OutputFileMap.json (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-OutputFileMap.json
+
+MkDir /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/MacOS (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/MacOS
+
+MkDir /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents
+
+MkDir /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns
+
+MkDir /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources
+
+MkDir /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS
+
+MkDir /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+MkDir /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents
+
+MkDir /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app
+
+Ld /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/__preview.dylib normal (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos15.0 -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -O0 -L/tmp/s2-conflict-pages-macos/Build/Products/Debug -F/tmp/s2-conflict-pages-macos/Build/Products/Debug -install_name @rpath/Tsurfing.debug.dylib -rdynamic -Xlinker -no_deduplicate -Xlinker -dependency_info -Xlinker /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing_dependency_info.dat -o /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/__preview.dylib
+
+CpResource /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources/clock-tock.wav /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/clock-tock.wav (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/clock-tock.wav /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources
+
+CpResource /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources/clock-tick.wav /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/clock-tick.wav (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/clock-tick.wav /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources
+
+CpResource /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources/PrivacyInfo.xcprivacy /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/PrivacyInfo.xcprivacy (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/PrivacyInfo.xcprivacy /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources
+
+MkDir /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/thinned (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/thinned
+
+MkDir /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/unthinned (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/unthinned
+
+GenerateAssetSymbols /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Assets.xcassets (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Assets.xcassets --compile /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources --output-format human-readable-text --notices --warnings --export-dependency-info /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_dependencies --output-partial-info-plist /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist --app-icon AppIcon --enable-on-demand-resources NO --development-region en --target-device mac --minimum-deployment-target 15.0 --platform macosx --bundle-identifier com.mariusschober.tsurfing.mac --generate-swift-asset-symbol-extensions NO --generate-swift-asset-symbols /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols.swift --generate-objc-asset-symbols /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols.h --generate-asset-symbol-index /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+2026-09-07 22:58:49.480 ibtoold[59887:1880216] CoreSimulatorService connection became invalid.  Simulator services will no longer be available.
+2026-09-07 22:58:49.480 ibtoold[59887:1880226] Logging connecton invalid: <OS_xpc_error: <dictionary: 0x1fb982080> { count = 1, transaction: 0, voucher = 0x0, contents =
+	"XPCErrorDescription" => <string: 0x1fb9821c0> { string cache = 0x0, length = 18, contents = "Connection invalid" }
+}>
+2026-09-07 22:58:49.481 ibtoold[59887:1880216] Error opening log file (/Users/schober/Library/Logs/CoreSimulator/CoreSimulator.com.apple.ibtool.log): Operation not permitted
+[-[SimServiceContext sendRequest:]:1751] ERROR : Unable to deliver request ({
+    "developer_dir" = "/Applications/Xcode.app/Contents/Developer";
+    request = "set_developer_dir";
+}) because we are not connected to CoreSimulatorService.
+[-[SimServiceContext initWithDeveloperDir:connectionType:error:]:432] WARN  : Unable to discover any Simulator runtimes. Developer Directory is /Applications/Xcode.app/Contents/Developer.
+[-[SimDiskImageManager init]:175] ERROR : Could not kickstart simdiskimaged; SimDiskImageManager services will not be available: Error Domain=NSPOSIXErrorDomain Code=53 "Software caused connection abort" UserInfo={NSLocalizedDescription=Error returned in reply from CoreSimulatorService: Connection invalid}
+[-[SimDiskImageManager _onQueue_checkConnection:]:239] ERROR : simdiskimaged returned error (invalid), marking disconnected.
+[-[SimDiskImageManager _onQueue_checkConnection:]:239] ERROR : simdiskimaged returned error (invalid), marking disconnected.
+[-[SimServiceContext initWithDeveloperDir:connectionType:error:]_block_invoke:468] ERROR : Could not get list of trusted mount directories: Error Domain=com.apple.CoreSimulator.SimError Code=410 "The service used to manage runtime disk images (simdiskimaged) crashed or is not responding" UserInfo={NSLocalizedDescription=The service used to manage runtime disk images (simdiskimaged) crashed or is not responding}
+[-[SimServiceContext sendRequest:reply:error:]:1771] ERROR : Unable to deliver request ({
+    request = "notification_subscription";
+    "set_path" = "/Users/schober/Library/Developer/CoreSimulator/Devices";
+}) because we are not connected to CoreSimulatorService.
+2026-09-07 22:58:49.572 ibtoold[59887:1880215] Error Domain=NSPOSIXErrorDomain Code=61 "Connection refused" UserInfo={NSLocalizedDescription=CoreSimulatorService connection became invalid.  Simulator services will no longer be available.}
+/* com.apple.actool.compilation-results */
+/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols.h
+/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols.swift
+
+
+CpResource /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources/CLOCK_AUDIO_LICENSE.md /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/CLOCK_AUDIO_LICENSE.md (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/CLOCK_AUDIO_LICENSE.md /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/libXCTestSwiftSupport.dylib /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/libXCTestBundleInject.dylib /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libXCTestBundleInject.dylib (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libXCTestBundleInject.dylib /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/XCUnit.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCUnit.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCUnit.framework /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/XCUIAutomation.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks/XCUIAutomation.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks/XCUIAutomation.framework /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/XCTestSupport.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCTestSupport.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCTestSupport.framework /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/XCTestCore.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCTestCore.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCTestCore.framework /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/XCTAutomationSupport.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCTAutomationSupport.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCTAutomationSupport.framework /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/XCTest.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks/XCTest.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks/XCTest.framework /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/Testing.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks/Testing.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks/Testing.framework /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+CompileAssetCatalogVariant thinned /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Assets.xcassets (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Assets.xcassets --compile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/thinned --output-format human-readable-text --notices --warnings --export-dependency-info /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_dependencies_thinned --output-partial-info-plist /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist_thinned --app-icon AppIcon --enable-on-demand-resources NO --development-region en --target-device mac --minimum-deployment-target 15.0 --platform macosx
+2026-09-07 22:58:49.529 ibtoold[59890:1880227] CoreSimulatorService connection became invalid.  Simulator services will no longer be available.
+2026-09-07 22:58:49.530 ibtoold[59890:1880228] Logging connecton invalid: <OS_xpc_error: <dictionary: 0x1fb982080> { count = 1, transaction: 0, voucher = 0x0, contents =
+	"XPCErrorDescription" => <string: 0x1fb9821c0> { string cache = 0x0, length = 18, contents = "Connection invalid" }
+}>
+2026-09-07 22:58:49.530 ibtoold[59890:1880228] Error opening log file (/Users/schober/Library/Logs/CoreSimulator/CoreSimulator.com.apple.ibtool.log): Operation not permitted
+[-[SimServiceContext sendRequest:]:1751] ERROR : Unable to deliver request ({
+    "developer_dir" = "/Applications/Xcode.app/Contents/Developer";
+    request = "set_developer_dir";
+}) because we are not connected to CoreSimulatorService.
+[-[SimServiceContext initWithDeveloperDir:connectionType:error:]:432] WARN  : Unable to discover any Simulator runtimes. Developer Directory is /Applications/Xcode.app/Contents/Developer.
+[-[SimDiskImageManager init]:175] ERROR : Could not kickstart simdiskimaged; SimDiskImageManager services will not be available: Error Domain=NSPOSIXErrorDomain Code=53 "Software caused connection abort" UserInfo={NSLocalizedDescription=Error returned in reply from CoreSimulatorService: Connection invalid}
+[-[SimDiskImageManager _onQueue_checkConnection:]:239] ERROR : simdiskimaged returned error (invalid), marking disconnected.
+[-[SimDiskImageManager _onQueue_checkConnection:]:239] ERROR : simdiskimaged returned error (invalid), marking disconnected.
+[-[SimServiceContext initWithDeveloperDir:connectionType:error:]_block_invoke:468] ERROR : Could not get list of trusted mount directories: Error Domain=com.apple.CoreSimulator.SimError Code=410 "The service used to manage runtime disk images (simdiskimaged) crashed or is not responding" UserInfo={NSLocalizedDescription=The service used to manage runtime disk images (simdiskimaged) crashed or is not responding}
+[-[SimServiceContext sendRequest:reply:error:]:1771] ERROR : Unable to deliver request ({
+    request = "notification_subscription";
+    "set_path" = "/Users/schober/Library/Developer/CoreSimulator/Devices";
+}) because we are not connected to CoreSimulatorService.
+2026-09-07 22:58:49.606 ibtoold[59890:1880218] Error Domain=NSPOSIXErrorDomain Code=61 "Connection refused" UserInfo={NSLocalizedDescription=CoreSimulatorService connection became invalid.  Simulator services will no longer be available.}
+/* com.apple.actool.compilation-results */
+/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist_thinned
+/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/thinned/AppIcon.icns
+/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/thinned/Assets.car
+
+
+SwiftDriver GoalflowMac normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GoalflowMac -Onone @/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target arm64-apple-macos15.0 -g -module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /tmp/s2-conflict-pages-macos/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/s2-conflict-pages-macos/Build/Products/Debug -F /tmp/s2-conflict-pages-macos/Build/Products/Debug -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/s2-conflict-pages-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache -output-file-map /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -sdk-module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-generated-files.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-own-target-headers.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-project-headers.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Products/Debug/include -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources-normal/arm64 -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/arm64 -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-Swift.h -working-directory /Users/schober/Projects/TSurfing/macos-native -experimental-emit-module-separately -disable-cmo
+
+LinkAssetCatalog /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Assets.xcassets (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-linkAssetCatalog --thinned /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/thinned --thinned-dependencies /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_dependencies_thinned --thinned-info-plist-content /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist_thinned --unthinned /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/unthinned --unthinned-dependencies /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_dependencies_unthinned --unthinned-info-plist-content /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist_unthinned --output /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources --plist-output /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist
+note: Emplaced /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources/Assets.car (in target 'GoalflowMac' from project 'GoalflowMac')
+note: Emplaced /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources/AppIcon.icns (in target 'GoalflowMac' from project 'GoalflowMac')
+
+ProcessInfoPlistFile /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Info.plist /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Info.plist (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-infoPlistUtility /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Info.plist -producttype com.apple.product-type.application -genpkginfo /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PkgInfo -expandbuildsettings -platform macosx -additionalcontentfile /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist -o /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Info.plist
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_Builtin_stddef-655QE6NHDLXQLUC2ST42V0V4S.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_Builtin_stdbool-6ON7TCQSGHOLQIEUODXFHS81R.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_Builtin_stdarg-1G1T0DHAM8FGXBLWC245BRBME.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/SwiftShims-E7HFGZJ200AD0HM5GRX4SOE79.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/ptrauth-C4BW91UJO3EFZ86EJAVLVCOX2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_AvailabilityInternal-8QOSHM9GV1SSEJP8SY1V4LI69.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_SwiftConcurrencyShims-4ZFYXQBZ98G8H8FNJ8P82AD5.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/ptrcheck-9BWROSC0VPS1BA2NH1BN5Q1HF.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/DeveloperToolsSupport-BNFU1KSVA7TK8T3LNGU8EG6MP.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_Builtin_float-CDIBRVMSN6X6NRRM9IOPUPNDF.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_DarwinFoundation1-46FCGV25LEUEGHLWB9H48WR2P.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_Builtin_limits-9RCHH1XM1FS8ZQ3991384X43F.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_DarwinFoundation2-65ATDT7KK9WJQC75FXR6E6TFL.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_Builtin_stdint-BMN4CW92NEHA298W34AJWDUK5.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/sys_types-22WZPJEZQMYIYZYQUT30ANWM6.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_Builtin_tgmath-9XBUVA5BDYDQAULSMD2MXWIAB.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/libDER-162B58H56F0VP88IQDBMVEZHJ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/OpenGL-6VW515SZ9IG3PIQXDVGQYGRQI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_Builtin_stdatomic-BB6AAKGTFX0J4FPBCLQWOW2GP.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_DarwinFoundation3-27EQ6RS1D5AKEC7W6V3TFV7QY.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_Builtin_intrinsics-D3WSQSCTIWNYYN5QE5RP8VZVG.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_Builtin_inttypes-P4VZU0USCJ6CBVQUHMAN8YHO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Darwin-LCI51F3R7O24ZECV5B0MB9L1.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/simd-BQVNYJ639A6D2D64EZGO33KJ0.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/libkern-C3TYYEQHZK8GK2WRXPH6B4IL0.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/MachO-412NX4R8FK1SC4KISTQ5LZ579.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CUPS-4XT8W4RF3C7M4WN28XUFA2EXK.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/launch-7W5J9OM58BF2PL73KX5IT2Y21.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Spatial-78E7L0LB5G9GO3WZE9IVHSHGD.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/ObjectiveC-7AGZ9R4Y4KFTZ3V4J36LMYXVY.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/os_object-8TZBVAF0Q7QWWKASG6MW2QYMD.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/os_workgroup-BA3HRDWZA6CP8PYTVFEDE2IVG.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Dispatch-9WR2X6ECBW46GUY9SD1YNW1JU.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/XPC-1MATUT5OWJILE85JQUQ4HPBD1.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CoreFoundation-562R60W07J86WBB20U2DHF9HY.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/dnssd-5Q1LR06DPHOOVSUNDOTOHFN8Y.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/os-AH8ZIBNFVQAA2OMGRPPR700EI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Security-1RAO22GBH2XIHM9H8H2OD984H.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/IOKit-3WHHEHBAIUTUJKZZZU8MH4Q1X.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/ColorSync-BDA1PZCTOU33IQLV83XLVSIAY.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CoreAudioTypes-7UCABVI74JRQRV22SKK0JI1YQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CFNetwork-BEI2GJ5Q31M5BMN3BZX6BTM6A.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/DiskArbitration-255HKDOOXK778JOVZNTSMR6QI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CoreGraphics-2D5BDFZIIL70PN17JEDTHC64J.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CoreServices-EGIWEO67B7UVC78FBPYSMDPRV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/ImageIO-7MIMSR178GYITL6M1IPGFL4RQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CoreText-86Q38SP3VSOJHZEEIPMBTZJH7.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Foundation-95UT4844F2ZLDP4X5JB0UMOZ5.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/OSLog-IIZ7E0QTI2B0FY7NOEPPQV94.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CoreMIDI-EW69ZHF7BDX87SWT8G1G1H5OF.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/_LocationEssentials-4PF12NPZLCWF5RCZBB27JBKSY.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CoreAudio-20CNKMOJZVI9DM78TZXACBD47.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Symbols-EL2ZCRJECF45K0CQ2HKT85Z4F.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/ApplicationServices-1HJ0U1GT3RQ0Z5LFW3BF8PLSN.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/JavaScriptCore-F487PERL1B66GHO2DO97AK9MR.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/DataDetection-4A2B4KZLTJJL2G7I9Z1FO1INA.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/LocalAuthentication-1GYBYE74CP40SYL27CN8P3M2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Accessibility-625VY7KECA6V2FF0EYHWCB3WU.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/IOSurface-AC5QH2K7GJIRWYNK5NBMRYJ7P.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Network-6ANNZ4A1HWQDVHIT8B52RI1JD.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CoreData-1FQBCNWIU34L54DX02KTH0N5H.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CoreLocation-CWVA49VHMUG6K7Q3OK0AVLUI5.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CoreTransferable-7P57J1SQ5O8QHSAGG50IX2T9B.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/ServiceManagement-5C3ZBCC8EFMQYW4H1A733TO6Y.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/UniformTypeIdentifiers-4N8S8OJPIWTPI3NYP59IICCBG.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Metal-EFEZXMQ895YE4YU4C39RMWWDX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/EventKit-DPDI0M4WH7F6YFRNYW6QE4342.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Carbon-C38KQ57JMD4Q4O23846UOK0EA.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CoreVideo-6QR80D56WF49L3N54V1BDZ1TT.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/AudioToolbox-8SXSJH93YW0X1HLVAUQ5NWMH4.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CoreMedia-8306OS2G7797EEY0EYWMHOWA1.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/QuartzCore-3DHM2TQIQXB4TLU2466W920OQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/CoreImage-407UT1ZCEJBUWY5ES4NYJ5BI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/SwiftUICore-3ZTK9MOU02G2X6KYQ72L51G2N.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/AVFAudio-9KOLN6O19PPED2GBNR4MAYRNL.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/MediaToolbox-LJF68LO3WPY6RH10LXDH9301.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/AppKit-7T8JGHDGMQ5U2P607G2OEJBYZ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/AVFoundation-6H3A2BYWF7A5TUH6T1MQ8M023.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/WebKit-94VQ5QBUNKA1OUJ6D0K3XUHZI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/SwiftUI-1T9OCT3XJXAL65EIJ5LYB5VRK.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/ModuleCache.noindex/ScreenCaptureKit-CI3GCV2YON36L0UK5B8XNCUN7.pcm
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ GoalflowMac (in target 'GoalflowMac' from project 'GoalflowMac')
+
+EmitSwiftModule normal arm64 (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:68:9: warning: stored property 'value' of 'Sendable'-conforming struct 'AnyCodable' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var value: Any?
+        ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:177:9: warning: stored property 'payload' of 'Sendable'-conforming struct 'StagedEntityChange' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var payload: Any? // Any JSON value
+        ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:187:9: warning: stored property 'previousValue' of 'Sendable'-conforming struct 'StagedLocalTransaction' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var previousValue: Any?
+        ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:189:9: warning: stored property 'value' of 'Sendable'-conforming struct 'StagedLocalTransaction' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var value: Any?
+        ^
+
+SwiftCompile normal arm64 Compiling\ FrogBadge.swift,\ GoalModels.swift,\ GoalStore.swift,\ GoalflowMacApp.swift,\ GoalflowTask.swift,\ HotkeyGateway.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/Components/FrogBadge.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/GoalModels.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/GoalStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/App/GoalflowMacApp.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/GoalflowTask.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/HotkeyGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/Components/FrogBadge.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/GoalModels.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/GoalStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/App/GoalflowMacApp.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/GoalflowTask.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/HotkeyGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ ExecutionPanelView.swift,\ ExecutionState.swift,\ CounterLedger.swift,\ CausalFocus.swift,\ ExecutionTimer.swift,\ FocusSessionStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/ExecutionPanelView.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/ExecutionState.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CounterLedger.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CausalFocus.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/ExecutionTimer.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/FocusSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/ExecutionPanelView.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/ExecutionPanelView.swift:801:10: warning: 'onChange(of:perform:)' was deprecated in macOS 14.0: Use `onChange` with a two or zero parameter action closure instead.
+        .onChange(of: vm.task?.id) { _ in completionInstructionVisible = false }
+         ^
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/ExecutionState.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CounterLedger.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CausalFocus.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/ExecutionTimer.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/FocusSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ SyncMeta.swift,\ SyncTransport.swift,\ TTSGateway.swift,\ UpdaterService.swift,\ GeneratedAssetSymbols.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncTransport.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/TTSGateway.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/UpdaterService.swift /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:68:9: warning: stored property 'value' of 'Sendable'-conforming struct 'AnyCodable' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var value: Any?
+        ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:177:9: warning: stored property 'payload' of 'Sendable'-conforming struct 'StagedEntityChange' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var payload: Any? // Any JSON value
+        ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:187:9: warning: stored property 'previousValue' of 'Sendable'-conforming struct 'StagedLocalTransaction' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var previousValue: Any?
+        ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:189:9: warning: stored property 'value' of 'Sendable'-conforming struct 'StagedLocalTransaction' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var value: Any?
+        ^
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncTransport.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/TTSGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/TTSGateway.swift:9:14: warning: instance method 'lock' is unavailable from asynchronous contexts; Use async-safe scoped locking instead; this is an error in the Swift 6 language mode
+        lock.lock(); let enabled = isEnabled; lock.unlock(); guard enabled else { return }
+             ^
+Foundation.NSLock.lock:2:11: note: 'lock()' declared here
+open func lock()}
+          ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/TTSGateway.swift:9:52: warning: instance method 'unlock' is unavailable from asynchronous contexts; Use async-safe scoped locking instead; this is an error in the Swift 6 language mode
+        lock.lock(); let enabled = isEnabled; lock.unlock(); guard enabled else { return }
+                                                   ^
+Foundation.NSLock.unlock:2:11: note: 'unlock()' declared here
+open func unlock()}
+          ^
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/UpdaterService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ CaptureOverlayView.swift,\ CaptureParser.swift,\ CaptureService.swift,\ CaptureViewModel.swift,\ CaptureWindowController.swift,\ CircularProgress.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/CaptureOverlayView.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CaptureParser.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CaptureService.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/CaptureViewModel.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/CaptureWindowController.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/Components/CircularProgress.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/CaptureOverlayView.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CaptureParser.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CaptureService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/CaptureViewModel.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/CaptureWindowController.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/Components/CircularProgress.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ KeychainSessionStore.swift,\ LoginItemService.swift,\ MenuBarController.swift,\ MetaStore.swift,\ NativeCaptchaView.swift,\ PlanningGate.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/KeychainSessionStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/LoginItemService.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/MenuBarController.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/MetaStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/NativeCaptchaView.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/PlanningGate.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/KeychainSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/LoginItemService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/MenuBarController.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/MetaStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/NativeCaptchaView.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/PlanningGate.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ StableJson.swift,\ StoreBridge.swift,\ SupabaseAuthService.swift,\ SyncBackedCurrentTaskProvider.swift,\ SyncEngine.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/StableJson.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/StoreBridge.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/SupabaseAuthService.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Providers/SyncBackedCurrentTaskProvider.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncEngine.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/StableJson.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/StoreBridge.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/SupabaseAuthService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Providers/SyncBackedCurrentTaskProvider.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncEngine.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ Clock.swift,\ CompletionHoldController.swift,\ ConflictsSheet.swift,\ CurrentTaskProvider.swift,\ DailyPlanStore.swift,\ DeviceIdStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/Clock.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/CompletionHoldController.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/ConflictsSheet.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Providers/CurrentTaskProvider.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/DailyPlanStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/DeviceIdStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/Clock.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/CompletionHoldController.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/ConflictsSheet.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Providers/CurrentTaskProvider.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/DailyPlanStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/DeviceIdStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ BreakState.swift,\ BreakTimer.swift,\ BreakdownService.swift,\ BreakdownSheet.swift,\ BuildStaging.swift,\ CalendarCollisionService.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/BreakState.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/BreakTimer.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/BreakdownService.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakdownSheet.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/BuildStaging.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/CalendarCollisionService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/BreakState.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/BreakTimer.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/BreakdownService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakdownSheet.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/BuildStaging.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/CalendarCollisionService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/CalendarCollisionService.swift:48:26: warning: 'authorized' was deprecated in macOS 14.0: Check for full access or write only access
+        guard status == .authorized || status == .fullAccess else { return nil }
+                         ^
+
+SwiftCompile normal arm64 Compiling\ AppDelegate.swift,\ ApplyPushResults.swift,\ ApplyRemotePage.swift,\ BreakCoverWindowController.swift,\ BreakOverlayView.swift,\ BreakSessionStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/App/AppDelegate.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/ApplyPushResults.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/ApplyRemotePage.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakCoverWindowController.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakOverlayView.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/BreakSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/App/AppDelegate.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/ApplyPushResults.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/ApplyRemotePage.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakCoverWindowController.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakCoverWindowController.swift:80:35: warning: call to main actor-isolated instance method 'orderOut' in a synchronous nonisolated context
+    deinit { for w in windows { w.orderOut(nil) } }
+                                  ^
+AppKit.NSWindow.orderOut:2:22: note: calls to instance method 'orderOut' from outside of its actor context are implicitly asynchronous
+@MainActor open func orderOut(_ sender: Any?)}
+                     ^
+AppKit.NSWindow.orderOut:2:22: note: main actor isolation inferred from inheritance from class 'NSResponder'
+@MainActor open func orderOut(_ sender: Any?)}
+                     ^
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakOverlayView.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/BreakSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ RealtimeWakeup.swift,\ SchedulingBridge.swift,\ ServerConflicts.swift,\ SignInView.swift,\ SoundGateway.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/RealtimeWakeup.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/SchedulingBridge.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/ServerConflicts.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/SignInView.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/SoundGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/RealtimeWakeup.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/SchedulingBridge.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/ServerConflicts.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/SignInView.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/SoundGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for GoalflowMac (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriver\ Compilation\ Requirements GoalflowMac normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GoalflowMac -Onone @/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target arm64-apple-macos15.0 -g -module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /tmp/s2-conflict-pages-macos/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/s2-conflict-pages-macos/Build/Products/Debug -F /tmp/s2-conflict-pages-macos/Build/Products/Debug -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/s2-conflict-pages-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache -output-file-map /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -sdk-module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-generated-files.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-own-target-headers.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-project-headers.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Products/Debug/include -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources-normal/arm64 -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/arm64 -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-Swift.h -working-directory /Users/schober/Projects/TSurfing/macos-native -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal arm64 Compiling StableJson.swift, StoreBridge.swift, SupabaseAuthService.swift, SyncBackedCurrentTaskProvider.swift, SyncEngine.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftMergeGeneratedHeaders /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GoalflowMac-Swift.h /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-Swift.h (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-swiftHeaderTool -arch arm64 /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-Swift.h -o /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GoalflowMac-Swift.h
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMac.swiftmodule/arm64-apple-macos.swiftmodule /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftmodule (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftmodule /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMac.swiftmodule/arm64-apple-macos.swiftmodule
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMac.swiftmodule/arm64-apple-macos.swiftdoc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftdoc (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftdoc /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMac.swiftmodule/arm64-apple-macos.swiftdoc
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMac.swiftmodule/arm64-apple-macos.abi.json /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.abi.json (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.abi.json /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMac.swiftmodule/arm64-apple-macos.abi.json
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMac.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftsourceinfo (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftsourceinfo /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMac.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo
+
+SwiftDriver GoalflowMacTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GoalflowMacTests -Onone @/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftFileList -DDEBUG -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target arm64-apple-macos15.0 -g -module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /tmp/s2-conflict-pages-macos/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/s2-conflict-pages-macos/Build/Products/Debug -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /tmp/s2-conflict-pages-macos/Build/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -emit-localized-strings -emit-localized-strings-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64 -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/s2-conflict-pages-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache -output-file-map /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -sdk-module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-generated-files.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-own-target-headers.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-project-headers.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Products/Debug/include -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources-normal/arm64 -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources/arm64 -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-Swift.h -working-directory /Users/schober/Projects/TSurfing/macos-native -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal arm64 Compiling AppDelegate.swift, ApplyPushResults.swift, ApplyRemotePage.swift, BreakCoverWindowController.swift, BreakOverlayView.swift, BreakSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling FrogBadge.swift, GoalModels.swift, GoalStore.swift, GoalflowMacApp.swift, GoalflowTask.swift, HotkeyGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SyncMeta.swift, SyncTransport.swift, TTSGateway.swift, UpdaterService.swift, GeneratedAssetSymbols.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling Clock.swift, CompletionHoldController.swift, ConflictsSheet.swift, CurrentTaskProvider.swift, DailyPlanStore.swift, DeviceIdStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling CaptureOverlayView.swift, CaptureParser.swift, CaptureService.swift, CaptureViewModel.swift, CaptureWindowController.swift, CircularProgress.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling BreakState.swift, BreakTimer.swift, BreakdownService.swift, BreakdownSheet.swift, BuildStaging.swift, CalendarCollisionService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling RealtimeWakeup.swift, SchedulingBridge.swift, ServerConflicts.swift, SignInView.swift, SoundGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KeychainSessionStore.swift, LoginItemService.swift, MenuBarController.swift, MetaStore.swift, NativeCaptchaView.swift, PlanningGate.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCUIAutomation-D50HS5DGI7QMXRW7FCAZH3O4V.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCTest-1TRII7ME0H4724KJY9J0HQO0Y.pcm
+
+SwiftExplicitDependencyCompileModuleFromInterface arm64 /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCUIAutomation-U5PJ27XWJSTK.swiftmodule
+
+SwiftExplicitDependencyCompileModuleFromInterface arm64 /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCTest-33R9VGYQ59A0C.swiftmodule
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ GoalflowMacTests (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+EmitSwiftModule normal arm64 (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ SyncTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SyncTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SyncTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SyncTests.swift:545:13: warning: initialization of immutable value 'res' was never used; consider replacing with assignment to '_' or removing it
+        let res = PushResult(mutationId: "m1", accepted: true, serverVersion: 11, replayMismatch: nil, serverMissing: nil, conflictId: nil, record: rec)
+        ~~~~^~~
+        _
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SyncTests.swift:639:13: warning: variable 'meta' was never mutated; consider changing to 'let' constant
+        var meta = emptySyncMeta()
+        ~~~ ^
+        let
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SyncTests.swift:645:13: warning: variable 'meta' was never mutated; consider changing to 'let' constant
+        var meta = emptySyncMeta()
+        ~~~ ^
+        let
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SyncTests.swift:661:13: warning: variable 'meta' was never mutated; consider changing to 'let' constant
+        var meta = emptySyncMeta()
+        ~~~ ^
+        let
+
+SwiftCompile normal arm64 Compiling\ HardeningTests.swift,\ PlanningGateTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/HardeningTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/PlanningGateTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/HardeningTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/PlanningGateTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ CausalFocusTests.swift,\ CaptureViewModelTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CausalFocusTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CaptureViewModelTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CausalFocusTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CaptureViewModelTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ CaptureTests.swift,\ CounterLedgerTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CaptureTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CounterLedgerTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CaptureTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CounterLedgerTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ RealtimeWakeupTests.swift,\ SchedulingTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/RealtimeWakeupTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SchedulingTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/RealtimeWakeupTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SchedulingTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ BreakTests.swift,\ BreakdownTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/BreakTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/BreakdownTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/BreakTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/BreakdownTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ ExecutionTimerTests.swift,\ FocusSessionStoreTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/ExecutionTimerTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/FocusSessionStoreTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/ExecutionTimerTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/FocusSessionStoreTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ CalendarTests.swift,\ CaptureServiceTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CalendarTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CaptureServiceTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CalendarTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CaptureServiceTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ SessionBTests.swift,\ SessionCTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SessionBTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SessionCTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SessionBTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SessionCTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for GoalflowMacTests (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriver\ Compilation\ Requirements GoalflowMacTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GoalflowMacTests -Onone @/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftFileList -DDEBUG -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target arm64-apple-macos15.0 -g -module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /tmp/s2-conflict-pages-macos/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/s2-conflict-pages-macos/Build/Products/Debug -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /tmp/s2-conflict-pages-macos/Build/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -emit-localized-strings -emit-localized-strings-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64 -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/s2-conflict-pages-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache -output-file-map /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -sdk-module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-generated-files.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-own-target-headers.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-project-headers.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Products/Debug/include -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources-normal/arm64 -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources/arm64 -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-Swift.h -working-directory /Users/schober/Projects/TSurfing/macos-native -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal arm64 Compiling CaptureTests.swift, CounterLedgerTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 Compiling\ EmailOtpAuthTests.swift,\ ExecutionStateTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/EmailOtpAuthTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/ExecutionStateTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/EmailOtpAuthTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/ExecutionStateTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftMergeGeneratedHeaders /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources/GoalflowMacTests-Swift.h /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-Swift.h (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-swiftHeaderTool -arch arm64 /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-Swift.h -o /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources/GoalflowMacTests-Swift.h
+
+SwiftDriverJobDiscovery normal arm64 Compiling CalendarTests.swift, CaptureServiceTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/arm64-apple-macos.swiftmodule /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftmodule (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftmodule /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/arm64-apple-macos.swiftmodule
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/arm64-apple-macos.swiftdoc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftdoc (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftdoc /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/arm64-apple-macos.swiftdoc
+
+SwiftDriverJobDiscovery normal arm64 Compiling ExecutionTimerTests.swift, FocusSessionStoreTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/arm64-apple-macos.abi.json /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.abi.json (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.abi.json /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/arm64-apple-macos.abi.json
+
+SwiftDriverJobDiscovery normal arm64 Compiling CausalFocusTests.swift, CaptureViewModelTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+Copy /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftsourceinfo (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftsourceinfo /tmp/s2-conflict-pages-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo
+
+SwiftDriverJobDiscovery normal arm64 Compiling RealtimeWakeupTests.swift, SchedulingTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling BreakTests.swift, BreakdownTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling HardeningTests.swift, PlanningGateTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SessionBTests.swift, SessionCTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SyncTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling EmailOtpAuthTests.swift, ExecutionStateTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriver\ Compilation GoalflowMacTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-Swift-Compilation -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GoalflowMacTests -Onone @/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftFileList -DDEBUG -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target arm64-apple-macos15.0 -g -module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /tmp/s2-conflict-pages-macos/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/s2-conflict-pages-macos/Build/Products/Debug -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /tmp/s2-conflict-pages-macos/Build/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -emit-localized-strings -emit-localized-strings-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64 -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/s2-conflict-pages-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache -output-file-map /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -sdk-module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-generated-files.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-own-target-headers.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-project-headers.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Products/Debug/include -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources-normal/arm64 -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources/arm64 -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-Swift.h -working-directory /Users/schober/Projects/TSurfing/macos-native -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal arm64 Compiling ExecutionPanelView.swift, ExecutionState.swift, CounterLedger.swift, CausalFocus.swift, ExecutionTimer.swift, FocusSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriver\ Compilation GoalflowMac normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-Swift-Compilation -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GoalflowMac -Onone @/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target arm64-apple-macos15.0 -g -module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /tmp/s2-conflict-pages-macos/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/s2-conflict-pages-macos/Build/Products/Debug -F /tmp/s2-conflict-pages-macos/Build/Products/Debug -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/s2-conflict-pages-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache -output-file-map /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -sdk-module-cache-path /tmp/s2-conflict-pages-macos/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/s2-conflict-pages-macos/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-generated-files.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-own-target-headers.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-project-headers.hmap -Xcc -I/tmp/s2-conflict-pages-macos/Build/Products/Debug/include -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources-normal/arm64 -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/arm64 -Xcc -I/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-Swift.h -working-directory /Users/schober/Projects/TSurfing/macos-native -experimental-emit-module-separately -disable-cmo
+
+Ld /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib normal (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos15.0 -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -O0 -L/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -L/tmp/s2-conflict-pages-macos/Build/Products/Debug -F/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -F/tmp/s2-conflict-pages-macos/Build/Products/Debug -filelist /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.LinkFileList -install_name @rpath/Tsurfing.debug.dylib -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker @executable_path/../Frameworks -Xlinker -object_path_lto -Xlinker /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -dependency_info -Xlinker /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftmodule @/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-linker-args.resp -Xlinker -alias -Xlinker _main -Xlinker ___debug_main_executable_dylib_entry_point -o /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib
+
+ConstructStubExecutorLinkFileList /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-ExecutorLinkFileList-normal-arm64.txt (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    construct-stub-executor-link-file-list /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libPreviewsJITStubExecutor_no_swift_entry_point.a /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a --output /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-ExecutorLinkFileList-normal-arm64.txt
+note: Using stub executor library with Swift entry point. (in target 'GoalflowMac' from project 'GoalflowMac')
+
+Ld /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing normal (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos15.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -O0 -L/tmp/s2-conflict-pages-macos/Build/Products/Debug -F/tmp/s2-conflict-pages-macos/Build/Products/Debug -Xlinker -rpath -Xlinker @executable_path -Xlinker -rpath -Xlinker @executable_path/../Frameworks -rdynamic -Xlinker -no_deduplicate -e ___debug_blank_executor_main -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_dylib -Xlinker /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-DebugDylibPath-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_instlnm -Xlinker /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-DebugDylibInstallName-normal-arm64.txt -Xlinker -filelist -Xlinker /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-ExecutorLinkFileList-normal-arm64.txt /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib -o /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing
+
+CopySwiftLibs /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib --scan-folder /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks --scan-folder /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns --scan-folder /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Library/SystemExtensions --scan-folder /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Extensions --platform macosx --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os --back-deploy-swift-span
+Ignoring --strip-bitcode because --sign was not passed
+
+ExtractAppIntentsMetadata (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name GoalflowMac --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk --xcode-version 17F113 --platform-family macOS --deployment-target 15.0 --bundle-identifier com.mariusschober.tsurfing.mac --output /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources --target-triple arm64-apple-macos15.0 --binary-file /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing --dependency-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing_dependency_info.dat --stringsdata-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftFileList --metadata-file-list /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.DependencyMetadataFileList --static-metadata-file-list /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.DependencyStaticMetadataFileList --swift-const-vals-list /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-09-07 22:59:11.627 appintentsmetadataprocessor[60060:1881454] Starting appintentsmetadataprocessor export
+2026-09-07 22:59:11.633 appintentsmetadataprocessor[60060:1881454] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+ProcessInfoPlistFile /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Info.plist /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/empty-GoalflowMacTests.plist (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-infoPlistUtility /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/empty-GoalflowMacTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -platform macosx -o /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Info.plist
+
+Ld /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/MacOS/GoalflowMacTests normal (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos15.0 -bundle -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -O0 -L/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -L/tmp/s2-conflict-pages-macos/Build/Products/Debug -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -F/tmp/s2-conflict-pages-macos/Build/Products/Debug -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -filelist /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.LinkFileList -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker @loader_path/../Frameworks -Xlinker -rpath -Xlinker @executable_path/../Frameworks -bundle_loader /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing -Xlinker -object_path_lto -Xlinker /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -dependency_info -Xlinker /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftmodule @/tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-linker-args.resp -Xlinker -needed_framework -Xlinker XCTest -framework XCTest -Xlinker -needed-lXCTestSwiftSupport -lXCTestSwiftSupport /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib -o /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/MacOS/GoalflowMacTests
+
+CopySwiftLibs /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/MacOS/GoalflowMacTests --scan-folder /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Frameworks --scan-folder /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/PlugIns --scan-folder /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Library/SystemExtensions --scan-folder /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Extensions --platform macosx --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os --back-deploy-swift-span
+Ignoring --strip-bitcode because --sign was not passed
+
+ExtractAppIntentsMetadata (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name GoalflowMacTests --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk --xcode-version 17F113 --platform-family macOS --deployment-target 15.0 --bundle-identifier com.mariusschober.tsurfing.mac.tests --output /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Resources --target-triple arm64-apple-macos15.0 --binary-file /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/MacOS/GoalflowMacTests --dependency-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_dependency_info.dat --stringsdata-file /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftFileList --metadata-file-list /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.DependencyMetadataFileList --static-metadata-file-list /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.DependencyStaticMetadataFileList --swift-const-vals-list /tmp/s2-conflict-pages-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-09-07 22:59:12.041 appintentsmetadataprocessor[60066:1881487] Starting appintentsmetadataprocessor export
+2026-09-07 22:59:12.042 appintentsmetadataprocessor[60066:1881487] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+RegisterExecutionPolicyException /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-RegisterExecutionPolicyException /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest
+
+Touch /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /usr/bin/touch -c /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest
+
+RegisterExecutionPolicyException /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-RegisterExecutionPolicyException /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app
+
+Validate /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-validationUtility /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app -no-validate-extension -infoplist-subpath Contents/Info.plist
+
+Touch /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /usr/bin/touch -c /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app
+
+RegisterWithLaunchServices /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f -R -trusted /tmp/s2-conflict-pages-macos/Build/Products/Debug/Tsurfing.app
+
+
+
+*** If you believe this error represents a bug, please attach the result bundle at /tmp/s2-conflict-pages-macos/Logs/Test/Test-GoalflowMac-2026.09.07_22-58-44-+0100.xcresult
+
+2026-09-07 22:59:14.142 xcodebuild[59866:1880032] *** attempt to post distributed notification 'IDETestProgressNotification' thwarted by sandboxing.
+
+Date/Time:     Mon Sep  7 22:59:14 2026
+OS Version:    25G83
+Application:   xcodebuild
+
+Backtrace:
+0   CoreFoundation                      0x000000018daf788c __CFGenerateReport + 244
+1   CoreFoundation                      0x000000018d9586cc _CFXNotificationPost + 1448
+2   Foundation                          0x000000018f247b94 -[NSDistributedNotificationCenter postNotificationName:object:userInfo:options:] + 92
+3   IDEFoundation                       0x000000011457b190 -[IDETestProgressNotificationsObserver _considerPostingDistributedNotification] + 948
+4   IDEFoundation                       0x000000011457f87c -[IDETestRunSession worker:forTestTargetRunner:willFinishWithResult:] + 320
+5   XCTHarness                          0x00000001106b4614 -[XCTHTestTargetRunner testRunner:willFinishWithResult:] + 496
+6   XCTHarness                          0x00000001106af91c -[XCTHTestRunner willFinishWithResult:sessionState:] + 1496
+7   XCTHarness                          0x00000001106a23dc __63-[XCTHTestOperationCoordinator _reportFinishToRunnerWithError:]_block_invoke_2 + 324
+8   XCTHarness                          0x00000001106a2cec -[XCTHTestOperationCoordinator _considerDispatchingDelegateBlock] + 824
+9   XCTHarness                          0x00000001107ce56c -[XCTHTestOperationCoordinator _executeDelegateBlockWithNextConsoleChunk:].cold.1 + 204
+10  XCTHarness                          0x00000001106a2e58 -[XCTHTestOperationCoordinator _executeDelegateBlockWithNextConsoleChunk:] + 128
+11  XCTHarness                          0x00000001106a2240 -[XCTHTestOperationCoordinator _reportFinishToRunnerWithError:] + 436
+12  XCTHarness                          0x00000001106a1f78 __81-[XCTHTestOperationCoordinator _tearDownLoggingAndReportFinishToRunnerWithError:]_block_invoke_2 + 36
+13  libdispatch.dylib                   0x000000018d71ba28 _dispatch_call_block_and_release + 32
+14  libdispatch.dylib                   0x000000018d7354b0 _dispatch_client_callout + 16
+15  libdispatch.dylib                   0x000000018d7533f0 _dispatch_main_queue_drain.cold.6 + 832
+16  libdispatch.dylib                   0x000000018d72a9e4 _dispatch_main_queue_drain + 176
+17  libdispatch.dylib                   0x000000018d72a924 _dispatch_main_queue_callback_4CF + 44
+18  CoreFoundation                      0x000000018d9d1754 __CFRUNLOOP_IS_SERVICING_THE_MAIN_DISPATCH_QUEUE__ + 16
+19  CoreFoundation                      0x000000018d993ce8 __CFRunLoopRun + 1944
+20  CoreFoundation                      0x000000018da66264 _CFRunLoopRunSpecificWithOptions + 532
+21  CoreFoundation                      0x000000018da09b24 CFRunLoopRun + 64
+22  Xcode3Core                          0x00000001044a4784 -[Xcode3CommandLineBuildTool waitForBuildWithBuildLog:buildActionTimingSection:executionEnvironment:title:operationToEnqueue:error:] + 572
+23  Xcode3Core                          0x00000001044a50c8 -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] + 1180
+24  Xcode3Core                          0x00000001044a5e64 -[Xcode3CommandLineBuildTool _buildWithTimingSection:] + 660
+25  Xcode3Core                          0x00000001044b1ce0 -[Xcode3CommandLineBuildTool run] + 5000
+26  libxcodebuildLoader.dylib           0x0000000104311514 XcodeBuildMain + 632
+27  xcodebuild                          0x0000000104203144 -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] + 164
+28  xcodebuild                          0x0000000104201640 -[XcodebuildPreIDEHandler runWithArguments:] + 372
+29  xcodebuild                          0x000000010420115c main + 716
+30  dyld                                0x000000018d50c4e4 start + 6992
+2026-09-07 22:59:14.151 xcodebuild[59866:1880063]  IDETestOperationsObserverDebug: Failure collecting logarchive: Error Domain=NSCocoaErrorDomain Code=4099 "The connection to service named com.apple.testmanagerd.control was invalidated: Connection init failed at lookup with error 159 - Sandbox restriction." UserInfo={NSDebugDescription=The connection to service named com.apple.testmanagerd.control was invalidated: Connection init failed at lookup with error 159 - Sandbox restriction.}
+2026-09-07 22:59:14.170 xcodebuild[59866:1880032] [MT] IDETestOperationsObserverDebug: 1.832 elapsed -- Testing started completed.
+2026-09-07 22:59:14.170 xcodebuild[59866:1880032] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-09-07 22:59:14.170 xcodebuild[59866:1880032] [MT] IDETestOperationsObserverDebug: 1.832 sec, +1.832 sec -- end
+2026-09-07 22:59:14.252 xcodebuild[59866:1880032] *** attempt to post distributed notification 'IDETestsDidCompleteNotification' thwarted by sandboxing.
+
+Date/Time:     Mon Sep  7 22:59:14 2026
+OS Version:    25G83
+Application:   xcodebuild
+
+Backtrace:
+0   CoreFoundation                      0x000000018daf788c __CFGenerateReport + 244
+1   CoreFoundation                      0x000000018d9586cc _CFXNotificationPost + 1448
+2   Foundation                          0x000000018f247b94 -[NSDistributedNotificationCenter postNotificationName:object:userInfo:options:] + 92
+3   IDEFoundation                       0x000000011436265c __214-[IDETestSchemeAction testOperationWithSchemeOperationParameters:testManager:buildOperation:buildParameters:schemeCommand:actionRecord:testPlanRunSpecifications:deviceAvailableChecker:outError:actionCallbackBlock:]_block_invoke_2.521 + 440
+4   IDEFoundation                       0x00000001148f2418 $s13IDEFoundation32IDESchemeActionsInvocationRecordC4save4withyySb_So7NSErrorCSgtc_tFySb_AHtcfU_ + 188
+5   IDEFoundation                       0x00000001148f2660 $s13IDEFoundation32IDESchemeActionsInvocationRecordC4save4withyySb_So7NSErrorCSgtc_tFySayAGGcfU0_ + 316
+6   IDEFoundation                       0x00000001148f2d80 $s13IDEFoundation32IDESchemeActionsInvocationRecordC23saveSchemeActionRecords33_D40A64AB4990F04B775584624DAB8AEELL15completionBlockyySaySo7NSErrorCGc_tFyycfU0_ + 124
+7   IDEFoundation                       0x00000001145c54fc $sIegh_IeyBh_TR + 28
+8   DVTFoundation                       0x0000000110e62bd0 __DVT_CALLING_CLIENT_BLOCK__ + 16
+9   DVTFoundation                       0x0000000110e64024 __DVTDispatchGroupNotify_block_invoke + 152
+10  libdispatch.dylib                   0x000000018d71ba28 _dispatch_call_block_and_release + 32
+11  libdispatch.dylib                   0x000000018d7354b0 _dispatch_client_callout + 16
+12  libdispatch.dylib                   0x000000018d7533f0 _dispatch_main_queue_drain.cold.6 + 832
+13  libdispatch.dylib                   0x000000018d72a9e4 _dispatch_main_queue_drain + 176
+14  libdispatch.dylib                   0x000000018d72a924 _dispatch_main_queue_callback_4CF + 44
+15  CoreFoundation                      0x000000018d9d1754 __CFRUNLOOP_IS_SERVICING_THE_MAIN_DISPATCH_QUEUE__ + 16
+16  CoreFoundation                      0x000000018d993ce8 __CFRunLoopRun + 1944
+17  CoreFoundation                      0x000000018da66264 _CFRunLoopRunSpecificWithOptions + 532
+18  CoreFoundation                      0x000000018da09b24 CFRunLoopRun + 64
+19  Xcode3Core                          0x00000001044a4784 -[Xcode3CommandLineBuildTool waitForBuildWithBuildLog:buildActionTimingSection:executionEnvironment:title:operationToEnqueue:error:] + 572
+20  Xcode3Core                          0x00000001044a50c8 -[Xcode3CommandLineBuildTool doBuildForBuildAction:timingSection:colorize:colorizeFailure:error:] + 1180
+21  Xcode3Core                          0x00000001044a5e64 -[Xcode3CommandLineBuildTool _buildWithTimingSection:] + 660
+22  Xcode3Core                          0x00000001044b1ce0 -[Xcode3CommandLineBuildTool run] + 5000
+23  libxcodebuildLoader.dylib           0x0000000104311514 XcodeBuildMain + 632
+24  xcodebuild                          0x0000000104203144 -[XcodebuildPreIDEHandler loadXcode3ProjectSupportAndRunXcode3CommandLineBuildToolWithArguments:] + 164
+25  xcodebuild                          0x0000000104201640 -[XcodebuildPreIDEHandler runWithArguments:] + 372
+26  xcodebuild                          0x000000010420115c main + 716
+27  dyld                                0x000000018d50c4e4 start + 6992
+
+Test session results, code coverage, and logs:
+	/tmp/s2-conflict-pages-macos/Logs/Test/Test-GoalflowMac-2026.09.07_22-58-44-+0100.xcresult
+
+Testing failed:
+	Tsurfing encountered an error (Failed to establish communication with the test runner. (Underlying Error: Couldn’t communicate with a helper application. Try your operation again. If that fails, quit and relaunch the application and try again. The connection to service named com.apple.testmanagerd.control was invalidated: Connection init failed at lookup with error 159 - Sandbox restriction.))
+
+** TEST FAILED **
+
+Testing started

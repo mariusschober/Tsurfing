@@ -1,0 +1,18 @@
+Starting a Gradle Daemon, 1 incompatible Daemon could not be reused, use --status for details
+
+FAILURE: Build failed with an exception.
+
+* Where:
+Build file '/Users/schober/Projects/TSurfing/android-native/app/build.gradle' line: 114
+
+* What went wrong:
+A problem occurred evaluating project ':app'.
+> Configured goalflowKeystore does not exist: /tmp/goalflow-release.keystore
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 11s

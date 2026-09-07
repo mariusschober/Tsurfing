@@ -1,0 +1,19 @@
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Could not determine the dependencies of task ':app:testProductionDebugUnitTest'.
+> Could not create task ':app:compileProductionDebugUnitTestJavaWithJavac'.
+   > Failed to calculate the value of task ':app:compileProductionDebugUnitTestJavaWithJavac' property 'javaCompiler'.
+      > Cannot find a Java installation on your machine matching this tasks requirements: {languageVersion=21, vendor=any vendor, implementation=vendor-specific} for MAC_OS on aarch64.
+         > No locally installed toolchains match and toolchain download repositories have not been configured.
+
+* Try:
+> Learn more about toolchain auto-detection at https://docs.gradle.org/8.11.1/userguide/toolchains.html#sec:auto_detection.
+> Learn more about toolchain repositories at https://docs.gradle.org/8.11.1/userguide/toolchains.html#sub:download_repositories.
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 2s

@@ -151,8 +151,35 @@ UI activation, day selection, server acceptance and native integration remain.
 
 Implement/prove the private counter/action ledger, baseline/legacy ambiguities,
 all-client transactional causal commands and atomic completion, forward schema
-and receipts, bounded history reconciliation and paged conflicts, old-tab write
+and receipts, bounded history reconciliation, old-tab write
 fencing/import and mixed-version rollout, shared TS/Kotlin/Swift/PostgreSQL
 fixtures, complete native gates and final independent compatibility review.
 `S2_PROTOCOL_ADR.md` records the design; it is not evidence these paths exist.
 Final S2 commit and S3 handover are intentionally unset until these pass.
+
+## Conflict pagination checkpoint
+
+`b9d8503456d8ca4954f7567dc31c48a471d16335`: **PASS_LOCAL**. Web, Android and Mac now scan the additive
+`GET /api/v1/sync/conflicts/page` endpoint using immutable UUID order, at most
+20 conflicts per response. An explicit empty page terminates the scan, so a
+lower PostgREST row cap cannot silently truncate it. Each validated page merges
+durably before the next request. The cursor restarts on every sync; it is not
+a committed-change high-water mark. Concurrent insertions behind the scan
+appear on the next sync; resolving visited rows cannot skip later rows.
+
+Tests recovered 1,003 synthetic conflicts with a seven-row database cap and
+intervening resolution. Android additionally proves an invalid continuation
+retains the already imported first page. Web rejects backward, duplicated,
+skipping, omitted and malformed cursors. Full Web release: 482 passed. Native
+Android: 141 passed, one hosted skip; lint and debug build passed. macOS: 223
+passed, one hosted skip. These are local tests, not hosted/PostgREST acceptance.
+The server query test exercises the installed Supabase client against synthetic
+HTTP responses. Initial native sandbox, keystore and Java toolchain failures
+are retained alongside successful gate logs.
+
+Deploy the server endpoint before upgrading clients. The legacy endpoint is
+unchanged for old clients. New clients fail closed against an older server;
+they do not fall back to an unpaged response. No migration, deployment or owner
+app installation occurred. Pagination bounds row count, not arbitrary legacy
+record size; existing response byte limits still apply. Oversize historical
+records and staged reconciliation history remain separate unfinished work.

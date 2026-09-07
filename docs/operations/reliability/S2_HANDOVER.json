@@ -318,6 +318,60 @@
         "Local event and outbox are not server acceptance",
         "No production activation; baseline authentication, day selection and native/server integration remain"
       ]
+    },
+    {
+      "commit": "b9d8503456d8ca4954f7567dc31c48a471d16335",
+      "scope": "All-client unresolved conflict keyset pagination",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeSyncEngine.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/sync/NativeSyncEngineTest.kt",
+        "macos-native/GoalflowMac/Sync/SyncEngine.swift",
+        "macos-native/GoalflowMac/Sync/SyncTransport.swift",
+        "macos-native/GoalflowMacTests/SyncTests.swift",
+        "server/conflictPages.test.ts",
+        "server/conflictPages.ts",
+        "server/routes/sync.ts",
+        "services/cloudSync.adversarial.test.ts",
+        "services/cloudSync.ts",
+        "services/conflictPages.test.ts",
+        "services/conflictPages.ts"
+      ],
+      "findingIds": [
+        "S2-CONFLICT-PAGING"
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "passed": 482
+        },
+        {
+          "command": "JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native testProductionDebugUnitTest lintProductionDebug assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "passed": 141,
+          "skipped": 1
+        },
+        {
+          "command": "xcodebuild test -project macos-native/GoalflowMac.xcodeproj -scheme GoalflowMac -configuration Debug -destination 'platform=macOS' -derivedDataPath /private/tmp/s2-conflict-pages-macos CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0,
+          "passed": 223,
+          "skipped": 1
+        }
+      ],
+      "compatibility": "Server-first rollout. Old endpoint unchanged; new clients require explicit paged responses. Scan restarts each sync. No schema changes. Oversize legacy records remain blocked by existing byte limits.",
+      "evidence": [
+        "evidence/s2-conflict-page-unit.log",
+        "evidence/s2-conflict-pages-web.log",
+        "evidence/s2-conflict-pages-lint.log",
+        "evidence/s2-conflict-pages-release.log",
+        "evidence/s2-conflict-pages-android.log",
+        "evidence/s2-conflict-pages-android-final.log",
+        "evidence/s2-conflict-pages-android-retry.log",
+        "evidence/s2-conflict-pages-android-final-gates.log",
+        "evidence/s2-conflict-pages-macos.log",
+        "evidence/s2-conflict-pages-macos-verified.log"
+      ]
     }
   ],
   "findings": [
@@ -380,7 +434,17 @@
     "evidence/s2-counter-admission-browser.log",
     "evidence/s2-counter-admission-browser-final.log",
     "evidence/s2-counter-admission-release.log",
-    "evidence/s2-counter-admission-release-final.log"
+    "evidence/s2-counter-admission-release-final.log",
+    "evidence/s2-conflict-page-unit.log",
+    "evidence/s2-conflict-pages-web.log",
+    "evidence/s2-conflict-pages-lint.log",
+    "evidence/s2-conflict-pages-release.log",
+    "evidence/s2-conflict-pages-android.log",
+    "evidence/s2-conflict-pages-android-final.log",
+    "evidence/s2-conflict-pages-android-retry.log",
+    "evidence/s2-conflict-pages-android-final-gates.log",
+    "evidence/s2-conflict-pages-macos.log",
+    "evidence/s2-conflict-pages-macos-verified.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"
