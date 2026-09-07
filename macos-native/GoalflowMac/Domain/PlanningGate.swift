@@ -48,11 +48,7 @@ func getPlanningGate(tasks: [GoalflowTask], today: String, dailyPlan: DailyPlan?
     let overdue = tasks.filter { $0.isOpen && $0.schedulePrecision == .day && $0.scheduledFor < today }
     let queue = buildTodayQueue(tasks: tasks, today: today)
     let plannedIds = queue.map(\.id)
-    var planMatches = false
-    if let plan = dailyPlan, plan.localDate == today {
-        let filtered = plan.taskIds.filter { plannedIds.contains($0) }
-        planMatches = filtered.count == plannedIds.count && filtered.enumerated().allSatisfy { idx, id in id == plannedIds[idx] }
-    }
+    let planMatches = dailyPlan?.localDate == today
     if !overdue.isEmpty || (queue.count > 0 && !planMatches) {
         return .dailyPlanningRequired(localDate: today, overdueTaskIds: overdue.map(\.id), taskIds: plannedIds)
     }

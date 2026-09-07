@@ -58,7 +58,7 @@ class GoalflowDomainTest {
     }
 
     @Test
-    fun `planning gate requires exact queue confirmation`() {
+    fun `planning gate keeps today confirmed when tasks arrive or reorder`() {
         val tasks = listOf(task("one", order = 0), task("two", order = 1))
 
         assertTrue(planningGate(tasks, today, null) is PlanningGate.DailyPlanningRequired)
@@ -73,8 +73,8 @@ class GoalflowDomainTest {
             planningGate(
                 tasks,
                 today,
-                DailyPlan(today, confirmedAt = 1L, taskIds = listOf("two", "one"))
-            ) is PlanningGate.DailyPlanningRequired
+                DailyPlan(today, confirmedAt = 1L, taskIds = listOf("two"))
+            ) is PlanningGate.Ready
         )
     }
 

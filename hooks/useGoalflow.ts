@@ -743,7 +743,9 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
           rescheduleCount: 0,
           schedulePrecision: finalSchedulePrecision,
           scheduledFor: finalScheduledFor,
-          plannedOrder: 0,
+          plannedOrder: Math.max(-1, ...prev
+            .filter(task => task.scheduledFor === finalScheduledFor)
+            .map(task => task.plannedOrder ?? 0)) + 1,
           frogFailures: 0,
           beforeFrog: false,
           source: 'manual',

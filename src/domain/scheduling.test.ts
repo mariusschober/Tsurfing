@@ -90,7 +90,7 @@ describe("Current queue", () => {
     }).state).toBe("ready");
   });
 
-  it("keeps a confirmed plan valid as tasks close but requires review for a new task", () => {
+  it("keeps a confirmed day valid as tasks close or arrive", () => {
     const first = task("First");
     const second = task("Second", { plannedOrder: 1 });
     const plan = {
@@ -99,10 +99,10 @@ describe("Current queue", () => {
       taskIds: [first.id, second.id]
     };
     expect(getPlanningGate([{ ...first, status: "completed" }, second], "2026-07-18", plan).state).toBe("ready");
-    expect(getPlanningGate([first, second, task("Added later")], "2026-07-18", plan).state).toBe("daily_planning_required");
+    expect(getPlanningGate([first, second, task("Added later")], "2026-07-18", plan).state).toBe("ready");
   });
 
-  it("requires review when the open queue order changes after confirmation", () => {
+  it("keeps confirmation when the scheduling queue order changes", () => {
     const first = task("First", { plannedOrder: 0 });
     const second = task("Second", { plannedOrder: 1 });
     const plan = {
@@ -113,7 +113,7 @@ describe("Current queue", () => {
     expect(getPlanningGate([
       { ...first, plannedOrder: 1 },
       { ...second, plannedOrder: 0 }
-    ], "2026-07-18", plan).state).toBe("daily_planning_required");
+    ], "2026-07-18", plan).state).toBe("ready");
   });
 });
 

@@ -99,14 +99,14 @@ final class PlanningGateTests: XCTestCase {
         XCTAssertEqual(gate, .empty)
     }
 
-    func test_plan_mismatch_order_triggers_daily() {
+    func test_confirmed_day_accepts_changed_order_and_new_tasks() {
         let today = "2026-09-01"
         let tasks = [
             makeTask(id: "a", scheduledFor: today, plannedOrder: 0),
             makeTask(id: "b", scheduledFor: today, plannedOrder: 1)
         ]
-        let plan = DailyPlan(localDate: today, confirmedAt: "x", taskIds: ["b","a"])
+        let plan = DailyPlan(localDate: today, confirmedAt: "x", taskIds: ["b"])
         let gate = getPlanningGate(tasks: tasks, today: today, dailyPlan: plan)
-        if case .dailyPlanningRequired = gate {} else { XCTFail("expected daily") }
+        if case .ready(let queue) = gate { XCTAssertEqual(queue.map(\.id), ["a", "b"]) } else { XCTFail("expected ready") }
     }
 }
