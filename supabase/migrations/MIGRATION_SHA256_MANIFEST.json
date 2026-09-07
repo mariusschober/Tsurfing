@@ -18,5 +18,7 @@
   "202609040003_realtime_sync_wakeup.sql": "28dae08a56aca84aedf90b666986b30c16e9869930b37447a667d6f313671a51",
   "202609040004_database_advisor_hardening.sql": "d484d89159dfa83ad82a55100650d203fc19578fdf9d9e207acafb7534a80707",
   "202609070001_legacy_mac_numeric_projection.sql": "34617cd895b0a84d09f8c3ddd23e40d5622209835f4f69806bb0301d726ee142",
-  "202609070002_automatic_sync_reconciliation.sql": "1a0cd3eb4e1b58acbfc04bcbb8d91914c8b5abd716ebf99b439752da6ea2aac2"
+  "202609070002_automatic_sync_reconciliation.sql": "1a0cd3eb4e1b58acbfc04bcbb8d91914c8b5abd716ebf99b439752da6ea2aac2",
+  "20260907122729_focus_session_preservation.sql": "4594c89550b7e99c9fd7120d7766cccfdc26ad9ea5e9350c8f870f01ff005070",
+  "20260907123917_focus_session_receipt_guard.sql": "2a91755d922844aa607a560c8ac7550a05025e7ae555362020642767f4eb38b0"
 }
