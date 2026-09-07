@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "/Users/schober/Projects/TSurfing/scripts/test-s2-action-ledger.py", line 109, in <module>
+    main()
+    ~~~~^^
+  File "/Users/schober/Projects/TSurfing/scripts/test-s2-action-ledger.py", line 78, in main
+    query(push(owner,str(uuid.uuid4()),{'id':task_id,'title':'Synthetic'},kind='tasks',entity=task_id))
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/schober/Projects/TSurfing/scripts/test-s2-action-ledger.py", line 20, in query
+    assert result.returncode == 0, result.stderr
+           ^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ERROR:  Task mutation has an invalid schedule
+CONTEXT:  PL/pgSQL function project_goalflow_task_sync(uuid,text,jsonb,bigint,timestamp with time zone,timestamp with time zone) line 80 at RAISE
+SQL statement "SELECT public.project_goalflow_task_sync(
+      target_user_id, target_entity_id, target_payload, next_server_version,
+      target_updated_at, target_deleted_at
+    )"
+PL/pgSQL function push_sync_mutation_v2(uuid,uuid,text,text,text,bigint,integer,jsonb,timestamp with time zone,timestamp with time zone,uuid) line 247 at PERFORM
+

@@ -372,6 +372,52 @@
         "evidence/s2-conflict-pages-macos.log",
         "evidence/s2-conflict-pages-macos-verified.log"
       ]
+    },
+    {
+      "commit": "31e4c184e801cbf542c96a52e9fa8e2cb8e80bfc",
+      "status": "PASS_LOCAL",
+      "scope": "Dormant private server action ledger and cutover guard",
+      "changedFiles": [
+        "config/durable-identifiers.json",
+        "scripts/test-postgres-migrations.sh",
+        "scripts/test-s2-action-ledger.py",
+        "supabase/migrations/20260907220709_s2_private_action_ledger.sql",
+        "supabase/migrations/MIGRATION_SHA256_MANIFEST.json"
+      ],
+      "findingIds": [
+        "S2-SERVER-CAUSAL-LEDGER"
+      ],
+      "commands": [
+        {
+          "command": "PGHOST=127.0.0.1 PGPORT=55437 PATH=/opt/homebrew/bin:$PATH npm run test:migrations:postgres",
+          "exitCode": 0,
+          "matrices": [
+            "empty UTF8",
+            "forward upgrade UTF8"
+          ],
+          "sharedCounterScenariosPerMatrix": 12,
+          "counterOrdersPerScenario": 2,
+          "sharedFocusScenariosPerMatrix": 9,
+          "actionLedger": "counter,focus,receipt,legacy-rejection,rollback,concurrent-deduplication,cursor,role checks passed"
+        },
+        {
+          "command": "npm run verify:migrations && npm run verify:migration-hashes && npm run verify:identifiers",
+          "exitCode": 0,
+          "migrations": 26
+        }
+      ],
+      "migrations": [
+        "20260907220709_s2_private_action_ledger.sql"
+      ],
+      "compatibility": "No automatic enrollment or HTTP caller. Existing protocol-3 accepted/rejected receipts remain exact. Private ledger never appears as new feed entity. Completion/correction/rollover/enrolled-backup remain unimplemented.",
+      "evidence": [
+        "evidence/s2-action-ledger-first.log",
+        "evidence/s2-action-ledger-utf8-first.log",
+        "evidence/s2-action-ledger-utf8-second.log",
+        "evidence/s2-action-ledger-concurrent.log",
+        "evidence/s2-action-ledger-matrix.log",
+        "evidence/s2-action-ledger-identifiers.log"
+      ]
     }
   ],
   "findings": [
@@ -444,7 +490,13 @@
     "evidence/s2-conflict-pages-android-retry.log",
     "evidence/s2-conflict-pages-android-final-gates.log",
     "evidence/s2-conflict-pages-macos.log",
-    "evidence/s2-conflict-pages-macos-verified.log"
+    "evidence/s2-conflict-pages-macos-verified.log",
+    "evidence/s2-action-ledger-first.log",
+    "evidence/s2-action-ledger-utf8-first.log",
+    "evidence/s2-action-ledger-utf8-second.log",
+    "evidence/s2-action-ledger-concurrent.log",
+    "evidence/s2-action-ledger-matrix.log",
+    "evidence/s2-action-ledger-identifiers.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

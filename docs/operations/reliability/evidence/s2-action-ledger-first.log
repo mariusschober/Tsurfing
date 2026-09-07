@@ -1,0 +1,15 @@
+Traceback (most recent call last):
+  File "/Users/schober/Projects/TSurfing/scripts/test-s2-action-ledger.py", line 109, in <module>
+    main()
+    ~~~~^^
+  File "/Users/schober/Projects/TSurfing/scripts/test-s2-action-ledger.py", line 35, in main
+    original_receipt = query(push(owner, legacy, tracking))
+  File "/Users/schober/Projects/TSurfing/scripts/test-s2-action-ledger.py", line 20, in query
+    assert result.returncode == 0, result.stderr
+           ^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ERROR:  unsupported Unicode escape sequence
+LINE 1: ...44521281','fixture','tracking','singleton',null,1,'{"date": ...
+                                                             ^
+DETAIL:  Unicode escape value could not be translated to the server's encoding SQL_ASCII.
+CONTEXT:  JSON data, line 1: ...eCount": 3, "future": {"preserved": "\ud83d\udc38...
+

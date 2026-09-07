@@ -183,3 +183,37 @@ they do not fall back to an unpaged response. No migration, deployment or owner
 app installation occurred. Pagination bounds row count, not arbitrary legacy
 record size; existing response byte limits still apply. Oversize historical
 records and staged reconciliation history remain separate unfinished work.
+
+## Private server action ledger checkpoint
+
+`31e4c184e801cbf542c96a52e9fa8e2cb8e80bfc`: **PASS_LOCAL** for the additive private ledger. Migration
+`20260907220709_s2_private_action_ledger.sql` creates no enrolled account.
+An explicitly invoked cutover compares the exact canonical tracking payload
+and server version, establishes its existing counts as baseline, and retains
+an immutable cutover receipt. Distinct focus/counter operations receive exact
+schema-v2 receipts with a separate projection revision. Account/action IDs
+deduplicate globally across command kinds; legacy mutation IDs cannot become
+new increments. Counter events are stored separately and unknown fields survive.
+
+The tracking entity lock serializes causal admission and legacy writes. After
+cutover, legacy protected-field changes receive their original rejected v3
+receipts. Other writers cannot alter protected fields through the tracking
+trigger. Equal-time focus commands use causal authority rather than the legacy
+LWW trigger. Publication retains `goalflow_next_change_version` and its global
+transaction lock. Private tables have RLS and no client schema/table access;
+RPC execution is limited to the trusted server role.
+
+Both complete PostgreSQL empty/upgrade matrices passed, including old protocol
+and backup tests on non-enrolled accounts, 12 shared counter scenarios in two
+orders, nine focus scenarios, existing concurrency checks, and new real SQL
+service-role tests for 27/3→29/5, +420, exact duplicate receipts, rollback,
+concurrent deduplication and ordered publication. Migration/hash gates checked
+26 migrations; identifier gate passed. Initial failures were fixture SQL_ASCII
+encoding and a synthetic task missing its required schedule. The matrix now
+creates UTF-8 databases explicitly. Failed and successful evidence is retained.
+
+This is not activation evidence. There is no HTTP cutover caller yet. Completion
+and corrections explicitly reject until atomic effects/evidence are implemented.
+Only the initial day's baseline is established. Backup/restore of enrolled
+accounts, legacy ambiguity/import, day selection, client receipt processing
+and capability activation remain required before rollout. No live DDL occurred.
