@@ -684,10 +684,23 @@ struct ExecutionPanelView: View {
                 Button("Link workspace") { vm.linkLocalWorkspace() }
                     .buttonStyle(.link)
                     .font(.system(size: 10, weight: .semibold))
-            } else {
+            } else if case .connected = vm.cloudState {
+                Button("Retry sync") { vm.triggerSyncIfNeeded() }
+                    .buttonStyle(.link)
+                    .font(.system(size: 10, weight: .semibold))
+            } else if case .mfaRequired = vm.cloudState {
+                Button("Verify MFA") { vm.showSignIn = true }
+                    .buttonStyle(.link)
+                    .font(.system(size: 10, weight: .semibold))
+            } else if case .signedOut = vm.cloudState {
                 Button("Sign in") { vm.showSignIn = true }
                     .buttonStyle(.link)
                     .font(.system(size: 10, weight: .semibold))
+            } else {
+                Button("Retry connection") { Task { await vm.refreshCloudState() } }
+                    .buttonStyle(.link)
+                    .font(.system(size: 10, weight: .semibold))
+                    .disabled(vm.cloudState == .authenticating)
             }
         }
         .padding(.horizontal, 16)
