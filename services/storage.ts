@@ -537,8 +537,8 @@ const mapRecordsForRecovery = (
 
 /**
  * Replays a WAL only against the value it was based on. Independent records
- * recovered from IndexedDB are retained; a same-record divergence stops
- * without selecting either version.
+ * recovered from IndexedDB are retained; a same-record divergence enters
+ * durable automatic reconciliation when an atomic sync ledger is available.
  */
 type DailyTrackingValue = { date: string; planViewCount: number; dailyPostponeCount: number };
 const isDailyTrackingValue = (value: unknown): value is DailyTrackingValue => {
@@ -552,7 +552,8 @@ const isDailyTrackingValue = (value: unknown): value is DailyTrackingValue => {
 
 const reconcileStagedTransactions = (
   currentValue: unknown,
-  transactions: StagedLocalTransaction[]
+  transactions: StagedLocalTransaction[],
+  meta?: SyncMeta
 ): unknown => {
   let current = currentValue;
   for (const transaction of [...transactions].sort((left, right) =>
@@ -601,9 +602,41 @@ const reconcileStagedTransactions = (
       const before = previousRecords?.get(change.entityId);
       const after = nextRecords.get(change.entityId);
       if (!jsonEqual(existing, before) && !jsonEqual(existing, after)) {
-        throw new DurableStorageError(
+        if (!meta) throw new DurableStorageError(
           `Pending ${transaction.storeName} record ${change.entityId} conflicts with recovered data. Neither was overwritten.`
         );
+        // Preserve the original mutation identities and timestamps in the same
+        // durable transaction as the recovered value. The server decides which
+        // edit is current; replay must never silently overwrite either copy.
+        const pending = meta.outbox.filter(item => item.entityType === change.entityType && item.entityId === change.entityId);
+        let conflict = meta.conflicts.find(item => item.entityType === change.entityType && item.entityId === change.entityId && item.status === 'unresolved');
+        if (!conflict && !pending.length) throw new DurableStorageError('Pending recovery history could not be verified.');
+        if (!conflict) {
+          const latest = [...pending].sort((a, b) => b.version - a.version)[0];
+          conflict = {
+            id: `recovery-${change.mutationId}`, kind: 'remote-vs-local',
+            entityType: change.entityType, entityId: change.entityId,
+            localPayload: latest.payload, localDeletedAt: latest.deletedAt,
+            localHistory: [], serverPayload: existing ?? null,
+            serverMissing: existing === undefined,
+            serverDeletedAt: typeof existing?.deletedAt === 'string' ? existing.deletedAt : null,
+            serverVersion: meta.versions[`${change.entityType}:${change.entityId}`]?.server ?? 0,
+            createdAt: latest.updatedAt, status: 'unresolved'
+          };
+          meta.conflicts.push(conflict);
+        }
+        for (const item of pending) {
+          if (!conflict.localHistory.some(entry => entry.mutationId === item.mutationId)) {
+            conflict.localHistory.push({ mutationId: item.mutationId, payload: item.payload,
+              deletedAt: item.deletedAt, updatedAt: item.updatedAt, version: item.version });
+          }
+        }
+        const latest = [...conflict.localHistory].sort((a, b) => b.version - a.version)[0];
+        conflict.localPayload = latest.payload;
+        conflict.localDeletedAt = latest.deletedAt;
+        // Transfer, rather than discard, every pending edit into durable history.
+        meta.outbox = meta.outbox.filter(item => item.entityType !== change.entityType || item.entityId !== change.entityId);
+        continue;
       }
       if (after === undefined) currentRecords.delete(change.entityId);
       else currentRecords.set(change.entityId, after);
@@ -759,16 +792,17 @@ export const storageService = {
             }
           }
           const dataStore = tx.objectStore(storeName);
+          const nextMeta = source === 'local' && SYNCABLE_STORES.has(storeName)
+            ? appendStagedTransactions(normalizeSyncMeta(await tx.objectStore(STORES.SYNC).get(key)), pending.map(item => item.transaction), readDeviceId())
+            : undefined;
           if (source === 'local' && SYNCABLE_STORES.has(storeName)) {
             committedValue = reconcileStagedTransactions(
-              await dataStore.get(key), pending.map(item => item.transaction)
+              await dataStore.get(key), pending.map(item => item.transaction), nextMeta
             );
           }
           await dataStore.put(committedValue, key);
-          if (stores.includes(STORES.SYNC)) {
+          if (nextMeta) {
             const syncStore = tx.objectStore(STORES.SYNC);
-            const meta = normalizeSyncMeta(await syncStore.get(key));
-            const nextMeta = appendStagedTransactions(meta, pending.map(item => item.transaction), readDeviceId());
             await syncStore.put(nextMeta, key);
           }
           await tx.done;
@@ -836,7 +870,7 @@ export const storageService = {
           for (const transaction of latestByStore.values()) {
             const store = tx.objectStore(transaction.storeName);
             const reconciled = reconcileStagedTransactions(
-              await store.get(userKey), pendingByStore.get(transaction.storeName) ?? []
+              await store.get(userKey), pendingByStore.get(transaction.storeName) ?? [], nextMeta
             );
             transaction.value = reconciled;
             await store.put(reconciled, userKey);

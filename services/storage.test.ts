@@ -1,4 +1,5 @@
 import 'fake-indexeddb/auto';
+import { reconciliationCandidate } from './syncProtocol';
 import { describe, expect, it } from 'vitest';
 import {
   mergeBackupCollection,
@@ -210,21 +211,51 @@ describe('durable storage failure boundaries', () => {
     expect(meta.outbox[0]).toMatchObject({ entityId: 'offline', payload: offline[0] });
   });
 
-  it('does not replay a WAL over a divergent recovered version of the same task', async () => {
+  it('preserves divergent WAL edits for automatic reconciliation without blocking reload', async () => {
     const localStorage = installBrowserStorage();
     const key = `storage-wal-conflict-${crypto.randomUUID()}`;
     const recovered = [{ id: 'same', title: 'Recovered version' }];
-    const believedPrevious = [{ id: 'same', title: 'Earlier version' }];
+    const previous = [{ id: 'same', title: 'Earlier version' }];
     const offline = [{ id: 'same', title: 'Offline version' }];
+    const latest = [{ id: 'same', title: 'Second offline edit' }];
     await storageService.set(STORES.TASKS, key, recovered, 'cloud');
-    storageService.stageLocalValue(STORES.TASKS, key, believedPrevious, offline);
-
-    await expect(storageService.flushPendingLocalChanges(key)).rejects.toThrow(/Neither was overwritten/i);
-    const walKeys = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
-      .filter((candidate): candidate is string => Boolean(candidate?.startsWith('goalflow_wal_v2_')));
-    expect(walKeys.length).toBeGreaterThan(0);
-    walKeys.forEach(candidate => localStorage.removeItem(candidate));
+    storageService.stageLocalValue(STORES.TASKS, key, previous, offline);
+    storageService.stageLocalValue(STORES.TASKS, key, offline, latest);
+    const originals = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
+      .filter((candidate): candidate is string => Boolean(candidate?.startsWith('goalflow_wal_v2_')))
+      .flatMap(candidate => JSON.parse(localStorage.getItem(candidate)!).changes);
+    const meta = await storageService.flushPendingLocalChanges(key);
     expect(await storageService.get(STORES.TASKS, key)).toEqual(recovered);
+    expect(meta.outbox).toEqual([]);
+    expect(meta.conflicts).toHaveLength(1);
+    expect(meta.conflicts[0].serverPayload).toEqual(recovered[0]);
+    expect(meta.conflicts[0].localHistory).toHaveLength(2);
+    for (const change of originals) expect(meta.conflicts[0].localHistory).toContainEqual(expect.objectContaining({
+      mutationId: change.mutationId, payload: change.payload, updatedAt: change.updatedAt, deletedAt: change.deletedAt
+    }));
+    expect(await storageService.flushPendingLocalChanges(key)).toEqual(meta);
+    const candidate = reconciliationCandidate(meta.conflicts[0]);
+    await storageService.commitAutomaticReconciliation(key, candidate, {
+      reconciled: true, receiptId: crypto.randomUUID(), candidate, serverMissing: false,
+      record: { entity_type: 'tasks', entity_id: 'same', payload: recovered[0], device_id: 'cloud',
+        version: 5, server_version: 5, updated_at: new Date().toISOString(), deleted_at: null }
+    });
+    expect((await storageService.flushPendingLocalChanges(key)).conflicts).toEqual([]);
+    expect(await storageService.get(STORES.TASKS, key)).toEqual(recovered);
+  });
+
+  it('hands a divergent normal save to automatic reconciliation atomically', async () => {
+    installBrowserStorage();
+    const key = `storage-save-conflict-${crypto.randomUUID()}`;
+    const recovered = [{ id: 'same', title: 'Cloud' }];
+    const offline = [{ id: 'same', title: 'Local' }];
+    await storageService.set(STORES.TASKS, key, recovered, 'cloud');
+    storageService.stageLocalValue(STORES.TASKS, key, [{ id: 'same', title: 'Old' }], offline);
+    await storageService.set(STORES.TASKS, key, offline);
+    expect(await storageService.get(STORES.TASKS, key)).toEqual(recovered);
+    const meta = await storageService.flushPendingLocalChanges(key);
+    expect(meta.conflicts[0].localPayload).toEqual(offline[0]);
+    expect(meta.outbox).toEqual([]);
   });
 
   it('atomically recovers durable fallback data after an IndexedDB restart', async () => {

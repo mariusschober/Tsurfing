@@ -197,6 +197,9 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
 
   // --- State Definitions ---
   const [isLoading, setIsLoading] = useState(true);
+  const [hydrationError, setHydrationError] = useState(false);
+  const [hydrationAttempt, setHydrationAttempt] = useState(0);
+  const retryHydration = useCallback(() => setHydrationAttempt(attempt => attempt + 1), []);
   
   const [tasks, setTasks, setTasksFromStorage, getTasks] = useDurableStoredState<Task[]>([], STORES.TASKS, USER_KEY);
   const [goals, setGoals, setGoalsFromStorage, getGoals] = useDurableStoredState<Goal[]>([], STORES.GOALS, USER_KEY);
@@ -225,7 +228,9 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
   // --- Initialization (Hydration) ---
   useEffect(() => {
     const loadData = async () => {
+      setHydrationError(false);
       try {
+        await storageService.flushPendingLocalChanges(USER_KEY);
         await storageService.migrateUserKey(legacyUserKey, USER_KEY);
         const [
             lTasks, lGoals, lHabits, lTrueNorth, lAmalgam, lHashtags, lAllStats, lProgress, lDaily, lAccountability, lCircadian, lSettings,
@@ -315,12 +320,13 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
         setDailyPlansFromStorage(lDailyPlans);
         setIsLoading(false);
       } catch (err) {
+          setHydrationError(true);
           console.error("Failed to hydrate data. Persistence remains blocked so existing data is not overwritten.", err);
       }
     };
 
     loadData();
-  }, [userKey, legacyUserKey]);
+  }, [userKey, legacyUserKey, hydrationAttempt]);
 
   // --- Persistence Wrappers ---
   // Using useRef to prevent effect loops when saving, saving is triggered by state changes.
@@ -1108,6 +1114,8 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
 
   return {
     isLoading,
+    hydrationError,
+    retryHydration,
     tasks, goals, habits, trueNorthGoals, amalgam,
     dailyPlans, confirmDailyPlan, clearDailyPlan,
     currentTask, todayTasks, upcomingTasks, overdueTasks, recentCompletedTasks, allCompletedTasks, 

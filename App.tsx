@@ -59,7 +59,9 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
   const [planningSaveError, setPlanningSaveError] = useState<string | null>(null);
   
   const {
-    isLoading, // Added loading state from hook
+    isLoading,
+    hydrationError,
+    retryHydration,
     tasks,
     goals,
     habits,
@@ -355,8 +357,14 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
   if (isLoading) {
       return (
           <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col justify-center items-center gap-4">
+              {hydrationError ? <div role="alert" className="max-w-md px-6 text-center">
+                <h1 className="text-lg font-bold">Your saved data couldn’t be opened</h1>
+                <p className="mt-2 text-gray-500">Your saved copies have been kept. Try again to resume loading.</p>
+                <button type="button" onClick={retryHydration} className="mt-4 rounded-lg bg-indigo-600 px-5 py-2 text-white">Try again</button>
+              </div> : <>
               <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-gray-500 dark:text-gray-400 animate-pulse text-sm font-bold uppercase tracking-widest">Hydrating Mind-State...</p>
+              <p className="text-gray-500 dark:text-gray-400 animate-pulse text-sm font-bold uppercase tracking-widest">Loading your tasks...</p>
+              </>}
           </div>
       );
   }
