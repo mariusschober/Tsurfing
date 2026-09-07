@@ -2656,6 +2656,9 @@ class GoalflowRepository(
         deletedAt: String? = null,
         dependsOnMutationIdOverride: String? = null
     ) {
+        require(payload.toByteArray(Charsets.UTF_8).size <= 3 * 1024 * 1024) {
+            "This change exceeds the 3 MiB record limit and was not saved. Existing saved data is unchanged."
+        }
         val metaKey = syncMetaKey(entityType, entityId)
         val current = syncMeta.get(metaKey)
         val existing = outbox.getForEntity(entityType, entityId)

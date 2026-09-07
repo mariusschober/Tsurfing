@@ -24,7 +24,7 @@ import {
   type SyncMutation
 } from './syncProtocol';
 import { mergeTrackingFocusSession, normalizeFocusSession } from '../src/domain/focusSession';
-import { transportablePushBatch } from './syncEnvelope';
+import { assertNewSyncPayload, transportablePushBatch } from './syncEnvelope';
 
 const BASE_DB_NAME = 'GoalflowDB';
 const ACTIVE_DB_KEY = 'goalflow_active_database_v2';
@@ -913,6 +913,7 @@ export const storageService = {
       storeName, key, previousValue, durableNextValue, nextWalOrder(), now, randomUuid, preserveSourceTime
     );
     if (!transaction) return null;
+    for (const change of transaction.changes) assertNewSyncPayload(change.payload);
     if (storeName === STORES.TRACKING && isRecord(previousValue) && isRecord(nextValue)
       && !jsonEqual(previousValue.focusSession, nextValue.focusSession)) {
       const session = normalizeFocusSession(previousValue.focusSession);
@@ -960,7 +961,10 @@ export const storageService = {
         now,
         randomUuid
       );
-      if (transaction) transactions.push(transaction);
+      if (transaction) {
+        for (const entityChange of transaction.changes) assertNewSyncPayload(entityChange.payload);
+        transactions.push(transaction);
+      }
     }
     if (!transactions.length) return null;
     const id = randomUuid();

@@ -119,6 +119,19 @@ class NativeSyncEngineTest {
     }
 
     @Test
+    fun `oversized new task rolls back its task event and mutation`() = runTest {
+        try {
+            repository.createTask(title = "Too large", notes = "🧭".repeat(800_000),
+                schedulePrecision = SchedulePrecision.DAY, scheduledFor = LocalDate.now().toString(),
+                scheduledTime = null, isFrog = false)
+            fail("Oversized edit must fail before durable success")
+        } catch (error: IllegalArgumentException) { assertTrue(error.message!!.contains("3 MiB")) }
+        assertTrue(repository.pendingSyncMutations().isEmpty())
+        val taskCursor = database.openHelper.readableDatabase.query("SELECT count(*) FROM tasks")
+        taskCursor.use { assertTrue(it.moveToFirst()); assertEquals(0, it.getInt(0)) }
+    }
+
+    @Test
     fun `interrupted staged mutation resumes its original payload and receipt`() = runTest {
         repository.createTask(title = "Large saved task", notes = "🧭".repeat(70_000),
             schedulePrecision = SchedulePrecision.DAY, scheduledFor = LocalDate.now().toString(),

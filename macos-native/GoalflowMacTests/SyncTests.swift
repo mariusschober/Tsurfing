@@ -281,6 +281,11 @@ final class SyncMetaTests: XCTestCase {
         XCTAssertEqual(meta.outbox.count, 1)
         XCTAssertEqual(meta.outbox.first?.entityId, task.id)
         XCTAssertEqual(stableJson(meta.outbox.first?.payload.value), stableJson(try task.toSyncDictionary()))
+        var oversized = task
+        oversized.title = String(repeating: "🧭", count: 800000)
+        XCTAssertThrowsError(try taskStore.saveAll([oversized]))
+        XCTAssertEqual(try taskStore.loadAll().first?.title, task.title)
+        XCTAssertEqual(try metaStore.load(), meta)
     }
 
     func test_goal_stores_stage_every_durable_field() throws {

@@ -4,6 +4,15 @@ import type { SyncMutation } from './syncProtocol';
 export const SYNC_REQUEST_BODY_BYTES = 256 * 1024;
 export const SYNC_BATCH_COUNT = 50;
 export const SYNC_STAGED_BODY_BYTES = 4 * 1024 * 1024;
+/** New records reserve transport headroom; captured historical requests retain
+ * the larger 4 MiB recovery envelope and are never passed through this gate. */
+export const NEW_SYNC_PAYLOAD_BYTES = 3 * 1024 * 1024;
+export function assertNewSyncPayload(payload: unknown): void {
+  const encoded = JSON.stringify(payload);
+  if (encoded === undefined || new TextEncoder().encode(encoded).byteLength > NEW_SYNC_PAYLOAD_BYTES) {
+    throw new Error('This change exceeds the 3 MiB record limit and was not saved. Existing saved data is unchanged.');
+  }
+}
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 // Keep the legacy request fields and canonicalization unchanged. Attempt/local

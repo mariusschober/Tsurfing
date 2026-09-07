@@ -281,8 +281,12 @@ describe('adversarial cloud synchronization', () => {
 
   it('preserves an oversize captured change without marking an unmade network attempt', async () => {
     const key = `oversize-${crypto.randomUUID()}`;
-    storageService.stageLocalValue(STORES.TASKS, key, [], [task('preserved', 'large', { notes: '🧭'.repeat(1_050_000) })]);
-    await storageService.flushPendingLocalChanges(key);
+    // This is a historical captured request, not a new edit through admission.
+    const historical = emptySyncMeta();
+    historical.outbox = [{ mutationId: crypto.randomUUID(), deviceId: 'legacy-device', entityType: 'tasks',
+      entityId: 'large', baseServerVersion: null, version: 1, payload: task('preserved', 'large', { notes: '🧭'.repeat(1_050_000) }),
+      updatedAt: '2026-09-07T00:00:00.123456789Z', deletedAt: null }];
+    await storageService.set(STORES.SYNC, key, historical, 'cloud');
     const before = normalizeSyncMeta(await storageService.get(STORES.SYNC, key));
     let requests = 0;
     const runtime = { ...dependencies(new DurableFakeServer()), fetch: async () => {
@@ -296,6 +300,23 @@ describe('adversarial cloud synchronization', () => {
     const after = normalizeSyncMeta(await storageService.get(STORES.SYNC, key));
     expect(after.outbox).toEqual(before.outbox);
     expect(after.cursor).toBe(before.cursor);
+  });
+
+  it('rejects an oversized new action before changing its durable data or WAL', async () => {
+    const key = `admission-${crypto.randomUUID()}`;
+    const saved = [task('preserved', 'saved')];
+    await storageService.set(STORES.TASKS, key, saved, 'cloud');
+    const draft = task('new draft', 'large', { notes: '🧭'.repeat(800_000) });
+    const draftBefore = JSON.stringify(draft);
+    const before = window.localStorage.length;
+    expect(() => storageService.stageLocalValues(key, [
+      { storeName: STORES.TASKS, previousValue: saved, nextValue: [...saved, draft] },
+      { storeName: STORES.STATS, previousValue: {}, nextValue: { completed: 1 } }
+    ])).toThrow(/3 MiB/);
+    expect(window.localStorage.length).toBe(before);
+    expect(await storageService.get(STORES.TASKS, key)).toEqual(saved);
+    expect(JSON.stringify(draft)).toBe(draftBefore);
+    expect(normalizeSyncMeta(await storageService.get(STORES.SYNC, key)).outbox).toHaveLength(0);
   });
 
   it('drains valid multibyte notes within the actual JSON body limit without changing receipts', async () => {

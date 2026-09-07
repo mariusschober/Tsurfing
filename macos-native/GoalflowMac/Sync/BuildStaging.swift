@@ -69,6 +69,14 @@ func buildStagedLocalTransaction(storeName: String, userKey: String, previousVal
             deletedAt: deleted
         ))
     }
+    // Admission only: historical WAL replay uses appendStagedTransactions and
+    // retains its original request even when it exceeds this new-record limit.
+    for change in changes {
+        let payload = try JSONSerialization.data(withJSONObject: change.payload ?? NSNull(), options: [.fragmentsAllowed])
+        guard payload.count <= 3 * 1024 * 1024 else {
+            throw SyncError.validation("This change exceeds the 3 MiB record limit and was not saved. Existing saved data is unchanged.")
+        }
+    }
     return StagedLocalTransaction(
         id: randomUuid(),
         userKey: userKey,
