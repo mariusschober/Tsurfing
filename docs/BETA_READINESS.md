@@ -1,5 +1,16 @@
 # Tsurfing beta readiness evidence
 
+## Overdue planner visibility fix — 2026-09-07
+
+The owner browser confirmed an overdue gate with no overdue rows in Plan.
+`PlanningView` accepted `overdueTasks` but never rendered them. A decision
+section now renders every blocking task with Do today, reschedule (except
+frogs), complete and Won’t do actions through existing durable handlers.
+Moving monthly work to today now also assigns day precision and the matching
+scheduled date, so it leaves the monthly planning gate. Four rendered-planner
+regressions cover overdue work, monthly work, frogs and an empty blocker list.
+No owner task was resolved or deleted during verification.
+
 ## Focused owner-trial fix — 2026-09-07
 
 The owner reported an endless startup spinner. Staging health was HTTP 200 at

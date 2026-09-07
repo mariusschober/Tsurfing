@@ -808,7 +808,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
         const today = getTodayYYYYMMDD();
         const todaysTasks = prev.filter(t => t.dateAssigned === today && !t.completed && !t.wontDo);
         const minCreatedAt = todaysTasks.length > 0 ? Math.min(...todaysTasks.map(t => t.createdAt)) : Date.now();
-        return prev.map(t => t.id === taskId ? { ...t, dateAssigned: today, createdAt: minCreatedAt - 1000, session: undefined } : t);
+        return prev.map(t => t.id === taskId ? { ...t, dateAssigned: today, schedulePrecision: 'day' as const, scheduledFor: today, createdAt: minCreatedAt - 1000, session: undefined } : t);
     });
   }, []);
 

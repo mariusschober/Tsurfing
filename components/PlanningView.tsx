@@ -882,6 +882,29 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                 </div>
             </div>
 
+            {overdueTasks.length > 0 && (
+                <section aria-labelledby="overdue-heading" className="rounded-3xl border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950/20">
+                    <h3 id="overdue-heading" className="text-xl font-bold text-gray-800 dark:text-white">Needs your decision ({overdueTasks.length})</h3>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">Choose what to do with each overdue or monthly task before starting today.</p>
+                    <ul className="mt-4 space-y-3">
+                        {overdueTasks.map(task => (
+                            <li key={task.id} className="rounded-2xl bg-white p-4 dark:bg-slate-900">
+                                <h4 className="font-bold text-gray-800 dark:text-white">{task.title}</h4>
+                                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                    {task.schedulePrecision === 'month' ? `Choose a day · ${task.scheduledFor || task.dateAssigned.slice(0, 7)}` : `Overdue · ${formatDisplayDate(task.dateAssigned)}`}
+                                </p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    <button onClick={() => moveTaskToTopToday(task.id)} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-bold text-white hover:bg-indigo-700">Do today</button>
+                                    {!task.isFrog && <button onClick={() => setRescheduleTaskDropId(task.id)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-slate-600 dark:text-white">Reschedule</button>}
+                                    <button onClick={() => completeTask(task.id)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-slate-600 dark:text-white">Mark complete</button>
+                                    <button onClick={() => markWontDo(task.id)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-slate-600 dark:text-white">Won’t do</button>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            )}
+
             {isStrictEnabled && (
                 <DragDropContext onDragEnd={onDragEnd}>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
