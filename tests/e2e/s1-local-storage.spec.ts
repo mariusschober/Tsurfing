@@ -219,6 +219,7 @@ test('C: account switch and unmount retire old React callbacks without creating 
 test('visibility: missed hints and absent BroadcastChannel recover on resume', async ({ page, context }) => {
   await page.addInitScript(() => { Object.defineProperty(window, 'BroadcastChannel', { value: undefined }); });
   await unlock(page);
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
   const peer = await context.newPage();
   await unlock(peer);
   await page.evaluate(() => {
@@ -233,7 +234,7 @@ test('visibility: missed hints and absent BroadcastChannel recover on resume', a
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' });
     window.dispatchEvent(new Event('focus'));
   });
-  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await page.bringToFront();
   await expect(page.getByText('S1 missed event', { exact: true })).toBeVisible();
 });
 
