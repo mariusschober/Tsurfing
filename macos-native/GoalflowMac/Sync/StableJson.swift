@@ -12,10 +12,12 @@ func stableJson(_ value: Any?) -> String? {
         // Wrap non-JSON top-level (e.g., String/Number) via array trick? JSONSerialization requires top-level array/dict.
         // But our payloads are always objects/arrays. For String/Number/Bool we handle directly.
         if let s = v as? String { return try String(data: JSONSerialization.data(withJSONObject: [s], options: []), encoding: .utf8).map { String($0.dropFirst().dropLast()) } }
-        if let b = v as? Bool { return b ? "true" : "false" }
-        if let n = v as? NSNumber, CFGetTypeID(n) != CFBooleanGetTypeID() {
-            // NSNumber
-            return "\(n)"
+        if let n = v as? NSNumber {
+            // NSNumber(0/1) can bridge to Bool. Inspect the actual JSON type
+            // before comparing, or a receipt for false could acknowledge 0.
+            if CFGetTypeID(n) == CFBooleanGetTypeID() { return n.boolValue ? "true" : "false" }
+            return try String(data: JSONSerialization.data(withJSONObject: [n], options: []), encoding: .utf8)
+                .map { String($0.dropFirst().dropLast()) }
         }
         // For Data already, try decode?
         let data = try JSONSerialization.data(withJSONObject: v, options: [.sortedKeys])

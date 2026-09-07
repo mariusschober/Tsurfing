@@ -37,7 +37,7 @@ data class NativeFocusSessionRecord(
         require(plannedDurationSeconds in MIN_FOCUS_DURATION_SECONDS..MAX_FOCUS_DURATION_SECONDS) {
             "The focus session duration is invalid."
         }
-        require(elapsedSeconds >= 0L) { "The focus session elapsed time is invalid." }
+        require(elapsedSeconds in 0L..9007199254740991L) { "The focus session elapsed time is invalid." }
         val started = parseInstant(startedAt)
         val updated = parseInstant(updatedAt)
         require(!started.isAfter(updated)) { "The focus session clock order is invalid." }
@@ -57,7 +57,7 @@ data class NativeFocusSessionRecord(
                 "A paused focus session needs a pause timestamp."
             }
             NativeFocusSessionPhase.STOPPED,
-            NativeFocusSessionPhase.COMPLETED -> require(endedAt != null) {
+            NativeFocusSessionPhase.COMPLETED -> require(endedAt != null && pausedAt == null) {
                 "A terminal focus session needs an end timestamp."
             }
         }

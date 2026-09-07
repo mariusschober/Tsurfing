@@ -1,0 +1,618 @@
+{
+  "schemaVersion": 1,
+  "accountId": "11111111-1111-4111-8111-111111111111",
+  "cases": [
+    {
+      "name": "concurrent-additive-extensions-and-retries",
+      "commands": [
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000001",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "start",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": null,
+          "expectedCurrentSessionId": null,
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 600
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000002",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "extend",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 300
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000003",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "extend",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 120
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000002",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "extend",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 300
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000003",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "extend",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 120
+        }
+      ],
+      "expected": {
+        "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        "plannedDurationSeconds": 1020,
+        "phase": "active",
+        "elapsedSeconds": 0
+      },
+      "outcomeCodes": [
+        "APPLIED",
+        "APPLIED",
+        "APPLIED",
+        "APPLIED",
+        "APPLIED"
+      ]
+    },
+    {
+      "name": "serial-extensions",
+      "commands": [
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000001",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "start",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": null,
+          "expectedCurrentSessionId": null,
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 600
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000002",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "extend",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 300
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000003",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "extend",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000002",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 120
+        }
+      ],
+      "expected": {
+        "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        "plannedDurationSeconds": 1020,
+        "phase": "active",
+        "elapsedSeconds": 0
+      },
+      "outcomeCodes": [
+        "APPLIED",
+        "APPLIED",
+        "APPLIED"
+      ]
+    },
+    {
+      "name": "pause-extend-resume",
+      "commands": [
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000001",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "start",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": null,
+          "expectedCurrentSessionId": null,
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 600
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000002",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "pause",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:01:00.000Z",
+          "durationSeconds": null
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000003",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "extend",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000002",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:02:00.000Z",
+          "durationSeconds": 300
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000004",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "resume",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000003",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:03:00.000Z",
+          "durationSeconds": null
+        }
+      ],
+      "expected": {
+        "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        "plannedDurationSeconds": 900,
+        "phase": "active",
+        "elapsedSeconds": 60
+      },
+      "outcomeCodes": [
+        "APPLIED",
+        "APPLIED",
+        "APPLIED",
+        "APPLIED"
+      ]
+    },
+    {
+      "name": "explicit-extend-and-resume",
+      "commands": [
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000001",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "start",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": null,
+          "expectedCurrentSessionId": null,
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 600
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000002",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "pause",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:01:00.000Z",
+          "durationSeconds": null
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000003",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "extendAndResume",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000002",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:02:00.000Z",
+          "durationSeconds": 120
+        }
+      ],
+      "expected": {
+        "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        "plannedDurationSeconds": 720,
+        "phase": "active",
+        "elapsedSeconds": 60
+      },
+      "outcomeCodes": [
+        "APPLIED",
+        "APPLIED",
+        "APPLIED"
+      ]
+    },
+    {
+      "name": "backward-clock-actions-retained",
+      "commands": [
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000001",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "start",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": null,
+          "expectedCurrentSessionId": null,
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 600
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000002",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "pause",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T11:59:00.000Z",
+          "durationSeconds": null
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000003",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "extend",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000002",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T11:58:00.000Z",
+          "durationSeconds": 120
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000004",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "resume",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000003",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T11:57:00.000Z",
+          "durationSeconds": null
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000005",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "stop",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000004",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T11:58:00.000Z",
+          "durationSeconds": null
+        }
+      ],
+      "expected": {
+        "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        "plannedDurationSeconds": 720,
+        "phase": "stopped",
+        "elapsedSeconds": 60
+      },
+      "outcomeCodes": [
+        "APPLIED",
+        "APPLIED",
+        "APPLIED",
+        "APPLIED",
+        "APPLIED"
+      ]
+    },
+    {
+      "name": "stale-state-command-audited",
+      "commands": [
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000001",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "start",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": null,
+          "expectedCurrentSessionId": null,
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 600
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000002",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "extend",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 300
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000003",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "pause",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:01:00.000Z",
+          "durationSeconds": null
+        }
+      ],
+      "expected": {
+        "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        "plannedDurationSeconds": 900,
+        "phase": "active",
+        "elapsedSeconds": 0
+      },
+      "outcomeCodes": [
+        "APPLIED",
+        "APPLIED",
+        "STALE_REVISION"
+      ]
+    },
+    {
+      "name": "terminal-rejects-extension",
+      "commands": [
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000001",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "start",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": null,
+          "expectedCurrentSessionId": null,
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 600
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000002",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "complete",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:01:00.000Z",
+          "durationSeconds": null
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000003",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "extend",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000002",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:02:00.000Z",
+          "durationSeconds": 120
+        }
+      ],
+      "expected": {
+        "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        "plannedDurationSeconds": 600,
+        "phase": "completed",
+        "elapsedSeconds": 60
+      },
+      "outcomeCodes": [
+        "APPLIED",
+        "APPLIED",
+        "TERMINAL"
+      ]
+    },
+    {
+      "name": "completed-F-never-revives-after-G",
+      "commands": [
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000001",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "start",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": null,
+          "expectedCurrentSessionId": null,
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 600
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000002",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "complete",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:01:00.000Z",
+          "durationSeconds": null
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000003",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "start",
+          "sessionId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+          "taskId": "task-G",
+          "epoch": "00000000-0000-4000-8000-000000000003",
+          "expectedRevision": "00000000-0000-4000-8000-000000000002",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:02:00.000Z",
+          "durationSeconds": 300
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000004",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "pause",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000002",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:03:00.000Z",
+          "durationSeconds": null
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000005",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "start",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000005",
+          "expectedRevision": "00000000-0000-4000-8000-000000000003",
+          "expectedCurrentSessionId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+          "capturedAt": "2026-09-07T12:04:00.000Z",
+          "durationSeconds": 600
+        }
+      ],
+      "expected": {
+        "sessionId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+        "plannedDurationSeconds": 300,
+        "phase": "active",
+        "elapsedSeconds": 0
+      },
+      "outcomeCodes": [
+        "APPLIED",
+        "APPLIED",
+        "APPLIED",
+        "STALE_TARGET",
+        "SESSION_EXISTS"
+      ]
+    },
+    {
+      "name": "extension-range-is-not-silently-clamped",
+      "commands": [
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000001",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "start",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": null,
+          "expectedCurrentSessionId": null,
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 600
+        },
+        {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000002",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "extend",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 86400
+        }
+      ],
+      "expected": {
+        "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        "plannedDurationSeconds": 600,
+        "phase": "active",
+        "elapsedSeconds": 0
+      },
+      "outcomeCodes": [
+        "APPLIED",
+        "INVALID_RANGE"
+      ]
+    }
+  ]
+}

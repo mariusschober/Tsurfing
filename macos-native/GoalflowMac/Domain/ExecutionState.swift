@@ -170,7 +170,7 @@ struct SharedFocusSessionRecord: Equatable, Sendable {
               !taskId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               taskId.count <= 240,
               sharedFocusSessionDurationRange.contains(plannedDurationSeconds),
-              elapsedSeconds >= 0,
+              elapsedSeconds >= 0, elapsedSeconds <= 9_007_199_254_740_991,
               startedAt <= updatedAt,
               pausedAt.map({ $0 >= startedAt && $0 <= updatedAt }) ?? true,
               endedAt.map({ $0 >= startedAt && $0 <= updatedAt }) ?? true else { return nil }
@@ -180,7 +180,7 @@ struct SharedFocusSessionRecord: Equatable, Sendable {
         case .paused:
             guard pausedAt != nil, endedAt == nil else { return nil }
         case .stopped, .completed:
-            guard endedAt != nil else { return nil }
+            guard endedAt != nil, pausedAt == nil else { return nil }
         }
         self.schemaVersion = schemaVersion
         self.sessionId = sessionId.lowercased()

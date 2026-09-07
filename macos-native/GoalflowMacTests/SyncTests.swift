@@ -24,6 +24,12 @@ final class SyncEnvelopeTests: XCTestCase {
 }
 
 final class StableJsonTests: XCTestCase {
+    func testParsedPrimitiveNumbersDoNotBecomeBooleans() throws {
+        let values = try XCTUnwrap(JSONSerialization.jsonObject(with: Data("[0,1,false,true,1.0]".utf8)) as? [Any])
+        XCTAssertEqual(values.map { stableJson($0) }, ["0", "1", "false", "true", "1"])
+        XCTAssertNotEqual(stableJson(values[0]), stableJson(values[2]))
+        XCTAssertNotEqual(stableJson(values[1]), stableJson(values[3]))
+    }
     func test_sorts_keys() {
         let a: [String: Any] = ["b": 2, "a": 1]
         let b: [String: Any] = ["a": 1, "b": 2]

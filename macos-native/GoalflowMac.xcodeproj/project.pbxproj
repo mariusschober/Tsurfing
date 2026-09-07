@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2095E9A6D2A084662BAB1DBB /* CausalFocusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6D542FCA9389FCE37DE4F6D /* CausalFocusTests.swift */; };
+		BBA1E6DCF608016219BA10AB /* CausalFocus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5AE78AB38DBFE0AA280A7F7 /* CausalFocus.swift */; };
+		6985D97D4616253BE857776A /* CounterLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61749B4C0E519C0745F5661A /* CounterLedger.swift */; };
+		BA98637B425AC88CFCCF9B6D /* CounterLedgerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E7443AB3FC9D9BD8442FC2 /* CounterLedgerTests.swift */; };
 		C10C00000000000000000012 /* CLOCK_AUDIO_LICENSE.md in Resources */ = {isa = PBXBuildFile; fileRef = C10C00000000000000000002 /* CLOCK_AUDIO_LICENSE.md */; };
 		C10C00000000000000000011 /* clock-tock.wav in Resources */ = {isa = PBXBuildFile; fileRef = C10C00000000000000000001 /* clock-tock.wav */; };
 		C10C00000000000000000010 /* clock-tick.wav in Resources */ = {isa = PBXBuildFile; fileRef = C10C00000000000000000000 /* clock-tick.wav */; };
@@ -96,6 +100,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A6D542FCA9389FCE37DE4F6D /* CausalFocusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CausalFocusTests.swift; sourceTree = "<group>"; };
+		C5AE78AB38DBFE0AA280A7F7 /* CausalFocus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CausalFocus.swift; sourceTree = "<group>"; };
+		40E7443AB3FC9D9BD8442FC2 /* CounterLedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterLedgerTests.swift; sourceTree = "<group>"; };
+		61749B4C0E519C0745F5661A /* CounterLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterLedger.swift; sourceTree = "<group>"; };
 		C10C00000000000000000002 /* CLOCK_AUDIO_LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLOCK_AUDIO_LICENSE.md; sourceTree = "<group>"; };
 		C10C00000000000000000001 /* clock-tock.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = clock-tock.wav; sourceTree = "<group>"; };
 		C10C00000000000000000000 /* clock-tick.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = clock-tick.wav; sourceTree = "<group>"; };
@@ -271,6 +279,8 @@
 				F3CC5C7FC26EAE04E420212F /* CaptureParser.swift */,
 				86CE938717E68CEB8A89E444 /* CaptureService.swift */,
 				E5C87EF4808BAD06681002F0 /* ExecutionState.swift */,
+				61749B4C0E519C0745F5661A /* CounterLedger.swift */,
+				C5AE78AB38DBFE0AA280A7F7 /* CausalFocus.swift */,
 				880B660E82110CAAE59ADDFE /* GoalflowTask.swift */,
 				17A42633A1F53B33B0441469 /* GoalModels.swift */,
 				385FFB3CC3176145427EE7C1 /* PlanningGate.swift */,
@@ -287,6 +297,8 @@
 				52F46B3249801BD9B2327764 /* CalendarTests.swift */,
 				722BA1A138750DE8CCE66295 /* CaptureServiceTests.swift */,
 				EB398F1027FB785F68950CA8 /* CaptureTests.swift */,
+				40E7443AB3FC9D9BD8442FC2 /* CounterLedgerTests.swift */,
+				A6D542FCA9389FCE37DE4F6D /* CausalFocusTests.swift */,
 				4E6E296D6144E2B16A2FC290 /* CaptureViewModelTests.swift */,
 				75FD4CE9AF7B05F82DC4E829 /* EmailOtpAuthTests.swift */,
 				E75593242BB50FF5FF2B90F1 /* ExecutionStateTests.swift */,
@@ -464,6 +476,8 @@
 				CA9EB4BAD57A5D7375DB67CF /* CalendarTests.swift in Sources */,
 				2709E179A9CC51DC2B3F6782 /* CaptureServiceTests.swift in Sources */,
 				257D9D35C45D592E5BA3B1D8 /* CaptureTests.swift in Sources */,
+				BA98637B425AC88CFCCF9B6D /* CounterLedgerTests.swift in Sources */,
+				2095E9A6D2A084662BAB1DBB /* CausalFocusTests.swift in Sources */,
 				0DFF4D3EAF7F06C09A8F8493 /* CaptureViewModelTests.swift in Sources */,
 				B36000BC49EA4E882DE39EB3 /* EmailOtpAuthTests.swift in Sources */,
 				60C71721839D479A8F1456C3 /* ExecutionStateTests.swift in Sources */,
@@ -509,6 +523,8 @@
 				D404496390E6780A73A57911 /* DeviceIdStore.swift in Sources */,
 				41C26C25928103F38F273B10 /* ExecutionPanelView.swift in Sources */,
 				5710A612E06235FF7D483818 /* ExecutionState.swift in Sources */,
+				6985D97D4616253BE857776A /* CounterLedger.swift in Sources */,
+				BBA1E6DCF608016219BA10AB /* CausalFocus.swift in Sources */,
 				F0B4F0EE32D6B024CDB46009 /* ExecutionTimer.swift in Sources */,
 				1718155336168592F9FA0148 /* FocusSessionStore.swift in Sources */,
 				BF355797A88E29C871B9C6D4 /* FrogBadge.swift in Sources */,

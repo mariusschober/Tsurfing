@@ -9,6 +9,7 @@ export const FOCUS_SESSION_SCHEMA_VERSION = 1 as const;
 export type FocusSessionPhase = 'active' | 'paused' | 'stopped' | 'completed';
 
 export interface FocusSessionRecord {
+  [key: string]: unknown;
   schemaVersion: typeof FOCUS_SESSION_SCHEMA_VERSION;
   sessionId: string;
   taskId: string;
@@ -75,8 +76,9 @@ export const normalizeFocusSession = (value: unknown): FocusSessionRecord | null
     || (endedTime !== null && (endedTime < startedTime || endedTime > updatedTime))) return null;
   if (phase === 'active' && (pausedAt !== null || endedAt !== null)) return null;
   if (phase === 'paused' && (pausedAt === null || endedAt !== null)) return null;
-  if ((phase === 'stopped' || phase === 'completed') && endedAt === null) return null;
+  if ((phase === 'stopped' || phase === 'completed') && (endedAt === null || pausedAt !== null)) return null;
   return {
+    ...value,
     schemaVersion: FOCUS_SESSION_SCHEMA_VERSION,
     sessionId: value.sessionId,
     taskId: value.taskId,
