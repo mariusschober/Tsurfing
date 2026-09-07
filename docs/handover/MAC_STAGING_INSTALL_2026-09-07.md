@@ -40,3 +40,20 @@ backed up under ~/Library/Application Support/Tsurfing-install-backups/.
 
 Full owner authentication and authenticated live sync require completion
 inside the installed app; local tests do not establish those outcomes.
+
+## Follow-up: authenticated sync recovery
+
+Installed build 2026090707 preserves the existing signed-in session across
+restart. The misleading Sign in action on authenticated sync errors now
+reads Retry sync. The native daily-plan decoder accepts both web Unix
+milliseconds and legacy native ISO timestamps without rewriting received
+wire data. Three regression tests cover the web timestamp, native format,
+and invalid numeric confirmations. Final native tests: 198 passed, zero
+failed, one explicitly gated live-transport test skipped.
+
+Staging's legacy numeric projection migration recovered all six original
+retained Mac mutations. After the installed build restarted, the Mac had
+zero pending uploads, zero conflicts and cursor 1243 (previously 0), proving
+successful authenticated download as well as upload. No owner task, session,
+or pending mutation was manually cleared. See the legacy sync recovery
+operations note for database evidence and hosted migration version.
