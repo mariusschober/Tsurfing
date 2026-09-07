@@ -45,7 +45,8 @@ for migration in \
   "${repository_root}/supabase/migrations/202609040001_email_otp_activation.sql" \
   "${repository_root}/supabase/migrations/202609040002_telegram_oidc_activation.sql" \
   "${repository_root}/supabase/migrations/202609040003_realtime_sync_wakeup.sql" \
-  "${repository_root}/supabase/migrations/202609040004_database_advisor_hardening.sql"; do
+  "${repository_root}/supabase/migrations/202609040004_database_advisor_hardening.sql" \
+  "${repository_root}/supabase/migrations/202609070001_legacy_mac_numeric_projection.sql"; do
   psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${migration}" >/dev/null
 done
 psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${repository_root}/scripts/migration-integrity-assertions.sql" >/dev/null
@@ -66,3 +67,7 @@ psql -v ON_ERROR_STOP=1 -d "${empty_database}" -f "${advisor_hardening_assertion
 psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${advisor_hardening_assertions}" >/dev/null
 
 echo '{"status":"PASS","emptyDatabase":"PASS","currentSchemaUpgrade":"PASS","idempotency":"PASS","conflictPreservation":"PASS","cursorRebase":"PASS","atomicRestore":"PASS","backupDryRun":"PASS","quotaRewind":"DENIED","nativeTaskEvents":"PASS","unknownPayloadPreservation":"PASS","directDataApi":"DENIED","rlsIsolation":"PASS","sameOwnerRelations":"PASS","typedEmailOtpActivation":"PASS","telegramOidcActivation":"PASS","sessionRevocation":"PASS","ownerBootstrap":"PASS","telegramWebhookClaims":"PASS","telegramMiniSessions":"PASS","telegramAccountBinding":"PASS","telegramCaptureConfirmation":"ATOMIC","realtimeWakeup":"PASS","wakeupRollback":"PASS","topicForgery":"DENIED","databaseAdvisorHardening":"PASS"}'
+
+for test_database in "${empty_database}" "${upgrade_database}"; do
+  psql -v ON_ERROR_STOP=1 -d "${test_database}" -f "${repository_root}/scripts/migration-legacy-mac-numeric-assertions.sql" >/dev/null
+done
