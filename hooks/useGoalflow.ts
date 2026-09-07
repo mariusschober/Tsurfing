@@ -366,7 +366,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
               }
           } catch (error) {
               window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: {
-                  userKey: USER_KEY, state: 'error', message: error instanceof Error ? error.message : 'Local commit failed; captured changes remain recoverable.'
+                  userKey: USER_KEY, state: 'error', localFailure: true, message: error instanceof Error ? error.message : 'Local commit failed; captured changes remain recoverable.'
               } }));
           } finally {
               active = false;
@@ -376,9 +376,33 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
       const captured = (event: Event) => {
           if ((event as CustomEvent).detail?.userKey === USER_KEY) void drain();
       };
+      const retry = async () => {
+          try {
+              await storageService.retryAtomicStorage();
+              if (stopped) return;
+              const meta = await storageService.flushPendingLocalChanges(USER_KEY);
+              if (stopped) return;
+              const blocked = Object.values(meta.localState?.blocked ?? {});
+              window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: {
+                  userKey: USER_KEY, state: blocked.length ? 'error' : 'saved-locally',
+                  localFailure: blocked.length > 0, localRecovery: blocked.length === 0,
+                  message: blocked[0] || 'Committed locally; waiting for cloud acknowledgment.'
+              } }));
+          } catch (error) {
+              if (!stopped) window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: {
+                  userKey: USER_KEY, state: 'error', localFailure: true,
+                  message: error instanceof Error ? error.message : 'Local recovery failed; captured changes remain preserved.'
+              } }));
+          }
+      };
       window.addEventListener('goalflow:captured', captured);
+      window.addEventListener('goalflow:sync-retry', retry);
       void drain();
-      return () => { stopped = true; window.removeEventListener('goalflow:captured', captured); };
+      return () => {
+          stopped = true;
+          window.removeEventListener('goalflow:captured', captured);
+          window.removeEventListener('goalflow:sync-retry', retry);
+      };
   }, [USER_KEY, isLoading]);
 
 

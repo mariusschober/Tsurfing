@@ -251,7 +251,7 @@ const captureWal = (userKey: string, key: string, serialized: string): void => {
   try { verifiedLocalStorageWrite(key, serialized); }
   catch (error) {
     window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: {
-      userKey, state: 'error', message: 'This action could not be captured. Keep the editable input and retry when local storage is available.'
+      userKey, state: 'error', localFailure: true, message: 'This action could not be captured. Keep the editable input and retry when local storage is available.'
     } }));
     throw error;
   }
@@ -1014,7 +1014,7 @@ export const storageService = {
         }
       } catch (error) {
         if (!stopped) window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: {
-          userKey, state: 'error', message: error instanceof Error ? error.message : 'Local view could not be verified.'
+          userKey, state: 'error', localFailure: true, message: error instanceof Error ? error.message : 'Local view could not be verified.'
         } }));
       } finally { active = false; }
     };
@@ -1356,7 +1356,10 @@ export const storageService = {
       try {
         meta = await materializeWal(tx, userKey, normalizeSyncMeta(await tx.objectStore(STORES.SYNC).get(userKey)));
         const current = await tx.objectStore(STORES.TRACKING).get(userKey);
-        if (!isRecord(current) || typeof current.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(today)) throw new DurableStorageError('The day boundary has an invalid tracking baseline.');
+        if (!isRecord(current)
+          || !isDailyTrackingValue({ date: current.date, planViewCount: current.planViewCount, dailyPostponeCount: current.dailyPostponeCount })
+          || !isDailyTrackingValue({ date: today, planViewCount: 0, dailyPostponeCount: 0 })
+          || (current.focusSession != null && !normalizeFocusSession(current.focusSession))) throw new DurableStorageError('The day boundary has an invalid tracking baseline.');
         next = current.date === today ? current : { ...current, date: today, planViewCount: 0, dailyPostponeCount: 0 };
         const action = buildStagedLocalTransaction(STORES.TRACKING, userKey, current, next, nextWalOrder(), new Date().toISOString(), randomUuid);
         if (action) {

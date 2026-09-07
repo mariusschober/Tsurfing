@@ -8,6 +8,8 @@ interface StatusDetail {
   lastSuccessfulSync?: string;
   conflictCount?: number;
   message?: string;
+  localFailure?: boolean;
+  localRecovery?: boolean;
 }
 
 export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
@@ -20,6 +22,7 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
   useEffect(() => {
     let stateRevision = 0;
     let stopped = false;
+    let lastErrorWasLocal = false;
     renderedGeneration.current = -1;
     pendingSynced.current = null;
     setStatus({ state: navigator.onLine ? 'saved-locally' : 'offline' });
@@ -27,10 +30,13 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
     const onState = async (event: Event) => {
       const detail = (event as CustomEvent<StatusDetail>).detail;
       if (stopped || detail.userKey !== userKey) return;
+      if (detail.localRecovery && !lastErrorWasLocal) return;
+      if (detail.state === 'error') lastErrorWasLocal = detail.localFailure === true;
+      else lastErrorWasLocal = false;
       const revision = ++stateRevision;
       if (detail.state === 'synced') {
         const snapshot = await storageService.readCommittedSnapshot(userKey).catch(error => {
-          if (!stopped && revision === stateRevision) setStatus({ state: 'error', message: error instanceof Error ? error.message : 'Local state could not be verified.' });
+          if (!stopped && revision === stateRevision) { lastErrorWasLocal = true; setStatus({ state: 'error', message: error instanceof Error ? error.message : 'Local state could not be verified.' }); }
           return null;
         });
         if (stopped || !snapshot || revision !== stateRevision) return;
@@ -72,12 +78,12 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
       pendingSynced.current = null;
       setStatus(previous => previous.state === 'synced' ? { ...previous, state: 'syncing', message: 'Updating local view.' } : previous);
       const snapshot = await storageService.readCommittedSnapshot(userKey).catch(error => {
-          if (!stopped && revision === stateRevision) setStatus({ state: 'error', message: error instanceof Error ? error.message : 'Local state could not be verified.' });
+          if (!stopped && revision === stateRevision) { lastErrorWasLocal = true; setStatus({ state: 'error', message: error instanceof Error ? error.message : 'Local state could not be verified.' }); }
           return null;
         });
         if (stopped || !snapshot || revision !== stateRevision) return;
       const blocked = Object.values<string>(snapshot.meta.localState?.blocked ?? {});
-      if (blocked.length) setStatus({ state: 'error', message: blocked[0] });
+      if (blocked.length) { lastErrorWasLocal = true; setStatus({ state: 'error', message: blocked[0] }); }
       else if (snapshot.pendingCount || snapshot.meta.outbox.length || snapshot.meta.conflicts.length) setStatus(previous => previous.state === 'error' ? previous : { state: 'saved-locally', message: 'Waiting for cloud acknowledgment.' });
     };
     window.addEventListener('goalflow:sync-state', onState);

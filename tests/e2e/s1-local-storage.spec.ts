@@ -493,3 +493,23 @@ test('bootstrap: two simultaneous real app hydrations import one legacy plan wit
   expect(after.meta.outbox).toEqual(first.meta.outbox);
   expect(after.original).toBe(first.original);
 });
+
+test('local retry: a captured action commits after storage recovery without a cloud client', async ({ page }) => {
+  await unlock(page);
+  await page.evaluate(() => {
+    const storage = (window as any).__s1Storage;
+    const flush = storage.flushPendingLocalChanges.bind(storage);
+    storage.flushPendingLocalChanges = () => Promise.reject(new Error('Synthetic local commit interruption'));
+    (window as any).__s1RestoreFlush = () => { storage.flushPendingLocalChanges = flush; };
+  });
+  await createTask(page, 'S1 retry retained action');
+  await expect(page.getByTitle('Synthetic local commit interruption')).toBeVisible();
+  await page.evaluate(() => (window as any).__s1RestoreFlush());
+  await page.getByTitle('Synthetic local commit interruption').click();
+  await page.getByRole('button', { name: 'Retry sync', exact: true }).click();
+  await expect.poll(() => page.evaluate(async user => {
+    const meta = await (window as any).__s1Storage.get('sync', user);
+    return meta.outbox.some((m: any) => m.payload?.title === 'S1 retry retained action');
+  }, user)).toBe(true);
+  await expect(page.getByTitle('Synthetic local commit interruption')).toHaveCount(0);
+});

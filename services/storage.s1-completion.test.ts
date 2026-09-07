@@ -226,3 +226,11 @@ it('bootstrap: concurrent day rollover preserves newer focus and optional fields
   await storage.rolloverTrackingDay(user, '2026-09-07');
   expect((await storage.get<any>('sync', user)).outbox).toEqual(first.outbox);
 });
+
+it('bootstrap: day rollover refuses malformed counters instead of laundering them into zero', async () => {
+  const { name, user } = fixture();
+  const malformed = { date: '2026-09-06', planViewCount: 'damaged', dailyPostponeCount: 1 };
+  await storage.set('tracking', user, malformed, 'cloud');
+  await expect(storage.rolloverTrackingDay(user, '2026-09-07')).rejects.toThrow(/invalid tracking baseline/);
+  expect(await (await openDB(name)).get('tracking', user)).toEqual(malformed);
+});
