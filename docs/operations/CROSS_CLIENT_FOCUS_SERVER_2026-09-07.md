@@ -32,3 +32,12 @@ focus preservation would change its payload. Only the separate audited
 reconciliation operation writes the combined canonical record. Every accepted
 v2 receipt still proves the exact original payload; API and client validation
 remain unchanged. This is necessary for older installed clients to keep syncing.
+
+Both safeguards were applied to Tsurfing Staging (xyjgpwwvsyjhurkycyqr): hosted
+migration versions 20260907124437 (focus_session_preservation) and
+20260907124452 (focus_session_receipt_guard). A read-only hosted query confirmed
+legacy omission preserves the focus value, the exact-receipt guard is active,
+the trigger is enabled, and authenticated users cannot execute the internal
+helper. Security advisors were unchanged from the pre-migration baseline.
+No owner records were modified by these verification queries. Client convergence
+remains pending until the new apps are installed and tested.
