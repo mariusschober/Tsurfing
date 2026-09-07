@@ -182,6 +182,99 @@ describe('durable storage failure boundaries', () => {
       .filter(k => k?.startsWith('goalflow_wal_v2_')).map(k => local.getItem(k!))).toEqual(before);
   });
 
+  it('merges a pending focus action with an independent newer tracking counter', async () => {
+    installBrowserStorage();
+    const key = `tracking-focus-counter-merge-${crypto.randomUUID()}`;
+    const previousFocus = {
+      schemaVersion: 1,
+      sessionId: '33333333-3333-4333-8333-333333333333',
+      taskId: 'task-focus',
+      phase: 'paused',
+      plannedDurationSeconds: 1_800,
+      startedAt: '2026-09-07T10:00:00.000Z',
+      elapsedSeconds: 300,
+      pausedAt: '2026-09-07T10:05:00.000Z',
+      endedAt: null,
+      updatedAt: '2026-09-07T10:05:00.000Z'
+    };
+    const nextFocus = {
+      ...previousFocus,
+      phase: 'active',
+      startedAt: '2026-09-07T10:05:00.001Z',
+      pausedAt: null,
+      updatedAt: '2026-09-07T10:05:00.001Z'
+    };
+    const previous = { date: '2026-09-07', planViewCount: 1, dailyPostponeCount: 0, focusSession: previousFocus };
+    const current = { ...previous, planViewCount: 2 };
+    const next = { ...previous, focusSession: nextFocus };
+    await storageService.set(STORES.TRACKING, key, current, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, previous, next);
+
+    await storageService.flushPendingLocalChanges(key);
+
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual({ ...current, focusSession: nextFocus });
+  });
+
+  it('keeps newer same-day counters when hydration resets an older baseline with focus', async () => {
+    installBrowserStorage();
+    const key = `tracking-focus-rollover-${crypto.randomUUID()}`;
+    const previousFocus = {
+      schemaVersion: 1,
+      sessionId: '44444444-4444-4444-8444-444444444444',
+      taskId: 'task-focus',
+      phase: 'active',
+      plannedDurationSeconds: 1_800,
+      startedAt: '2026-09-06T23:55:00.000Z',
+      elapsedSeconds: 0,
+      pausedAt: null,
+      endedAt: null,
+      updatedAt: '2026-09-06T23:55:00.000Z'
+    };
+    const currentFocus = {
+      ...previousFocus,
+      phase: 'paused',
+      elapsedSeconds: 300,
+      pausedAt: '2026-09-07T00:05:00.000Z',
+      updatedAt: '2026-09-07T00:05:00.000Z'
+    };
+    const previous = { date: '2026-09-06', planViewCount: 7, dailyPostponeCount: 1, focusSession: previousFocus };
+    const reset = { date: '2026-09-07', planViewCount: 0, dailyPostponeCount: 0, focusSession: previousFocus };
+    const current = { date: '2026-09-07', planViewCount: 3, dailyPostponeCount: 2, focusSession: currentFocus };
+    await storageService.set(STORES.TRACKING, key, current, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, previous, reset);
+
+    const meta = await storageService.flushPendingLocalChanges(key);
+
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual(current);
+    expect(meta.outbox[0]?.payload).toEqual(current);
+  });
+
+  it('does not choose between concurrent focus records with the same causal timestamp', async () => {
+    installBrowserStorage();
+    const key = `tracking-focus-tie-${crypto.randomUUID()}`;
+    const previousFocus = {
+      schemaVersion: 1,
+      sessionId: '55555555-5555-4555-8555-555555555555',
+      taskId: 'task-focus',
+      phase: 'active',
+      plannedDurationSeconds: 1_800,
+      startedAt: '2026-09-07T10:00:00.000Z',
+      elapsedSeconds: 0,
+      pausedAt: null,
+      endedAt: null,
+      updatedAt: '2026-09-07T10:00:00.000Z'
+    };
+    const currentFocus = { ...previousFocus, phase: 'paused', elapsedSeconds: 120, pausedAt: '2026-09-07T10:02:00.000Z', updatedAt: '2026-09-07T10:02:00.000Z' };
+    const nextFocus = { ...previousFocus, phase: 'completed', elapsedSeconds: 120, endedAt: '2026-09-07T10:02:00.000Z', updatedAt: '2026-09-07T10:02:00.000Z' };
+    const previous = { date: '2026-09-07', planViewCount: 1, dailyPostponeCount: 0, focusSession: previousFocus };
+    const current = { ...previous, focusSession: currentFocus };
+    const next = { ...previous, focusSession: nextFocus };
+    await storageService.set(STORES.TRACKING, key, current, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, previous, next);
+
+    await expect(storageService.flushPendingLocalChanges(key)).rejects.toThrow(/Neither version was overwritten/);
+  });
+
   it('recovers every store in a grouped UI mutation after a simulated process kill', async () => {
     installBrowserStorage();
     const key = `storage-group-kill-${crypto.randomUUID()}`;

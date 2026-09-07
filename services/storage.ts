@@ -23,7 +23,7 @@ import {
   type SyncMeta,
   type SyncMutation
 } from './syncProtocol';
-import { mergeTrackingFocusSession } from '../src/domain/focusSession';
+import { mergeTrackingFocusSession, normalizeFocusSession } from '../src/domain/focusSession';
 
 const BASE_DB_NAME = 'GoalflowDB';
 const ACTIVE_DB_KEY = 'goalflow_active_database_v2';
@@ -541,14 +541,23 @@ const mapRecordsForRecovery = (
  * recovered from IndexedDB are retained; a same-record divergence enters
  * durable automatic reconciliation when an atomic sync ledger is available.
  */
-type DailyTrackingValue = { date: string; planViewCount: number; dailyPostponeCount: number };
+type DailyTrackingValue = {
+  date: string;
+  planViewCount: number;
+  dailyPostponeCount: number;
+  focusSession?: unknown;
+};
 const isDailyTrackingValue = (value: unknown): value is DailyTrackingValue => {
-  if (!isRecord(value) || Object.keys(value).length !== 3
+  if (!isRecord(value) || Object.keys(value).some(key =>
+    !['date', 'planViewCount', 'dailyPostponeCount', 'focusSession'].includes(key))
     || typeof value.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value.date)
     || !Number.isFinite(Date.parse(value.date))
     || new Date(value.date).toISOString().slice(0, 10) !== value.date) return false;
-  return [value.planViewCount, value.dailyPostponeCount]
-    .every(count => typeof count === 'number' && Number.isSafeInteger(count) && count >= 0);
+  if (![value.planViewCount, value.dailyPostponeCount]
+    .every(count => typeof count === 'number' && Number.isSafeInteger(count) && count >= 0)) return false;
+  if (!Object.prototype.hasOwnProperty.call(value, 'focusSession')
+    || value.focusSession === null || value.focusSession === undefined) return true;
+  return normalizeFocusSession(value.focusSession) !== null;
 };
 
 const reconcileStagedTransactions = (
@@ -556,6 +565,87 @@ const reconcileStagedTransactions = (
   transactions: StagedLocalTransaction[],
   meta?: SyncMeta
 ): unknown => {
+  const mergeDivergentTracking = (
+    current: unknown,
+    previous: unknown,
+    next: unknown
+  ): { handled: true; value: Record<string, unknown> } | { handled: false } => {
+    if (!isRecord(current) || !isRecord(previous) || !isRecord(next)) return { handled: false };
+    const same = (left: unknown, right: unknown): boolean => jsonEqual(left, right);
+    const merged: Record<string, unknown> = { ...current };
+    const keys = new Set([...Object.keys(current), ...Object.keys(previous), ...Object.keys(next)]);
+    const chooseThreeWay = (currentField: unknown, previousField: unknown, nextField: unknown): { ok: true; value: unknown } | { ok: false } => {
+      if (same(currentField, previousField)) return { ok: true, value: nextField };
+      if (same(nextField, previousField) || same(currentField, nextField)) return { ok: true, value: currentField };
+      return { ok: false };
+    };
+    const focusState = (value: unknown):
+      { kind: 'empty' }
+      | { kind: 'valid'; value: NonNullable<ReturnType<typeof normalizeFocusSession>> }
+      | { kind: 'invalid' } => {
+      if (value === null || value === undefined) return { kind: 'empty' };
+      const normalized = normalizeFocusSession(value);
+      return normalized ? { kind: 'valid', value: normalized } : { kind: 'invalid' };
+    };
+    const validateChosenFocus = (value: unknown): { ok: true; value: unknown } | { ok: false } => {
+      if (value === null || value === undefined) return { ok: true, value };
+      const normalized = normalizeFocusSession(value);
+      return normalized ? { ok: true, value: normalized } : { ok: false };
+    };
+    const currentFocus = current.focusSession;
+    const previousFocus = previous.focusSession;
+    const nextFocus = next.focusSession;
+    let chosenFocus: unknown;
+    if (same(currentFocus, previousFocus)) {
+      chosenFocus = nextFocus;
+    } else if (same(nextFocus, previousFocus) || same(currentFocus, nextFocus)) {
+      chosenFocus = currentFocus;
+    } else {
+      const currentState = focusState(currentFocus);
+      const nextState = focusState(nextFocus);
+      if (currentState.kind === 'invalid' || nextState.kind === 'invalid') return { handled: false };
+      if (currentState.kind === 'empty') chosenFocus = nextFocus;
+      else if (nextState.kind === 'empty') chosenFocus = currentFocus;
+      else {
+        const currentTime = Date.parse(currentState.value.updatedAt);
+        const nextTime = Date.parse(nextState.value.updatedAt);
+        // Equal timestamps from two distinct valid records are concurrent,
+        // not an ordering signal. Keep both versions recoverable instead of
+        // selecting one by object order.
+        if (currentTime === nextTime) return { handled: false };
+        chosenFocus = currentTime > nextTime ? currentFocus : nextFocus;
+      }
+    }
+    const checkedFocus = validateChosenFocus(chosenFocus);
+    if (!checkedFocus.ok) return { handled: false };
+    if (checkedFocus.value === undefined) delete merged.focusSession;
+    else merged.focusSession = checkedFocus.value;
+
+    const isForwardReset = isDailyTrackingValue(previous)
+      && isDailyTrackingValue(next)
+      && previous.date < next.date
+      && next.planViewCount === 0
+      && next.dailyPostponeCount === 0;
+    const currentAlreadyOnResetDay = isDailyTrackingValue(current)
+      && isForwardReset
+      && current.date >= next.date;
+    keys.delete('focusSession');
+    for (const key of keys) {
+      // A hydration reset only owns the date-scoped fields when the recovered
+      // value is still before the reset day. If another client has already
+      // written that day, retain its counters and let the pending focus action
+      // merge independently.
+      if (currentAlreadyOnResetDay && ['date', 'planViewCount', 'dailyPostponeCount'].includes(key)) {
+        merged[key] = current[key];
+        continue;
+      }
+      const choice = chooseThreeWay(current[key], previous[key], next[key]);
+      if (!choice.ok) return { handled: false };
+      if (choice.value === undefined) delete merged[key];
+      else merged[key] = choice.value;
+    }
+    return { handled: true, value: merged };
+  };
   let current = currentValue;
   for (const transaction of [...transactions].sort((left, right) =>
     left.order - right.order || left.id.localeCompare(right.id))) {
@@ -581,6 +671,32 @@ const reconcileStagedTransactions = (
       && transaction.previousValue.dailyPostponeCount === 0) {
       current = transaction.value;
       continue;
+    }
+    // Tracking is a singleton with independent daily counters and focus
+    // actions. A remote counter update must not make a pending focus action
+    // unrecoverable; merge only fields where one side is unchanged from the
+    // staged baseline, and keep the existing hard failure for ambiguity.
+    if (transaction.storeName === STORES.TRACKING && transaction.hasPreviousValue) {
+      const merged = mergeDivergentTracking(current, transaction.previousValue, transaction.value);
+      if (merged.handled) {
+        current = merged.value;
+        // The singleton mutation must carry the rebased whole value as well
+        // as the recovered store. Otherwise the next sync push would replay
+        // the stale reset payload and erase the newer counters we just kept.
+        transaction.value = merged.value;
+        const mutationIds = new Set(transaction.changes.map(change => change.mutationId));
+        for (const change of transaction.changes) {
+          change.payload = merged.value;
+          change.deletedAt = null;
+        }
+        for (const mutation of meta?.outbox ?? []) {
+          if (mutationIds.has(mutation.mutationId)) {
+            mutation.payload = merged.value;
+            mutation.deletedAt = null;
+          }
+        }
+        continue;
+      }
     }
     if (!RECORD_LEVEL_STORES.has(transaction.storeName)) {
       throw new DurableStorageError(
@@ -845,15 +961,20 @@ export const storageService = {
             committedValue = transaction.value;
           }
         }
+        let nextMeta: SyncMeta | undefined;
         if (source === 'local' && SYNCABLE_STORES.has(storeName)) {
+          nextMeta = appendStagedTransactions(
+            normalizeSyncMeta(readLocalCopy(STORES.SYNC, key)),
+            pending.map(item => item.transaction),
+            readDeviceId()
+          );
           committedValue = reconcileStagedTransactions(
-            readLocalCopy(storeName, key), pending.map(item => item.transaction)
+            readLocalCopy(storeName, key), pending.map(item => item.transaction), nextMeta
           );
         }
         writeFallback(storeName, key, committedValue);
-        if (source === 'local' && SYNCABLE_STORES.has(storeName)) {
-          const meta = normalizeSyncMeta(readLocalCopy(STORES.SYNC, key));
-          writeFallback(STORES.SYNC, key, appendStagedTransactions(meta, pending.map(item => item.transaction), readDeviceId()));
+        if (nextMeta) {
+          writeFallback(STORES.SYNC, key, nextMeta);
         }
       }
       pending.forEach(item => safeLocalStorageRemove(item.key));
@@ -910,7 +1031,7 @@ export const storageService = {
         );
         for (const transaction of latestByStore.values()) {
           const reconciled = reconcileStagedTransactions(
-            readLocalCopy(transaction.storeName, userKey), pendingByStore.get(transaction.storeName) ?? []
+            readLocalCopy(transaction.storeName, userKey), pendingByStore.get(transaction.storeName) ?? [], nextMeta
           );
           transaction.value = reconciled;
           writeFallback(transaction.storeName, userKey, reconciled);
