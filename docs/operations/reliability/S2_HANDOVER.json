@@ -657,6 +657,32 @@
         "Active legacy transport still lacks causal action receipts and durable logical operation deduplication.",
         "No cross-client causal acceptance or native installation claimed."
       ]
+    },
+    {
+      "commit": "eb8237f0c9ba0ff2d22f9fd07cedb343875928c5",
+      "scope": "macOS focus intent read-transform-commit and recoverable atomic task/focus completion",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "macos-native/GoalflowMac/Sync/MetaStore.swift",
+        "macos-native/GoalflowMac/Sync/SyncEngine.swift",
+        "macos-native/GoalflowMac/UI/ExecutionPanelView.swift",
+        "macos-native/GoalflowMacTests/SyncTests.swift"
+      ],
+      "migrations": [],
+      "validation": [
+        {
+          "command": "xcodebuild test -project macos-native/GoalflowMac.xcodeproj -scheme GoalflowMac -configuration Debug -destination 'platform=macOS' -derivedDataPath /private/tmp/s2-macos-tests CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0,
+          "tests": 226,
+          "skipped": 1,
+          "failures": 0
+        }
+      ],
+      "limitations": [
+        "Legacy server multi-entity push is not atomic completion.",
+        "Causal action receipt integration, operation deduplication and cross-client terminal history remain.",
+        "No installed app replacement or hosted proof."
+      ]
     }
   ],
   "findings": [
@@ -765,7 +791,11 @@
     "evidence/s2-new-record-admission-release-initial.log",
     "evidence/s2-admission-release-retry.log",
     "evidence/s2-native-focus-transaction-test.log",
-    "evidence/s2-native-focus-transaction-final.log"
+    "evidence/s2-native-focus-transaction-final.log",
+    "evidence/s2-mac-focus-actions-first.log",
+    "evidence/s2-mac-focus-actions-final.log",
+    "evidence/s2-mac-focus-actions-verified.log",
+    "evidence/s2-mac-focus-actions-final-parent.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"
