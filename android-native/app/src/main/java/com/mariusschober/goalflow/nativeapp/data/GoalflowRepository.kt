@@ -162,22 +162,25 @@ class GoalflowRepository(
     /** Applies one focus action to the tracking singleton and queues one raw
      * collection mutation. The ticker never calls this method. */
     suspend fun saveFocusSession(session: NativeFocusSessionRecord) {
-        database.withTransaction {
-            val existing = rawCollections.get("tracking")?.payload
-            val root = if (existing == null) {
-                JSONObject()
-                    .put("date", timeProvider.today().toString())
-                    .put("planViewCount", 0)
-                    .put("dailyPostponeCount", 0)
-            } else {
-                val parsed = parseJsonValue(existing) as? JSONObject
-                    ?: throw IllegalArgumentException("Daily tracking is damaged; the focus action was not applied.")
-                parsed
-            }
-            root.put("focusSession", session.toJson())
-            upsertRawCollectionInTransaction("tracking", root.toString())
-        }
+        database.withTransaction { saveFocusSessionInTransaction(session) }
         onMutation()
+    }
+
+    private suspend fun saveFocusSessionInTransaction(session: NativeFocusSessionRecord) {
+        val existing = rawCollections.get("tracking")?.payload
+        val root = if (existing == null) {
+            JSONObject().put("date", timeProvider.today().toString())
+                .put("planViewCount", 0).put("dailyPostponeCount", 0)
+        } else {
+            parseJsonValue(existing) as? JSONObject
+                ?: throw IllegalArgumentException("Daily tracking is damaged; the focus action was not applied.")
+        }
+        val previous = root.optJSONObject("focusSession")
+        val next = if (previous?.optString("sessionId") == session.sessionId) JSONObject(previous.toString()) else JSONObject()
+        val projected = session.toJson()
+        for (key in projected.keys()) next.put(key, projected.get(key))
+        root.put("focusSession", next)
+        upsertRawCollectionInTransaction("tracking", root.toString())
     }
 
     fun planStream(localDate: String): Flow<DailyPlan?> = plans.observe(localDate).map { row -> row?.let(::toDomain) }
@@ -313,128 +316,171 @@ class GoalflowRepository(
         expectedWidgetTarget: NativeWidgetTarget? = null
     ) {
         val changed = database.withTransaction {
-            val task = tasks.getAll().firstOrNull { it.id == id }
-                ?: throw SchedulingException("Task not found.")
-            expectedWidgetTarget?.let { requireWidgetTargetInTransaction(it) }
-            if (task.status != TaskStatus.OPEN.name) return@withTransaction false
-            val now = timeProvider.now().toEpochMilli()
-            val today = timeProvider.today().toString()
-            val taskExtras = runCatching { JSONObject(task.extraJson) }.getOrElse { JSONObject() }
-            val previousGoal = task.goalId?.let { goals.get(it) }
-            val previousHabit = task.habitId?.let { habits.get(it) }
-            val previousStats = rawCollections.get("stats")
-            val previousStatsRoot = previousStats?.let { stored ->
-                runCatching { parseJsonValue(stored.payload) as? JSONObject }.getOrNull()
-            }
-            val statsWasFlat = previousStatsRoot?.let { root ->
-                root.has("tasksCompleted") || root.has("frogsEaten")
-            } == true
-            val statsDayBefore = when {
-                previousStatsRoot == null -> null
-                statsWasFlat -> previousStatsRoot.toString()
-                else -> previousStatsRoot.optJSONObject(today)?.toString()
-            }
-            val previousProgress = rawCollections.get("progress")?.payload
-            val focusMinutes = (actualDuration ?: taskExtras.optInt("actualDuration", taskExtras.optInt("duration", 0)))
-                .coerceAtLeast(0)
-            // Use indexed count instead of full table scan (P0-1)
-            val totalToday = tasks.countRemainingToday(today)
-            val remainingToday = if (task.scheduledFor == today && task.status == TaskStatus.OPEN.name && task.deletedAt == null) {
-                (totalToday - 1).coerceAtLeast(0)
-            } else totalToday
-            val habitStreak = previousHabit?.let { it.streak + 1 } ?: 0
-            var earnedXp = if (task.isFrog) 30 else 10
-            if (task.habitId != null) earnedXp += habitStreak * 2
-            if (task.goalId != null || task.habitId != null) earnedXp += 15
-            if (flowState == "flow") earnedXp += 15
-            if (flowState == "high") earnedXp += 10
-            if (remainingToday == 0) earnedXp += 50
+            completeTaskInTransaction(id, actualDuration, flowState, finalDescription, expectedWidgetTarget)
+        }
+        if (changed) onMutation()
+    }
 
-            // Stats and progression are web-owned collections, but a native
-            // completion is still a complete Goalflow state transition. Update
-            // their preserved JSON atomically when their projections are valid.
-            var statsChanged = false
-            // Stats and progress are optional web-owned projections. If a
-            // legacy client left one malformed, preserve that exact payload
-            // and let the task transition complete; the core commitment must
-            // not become unusable because an auxiliary projection is bad.
-            val statsRoot = when {
-                previousStats == null -> JSONObject()
-                previousStatsRoot != null -> previousStatsRoot
-                else -> null
-            }
-            statsRoot?.let { root ->
-                val statsForDay = if (root.has("tasksCompleted") || root.has("frogsEaten")) {
-                    root
-                } else {
-                    root.optJSONObject(today) ?: JSONObject()
-                }
-                statsForDay.put("tasksCompleted", (statsForDay.optInt("tasksCompleted", 0) + 1).coerceAtLeast(0))
-                statsForDay.put("frogsEaten", (statsForDay.optInt("frogsEaten", 0) + if (task.isFrog) 1 else 0).coerceAtLeast(0))
-                statsForDay.put("timeFocused", (statsForDay.optInt("timeFocused", 0) + focusMinutes).coerceAtLeast(0))
-                if (root !== statsForDay) root.put(today, statsForDay)
-                upsertRawCollectionInTransaction("stats", root.toString())
-                statsChanged = true
-            }
+    private suspend fun completeTaskInTransaction(
+        id: String, actualDuration: Int?, flowState: String?, finalDescription: String?,
+        expectedWidgetTarget: NativeWidgetTarget? = null
+    ): Boolean {
+        val task = tasks.getAll().firstOrNull { it.id == id }
+            ?: throw SchedulingException("Task not found.")
+        expectedWidgetTarget?.let { requireWidgetTargetInTransaction(it) }
+        if (task.status != TaskStatus.OPEN.name) return false
+        val now = timeProvider.now().toEpochMilli()
+        val today = timeProvider.today().toString()
+        val taskExtras = runCatching { JSONObject(task.extraJson) }.getOrElse { JSONObject() }
+        val previousGoal = task.goalId?.let { goals.get(it) }
+        val previousHabit = task.habitId?.let { habits.get(it) }
+        val previousStats = rawCollections.get("stats")
+        val previousStatsRoot = previousStats?.let { stored ->
+            runCatching { parseJsonValue(stored.payload) as? JSONObject }.getOrNull()
+        }
+        val statsWasFlat = previousStatsRoot?.let { root ->
+            root.has("tasksCompleted") || root.has("frogsEaten")
+        } == true
+        val statsDayBefore = when {
+            previousStatsRoot == null -> null
+            statsWasFlat -> previousStatsRoot.toString()
+            else -> previousStatsRoot.optJSONObject(today)?.toString()
+        }
+        val previousProgress = rawCollections.get("progress")?.payload
+        val focusMinutes = (actualDuration ?: taskExtras.optInt("actualDuration", taskExtras.optInt("duration", 0)))
+            .coerceAtLeast(0)
+        // Use indexed count instead of full table scan (P0-1)
+        val totalToday = tasks.countRemainingToday(today)
+        val remainingToday = if (task.scheduledFor == today && task.status == TaskStatus.OPEN.name && task.deletedAt == null) {
+            (totalToday - 1).coerceAtLeast(0)
+        } else totalToday
+        val habitStreak = previousHabit?.let { it.streak + 1 } ?: 0
+        var earnedXp = if (task.isFrog) 30 else 10
+        if (task.habitId != null) earnedXp += habitStreak * 2
+        if (task.goalId != null || task.habitId != null) earnedXp += 15
+        if (flowState == "flow") earnedXp += 15
+        if (flowState == "high") earnedXp += 10
+        if (remainingToday == 0) earnedXp += 50
 
-            val progressChanged = updateProgressInTransaction(earnedXp)
-            val undo = JSONObject().apply {
-                put("version", 1)
-                put("priorExtraJson", task.extraJson)
-                put("priorNotes", task.notes)
-                put("statsChanged", statsChanged)
-                put("statsWasPresent", previousStats != null)
-                put("statsWasFlat", statsWasFlat)
-                put("statsDayBefore", statsDayBefore ?: JSONObject.NULL)
-                put("progressChanged", progressChanged)
-                put("progressBefore", previousProgress ?: JSONObject.NULL)
-                put("goalId", task.goalId ?: JSONObject.NULL)
-                put("goalCompletedTasksBefore", previousGoal?.completedTasks ?: JSONObject.NULL)
-                put("habitId", task.habitId ?: JSONObject.NULL)
-                put("habitStreakBefore", previousHabit?.streak ?: JSONObject.NULL)
-                put("habitBestStreakBefore", previousHabit?.bestStreak ?: JSONObject.NULL)
-                put("habitLastCompletedDateBefore", previousHabit?.lastCompletedDate ?: JSONObject.NULL)
-                put("completionRecordedDate", today)
-                put("earnedXp", earnedXp)
+        // Stats and progression are web-owned collections, but a native
+        // completion is still a complete Goalflow state transition. Update
+        // their preserved JSON atomically when their projections are valid.
+        var statsChanged = false
+        // Stats and progress are optional web-owned projections. If a
+        // legacy client left one malformed, preserve that exact payload
+        // and let the task transition complete; the core commitment must
+        // not become unusable because an auxiliary projection is bad.
+        val statsRoot = when {
+            previousStats == null -> JSONObject()
+            previousStatsRoot != null -> previousStatsRoot
+            else -> null
+        }
+        statsRoot?.let { root ->
+            val statsForDay = if (root.has("tasksCompleted") || root.has("frogsEaten")) {
+                root
+            } else {
+                root.optJSONObject(today) ?: JSONObject()
             }
-            val updatedExtras = taskExtras.apply {
-                if (actualDuration != null) put("actualDuration", focusMinutes)
-                flowState?.takeIf { it in setOf("distracted", "good", "high", "flow") }?.let { put("flowState", it) }
-                put(COMPLETION_UNDO_KEY, undo)
+            statsForDay.put("tasksCompleted", (statsForDay.optInt("tasksCompleted", 0) + 1).coerceAtLeast(0))
+            statsForDay.put("frogsEaten", (statsForDay.optInt("frogsEaten", 0) + if (task.isFrog) 1 else 0).coerceAtLeast(0))
+            statsForDay.put("timeFocused", (statsForDay.optInt("timeFocused", 0) + focusMinutes).coerceAtLeast(0))
+            if (root !== statsForDay) root.put(today, statsForDay)
+            upsertRawCollectionInTransaction("stats", root.toString())
+            statsChanged = true
+        }
+
+        val progressChanged = updateProgressInTransaction(earnedXp)
+        val undo = JSONObject().apply {
+            put("version", 1)
+            put("priorExtraJson", task.extraJson)
+            put("priorNotes", task.notes)
+            put("statsChanged", statsChanged)
+            put("statsWasPresent", previousStats != null)
+            put("statsWasFlat", statsWasFlat)
+            put("statsDayBefore", statsDayBefore ?: JSONObject.NULL)
+            put("progressChanged", progressChanged)
+            put("progressBefore", previousProgress ?: JSONObject.NULL)
+            put("goalId", task.goalId ?: JSONObject.NULL)
+            put("goalCompletedTasksBefore", previousGoal?.completedTasks ?: JSONObject.NULL)
+            put("habitId", task.habitId ?: JSONObject.NULL)
+            put("habitStreakBefore", previousHabit?.streak ?: JSONObject.NULL)
+            put("habitBestStreakBefore", previousHabit?.bestStreak ?: JSONObject.NULL)
+            put("habitLastCompletedDateBefore", previousHabit?.lastCompletedDate ?: JSONObject.NULL)
+            put("completionRecordedDate", today)
+            put("earnedXp", earnedXp)
+        }
+        val updatedExtras = taskExtras.apply {
+            if (actualDuration != null) put("actualDuration", focusMinutes)
+            flowState?.takeIf { it in setOf("distracted", "good", "high", "flow") }?.let { put("flowState", it) }
+            put(COMPLETION_UNDO_KEY, undo)
+        }
+        val updated = task.copy(
+            status = TaskStatus.COMPLETED.name,
+            notes = finalDescription?.trim()?.takeIf(String::isNotBlank) ?: task.notes,
+            completedAt = now,
+            updatedAt = now,
+            extraJson = updatedExtras.toString()
+        )
+        tasks.update(updated)
+        enqueueRecordInTransaction("tasks", id, GoalflowJson.taskPayload(toDomain(updated)).toString())
+        recordTaskEventInTransaction(id, "completed", today)
+        task.goalId?.let { goalId ->
+            previousGoal?.let { goal ->
+                val updatedGoal = goal.copy(completedTasks = (goal.completedTasks + 1).coerceAtLeast(0))
+                goals.insert(updatedGoal)
+                enqueueRecordInTransaction(
+                    "goals", goalId, GoalflowJson.goalPayload(toDomain(updatedGoal)).toString()
+                )
             }
-            val updated = task.copy(
-                status = TaskStatus.COMPLETED.name,
-                notes = finalDescription?.trim()?.takeIf(String::isNotBlank) ?: task.notes,
-                completedAt = now,
-                updatedAt = now,
-                extraJson = updatedExtras.toString()
-            )
-            tasks.update(updated)
-            enqueueRecordInTransaction("tasks", id, GoalflowJson.taskPayload(toDomain(updated)).toString())
-            recordTaskEventInTransaction(id, "completed", today)
-            task.goalId?.let { goalId ->
-                previousGoal?.let { goal ->
-                    val updatedGoal = goal.copy(completedTasks = (goal.completedTasks + 1).coerceAtLeast(0))
-                    goals.insert(updatedGoal)
-                    enqueueRecordInTransaction(
-                        "goals", goalId, GoalflowJson.goalPayload(toDomain(updatedGoal)).toString()
-                    )
+        }
+        task.habitId?.let { habitId ->
+            previousHabit?.let { habit ->
+                val updatedHabit = habit.copy(
+                    streak = habitStreak,
+                    bestStreak = maxOf(habit.bestStreak, habitStreak),
+                    lastCompletedDate = today
+                )
+                habits.insert(updatedHabit)
+                enqueueRecordInTransaction(
+                    "habits", habitId, GoalflowJson.habitPayload(toDomain(updatedHabit)).toString()
+                )
+            }
+        }
+        return true
+    }
+
+    /** Final notes, task effects and focus termination share one Room commit.
+     * The captured session target is never replaced by a newly current session. */
+    suspend fun completeFocus(
+        taskId: String,
+        expectedSessionId: String,
+        capturedAt: Instant,
+        actualDuration: Int? = null,
+        flowState: String? = null,
+        finalDescription: String? = null
+    ) {
+        val changed = database.withTransaction {
+            val current = trackingFocusSession()
+                ?: throw IllegalStateException("No shared focus session is open.")
+            require(current.sessionId == expectedSessionId && current.taskId == taskId) {
+                "The focus target changed. Your task and notes were not modified."
+            }
+            val task = tasks.get(taskId) ?: throw SchedulingException("Task not found.")
+            if (current.phase == NativeFocusSessionPhase.COMPLETED) {
+                require(task.status == TaskStatus.COMPLETED.name) { "This focus session is already terminal. Start a new session." }
+                require(finalDescription?.trim()?.takeIf(String::isNotBlank)?.let { it == task.notes } != false) {
+                    "This completion already has different final notes. Edit the task to preserve your new notes."
                 }
+                return@withTransaction false
             }
-            task.habitId?.let { habitId ->
-                previousHabit?.let { habit ->
-                    val updatedHabit = habit.copy(
-                        streak = habitStreak,
-                        bestStreak = maxOf(habit.bestStreak, habitStreak),
-                        lastCompletedDate = today
-                    )
-                    habits.insert(updatedHabit)
-                    enqueueRecordInTransaction(
-                        "habits", habitId, GoalflowJson.habitPayload(toDomain(updatedHabit)).toString()
-                    )
-                }
+            require(current.phase in setOf(NativeFocusSessionPhase.ACTIVE, NativeFocusSessionPhase.PAUSED)
+                && task.status == TaskStatus.OPEN.name && task.deletedAt == null) {
+                "This commitment is no longer open. Your notes were not modified."
             }
-            true
+            val taskChanged = completeTaskInTransaction(taskId, actualDuration, flowState, finalDescription)
+            val next = current.complete(capturedAt)
+            if (next != current) saveFocusSessionInTransaction(next)
+            taskChanged || next != current
         }
         if (changed) onMutation()
     }

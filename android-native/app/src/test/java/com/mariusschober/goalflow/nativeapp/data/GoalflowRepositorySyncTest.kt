@@ -91,6 +91,75 @@ class GoalflowRepositorySyncTest {
     }
 
     @Test
+    fun `focus completion rolls back notes effects and terminal state together`() = runTest {
+        val task = repository.createTask("Synthetic completion", "Original notes", SchedulePrecision.DAY,
+            LocalDate.now().toString(), null, true)
+        val started = Instant.parse("2026-09-07T10:00:00Z")
+        val focus = NativeFocusSessionRecord.start(task.id, 1500, started)
+        repository.saveFocusSession(focus)
+        val raw = org.json.JSONObject(database.rawCollectionDao().get("tracking")!!.payload)
+        raw.getJSONObject("focusSession").put("future", org.json.JSONObject().put("keep", "🐸"))
+        repository.saveRawCollection("tracking", raw.toString())
+        val beforeTask = database.taskDao().get(task.id)
+        val beforeRaw = database.rawCollectionDao().getAll()
+        val beforeOutbox = repository.pendingSyncMutations()
+        database.openHelper.writableDatabase.execSQL("""
+            CREATE TRIGGER fail_focus_completion BEFORE INSERT ON raw_collections
+            WHEN NEW.entityType='tracking'
+            BEGIN SELECT RAISE(ABORT, 'synthetic final focus write failure'); END
+        """.trimIndent())
+        try {
+            repository.completeFocus(task.id, focus.sessionId, started.plusSeconds(120), 2, "flow", "Final notes 🐸")
+            fail("Final tracking write must abort the whole completion")
+        } catch (failure: Exception) {
+            assertTrue(failure.message.orEmpty().contains("synthetic"))
+        }
+        assertEquals(beforeTask, database.taskDao().get(task.id))
+        assertEquals(beforeRaw, database.rawCollectionDao().getAll())
+        assertEquals(beforeOutbox, repository.pendingSyncMutations())
+        database.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_focus_completion")
+        repository.completeFocus(task.id, focus.sessionId, started.plusSeconds(120), 2, "flow", "Final notes 🐸")
+        assertEquals("Final notes 🐸", database.taskDao().get(task.id)!!.notes)
+        assertEquals(TaskStatus.COMPLETED.name, database.taskDao().get(task.id)!!.status)
+        assertEquals(NativeFocusSessionPhase.COMPLETED, repository.trackingFocusSession()!!.phase)
+        assertEquals("🐸", org.json.JSONObject(database.rawCollectionDao().get("tracking")!!.payload)
+            .getJSONObject("focusSession").getJSONObject("future").getString("keep"))
+        val completedRaw = database.rawCollectionDao().getAll()
+        val completedOutbox = repository.pendingSyncMutations()
+        repository.completeFocus(task.id, focus.sessionId, started.plusSeconds(120), 2, "flow", "Final notes 🐸")
+        assertEquals(completedRaw, database.rawCollectionDao().getAll())
+        assertEquals(completedOutbox, repository.pendingSyncMutations())
+        repository.undoCompletion(task.id)
+        val undoneOutbox = repository.pendingSyncMutations()
+        try {
+            repository.completeFocus(task.id, focus.sessionId, started.plusSeconds(120), 2, "flow", "Final notes 🐸")
+            fail("An old terminal session cannot award again after task undo")
+        } catch (failure: IllegalArgumentException) {
+            assertTrue(failure.message.orEmpty().contains("terminal"))
+        }
+        assertEquals(TaskStatus.OPEN.name, database.taskDao().get(task.id)!!.status)
+        assertEquals(undoneOutbox, repository.pendingSyncMutations())
+    }
+
+    @Test
+    fun `stale focus completion cannot finish a replacement session or alter task notes`() = runTest {
+        val task = repository.createTask("Synthetic stale target", "Keep notes", SchedulePrecision.DAY,
+            LocalDate.now().toString(), null, false)
+        val first = NativeFocusSessionRecord.start(task.id, 600)
+        val replacement = NativeFocusSessionRecord.start(task.id, 600)
+        repository.saveFocusSession(replacement)
+        try {
+            repository.completeFocus(task.id, first.sessionId, Instant.now(), finalDescription = "Stale notes")
+            fail("A stale session target must fail")
+        } catch (failure: IllegalArgumentException) {
+            assertTrue(failure.message.orEmpty().contains("target changed"))
+        }
+        assertEquals(TaskStatus.OPEN.name, database.taskDao().get(task.id)!!.status)
+        assertEquals("Keep notes", database.taskDao().get(task.id)!!.notes)
+        assertEquals(replacement, repository.trackingFocusSession())
+    }
+
+    @Test
     fun `repository uses injected local zone for date-sensitive transitions`() = runTest {
         val provider = FixedGoalflowTimeProvider(
             Clock.fixed(Instant.parse("2024-02-29T23:59:59Z"), ZoneId.of("UTC")),

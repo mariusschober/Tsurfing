@@ -291,14 +291,13 @@ class GoalflowViewModel(
         flowState: String? = null,
         onComplete: () -> Unit = {}
     ) {
+        val expectedSessionId = focusSession.value?.takeIf { it.taskId == task.id }?.sessionId
+        val capturedAt = Instant.now()
         viewModelScope.launch {
             clearError()
             runCatching {
-                val current = repository.trackingFocusSession()
-                if (current != null && current.taskId == task.id && current.phase != NativeFocusSessionPhase.COMPLETED) {
-                    repository.saveFocusSession(current.complete(Instant.now()))
-                }
-                repository.completeTask(task.id, actualDuration, flowState)
+                require(expectedSessionId != null) { "The focus session is not ready. Your task remains open." }
+                repository.completeFocus(task.id, expectedSessionId, capturedAt, actualDuration, flowState)
             }.onSuccess { onComplete() }
                 .onFailure { failure -> _error.value = failure.message ?: "The commitment could not be completed." }
         }
