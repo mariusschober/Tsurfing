@@ -80,7 +80,11 @@ class NativeAndroidSmokeTest {
             composeRule.onAllNodesWithText("Start focus session").fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithText("Start focus session").performClick()
-        composeRule.waitForIdle()
+        // Starting shared focus now commits through Room before the screen
+        // changes. Compose idleness alone does not await that IO transaction.
+        composeRule.waitUntil(10_000) {
+            composeRule.onAllNodesWithText("FOCUS SESSION").fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onNodeWithText("FOCUS SESSION").assertIsDisplayed()
         check(composeRule.onAllNodesWithText("Planning").fetchSemanticsNodes().isEmpty())
 
