@@ -8,6 +8,9 @@ import com.mariusschober.goalflow.nativeapp.domain.HabitFrequency
 import com.mariusschober.goalflow.nativeapp.domain.GoalflowCircadianState
 import com.mariusschober.goalflow.nativeapp.domain.TaskStatus
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import org.json.JSONArray
 import org.junit.After
@@ -88,6 +91,55 @@ class GoalflowRepositorySyncTest {
         assertEquals(paused.toJson().toString(), payload.getJSONObject("focusSession").toString())
         assertEquals(paused, repository.trackingFocusSession())
         assertTrue(repository.pendingSyncMutations().all { it.entityType == "tracking" && it.entityId == "singleton" })
+    }
+
+    @Test
+    fun `focus transactions compose extensions and reject a stale same task session`() = runTest {
+        val task = repository.createTask("Synthetic focus", "Preserved notes", SchedulePrecision.DAY,
+            LocalDate.now().toString(), null, false)
+        val time = Instant.parse("2026-09-07T10:00:00Z")
+        val first = repository.startFocus(task.id, UUID.randomUUID().toString(), time)
+        val parents = java.util.Collections.synchronizedList(mutableListOf<Long>())
+        listOf(300L, 120L).map { delta -> async(Dispatchers.Default) {
+            repository.transitionFocus(first.sessionId, task.id) { current ->
+                parents.add(current.plannedDurationSeconds)
+                current.extend(delta, time.plusSeconds(10))
+            }
+        } }.awaitAll()
+        assertEquals(first.plannedDurationSeconds + 420, repository.trackingFocusSession()!!.plannedDurationSeconds)
+        assertEquals(first.plannedDurationSeconds, parents.first())
+        assertTrue(parents.last() > parents.first())
+        repository.transitionFocus(first.sessionId, task.id) { it.stop(time.plusSeconds(20)) }
+        val replacement = repository.startFocus(task.id, UUID.randomUUID().toString(), time.plusSeconds(30))
+        val before = repository.pendingSyncMutations()
+        try {
+            repository.transitionFocus(first.sessionId, task.id) { it.pause(time.plusSeconds(40)) }
+            fail("A stale pause cannot affect the replacement session")
+        } catch (_: IllegalArgumentException) { }
+        assertEquals(replacement, repository.trackingFocusSession())
+        assertEquals(before, repository.pendingSyncMutations())
+        assertTrue(!repository.importLegacyFocusIfMissing(first))
+        assertEquals(replacement, repository.trackingFocusSession())
+    }
+
+    @Test
+    fun `failed focus transition retains parent and outbox for retry`() = runTest {
+        val task = repository.createTask("Synthetic focus", "", SchedulePrecision.DAY,
+            LocalDate.now().toString(), null, false)
+        val time = Instant.parse("2026-09-07T10:00:00Z")
+        val first = repository.startFocus(task.id, UUID.randomUUID().toString(), time)
+        val before = repository.pendingSyncMutations()
+        database.openHelper.writableDatabase.execSQL("CREATE TRIGGER fail_focus_transition BEFORE INSERT ON raw_collections WHEN NEW.entityType = 'tracking' BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END")
+        try {
+            repository.transitionFocus(first.sessionId, task.id) { it.pause(time.plusSeconds(10)) }
+            fail("Failed focus write must roll back")
+        } catch (_: android.database.sqlite.SQLiteException) { }
+        assertEquals(first, repository.trackingFocusSession())
+        assertEquals(before, repository.pendingSyncMutations())
+        database.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_focus_transition")
+        val paused = repository.transitionFocus(first.sessionId, task.id) { it.pause(time.plusSeconds(10)) }
+        assertEquals(NativeFocusSessionPhase.PAUSED, paused.phase)
+        assertEquals(10L, paused.elapsedSeconds)
     }
 
     @Test

@@ -8,7 +8,6 @@ import com.mariusschober.goalflow.nativeapp.data.HabitGenerationHealth
 import com.mariusschober.goalflow.nativeapp.data.HabitGenerationStatus
 import com.mariusschober.goalflow.nativeapp.data.NativeReorderResult
 import com.mariusschober.goalflow.nativeapp.data.NativeFocusSessionRecord
-import com.mariusschober.goalflow.nativeapp.data.NativeFocusSessionPhase
 import com.mariusschober.goalflow.nativeapp.data.SyncConflictEntity
 import com.mariusschober.goalflow.nativeapp.domain.BreakdownChild
 import com.mariusschober.goalflow.nativeapp.domain.GoalflowHabit
@@ -233,54 +232,38 @@ class GoalflowViewModel(
     }
 
     fun startFocus(task: GoalflowTask, onComplete: (NativeFocusSessionRecord) -> Unit = {}) {
+        val taskId = task.id
+        val sessionId = java.util.UUID.randomUUID().toString()
+        val capturedAt = Instant.now()
         viewModelScope.launch {
             clearError()
             runCatching {
-                val requestedTask = repository.taskSnapshot(task.id)
-                require(requestedTask?.status == com.mariusschober.goalflow.nativeapp.domain.TaskStatus.OPEN
-                    && requestedTask.deletedAt == null) { "This commitment is no longer open." }
-                val current = repository.trackingFocusSession()
-                val currentTask = current?.let { repository.taskSnapshot(it.taskId) }
-                val currentTaskIsOpen = currentTask?.status == com.mariusschober.goalflow.nativeapp.domain.TaskStatus.OPEN
-                    && currentTask.deletedAt == null
-                // Completion or breakdown can arrive before its tracking
-                // projection. A closed task must never block the next focus.
-                if (currentTaskIsOpen && (current?.phase == NativeFocusSessionPhase.ACTIVE || current?.phase == NativeFocusSessionPhase.PAUSED)) {
-                    if (current.taskId != task.id) throw IllegalStateException("Another focus session is already open.")
-                    current
-                } else {
-                    val plannedDurationSeconds = JSONObject(task.extraJson)
-                        .optInt("duration", 25)
-                        .coerceIn(1, 1_440) * 60L
-                    repository.saveFocusSession(NativeFocusSessionRecord.start(task.id, plannedDurationSeconds))
-                    repository.trackingFocusSession()
-                        ?: throw IllegalStateException("The focus session was not confirmed locally.")
-                }
+                repository.startFocus(taskId, sessionId, capturedAt)
             }.onSuccess(onComplete)
                 .onFailure { failure -> _error.value = failure.message ?: "The focus session could not start." }
         }
     }
 
     fun pauseFocus(onComplete: (NativeFocusSessionRecord) -> Unit = {}) = updateFocus(
-        transform = { it.pause(Instant.now()) },
+        transform = { session, capturedAt -> session.pause(capturedAt) },
         onComplete = onComplete,
         failureMessage = "The focus session could not be paused."
     )
 
     fun resumeFocus(onComplete: (NativeFocusSessionRecord) -> Unit = {}) = updateFocus(
-        transform = { it.resume(Instant.now()) },
+        transform = { session, capturedAt -> session.resume(capturedAt) },
         onComplete = onComplete,
         failureMessage = "The focus session could not be resumed."
     )
 
     fun stopFocus(onComplete: (NativeFocusSessionRecord) -> Unit = {}) = updateFocus(
-        transform = { it.stop(Instant.now()) },
+        transform = { session, capturedAt -> session.stop(capturedAt) },
         onComplete = onComplete,
         failureMessage = "The focus session could not be stopped."
     )
 
     fun extendFocus(deltaSeconds: Long, onComplete: (NativeFocusSessionRecord) -> Unit = {}) = updateFocus(
-        transform = { it.extend(deltaSeconds, Instant.now()) },
+        transform = { session, capturedAt -> session.extend(deltaSeconds, capturedAt) },
         onComplete = onComplete,
         failureMessage = "The focus session could not be extended."
     )
@@ -304,18 +287,17 @@ class GoalflowViewModel(
     }
 
     private fun updateFocus(
-        transform: (NativeFocusSessionRecord) -> NativeFocusSessionRecord,
+        transform: (NativeFocusSessionRecord, Instant) -> NativeFocusSessionRecord,
         onComplete: (NativeFocusSessionRecord) -> Unit,
         failureMessage: String
     ) {
+        val target = focusSession.value
+        val capturedAt = Instant.now()
         viewModelScope.launch {
             clearError()
             runCatching {
-                val current = repository.trackingFocusSession()
-                    ?: throw IllegalStateException("No shared focus session is open.")
-                val next = transform(current)
-                repository.saveFocusSession(next)
-                next
+                require(target != null) { "No shared focus session is open." }
+                repository.transitionFocus(target.sessionId, target.taskId) { transform(it, capturedAt) }
             }.onSuccess(onComplete)
                 .onFailure { failure -> _error.value = failure.message ?: failureMessage }
         }

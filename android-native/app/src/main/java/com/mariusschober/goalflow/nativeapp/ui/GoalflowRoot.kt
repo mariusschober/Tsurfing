@@ -313,9 +313,10 @@ fun GoalflowRoot(
             now = Instant.ofEpochMilli(legacy.startedAtMillis)
         )
         try {
-            application.repository.saveFocusSession(recovered)
-            application.focusSessionStore.saveRecord(recovered)
-            focusTask = storedTask
+            if (application.repository.importLegacyFocusIfMissing(recovered)) {
+                application.focusSessionStore.saveRecord(recovered)
+                focusTask = storedTask
+            }
         } catch (_: Exception) {
             // The mirror remains available for the next explicitly offline recovery attempt.
         }

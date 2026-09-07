@@ -159,6 +159,69 @@ class GoalflowRepository(
     suspend fun trackingFocusSession(): NativeFocusSessionRecord? =
         NativeFocusSessionRecord.fromTrackingPayload(rawCollections.get("tracking")?.payload)
 
+    /** Resolve eligibility and duration from the transaction's actual task,
+     * then publish the focus and its outbox mutation together. */
+    suspend fun startFocus(taskId: String, sessionId: String, capturedAt: Instant): NativeFocusSessionRecord {
+        val result = database.withTransaction {
+            val requested = tasks.getAll().firstOrNull { it.id == taskId }?.let(::toDomain)
+            require(requested?.status == TaskStatus.OPEN && requested.deletedAt == null) {
+                "This commitment is no longer open."
+            }
+            val current = trackingFocusSession()
+            val currentTask = current?.let { focus -> tasks.getAll().firstOrNull { it.id == focus.taskId }?.let(::toDomain) }
+            if (currentTask?.status == TaskStatus.OPEN && currentTask.deletedAt == null
+                && current?.phase in setOf(NativeFocusSessionPhase.ACTIVE, NativeFocusSessionPhase.PAUSED)) {
+                require(current!!.taskId == taskId) { "Another focus session is already open." }
+                current
+            } else {
+                val duration = JSONObject(requested.extraJson).optInt("duration", 25).coerceIn(1, 1440) * 60L
+                NativeFocusSessionRecord.start(taskId, duration, capturedAt, sessionId).also {
+                    saveFocusSessionInTransaction(it)
+                }
+            }
+        }
+        onMutation()
+        return result
+    }
+
+    /** Capture the target at intent time; transform only the actual persisted
+     * parent. A command for F cannot act on a replacement G, even on one task. */
+    suspend fun transitionFocus(
+        expectedSessionId: String,
+        expectedTaskId: String,
+        transform: (NativeFocusSessionRecord) -> NativeFocusSessionRecord
+    ): NativeFocusSessionRecord {
+        val result = database.withTransaction {
+            val current = trackingFocusSession() ?: error("No shared focus session is open.")
+            require(current.sessionId == expectedSessionId && current.taskId == expectedTaskId) {
+                "The focus session changed. The action was not applied."
+            }
+            val next = transform(current)
+            require(next.sessionId == current.sessionId && next.taskId == current.taskId) {
+                "A focus transition cannot replace its target."
+            }
+            if (next != current) saveFocusSessionInTransaction(next)
+            next
+        }
+        onMutation()
+        return result
+    }
+
+    suspend fun importLegacyFocusIfMissing(session: NativeFocusSessionRecord): Boolean {
+        val imported = database.withTransaction {
+            val raw = rawCollections.get("tracking")?.payload
+            // An explicit null, terminal state or malformed optional field is
+            // evidence. An older timer mirror must not replace any of them.
+            if (raw != null && JSONObject(raw).has("focusSession")) return@withTransaction false
+            val task = tasks.getAll().firstOrNull { it.id == session.taskId }?.let(::toDomain)
+            require(task?.status == TaskStatus.OPEN && task.deletedAt == null) { "This commitment is no longer open." }
+            saveFocusSessionInTransaction(session)
+            true
+        }
+        if (imported) onMutation()
+        return imported
+    }
+
     /** Applies one focus action to the tracking singleton and queues one raw
      * collection mutation. The ticker never calls this method. */
     suspend fun saveFocusSession(session: NativeFocusSessionRecord) {
