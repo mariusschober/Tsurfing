@@ -53,7 +53,8 @@ for migration in \
   "${repository_root}/supabase/migrations/20260907203259_s2_sync_lock_order.sql" \
   "${repository_root}/supabase/migrations/20260907205825_s2_counter_projection.sql" \
   "${repository_root}/supabase/migrations/20260907211939_s2_focus_transitions.sql" \
-  "${repository_root}/supabase/migrations/20260907220709_s2_private_action_ledger.sql"; do
+  "${repository_root}/supabase/migrations/20260907220709_s2_private_action_ledger.sql" \
+  "${repository_root}/supabase/migrations/20260907222904_s2_staged_reconciliation.sql"; do
   psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${migration}" >/dev/null
 done
 psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${repository_root}/scripts/migration-integrity-assertions.sql" >/dev/null
@@ -99,4 +100,8 @@ done
 
 for test_database in "${empty_database}" "${upgrade_database}"; do
   PGDATABASE="${test_database}" python3 "${repository_root}/scripts/test-s2-action-ledger.py"
+done
+
+for test_database in "${empty_database}" "${upgrade_database}"; do
+  PGDATABASE="${test_database}" python3 "${repository_root}/scripts/test-s2-staged-reconciliation.py"
 done

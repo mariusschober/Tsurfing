@@ -192,6 +192,50 @@ const task = (title: string, id = 'task-1', extra: Record<string, unknown> = {})
 describe('adversarial cloud synchronization', () => {
   beforeEach(() => installBrowser());
 
+  it('resumes a complete staged history after an interrupted chunk without dropping evidence', async () => {
+    const key = `staged-history-${crypto.randomUUID()}`;
+    const server = new DurableFakeServer();
+    const history = Array.from({ length: 1001 }, (_, i) => ({ mutationId: crypto.randomUUID(), version: i + 1,
+      payload: { notes: `${i}:` + '🧭'.repeat(80) }, updatedAt: '2026-09-07T00:00:00.123456789Z', deletedAt: null }));
+    const meta = emptySyncMeta();
+    meta.conflicts = [{ id: crypto.randomUUID(), kind: 'remote-vs-local', entityType: 'settings', entityId: 'singleton',
+      localPayload: history.at(-1)!.payload, localDeletedAt: null, localHistory: history, serverPayload: null,
+      serverMissing: true, serverDeletedAt: null, serverVersion: 0, createdAt: '2026-09-07T00:00:00.000Z', status: 'unresolved' }];
+    await storageService.set(STORES.SYNC, key, meta, 'cloud');
+    const chunks = new Map<number, string>();
+    let interrupt = true;
+    let replays = 0;
+    const runtime = dependencies(server);
+    runtime.fetch = async (input, init) => {
+      const path = String(input);
+      if (path.endsWith('/sync/conflicts/stage')) {
+        const raw = String(init?.body);
+        expect(Buffer.byteLength(raw, 'utf8')).toBeLessThanOrEqual(262144);
+        const chunk = JSON.parse(raw);
+        if (interrupt && chunk.chunkIndex === 1) { interrupt = false; return Response.json({ staged: false }); }
+        if (chunks.has(chunk.chunkIndex)) { expect(chunks.get(chunk.chunkIndex)).toBe(raw); replays++; }
+        chunks.set(chunk.chunkIndex, raw);
+        return Response.json({ staged: true, manifest: chunk.manifest, chunkIndex: chunk.chunkIndex, chunkSha256: chunk.chunkSha256 });
+      }
+      if (path.endsWith('/sync/conflicts/reconcile-staged')) {
+        const manifest = JSON.parse(String(init?.body));
+        expect(chunks.size).toBe(manifest.chunkCount);
+        const body = Buffer.concat([...chunks].sort((a, b) => a[0] - b[0]).map(([, raw]) => Buffer.from(JSON.parse(raw).data, 'base64'))).toString('utf8');
+        expect(JSON.parse(body).localHistory).toEqual(history);
+        return server.fetch('/api/v1/sync/conflicts/reconcile', { method: 'POST', body });
+      }
+      return server.fetch(path, init);
+    };
+    await expect(synchronizeCloudOnce(key, runtime, { seedLocalData: false })).rejects.toThrow(/chunk/);
+    expect(normalizeSyncMeta(await storageService.get(STORES.SYNC, key)).conflicts[0].localHistory).toEqual(history);
+    expect(server.reconciliations).toHaveLength(0);
+    const done = await synchronizeCloudOnce(key, runtime, { seedLocalData: false });
+    expect(replays).toBe(1);
+    expect(done.conflicts).toHaveLength(0);
+    expect(server.reconciliations[0].candidate.localHistory).toEqual(history);
+    expect(await storageService.get(STORES.SETTINGS, key)).toEqual(history.at(-1)!.payload);
+  });
+
   it('preserves an oversize captured change without marking an unmade network attempt', async () => {
     const key = `oversize-${crypto.randomUUID()}`;
     storageService.stageLocalValue(STORES.TASKS, key, [], [task('preserved', 'large', { notes: '🧭'.repeat(70_000) })]);

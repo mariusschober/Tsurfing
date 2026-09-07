@@ -2,6 +2,30 @@ import XCTest
 @testable import GoalflowMac
 
 final class SyncEnvelopeTests: XCTestCase {
+    func testSharedReconciliationStagingManifestAndReceipts() throws {
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let fixture = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: root.appendingPathComponent("tests/fixtures/s2/reconciliation-staging-v1.json"))) as? [String: Any])
+        let text = try XCTUnwrap(fixture["bodyPrefix"] as? String)
+            + String(repeating: try XCTUnwrap(fixture["bodyUnit"] as? String), count: try XCTUnwrap(fixture["repetitions"] as? Int))
+            + (try XCTUnwrap(fixture["bodySuffix"] as? String))
+        let upload = try ReconciliationUpload.prepare(Data(text.utf8), historyCount: 1)
+        XCTAssertEqual(stableJson(upload.manifest), stableJson(fixture["manifest"]))
+        var restored = Data()
+        for chunk in upload.chunks {
+            restored.append(try XCTUnwrap(Data(base64Encoded: try XCTUnwrap(chunk["data"] as? String))))
+            XCTAssertLessThanOrEqual(try JSONSerialization.data(withJSONObject: chunk).count, 262144)
+            var ack = chunk
+            ack.removeValue(forKey: "data")
+            ack["staged"] = true
+            try ReconciliationUpload.verifyAck(chunk, JSONSerialization.data(withJSONObject: ack))
+            ack["chunkSha256"] = String(repeating: "0", count: 64)
+            XCTAssertThrowsError(try ReconciliationUpload.verifyAck(chunk, JSONSerialization.data(withJSONObject: ack)))
+        }
+        XCTAssertEqual(restored, Data(text.utf8))
+        XCTAssertNotNil(try ReconciliationUpload.prepare(Data("{}".utf8), historyCount: 1001).manifest)
+        XCTAssertThrowsError(try ReconciliationUpload.prepare(Data(repeating: 120, count: 4 * 1024 * 1024 + 1), historyCount: 1))
+    }
+
     func testActualUTF8EnvelopePreservesRequests() throws {
         let item = SyncMutation(mutationId: "11111111-1111-4111-8111-111111111111",
             deviceId: "fixture", entityType: "tasks", entityId: "fixture", baseServerVersion: nil,

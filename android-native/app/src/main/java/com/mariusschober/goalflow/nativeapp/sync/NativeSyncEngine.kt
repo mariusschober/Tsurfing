@@ -422,7 +422,15 @@ class NativeSyncEngine(
 
         for (conflict in repository.automaticSyncCandidates()) {
             val request = repository.automaticSyncRequest(conflict)
-            val response = requestForSession(session, "/api/v1/sync/conflicts/reconcile", "POST", request)
+            val upload = ReconciliationUpload.prepare(request)
+            for (chunk in upload.chunks) {
+                val staged = requestForSession(session, "/api/v1/sync/conflicts/stage", "POST", chunk.toString())
+                ensureSuccessful(staged, "Reconciliation upload will resume. Your full history remains saved.")
+                ReconciliationUpload.verifyAck(chunk, staged.body)
+            }
+            val response = requestForSession(session,
+                if (upload.manifest == null) "/api/v1/sync/conflicts/reconcile" else "/api/v1/sync/conflicts/reconcile-staged",
+                "POST", upload.manifest?.toString() ?: request)
             ensureSuccessful(response, "Automatic sync will retry. Your changes remain saved.")
             repository.commitAutomaticSync(conflict, request, response.body)
         }

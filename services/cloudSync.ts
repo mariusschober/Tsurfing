@@ -6,6 +6,7 @@ import {
 import { readResponseBodyWithLimit, ResponseTooLargeError } from './boundedResponse';
 import { SyncMutationTooLargeError, wireMutation } from './syncEnvelope';
 import { validateConflictPage } from './conflictPages';
+import { prepareReconciliation, verifyReconciliationChunkAck } from './reconciliationStaging';
 import { DurableStorageError, storageService, STORES } from './storage';
 import {
   emptySyncMeta,
@@ -300,8 +301,15 @@ export const synchronizeCloudOnce = async (
 
   for (const conflict of meta.conflicts.filter(item => item.status === 'unresolved')) {
     const candidate = reconciliationCandidate(conflict);
-    const response = await fetchSyncWithRetry('/api/v1/sync/conflicts/reconcile', {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(candidate)
+    const upload = await prepareReconciliation(candidate);
+    for (const chunk of upload.chunks) {
+      const staged = await fetchSyncWithRetry('/api/v1/sync/conflicts/stage', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(chunk)
+      }, dependencies);
+      verifyReconciliationChunkAck(chunk, await parseJson<unknown>(staged, 'Reconciliation upload will resume. Your full history remains saved.'));
+    }
+    const response = await fetchSyncWithRetry(upload.manifest ? '/api/v1/sync/conflicts/reconcile-staged' : '/api/v1/sync/conflicts/reconcile', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: upload.manifest ? JSON.stringify(upload.manifest) : upload.body
     }, dependencies);
     const reply = await parseJson<unknown>(response, 'Automatic sync will retry. Your changes remain saved.');
     meta = await storageService.commitAutomaticReconciliation(userKey, candidate, reply);

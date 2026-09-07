@@ -1,0 +1,26 @@
+{
+  "bodyPrefix": "{\"conflictId\":\"11111111-1111-4111-8111-111111111111\",\"sourceMutationId\":null,\"entityType\":\"tasks\",\"entityId\":\"fixture-task\",\"localHistory\":[{\"mutationId\":\"22222222-2222-4222-8222-222222222222\",\"version\":1,\"payload\":{\"notes\":\"",
+  "bodyUnit": "🧭\\\"\\\\\\n",
+  "repetitions": 28000,
+  "bodySuffix": "\"},\"updatedAt\":\"2026-09-07T00:00:00.123456789Z\",\"deletedAt\":null}]}",
+  "manifest": {
+    "schemaVersion": 1,
+    "sha256": "17dbeacde377294125ec8c3fe670a2c475a9934da8bbd4f0314a955ca14a5bda",
+    "totalBytes": 280292,
+    "chunkCount": 5,
+    "chunkHashes": [
+      "09d5c75aa89dd43427528da846ef09109a5c4090372097909a5d41fa41cda5c6",
+      "96c006c25f37d08e8f882e213885614e3edc3c32bd82f8c4731ad3aa2bcdcab2",
+      "2b879db30010109b9849c1007abb7d4adea433f237fc0557b4924ed7f93800a3",
+      "c6ff4a5cc194f0cd4d1b8f63645ffa505536956d9ea51499946828d6b9f57f43",
+      "792141489f17a988718c23c9386334d201ba22e2444ecf2fac042c94cdf75bae"
+    ]
+  },
+  "chunkHashes": [
+    "09d5c75aa89dd43427528da846ef09109a5c4090372097909a5d41fa41cda5c6",
+    "96c006c25f37d08e8f882e213885614e3edc3c32bd82f8c4731ad3aa2bcdcab2",
+    "2b879db30010109b9849c1007abb7d4adea433f237fc0557b4924ed7f93800a3",
+    "c6ff4a5cc194f0cd4d1b8f63645ffa505536956d9ea51499946828d6b9f57f43",
+    "792141489f17a988718c23c9386334d201ba22e2444ecf2fac042c94cdf75bae"
+  ]
+}

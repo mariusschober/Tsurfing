@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { reconcileLegacyTasks } from '../taskReconciliation';
 import { readConflictPage } from '../conflictPages';
+import { readStagedReconciliation, stageReconciliationChunk } from '../reconciliationStaging';
 
 const syncEntityType = z.enum([
   'tasks', 'goals', 'habits', 'stats', 'progress', 'hashtags', 'accountability',
@@ -184,6 +185,32 @@ const invalidRequest = (response: Response, error: unknown) => {
   response.status(500).json({ error: { code: 'sync_failed', message: 'Synchronization could not be completed.' } });
 };
 
+export const reconcileCandidate = async (database: SupabaseClient, userId: string, input: unknown, maximumHistory = 1000) => {
+  const historyEntry = z.object({
+    mutationId: z.string().uuid(), version: z.number().int().positive(),
+    payload: z.unknown(), updatedAt: z.string().datetime({ offset: true }), deletedAt: z.string().datetime({ offset: true }).nullable()
+  }).strict().refine(item => Object.prototype.hasOwnProperty.call(item, 'payload'), { message: 'History payload is required.' });
+  const candidate = z.object({
+    conflictId: z.string().min(1).max(600), sourceMutationId: z.string().uuid().nullable(),
+    entityType: syncEntityType, entityId: z.string().min(1).max(240),
+    localHistory: z.array(historyEntry).max(maximumHistory)
+  }).strict().parse(input);
+  if (new Set(candidate.localHistory.map(item => item.mutationId)).size !== candidate.localHistory.length) {
+    throw new z.ZodError([{ code: 'custom', path: ['localHistory'], message: 'Sync history contains duplicate changes.' }]);
+  }
+  const { data, error } = await database.rpc('reconcile_goalflow_sync_change', {
+    target_user_id: userId, target_candidate: candidate
+  });
+  if (error) throw error;
+  if (!isRecord(data) || data.reconciled !== true || canonicalJson(data.candidate) !== canonicalJson(candidate)
+    || !z.string().uuid().safeParse(data.receiptId).success || typeof data.serverMissing !== 'boolean'
+    || (!data.serverMissing && (!isRecord(data.record)
+      || data.record.entity_type !== candidate.entityType || data.record.entity_id !== candidate.entityId))) {
+    throw new Error('Automatic reconciliation did not acknowledge the exact saved change.');
+  }
+  return data;
+};
+
 export const createSyncRouter = (admin?: SupabaseClient) => {
   const router = Router();
   const requireHardenedProtocol = admin ? createSyncProtocolGuard(admin) : undefined;
@@ -296,34 +323,22 @@ export const createSyncRouter = (admin?: SupabaseClient) => {
 
   router.post('/sync/conflicts/reconcile', async (request, response) => {
     try {
+      response.json(await reconcileCandidate(requireDatabase(admin), request.user!.id, request.body));
+    } catch (error) { invalidRequest(response, error); }
+  });
+
+  router.post('/sync/conflicts/stage', async (request, response) => {
+    try {
+      response.json(await stageReconciliationChunk(requireDatabase(admin), request.user!.id, request.body));
+    } catch (error) { invalidRequest(response, error); }
+  });
+
+  router.post('/sync/conflicts/reconcile-staged', async (request, response) => {
+    try {
       const database = requireDatabase(admin);
-      const historyEntry = z.object({
-        mutationId: z.string().uuid(), version: z.number().int().positive(),
-        payload: z.unknown(), updatedAt: z.string().datetime({ offset: true }), deletedAt: z.string().datetime({ offset: true }).nullable()
-      }).strict();
-      const candidate = z.object({
-        conflictId: z.string().min(1).max(600), sourceMutationId: z.string().uuid().nullable(),
-        entityType: syncEntityType, entityId: z.string().min(1).max(240),
-        localHistory: z.array(historyEntry).max(1000)
-      }).strict().parse(request.body);
-      if (new Set(candidate.localHistory.map(item => item.mutationId)).size !== candidate.localHistory.length) {
-        response.status(400).json({ error: { code: 'invalid_request', message: 'Sync history contains duplicate changes.' } });
-        return;
-      }
-      const { data, error } = await database.rpc('reconcile_goalflow_sync_change', {
-        target_user_id: request.user!.id, target_candidate: candidate
-      });
-      if (error) throw error;
-      if (!isRecord(data) || data.reconciled !== true || canonicalJson(data.candidate) !== canonicalJson(candidate)
-        || typeof data.receiptId !== 'string' || typeof data.serverMissing !== 'boolean'
-        || (!data.serverMissing && (!isRecord(data.record)
-          || data.record.entity_type !== candidate.entityType || data.record.entity_id !== candidate.entityId))) {
-        throw new Error('Automatic reconciliation did not acknowledge the exact saved change.');
-      }
-      response.json(data);
-    } catch (error) {
-      invalidRequest(response, error);
-    }
+      const candidate = await readStagedReconciliation(database, request.user!.id, request.body);
+      response.json(await reconcileCandidate(database, request.user!.id, candidate, 100000));
+    } catch (error) { invalidRequest(response, error); }
   });
 
   router.post('/sync/conflicts/resolve', async (request, response) => {

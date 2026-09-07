@@ -1,4 +1,37 @@
 import Foundation
+import CryptoKit
+
+struct ReconciliationUpload {
+    let manifest: [String: Any]?
+    let chunks: [[String: Any]]
+
+    static func prepare(_ body: Data, historyCount: Int) throws -> ReconciliationUpload {
+        if body.count <= 262144 && historyCount <= 1000 { return ReconciliationUpload(manifest: nil, chunks: []) }
+        guard body.count <= 4 * 1024 * 1024, historyCount <= 100000 else {
+            throw SyncError.validation("Saved reconciliation exceeds the supported 4 MiB or 100,000-entry envelope. The full history remains preserved and needs larger-record recovery.")
+        }
+        func hash(_ value: Data) -> String { SHA256.hash(data: value).map { String(format: "%02x", $0) }.joined() }
+        let parts = stride(from: 0, to: body.count, by: 65536).map { body.subdata(in: $0..<min($0 + 65536, body.count)) }
+        let hashes = parts.map(hash)
+        let manifest: [String: Any] = ["schemaVersion": 1, "sha256": hash(body), "totalBytes": body.count,
+                                      "chunkCount": parts.count, "chunkHashes": hashes]
+        var chunks: [[String: Any]] = []
+        for (index, chunk) in parts.enumerated() {
+            chunks.append(["manifest": manifest, "chunkIndex": index, "chunkSha256": hashes[index],
+                           "data": chunk.base64EncodedString()])
+        }
+        return ReconciliationUpload(manifest: manifest, chunks: chunks)
+    }
+
+    static func verifyAck(_ chunk: [String: Any], _ response: Data) throws {
+        let ack = try JSONSerialization.jsonObject(with: response)
+        let expected: [String: Any] = ["staged": true, "manifest": chunk["manifest"]!,
+                                      "chunkIndex": chunk["chunkIndex"]!, "chunkSha256": chunk["chunkSha256"]!]
+        guard stableJson(ack) == stableJson(expected) else {
+            throw SyncError.validation("Reconciliation staging did not acknowledge the exact chunk. The full history remains saved.")
+        }
+    }
+}
 
 func parsePushReceiptRecord(_ value: Any?) -> RemoteRecord? {
     guard let object = value as? [String: Any],
@@ -502,7 +535,17 @@ final class SyncEngine: @unchecked Sendable {
         for conflict in try metaStore.load().conflicts where conflict.status == "unresolved" {
             let candidate = try automaticReconciliationCandidate(conflict)
             let body = try JSONSerialization.data(withJSONObject: candidate, options: [.sortedKeys])
-            let (data, response) = try await requestWithRetry(path: "/api/v1/sync/conflicts/reconcile", method: "POST", body: body)
+            let upload = try ReconciliationUpload.prepare(body, historyCount: conflict.localHistory.count)
+            for chunk in upload.chunks {
+                let chunkBody = try JSONSerialization.data(withJSONObject: chunk, options: [.sortedKeys])
+                let (staged, response) = try await requestWithRetry(path: "/api/v1/sync/conflicts/stage", method: "POST", body: chunkBody)
+                guard (200..<300).contains(response.statusCode) else {
+                    throw SyncError.validation("Reconciliation upload will resume. Your full history remains saved.")
+                }
+                try ReconciliationUpload.verifyAck(chunk, staged)
+            }
+            let requestBody = try upload.manifest.map { try JSONSerialization.data(withJSONObject: $0, options: [.sortedKeys]) } ?? body
+            let (data, response) = try await requestWithRetry(path: upload.manifest == nil ? "/api/v1/sync/conflicts/reconcile" : "/api/v1/sync/conflicts/reconcile-staged", method: "POST", body: requestBody)
             guard (200..<300).contains(response.statusCode), data.count <= 16 * 1024 * 1024,
                   let reply = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 throw SyncError.validation("Automatic sync will retry. Your saved changes remain available.")
