@@ -1,0 +1,121 @@
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preProductionDebugBuild UP-TO-DATE
+> Task :app:generateProductionDebugBuildConfig
+> Task :app:generateProductionDebugResValues
+> Task :app:checkProductionDebugAarMetadata
+> Task :app:mapProductionDebugSourceSetPaths
+> Task :app:generateProductionDebugResources
+> Task :app:packageProductionDebugResources
+> Task :app:createProductionDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksProductionDebug
+> Task :app:parseProductionDebugLocalResources
+> Task :app:mergeProductionDebugResources
+> Task :app:processProductionDebugMainManifest
+> Task :app:processProductionDebugManifest
+> Task :app:preProductionDebugUnitTestBuild UP-TO-DATE
+> Task :app:mergeProductionDebugShaders
+> Task :app:compileProductionDebugShaders NO-SOURCE
+> Task :app:generateProductionDebugAssets UP-TO-DATE
+> Task :app:javaPreCompileProductionDebugUnitTest
+> Task :app:javaPreCompileProductionDebug
+> Task :app:mergeProductionDebugAssets
+> Task :app:preProductionDebugAndroidTestBuild SKIPPED
+> Task :app:generateProductionDebugAndroidTestResValues
+> Task :app:extractProguardFiles
+> Task :app:mergeProductionDebugNativeDebugMetadata NO-SOURCE
+> Task :app:compressProductionDebugAssets
+> Task :app:desugarProductionDebugFileDependencies
+> Task :app:mergeProductionDebugJniLibFolders
+> Task :app:checkProductionDebugDuplicateClasses
+> Task :app:mergeProductionDebugNativeLibs
+> Task :app:processProductionDebugManifestForPackage
+> Task :app:mergeLibDexProductionDebug
+> Task :app:validateSigningProductionDebug
+> Task :app:writeProductionDebugAppMetadata
+> Task :app:writeProductionDebugSigningConfigVersions
+> Task :benchmark:preBuild UP-TO-DATE
+> Task :benchmark:preProductionDebugBuild UP-TO-DATE
+> Task :benchmark:checkTestedAppObfuscationProductionDebug UP-TO-DATE
+> Task :benchmark:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateProductionDebugFeatureTransitiveDeps
+> Task :app:stripProductionDebugDebugSymbols
+> Task :benchmark:checkProductionDebugAarMetadata
+> Task :benchmark:generateProductionDebugResValues
+> Task :benchmark:mapProductionDebugSourceSetPaths
+> Task :benchmark:generateProductionDebugResources
+> Task :benchmark:processProductionDebugManifest
+> Task :benchmark:javaPreCompileProductionDebug
+> Task :benchmark:mergeProductionDebugShaders
+> Task :benchmark:compileProductionDebugShaders NO-SOURCE
+> Task :benchmark:generateProductionDebugAssets UP-TO-DATE
+> Task :benchmark:mergeProductionDebugResources
+> Task :app:processProductionDebugResources
+> Task :benchmark:mergeProductionDebugAssets
+> Task :app:packageProductionDebugUnitTestForUnitTest
+> Task :app:generateProductionDebugUnitTestConfig
+> Task :benchmark:desugarProductionDebugFileDependencies
+> Task :benchmark:checkProductionDebugDuplicateClasses
+> Task :benchmark:mergeProductionDebugJniLibFolders
+> Task :benchmark:processProductionDebugResources
+> Task :benchmark:mergeLibDexProductionDebug
+> Task :benchmark:validateSigningProductionDebug
+> Task :benchmark:writeProductionDebugSigningConfigVersions
+> Task :benchmark:mergeProductionDebugNativeLibs
+> Task :benchmark:compressProductionDebugAssets
+> Task :benchmark:stripProductionDebugDebugSymbols
+> Task :benchmark:mergeExtDexProductionDebug
+> Task :app:mergeExtDexProductionDebug
+
+> Task :app:kaptGenerateStubsProductionDebugKotlin
+w: Kapt currently doesn't support language version 2.0+. Falling back to 1.9.
+
+> Task :app:kaptProductionDebugKotlin
+> Task :app:compileProductionDebugKotlin
+> Task :app:compileProductionDebugJavaWithJavac
+> Task :app:processProductionDebugJavaRes
+> Task :app:bundleProductionDebugClassesToCompileJar
+> Task :app:bundleProductionDebugClassesToRuntimeJar
+> Task :app:generateProductionDebugLintReportModel
+> Task :app:generateProductionDebugAndroidTestLintModel
+> Task :app:generateProductionDebugUnitTestLintModel
+> Task :app:dexBuilderProductionDebug
+> Task :app:mergeProductionDebugGlobalSynthetics
+
+> Task :app:kaptGenerateStubsProductionDebugUnitTestKotlin
+w: Kapt currently doesn't support language version 2.0+. Falling back to 1.9.
+
+> Task :benchmark:compileProductionDebugKotlin
+> Task :app:mergeProjectDexProductionDebug
+> Task :benchmark:compileProductionDebugJavaWithJavac NO-SOURCE
+> Task :benchmark:dexBuilderProductionDebug
+> Task :benchmark:mergeProductionDebugGlobalSynthetics
+> Task :benchmark:processProductionDebugJavaRes
+> Task :benchmark:mergeProjectDexProductionDebug
+> Task :benchmark:mergeProductionDebugJavaResource
+
+> Task :app:kaptProductionDebugUnitTestKotlin
+warning: The following options were not recognized by any processor: '[room.schemaLocation, kapt.kotlin.generated]'
+
+> Task :app:mergeProductionDebugJavaResource
+> Task :benchmark:packageProductionDebug
+> Task :benchmark:createProductionDebugApkListingFileRedirect
+> Task :benchmark:assembleProductionDebug
+> Task :app:packageProductionDebug
+> Task :app:createProductionDebugApkListingFileRedirect
+> Task :app:assembleProductionDebug
+> Task :app:compileProductionDebugUnitTestKotlin
+> Task :app:compileProductionDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processProductionDebugUnitTestJavaRes
+> Task :app:lintAnalyzeProductionDebugAndroidTest
+> Task :app:lintAnalyzeProductionDebug
+> Task :app:lintAnalyzeProductionDebugUnitTest
+> Task :app:testProductionDebugUnitTest
+
+> Task :app:lintReportProductionDebug
+Wrote HTML report to file:///Users/schober/Projects/TSurfing/android-native/app/build/reports/lint-results-productionDebug.html
+
+> Task :app:lintProductionDebug
+
+BUILD SUCCESSFUL in 1m 41s
+89 actionable tasks: 88 executed, 1 up-to-date

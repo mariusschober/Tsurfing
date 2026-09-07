@@ -1,0 +1,28 @@
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+ ❯ services/cloudSync.adversarial.test.ts (18 tests | 1 failed | 17 skipped) 77ms
+     × drains valid multibyte notes within the actual JSON body limit without changing receipts 76ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  services/cloudSync.adversarial.test.ts > adversarial cloud synchronization > drains valid multibyte notes within the actual JSON body limit without changing receipts
+SyncHttpError: Sync push failed. Local changes remain pending.
+ ❯ parseJson services/cloudSync.ts:142:11
+    140|   if (!response.ok) {
+    141|     const error = (body as { error?: { code?: string; message?: string…
+    142|     throw new SyncHttpError(error?.message || failureMessage, response…
+       |           ^
+    143|   }
+    144|   return body as T;
+ ❯ synchronizeCloudOnce services/cloudSync.ts:266:18
+ ❯ services/cloudSync.adversarial.test.ts:206:18
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 skipped (18)
+   Start at  21:18:23
+   Duration  416ms (transform 162ms, setup 0ms, import 243ms, tests 77ms, environment 0ms)
+

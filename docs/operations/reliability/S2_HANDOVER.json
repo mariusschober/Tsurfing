@@ -1,0 +1,91 @@
+{
+  "stageId": "S2",
+  "status": "BLOCKED",
+  "acceptanceReason": "Implementation continues; transport checkpoint only.",
+  "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
+  "finalCommit": null,
+  "prerequisites": [
+    {
+      "stageId": "S1",
+      "commit": "09245261b6174ec878f0296ca61682c603f54304"
+    },
+    {
+      "stageId": "S1.2",
+      "commit": "262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d"
+    }
+  ],
+  "checkpoints": [
+    {
+      "commit": "adc0b1c08cd64fa5d7e9613c81a47e4bb117ff85",
+      "scope": "UTF-8 bounded push batches, all clients",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeSyncEngine.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/sync/NativeSyncEngineTest.kt",
+        "macos-native/GoalflowMac/Sync/SyncEngine.swift",
+        "macos-native/GoalflowMacTests/SyncTests.swift",
+        "services/cloudSync.adversarial.test.ts",
+        "services/cloudSync.ts",
+        "services/storage.ts",
+        "services/syncEnvelope.test.ts",
+        "services/syncEnvelope.ts"
+      ],
+      "tests": {
+        "web": {
+          "passed": 431,
+          "skipped": 0
+        },
+        "macos": {
+          "passed": 219,
+          "skipped": 1
+        },
+        "androidProductionUnit": {
+          "passed": 137,
+          "skipped": 1
+        }
+      },
+      "exitCodes": {
+        "verify:release": 0,
+        "xcodebuild test": 0,
+        "android unit lint debug build": 0
+      },
+      "artifactSha256": {
+        "android-native/app/build/outputs/apk/production/debug/app-production-debug.apk": "c62b89becb1aa359163a368b63f08c814e05434cb173c112456cd824216c7dcf",
+        "/private/tmp/s2-macos-tests/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing": "5f744f0236f5ec62880d9af996a00af5818c0e144eeed1f9de26c0cf8ec2e85b",
+        "/private/tmp/s2-macos-tests/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib": "4dcb0e22283ec10fe76442be0a66ebe12fe26f199a2337683188238c7686c365"
+      }
+    }
+  ],
+  "findings": [
+    {
+      "id": "S2-T01",
+      "disposition": "Corrected and tested locally"
+    },
+    {
+      "id": "S2-T02",
+      "disposition": "Oversize preserved; resumable recovery still required"
+    },
+    {
+      "id": "S2-L01",
+      "disposition": "Real PostgreSQL deadlock reproduced; correction pending"
+    }
+  ],
+  "migrations": [],
+  "compatibilityNotes": [
+    "Legacy mutation fields and precision unchanged",
+    "No production deployment or native installation",
+    "Causal protocol and mixed-version protections not yet implemented"
+  ],
+  "evidencePaths": [
+    "evidence/s2-byte-baseline.log",
+    "evidence/s2-transport-release.log",
+    "evidence/s2-transport-sandbox-failure.log",
+    "evidence/s2-transport-macos.log",
+    "evidence/s2-transport-android.log",
+    "s2-live-definitions.json"
+  ],
+  "blockers": [
+    "S2 implementation and acceptance requirements remain; see S2_REPORT.md"
+  ],
+  "permittedNextStage": null
+}
