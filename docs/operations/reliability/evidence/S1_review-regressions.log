@@ -1,0 +1,58 @@
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+ ❯ docs/operations/reliability/s1-review-regression.test.ts (2 tests | 2 failed) 14ms
+   × review: fallback must not shadow an acknowledged committed projection 10ms
+   × review: explicit set must not silently discard its value when another store has WAL 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  docs/operations/reliability/s1-review-regression.test.ts > review: fallback must not shadow an acknowledged committed projection
+AssertionError: expected [ { id: 'a', title: 'old fallback' } ] to deeply equal [ { id: 'a', title: 'acknowledged' } ]
+
+- Expected
++ Received
+
+  [
+    {
+      "id": "a",
+-     "title": "acknowledged",
++     "title": "old fallback",
+    },
+  ]
+
+ ❯ docs/operations/reliability/s1-review-regression.test.ts:25:51
+     23|   await storageService.applyRemotePage(user, [{ entityType: 'tasks', e…
+     24|   values.set(`goalflow_fallback_tasks_${user}`, JSON.stringify([{ id: …
+     25|   expect(await storageService.get('tasks', user)).toEqual(current);
+       |                                                   ^
+     26| });
+     27|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  docs/operations/reliability/s1-review-regression.test.ts > review: explicit set must not silently discard its value when another store has WAL
+AssertionError: expected undefined to be 'independent note' // Object.is equality
+
+- Expected:
+"independent note"
+
++ Received:
+undefined
+
+ ❯ docs/operations/reliability/s1-review-regression.test.ts:33:53
+     31|   storageService.stageLocalValue('tasks', user, [], [{ id: 'a', title:…
+     32|   await storageService.set('amalgam', user, 'independent note');
+     33|   expect(await storageService.get('amalgam', user)).toBe('independent …
+       |                                                     ^
+     34| });
+     35|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  17:52:39
+   Duration  294ms (transform 113ms, setup 0ms, import 147ms, tests 14ms, environment 0ms)
+
