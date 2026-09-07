@@ -1,0 +1,13 @@
+
+> tsurfing@0.4.0-beta.1 test:s1:storage
+> vitest run services/storage.s1.test.ts services/storage.s1-fallback.test.ts
+
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+
+ Test Files  2 passed (2)
+      Tests  15 passed (15)
+   Start at  17:35:59
+   Duration  341ms (transform 206ms, setup 0ms, import 215ms, tests 145ms, environment 0ms)
+

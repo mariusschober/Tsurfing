@@ -1,0 +1,62 @@
+
+> tsurfing@0.4.0-beta.1 test:s1:browser
+> playwright test --config playwright.s1.config.ts --repeat-each=3
+
+[WebServer] (node:15999) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:16036) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:16062) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 30 tests using 2 workers
+
+(node:16068) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16067) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   2 [chromium] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (2.0s)
+  ✓   1 [chromium] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (2.0s)
+  ✓   3 [chromium] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (455ms)
+  ✓   4 [chromium] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (463ms)
+  ✓   5 [chromium] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (1.8s)
+  ✓   6 [chromium] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (1.8s)
+  ✓   8 [chromium] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (646ms)
+  ✓   7 [chromium] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (752ms)
+  ✓   9 [chromium] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (1.3s)
+  ✓  10 [chromium] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (1.3s)
+(node:16132) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:16133) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  11 [chromium] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (2.0s)
+  ✓  13 [chromium] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (515ms)
+  ✓  12 [webkit] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (2.7s)
+  ✓  15 [webkit] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (749ms)
+  ✓  14 [chromium] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (1.5s)
+  ✓  17 [chromium] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (893ms)
+  ✓  16 [webkit] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (2.1s)
+  ✓  18 [chromium] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (1.2s)
+(node:16186) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  19 [webkit] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (999ms)
+  ✓  21 [webkit] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (2.0s)
+  ✓  20 [webkit] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (1.9s)
+(node:16208) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  22 [webkit] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (702ms)
+  ✓  23 [webkit] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (2.1s)
+  ✓  24 [webkit] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (2.3s)
+  ✓  25 [webkit] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (666ms)
+  ✓  26 [webkit] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (958ms)
+  ✓  27 [webkit] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (2.0s)
+  ✓  28 [webkit] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (1.8s)
+  ✓  29 [webkit] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (965ms)
+  ✓  30 [webkit] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (1.6s)
+
+  30 passed (29.5s)

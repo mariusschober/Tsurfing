@@ -1,0 +1,5 @@
+
+> tsurfing@0.4.0-beta.1 verify:migrations
+> node scripts/verify-data-integrity-migrations.mjs
+
+{"status":"PASS","migrations":22,"emptySchemaOrder":"PASS","existingSchemaAdditiveSafety":"PASS","accessBoundary":"PASS","note":"Static verification only; PostgreSQL execution still requires a live/staging Supabase drill."}

@@ -1,0 +1,137 @@
+[WebServer] (node:12377) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:12382) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:12400) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 3 tests using 1 worker
+
+(node:12402) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (8.2s)
+(node:12420) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [chromium] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (575ms)
+(node:12427) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  3 [chromium] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (8.3s)
+
+
+  1) [chromium] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('S1 peer-visible task', { exact: true })
+    Expected: visible
+    Timeout: 7000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 7000ms
+      - waiting for getByText('S1 peer-visible task', { exact: true })
+
+
+      28 |   await createTask(page, 'S1 peer-visible task');
+      29 |   await peer.getByRole('button', { name: 'Plan', exact: true }).click();
+    > 30 |   await expect(peer.getByText('S1 peer-visible task', { exact: true })).toBeVisible();
+         |                                                                         ^
+      31 |   const meta = await page.evaluate(async user => (window as any).__s1Storage.get('sync', user), user);
+      32 |   expect(meta.outbox.some((m: any) => m.payload?.title === 'S1 peer-visible task')).toBe(true);
+      33 |   expect(context.pages()).toHaveLength(2);
+        at /private/tmp/tsurfing-s1-baseline-6f750a7/tests/e2e/s1-local-storage.spec.ts:30:73
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s1-local-storage-A-E-one-p-ea416-ithout-reload-or-cloud-pull-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s1-local-storage-A-E-one-p-ea416-ithout-reload-or-cloud-pull-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s1-local-storage-A-E-one-p-ea416-ithout-reload-or-cloud-pull-chromium/video-1.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #4: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s1-local-storage-A-E-one-p-ea416-ithout-reload-or-cloud-pull-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s1-local-storage-A-E-one-p-ea416-ithout-reload-or-cloud-pull-chromium/error-context.md
+
+  2) [chromium] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 1
+
+      Array [
+        "9bf4cebf-aa83-47a4-bb07-11269d965923",
+    +   "8539a4fb-ddf5-402a-9783-601c5757a886",
+      ]
+
+      57 |     return { meta: await storage.get('sync', user), tracking: await storage.get('tracking', user) };
+      58 |   }, user);
+    > 59 |   expect(after.meta.outbox.map((m: any) => m.mutationId)).toEqual(before.ids);
+         |                                                           ^
+      60 |   expect(after.tracking).toEqual(before.newer);
+      61 | });
+      62 |
+        at /private/tmp/tsurfing-s1-baseline-6f750a7/tests/e2e/s1-local-storage.spec.ts:59:59
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s1-local-storage-C-releasi-1bccc-hydration-creates-no-action-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s1-local-storage-C-releasi-1bccc-hydration-creates-no-action-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s1-local-storage-C-releasi-1bccc-hydration-creates-no-action-chromium/error-context.md
+
+  3) [chromium] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByTitle('Start Focus (Space)')
+    Expected: visible
+    Timeout: 7000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 7000ms
+      - waiting for getByTitle('Start Focus (Space)')
+
+
+      72 |   await expect(peer.getByTitle('Pause Timer (Space)')).toBeVisible();
+      73 |   await peer.getByTitle('Pause Timer (Space)').click();
+    > 74 |   await expect(page.getByTitle('Start Focus (Space)')).toBeVisible();
+         |                                                        ^
+      75 |   const paused = await page.evaluate(async user => {
+      76 |     const storage = (window as any).__s1Storage;
+      77 |     await storage.flushPendingLocalChanges(user);
+        at /private/tmp/tsurfing-s1-baseline-6f750a7/tests/e2e/s1-local-storage.spec.ts:74:56
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s1-local-storage-A-paused--0165b-eer-hints-create-no-actions-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s1-local-storage-A-paused--0165b-eer-hints-create-no-actions-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s1-local-storage-A-paused--0165b-eer-hints-create-no-actions-chromium/video-1.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #4: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s1-local-storage-A-paused--0165b-eer-hints-create-no-actions-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s1-local-storage-A-paused--0165b-eer-hints-create-no-actions-chromium/error-context.md
+
+  3 failed
+    [chromium] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull 
+    [chromium] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action 
+    [chromium] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions 

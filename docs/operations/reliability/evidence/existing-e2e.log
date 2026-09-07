@@ -1,0 +1,61 @@
+
+> tsurfing@0.4.0-beta.1 test:e2e
+> playwright test
+
+[WebServer] (node:15634) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer]   dist/server/index.mjs        167.0kb
+[WebServer]   dist/server/maintenance.mjs   18.6kb
+[WebServer] 
+[WebServer] ⚡ Done in 10ms
+[WebServer] {"level":"error","event":"server.production_configuration_invalid","problems":["public_origin_must_use_https","supabase_url_missing","supabase_public_key_missing","supabase_server_key_missing","owner_user_id_missing"]}
+[WebServer] (node:15720) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 34 tests using 2 workers
+
+(node:15727) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:15728) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   2 [chromium] › tests/e2e/auth-focus.spec.ts:45:1 › repeated sign-in, token refresh and focus retain view and draft, including slow and offline validation (715ms)
+  ✓   3 [chromium] › tests/e2e/auth-focus.spec.ts:62:1 › revocation removes the app (637ms)
+  ✓   4 [chromium] › tests/e2e/auth-focus.spec.ts:67:1 › new login for the same user must pass MFA again (406ms)
+  ✓   1 [chromium] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (2.1s)
+  ✓   5 [chromium] › tests/e2e/auth-focus.spec.ts:72:1 › MFA downgrade must pass the gate again (491ms)
+  ✓   6 [chromium] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (456ms)
+  ✓   7 [chromium] › tests/e2e/auth-focus.spec.ts:76:1 › sign-out invalidates pending validation (426ms)
+  ✓   9 [chromium] › tests/e2e/startup-recovery.spec.ts:10:1 › reload recovers a divergent pending task without overwriting either edit (663ms)
+  ✓  10 [chromium] › tests/e2e/startup-recovery.spec.ts:47:1 › unreadable saved data shows a retry screen instead of an endless spinner (482ms)
+  ✓   8 [chromium] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (1.7s)
+  ✓  12 [chromium] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (735ms)
+  ✓  11 [chromium] › tests/e2e/web-critical.spec.ts:100:3 › web-critical — deterministic visible UI journey › capture, schedule, reorder, confirm, complete, and reload persist exactly (1.6s)
+  ✓  14 [chromium] › tests/e2e/web-critical.spec.ts:145:3 › web-critical — deterministic visible UI journey › service worker controls the app and supported offline behavior is durable (627ms)
+  ✓  13 [chromium] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (1.4s)
+(node:15817) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  15 [chromium] › tests/e2e/web-critical.spec.ts:187:3 › web-critical — deterministic visible UI journey › saved tasks are isolated between browser profiles (1.4s)
+  ✓  17 [chromium] › tests/e2e/web-critical.spec.ts:205:3 › web-critical — deterministic visible UI journey › manifest, service worker, and required icons are served (346ms)
+  ✓  18 [chromium] › tests/e2e/web-critical.spec.ts:233:1 › natural-language capture previews and persists month planning (652ms)
+  ✓  16 [webkit] › tests/e2e/auth-focus.spec.ts:45:1 › repeated sign-in, token refresh and focus retain view and draft, including slow and offline validation (1.3s)
+(node:15848) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  19 [webkit] › tests/e2e/auth-focus.spec.ts:62:1 › revocation removes the app (495ms)
+  ✓  21 [webkit] › tests/e2e/auth-focus.spec.ts:67:1 › new login for the same user must pass MFA again (527ms)
+  ✓  22 [webkit] › tests/e2e/auth-focus.spec.ts:72:1 › MFA downgrade must pass the gate again (469ms)
+  ✓  23 [webkit] › tests/e2e/auth-focus.spec.ts:76:1 › sign-out invalidates pending validation (535ms)
+  ✓  20 [webkit] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (2.2s)
+  ✓  24 [webkit] › tests/e2e/startup-recovery.spec.ts:10:1 › reload recovers a divergent pending task without overwriting either edit (900ms)
+  ✓  25 [webkit] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (853ms)
+  ✓  26 [webkit] › tests/e2e/startup-recovery.spec.ts:47:1 › unreadable saved data shows a retry screen instead of an endless spinner (850ms)
+  ✓  27 [webkit] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (2.5s)
+  ✓  28 [webkit] › tests/e2e/web-critical.spec.ts:100:3 › web-critical — deterministic visible UI journey › capture, schedule, reorder, confirm, complete, and reload persist exactly (2.8s)
+  ✓  29 [webkit] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (1.2s)
+  ✓  30 [webkit] › tests/e2e/web-critical.spec.ts:145:3 › web-critical — deterministic visible UI journey › service worker controls the app and supported offline behavior is durable (1.9s)
+  ✓  31 [webkit] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (2.0s)
+  ✓  32 [webkit] › tests/e2e/web-critical.spec.ts:187:3 › web-critical — deterministic visible UI journey › saved tasks are isolated between browser profiles (2.4s)
+  ✓  33 [webkit] › tests/e2e/web-critical.spec.ts:205:3 › web-critical — deterministic visible UI journey › manifest, service worker, and required icons are served (719ms)
+  ✓  34 [webkit] › tests/e2e/web-critical.spec.ts:233:1 › natural-language capture previews and persists month planning (971ms)
+
+  34 passed (27.0s)

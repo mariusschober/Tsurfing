@@ -1,0 +1,78 @@
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+ ❯ services/storage.s1.test.ts (4 tests | 4 failed) 17ms
+     × G: equal key count is not a WAL content revision 7ms
+     × B: markSyncSuccessful must not replace a concurrently appended outbox 6ms
+     × B: mergeServerConflicts must not replace a concurrently appended outbox 2ms
+     × B: commitPushResults must not replace a concurrently appended outbox 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  services/storage.s1.test.ts > S1 deterministic storage schedules > G: equal key count is not a WAL content revision
+AssertionError: expected [ { id: 'a', title: 'A' } ] to deeply equal [ { id: 'b', title: 'B' } ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "id": "b",
+-     "title": "B",
++     "id": "a",
++     "title": "A",
+    },
+  ]
+
+ ❯ services/storage.s1.test.ts:33:58
+     31|     values.delete(key);
+     32|     values.set(key + '-peer', JSON.stringify(replacement));
+     33|     expect(await storageService.get(STORES.TASKS, user)).toEqual([{ id…
+       |                                                          ^
+     34|   });
+     35|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  services/storage.s1.test.ts > S1 deterministic storage schedules > B: markSyncSuccessful must not replace a concurrently appended outbox
+AssertionError: expected [] to include '08c356b9-02e9-4eef-b9cc-c66711913dd3'
+ ❯ services/storage.s1.test.ts:77:57
+     75|       const restarted = await openDB('GoalflowDB');
+     76|       const meta = await restarted.get(STORES.SYNC, user);
+     77|       expect(meta.outbox.map((m: any) => m.mutationId)).toContain(stag…
+       |                                                         ^
+     78|       expect(await restarted.get(STORES.TASKS, user)).toEqual(staged.v…
+     79|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  services/storage.s1.test.ts > S1 deterministic storage schedules > B: mergeServerConflicts must not replace a concurrently appended outbox
+AssertionError: expected [] to include '3d3cfb82-4d77-4bbd-9ed4-daeafb403c99'
+ ❯ services/storage.s1.test.ts:77:57
+     75|       const restarted = await openDB('GoalflowDB');
+     76|       const meta = await restarted.get(STORES.SYNC, user);
+     77|       expect(meta.outbox.map((m: any) => m.mutationId)).toContain(stag…
+       |                                                         ^
+     78|       expect(await restarted.get(STORES.TASKS, user)).toEqual(staged.v…
+     79|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  services/storage.s1.test.ts > S1 deterministic storage schedules > B: commitPushResults must not replace a concurrently appended outbox
+AssertionError: expected [] to include '40833554-1b42-42b9-b513-6de634051573'
+ ❯ services/storage.s1.test.ts:77:57
+     75|       const restarted = await openDB('GoalflowDB');
+     76|       const meta = await restarted.get(STORES.SYNC, user);
+     77|       expect(meta.outbox.map((m: any) => m.mutationId)).toContain(stag…
+       |                                                         ^
+     78|       expect(await restarted.get(STORES.TASKS, user)).toEqual(staged.v…
+     79|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed (4)
+   Start at  17:07:15
+   Duration  457ms (transform 107ms, setup 0ms, import 145ms, tests 17ms, environment 0ms)
+

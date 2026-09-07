@@ -1,0 +1,219 @@
+
+ RUN  v4.1.10 /private/tmp/tsurfing-s1-baseline-6f750a7
+
+stderr | services/storage.s1-fallback.test.ts > S1 F: unavailable atomic storage > keeps cursor and exact offline WAL when optional mirror fails=false
+[Storage] IndexedDB is unavailable. Local WAL remains authoritative. Error: synthetic IndexedDB unavailable
+    at FDBFactory.<anonymous> (/private/tmp/tsurfing-s1-baseline-6f750a7/services/storage.s1-fallback.test.ts:19:79)
+    at FDBFactory.open (file:///Users/schober/Projects/TSurfing/node_modules/@vitest/spy/dist/index.js:332:34)
+    at openDB (file:///Users/schober/Projects/TSurfing/node_modules/idb/build/index.js:168:31)
+    at openAndMigrate (/private/tmp/tsurfing-s1-baseline-6f750a7/services/storage.ts:434:20)
+    at getDB (/private/tmp/tsurfing-s1-baseline-6f750a7/services/storage.ts:467:17)
+    at /private/tmp/tsurfing-s1-baseline-6f750a7/services/storage.ts:992:24
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+stderr | services/storage.s1-fallback.test.ts > S1 F: unavailable atomic storage > keeps cursor and exact offline WAL when optional mirror fails=true
+[Storage] IndexedDB is unavailable. Local WAL remains authoritative. Error: synthetic IndexedDB unavailable
+    at FDBFactory.<anonymous> (/private/tmp/tsurfing-s1-baseline-6f750a7/services/storage.s1-fallback.test.ts:19:79)
+    at FDBFactory.open (file:///Users/schober/Projects/TSurfing/node_modules/@vitest/spy/dist/index.js:332:34)
+    at openDB (file:///Users/schober/Projects/TSurfing/node_modules/idb/build/index.js:168:31)
+    at openAndMigrate (/private/tmp/tsurfing-s1-baseline-6f750a7/services/storage.ts:434:20)
+    at getDB (/private/tmp/tsurfing-s1-baseline-6f750a7/services/storage.ts:467:17)
+    at /private/tmp/tsurfing-s1-baseline-6f750a7/services/storage.ts:992:24
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+stderr | services/storage.s1-fallback.test.ts > S1 F: unavailable atomic storage > keeps cursor and exact offline WAL when optional mirror fails=true
+[Storage] Optional recovery mirror could not be updated. Error: synthetic mirror quota
+    at Object.setItem (/private/tmp/tsurfing-s1-baseline-6f750a7/services/storage.s1-fallback.test.ts:15:99)
+    at writeRecovery (/private/tmp/tsurfing-s1-baseline-6f750a7/services/storage.ts:258:25)
+    at /private/tmp/tsurfing-s1-baseline-6f750a7/services/storage.ts:1005:16
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+ ❯ services/storage.s1-fallback.test.ts (2 tests | 2 failed) 110ms
+     × keeps cursor and exact offline WAL when optional mirror fails=false 104ms
+     × keeps cursor and exact offline WAL when optional mirror fails=true 4ms
+ ❯ services/storage.s1.test.ts (9 tests | 9 failed) 34ms
+     × G: equal key count is not a WAL content revision 8ms
+     × B: markSyncSuccessful must not replace a concurrently appended outbox 8ms
+     × B: mergeServerConflicts must not replace a concurrently appended outbox 2ms
+     × B: commitPushResults must not replace a concurrently appended outbox 2ms
+     × B: preparePushBatch must not replace a concurrently appended outbox 2ms
+     × B: resolveConflictLocally must not replace a concurrently appended outbox 3ms
+     × B: resolveConflictWithCloud must not replace a concurrently appended outbox 2ms
+   × D: a focus intent arriving during inbound application remains durable and classifies stale admission 3ms
+   × E: grouped completion and independent note edit retain every exact mutation on repeated drains 3ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 11 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  services/storage.s1-fallback.test.ts > S1 F: unavailable atomic storage > keeps cursor and exact offline WAL when optional mirror fails=false
+ FAIL  services/storage.s1-fallback.test.ts > S1 F: unavailable atomic storage > keeps cursor and exact offline WAL when optional mirror fails=true
+AssertionError: promise resolved "{ …(2) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "changedStores": [
++     "tracking",
++   ],
++   "meta": {
++     "conflicts": [],
++     "cursor": 8,
++     "lastSuccessfulSync": undefined,
++     "outbox": [],
++     "schemaVersion": 2,
++     "versions": {
++       "tracking:singleton": {
++         "local": 1,
++         "server": 8,
++       },
++     },
++   },
+  }
+
+ ❯ services/storage.s1-fallback.test.ts:26:120
+     24|       const wal = [...values.entries()].filter(([k]) => k.startsWith('…
+     25|       await expect(storageService.applyRemotePage(user, [{ entityType:…
+     26|         serverVersion: 8, payload: { ...original, planViewCount: 2 }, …
+       |                                                                                                                        ^
+     27|       expect(values.get(`goalflow_fallback_sync_${user}`)).toBe(meta);
+     28|       expect([...values.entries()].filter(([k]) => k.startsWith('goalf…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/11]⎯
+
+ FAIL  services/storage.s1.test.ts > S1 deterministic storage schedules > G: equal key count is not a WAL content revision
+AssertionError: expected [ { id: 'a', title: 'A' } ] to deeply equal [ { id: 'b', title: 'B' } ]
+
+- Expected
++ Received
+
+  [
+    {
+-     "id": "b",
+-     "title": "B",
++     "id": "a",
++     "title": "A",
+    },
+  ]
+
+ ❯ services/storage.s1.test.ts:33:58
+     31|     values.delete(key);
+     32|     values.set(key + '-peer', JSON.stringify(replacement));
+     33|     expect(await storageService.get(STORES.TASKS, user)).toEqual([{ id…
+       |                                                          ^
+     34|   });
+     35|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/11]⎯
+
+ FAIL  services/storage.s1.test.ts > S1 deterministic storage schedules > B: markSyncSuccessful must not replace a concurrently appended outbox
+AssertionError: expected [] to include '030dac7a-b4cd-486c-bd50-749e38a49dd9'
+ ❯ services/storage.s1.test.ts:91:57
+     89|       const restarted = await openDB('GoalflowDB');
+     90|       const meta = await restarted.get(STORES.SYNC, user);
+     91|       expect(meta.outbox.map((m: any) => m.mutationId)).toContain(stag…
+       |                                                         ^
+     92|       expect(await restarted.get(STORES.TASKS, user)).toEqual(staged.v…
+     93|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/11]⎯
+
+ FAIL  services/storage.s1.test.ts > S1 deterministic storage schedules > B: mergeServerConflicts must not replace a concurrently appended outbox
+AssertionError: expected [] to include '44c12023-acec-491d-95ab-c9bc0cbd05f7'
+ ❯ services/storage.s1.test.ts:91:57
+     89|       const restarted = await openDB('GoalflowDB');
+     90|       const meta = await restarted.get(STORES.SYNC, user);
+     91|       expect(meta.outbox.map((m: any) => m.mutationId)).toContain(stag…
+       |                                                         ^
+     92|       expect(await restarted.get(STORES.TASKS, user)).toEqual(staged.v…
+     93|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/11]⎯
+
+ FAIL  services/storage.s1.test.ts > S1 deterministic storage schedules > B: commitPushResults must not replace a concurrently appended outbox
+AssertionError: expected [] to include '02206ad8-61d8-474e-af35-ef36209ab7e3'
+ ❯ services/storage.s1.test.ts:91:57
+     89|       const restarted = await openDB('GoalflowDB');
+     90|       const meta = await restarted.get(STORES.SYNC, user);
+     91|       expect(meta.outbox.map((m: any) => m.mutationId)).toContain(stag…
+       |                                                         ^
+     92|       expect(await restarted.get(STORES.TASKS, user)).toEqual(staged.v…
+     93|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/11]⎯
+
+ FAIL  services/storage.s1.test.ts > S1 deterministic storage schedules > B: preparePushBatch must not replace a concurrently appended outbox
+AssertionError: expected [ Array(1) ] to include 'd995f01c-c647-4ca0-845e-6991831eeb68'
+ ❯ services/storage.s1.test.ts:91:57
+     89|       const restarted = await openDB('GoalflowDB');
+     90|       const meta = await restarted.get(STORES.SYNC, user);
+     91|       expect(meta.outbox.map((m: any) => m.mutationId)).toContain(stag…
+       |                                                         ^
+     92|       expect(await restarted.get(STORES.TASKS, user)).toEqual(staged.v…
+     93|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/11]⎯
+
+ FAIL  services/storage.s1.test.ts > S1 deterministic storage schedules > B: resolveConflictLocally must not replace a concurrently appended outbox
+AssertionError: expected [ Array(1) ] to include 'b2ce4147-b86b-4cc1-b0b0-daafbae88252'
+ ❯ services/storage.s1.test.ts:91:57
+     89|       const restarted = await openDB('GoalflowDB');
+     90|       const meta = await restarted.get(STORES.SYNC, user);
+     91|       expect(meta.outbox.map((m: any) => m.mutationId)).toContain(stag…
+       |                                                         ^
+     92|       expect(await restarted.get(STORES.TASKS, user)).toEqual(staged.v…
+     93|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/11]⎯
+
+ FAIL  services/storage.s1.test.ts > S1 deterministic storage schedules > B: resolveConflictWithCloud must not replace a concurrently appended outbox
+AssertionError: expected [] to include 'a3845f74-a296-48da-ae4e-020a2261abe7'
+ ❯ services/storage.s1.test.ts:91:57
+     89|       const restarted = await openDB('GoalflowDB');
+     90|       const meta = await restarted.get(STORES.SYNC, user);
+     91|       expect(meta.outbox.map((m: any) => m.mutationId)).toContain(stag…
+       |                                                         ^
+     92|       expect(await restarted.get(STORES.TASKS, user)).toEqual(staged.v…
+     93|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/11]⎯
+
+ FAIL  services/storage.s1.test.ts > D: a focus intent arriving during inbound application remains durable and classifies stale admission
+DurableStorageError: Pending tracking data diverged from recovered storage. Neither version was overwritten.
+ ❯ reconcileStagedTransactions services/storage.ts:619:13
+    617|     }
+    618|     if (!RECORD_LEVEL_STORES.has(transaction.storeName)) {
+    619|       throw new DurableStorageError(
+       |             ^
+    620|         `Pending ${transaction.storeName} data diverged from recovered…
+    621|       );
+ ❯ services/storage.ts:925:32
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/11]⎯
+
+ FAIL  services/storage.s1.test.ts > E: grouped completion and independent note edit retain every exact mutation on repeated drains
+AssertionError: expected [] to have a length of 3 but got +0
+
+- Expected
++ Received
+
+- 3
++ 0
+
+ ❯ services/storage.s1.test.ts:149:56
+    147|   expect((await storageService.flushPendingLocalChanges(user)).outbox)…
+    148|   expect(await storageService.get(STORES.TASKS, user)).toEqual([comple…
+    149|   expect(Object.keys(first.localState?.journal ?? {})).toHaveLength(3);
+       |                                                        ^
+    150| });
+    151|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/11]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  11 failed (11)
+   Start at  17:26:10
+   Duration  306ms (transform 184ms, setup 0ms, import 234ms, tests 144ms, environment 0ms)
+
