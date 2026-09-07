@@ -54,6 +54,41 @@
         "/private/tmp/s2-macos-tests/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing": "5f744f0236f5ec62880d9af996a00af5818c0e144eeed1f9de26c0cf8ec2e85b",
         "/private/tmp/s2-macos-tests/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib": "4dcb0e22283ec10fe76442be0a66ebe12fe26f199a2337683188238c7686c365"
       }
+    },
+    {
+      "commit": "8e7d6fd3ab03e9e97cdc5fa8ffc32da75d8bf55b",
+      "scope": "Explicit resolution lock order and committed cursor safety",
+      "status": "PASS_LOCAL",
+      "commands": [
+        {
+          "command": "PGHOST=/private/tmp PGPORT=55437 bash scripts/test-postgres-migrations.sh",
+          "exitCode": 0,
+          "counts": {
+            "databaseMatrices": 2,
+            "concurrencyScenariosPerMatrix": 2
+          }
+        },
+        {
+          "command": "npm run verify:migrations",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:migration-hashes",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0
+        }
+      ],
+      "changedFiles": [
+        ".github/workflows/ci.yml",
+        "config/durable-identifiers.json",
+        "scripts/test-postgres-migrations.sh",
+        "scripts/test-sync-lock-order.py",
+        "supabase/migrations/20260907203259_s2_sync_lock_order.sql",
+        "supabase/migrations/MIGRATION_SHA256_MANIFEST.json"
+      ]
     }
   ],
   "findings": [
@@ -67,10 +102,12 @@
     },
     {
       "id": "S2-L01",
-      "disposition": "Real PostgreSQL deadlock reproduced; correction pending"
+      "disposition": "Corrected and tested in real isolated PostgreSQL; no live application"
     }
   ],
-  "migrations": [],
+  "migrations": [
+    "20260907203259_s2_sync_lock_order.sql"
+  ],
   "compatibilityNotes": [
     "Legacy mutation fields and precision unchanged",
     "No production deployment or native installation",
@@ -82,7 +119,11 @@
     "evidence/s2-transport-sandbox-failure.log",
     "evidence/s2-transport-macos.log",
     "evidence/s2-transport-android.log",
-    "s2-live-definitions.json"
+    "s2-live-definitions.json",
+    "evidence/s2-lock-baseline.json",
+    "evidence/s2-lock-final-postgres.log",
+    "evidence/s2-lock-hashes.log",
+    "evidence/s2-lock-identifiers.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

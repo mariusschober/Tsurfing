@@ -52,9 +52,14 @@ Read-only staging definitions and applied history are in
 `s2-live-definitions.json`. The isolated PostgreSQL 17.11 database produced the
 same push function MD5 as staging: `95ada6932c85d9b24a7022277421c355`.
 S2-L01: two real concurrent transactions reproduced SQLSTATE `40P01` between
-explicit conflict resolution and automatic reconciliation. Forward correction
-and regression validation are in progress. Publication-order advisory locking
-must remain intact.
+explicit conflict resolution and automatic reconciliation. Forward correction `8e7d6fd3ab03e9e97cdc5fa8ffc32da75d8bf55b` passes both empty and upgrade
+PostgreSQL matrices, including original receipt checks and real two-transaction
+lock/cursor regressions. The racing explicit resolution now fails safely with
+22023 after reconciliation wins. Publication-order advisory locking is unchanged.
+`PGHOST=/private/tmp PGPORT=55437 bash scripts/test-postgres-migrations.sh` exited
+0. Migration/hash/identifier ledgers pass with the appended migration.
+No database claim extends to a live rollout. The remaining action protocol needs
+its own lock-order audit across completion and projection writers.
 
 ## Remaining acceptance work
 

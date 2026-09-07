@@ -1,0 +1,25 @@
+
+> tsurfing@0.4.0-beta.1 verify:identifiers
+> node scripts/check-durable-identifiers.mjs
+
+IDENTIFIER_OK Capacitor application ID
+IDENTIFIER_OK Legacy Android namespace
+IDENTIFIER_OK Legacy Android application ID
+IDENTIFIER_OK Native Android namespace
+IDENTIFIER_OK Native Android application ID
+IDENTIFIER_OK Web database name
+IDENTIFIER_OK Active web database key
+IDENTIFIER_OK Web WAL prefix
+IDENTIFIER_OK Web device ID key
+IDENTIFIER_OK Native database name
+IDENTIFIER_OK Native URL scheme
+IDENTIFIER_OK Native auth redirect URI
+IDENTIFIER_OK Secure-session preferences name
+IDENTIFIER_OK Android Keystore alias
+IDENTIFIER_OK Encrypted backup legacy magic
+IDENTIFIER_OK Encrypted backup current magic
+IDENTIFIER_OK Backup storage bucket
+IDENTIFIER_OK Encrypted backup suffix
+IDENTIFIER_OK Postgres migration filenames
+IDENTIFIER_OK Room schema filenames
+{"status":"PASS","manifestVersion":2,"checked":20}
