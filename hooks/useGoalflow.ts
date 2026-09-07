@@ -8,6 +8,7 @@ import { storageService, STORES, type LocalValueChange } from '../services/stora
 import { assertSchedule, compareQueueCandidates } from '../src/domain/scheduling';
 import {
   completeFocusSession,
+  extendAndResumeFocusSession,
   extendFocusSession,
   normalizeFocusSession,
   pauseFocusSession,
@@ -629,7 +630,10 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
   const extendFocusSessionForCurrentTask = useCallback((deltaSeconds: number): FocusSessionRecord | null => {
       const current = normalizeFocusSession(getDailyTracking().focusSession);
       if (!current) return null;
-      return commitFocusSession(extendFocusSession(current, deltaSeconds));
+      const next = current.phase === 'paused'
+          ? extendAndResumeFocusSession(current, deltaSeconds)
+          : extendFocusSession(current, deltaSeconds);
+      return commitFocusSession(next);
   }, [commitFocusSession, getDailyTracking]);
 
   const trackPlanVisit = () => {

@@ -116,6 +116,20 @@ export const focusSessionOvertimeSeconds = (
 
 const iso = (now: Date): string => now.toISOString();
 
+/**
+ * Keep the durable action timestamp causally after the record it replaces.
+ * Clients can legitimately dispatch two actions in one millisecond, and a
+ * wall clock can move backwards between reads. The record must still expose
+ * a strictly newer revision so sync ordering cannot collapse the actions.
+ */
+const causalIso = (session: FocusSessionRecord, now: Date): string => {
+  const previous = Date.parse(session.updatedAt);
+  const timestamp = Number.isFinite(previous)
+    ? Math.max(now.getTime(), previous + 1)
+    : now.getTime();
+  return new Date(timestamp).toISOString();
+};
+
 const requireTask = (taskId: string): void => {
   if (typeof taskId !== 'string' || taskId.trim().length === 0) throw new Error('A focus session needs a task identity.');
 };
@@ -165,7 +179,7 @@ const transition = (
     ...overrides,
     phase,
     elapsedSeconds: Math.max(0, Math.floor(elapsedSeconds)),
-    updatedAt: iso(now)
+    updatedAt: causalIso(session, now)
   };
   const normalized = normalizeFocusSession(next);
   if (!normalized) throw new Error('The focus session transition is invalid.');
@@ -200,7 +214,31 @@ export const extendFocusSession = (session: FocusSessionRecord, deltaSeconds: nu
   if (!Number.isSafeInteger(delta) || delta <= 0) return session;
   const duration = asDuration(Math.min(MAX_DURATION_SECONDS, session.plannedDurationSeconds + delta));
   if (duration === null) return session;
-  return { ...session, plannedDurationSeconds: duration, updatedAt: iso(now) };
+  return { ...session, plannedDurationSeconds: duration, updatedAt: causalIso(session, now) };
+};
+
+/**
+ * Add time and resume a paused session as one durable action. Keeping this as
+ * one transition avoids two same-millisecond tracking mutations where the
+ * second resume could be reordered or hide the first extension remotely.
+ */
+export const extendAndResumeFocusSession = (
+  session: FocusSessionRecord,
+  deltaSeconds: number,
+  now: Date = new Date()
+): FocusSessionRecord => {
+  requireSession(session); requireNow(now);
+  if (session.phase !== 'paused') return extendFocusSession(session, deltaSeconds, now);
+  const delta = Number(deltaSeconds);
+  if (!Number.isSafeInteger(delta) || delta <= 0) return session;
+  const duration = asDuration(Math.min(MAX_DURATION_SECONDS, session.plannedDurationSeconds + delta));
+  if (duration === null) return session;
+  return transition(session, 'active', now, focusSessionElapsedSeconds(session, now), {
+    plannedDurationSeconds: duration,
+    startedAt: iso(now),
+    pausedAt: null,
+    endedAt: null
+  });
 };
 
 /**

@@ -180,7 +180,6 @@ export const useFocusTimer = (settings: TimerSettings) => {
     if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return;
     if (sharedSession) {
       onExtend?.(deltaSeconds);
-      if (matchingSession?.phase === 'paused') onResume?.();
       return;
     }
     setLocalState(previous => ({
@@ -191,7 +190,7 @@ export const useFocusTimer = (settings: TimerSettings) => {
       pausedAt: null,
       startTime: Date.now()
     }));
-  }, [sharedSession, onExtend, matchingSession, onResume]);
+  }, [sharedSession, onExtend]);
 
   return {
     displaySeconds,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   completeFocusSession,
+  extendAndResumeFocusSession,
   extendFocusSession,
   focusSessionElapsedSeconds,
   focusSessionOvertimeSeconds,
@@ -53,6 +54,21 @@ describe('shared focus session domain', () => {
     expect(extended.plannedDurationSeconds).toBe(180);
     expect(extended.elapsedSeconds).toBe(0);
     expect(extended.updatedAt).toBe(at(125).toISOString());
+  });
+
+  it('coalesces paused extension and resume into one causally newer transition', () => {
+    const active = startFocusSession('task-1', 600, at(100), sessionId);
+    const paused = pauseFocusSession(active, at(145));
+    const resumed = extendAndResumeFocusSession(paused, 120, at(145));
+
+    expect(resumed.phase).toBe('active');
+    expect(resumed.plannedDurationSeconds).toBe(720);
+    expect(resumed.elapsedSeconds).toBe(45);
+    expect(resumed.startedAt).toBe(at(145).toISOString());
+    expect(resumed.pausedAt).toBeNull();
+    expect(resumed.endedAt).toBeNull();
+    expect(resumed.updatedAt).toBe(at(145.001).toISOString());
+    expect(Date.parse(resumed.updatedAt)).toBeGreaterThan(Date.parse(paused.updatedAt));
   });
 
   it('rejects malformed, contradictory, and too-short remote records', () => {
