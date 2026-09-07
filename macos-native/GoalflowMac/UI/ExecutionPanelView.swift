@@ -735,6 +735,39 @@ final class ExecutionViewModel: ObservableObject {
         return f.string(from: Date())
     }
 }
+struct TaskNotesView: View {
+    let notes: String
+    private var visibleHeight: CGFloat {
+        // The panel is 380 points wide with 26-point insets on each side.
+        let bounds = (notes as NSString).boundingRect(
+            with: NSSize(width: 328, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: NSFont.systemFont(ofSize: 12)]
+        )
+        return min(140, max(20, ceil(bounds.height) + 6))
+    }
+    private var noteText: some View {
+        Text(notes)
+            .font(.system(size: 12))
+            .foregroundStyle(.primary)
+            .textSelection(.enabled)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Notes")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+            ScrollView(.vertical) { noteText }
+                .frame(height: visibleHeight)
+                .clipped()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityIdentifier("task-notes")
+    }
+}
+
 struct ExecutionPanelView: View {
     @ObservedObject var vm: ExecutionViewModel
     @State private var completionInstructionVisible = false
@@ -1068,15 +1101,9 @@ struct ExecutionPanelView: View {
                         .overlay(Capsule().stroke(Color.indigo.opacity(0.15), lineWidth: 1))
                 }.buttonStyle(.plain)
             }
-            if !(vm.isActive || vm.isPaused || vm.isOvertime) {
-                Text("Tap ACTION to start. The timer counts from \(task.durationMinutes) minutes — it will persist if Tsurfing restarts. Pause is low friction; overtime counts separately.")
-                    .font(.system(size: 11, weight: .regular)).foregroundStyle(.secondary).lineLimit(3)
-            } else if vm.isPaused {
-                Text("Paused — elapsed time is frozen. Resume when you’re ready.").font(.system(size: 11, weight: .regular)).foregroundStyle(.secondary)
-            } else if vm.isOvertime {
-                Text("Planned time is up. Keep working or mark the task as done.").font(.system(size: 11, weight: .medium)).foregroundStyle(Color.orange)
-            } else {
-                Text("Focusing — keep the next action small and visible.").font(.system(size: 11, weight: .regular)).foregroundStyle(.secondary)
+            if !task.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                TaskNotesView(notes: task.notes)
+                    .padding(.top, 8)
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 18)

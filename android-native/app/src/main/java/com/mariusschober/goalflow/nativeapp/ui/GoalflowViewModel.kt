@@ -236,8 +236,16 @@ class GoalflowViewModel(
         viewModelScope.launch {
             clearError()
             runCatching {
+                val requestedTask = repository.taskSnapshot(task.id)
+                require(requestedTask?.status == com.mariusschober.goalflow.nativeapp.domain.TaskStatus.OPEN
+                    && requestedTask.deletedAt == null) { "This commitment is no longer open." }
                 val current = repository.trackingFocusSession()
-                if (current?.phase == NativeFocusSessionPhase.ACTIVE || current?.phase == NativeFocusSessionPhase.PAUSED) {
+                val currentTask = current?.let { repository.taskSnapshot(it.taskId) }
+                val currentTaskIsOpen = currentTask?.status == com.mariusschober.goalflow.nativeapp.domain.TaskStatus.OPEN
+                    && currentTask.deletedAt == null
+                // Completion or breakdown can arrive before its tracking
+                // projection. A closed task must never block the next focus.
+                if (currentTaskIsOpen && (current?.phase == NativeFocusSessionPhase.ACTIVE || current?.phase == NativeFocusSessionPhase.PAUSED)) {
                     if (current.taskId != task.id) throw IllegalStateException("Another focus session is already open.")
                     current
                 } else {
