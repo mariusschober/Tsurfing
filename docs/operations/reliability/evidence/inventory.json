@@ -1,0 +1,27 @@
+{
+  "node": "v22.16.0",
+  "npm": "10.9.2",
+  "dependencies": {
+    "@playwright/test": "1.62.1",
+    "fake-indexeddb": "6.2.5",
+    "fast-check": "4.9.0",
+    "idb": "8.0.3",
+    "react": "18.3.1",
+    "typescript": "5.8.3",
+    "vite": "6.4.3",
+    "vitest": "4.1.10"
+  },
+  "baselineCommit": "6f750a712f253754bfac840d8edc5d846b360b7d",
+  "testedCommit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+  "goalflowPathExists": false,
+  "preservedWorktree": "/private/tmp/tsurfing-focus-integrated",
+  "nativeSourceRoots": [
+    "android-native",
+    "macos-native"
+  ],
+  "legacySourceRoot": "android",
+  "schemaChanges": false,
+  "prerequisiteStages": [],
+  "originalAuditAttachment": "not supplied; executable user prompt used",
+  "ownerRunningWebBuild": "NOT MEASURED; no owner tab or installation changed"
+}

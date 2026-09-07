@@ -1,0 +1,32 @@
+{
+  "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+  "sha256": {
+    "dist/client/workbox-2cde83c0.js": "608ae279c74a052d7055964c39316e482af468b4e1a1b7918670d5e254773ad2",
+    "dist/client/index.html": "1d135b3f8b6e5b0ecae32e3f9a173392637d873b79ae4a8bc64c146722c0719f",
+    "dist/client/manifest.webmanifest": "ddd17754b4a575d249b07612292a7d66311f54453a49895b7cc2825786f83b50",
+    "dist/client/sw.js": "9320aa9c264b02549d6d370f1944032d7d73555682abcd4061d6387fb5afbf5e",
+    "dist/client/icons/apple-touch-icon.png": "f69f5f61de33604e287749f32e114ec63d025c6d74b5a49bd5f665f16f7c9a29",
+    "dist/client/icons/maskable.svg": "c994d910464613bc5d162a9e1291c25f61b385e490fe0ec8ad2c61caf243e59e",
+    "dist/client/icons/icon-192.png": "5d6e8f6fb524a8bdf2afa9386b544d2bc79b6be67daeca0b3230eab7ae77d9b1",
+    "dist/client/icons/icon.svg": "1896114e677498f9bf5cb5c829745f7efe788edd80ce48b195e68730ad6a4ac6",
+    "dist/client/icons/maskable-512.png": "0cb755972294399461d0a5d8e96f486281e1310a2da702e5a52273882e268f4d",
+    "dist/client/icons/icon-512.png": "056c42c44b0505f4210c959b6a17de9bf9bfbb50ac69773a1baa688616f4a375",
+    "dist/client/assets/inter-greek-wght-normal-CkhJZR-_.woff2": "1be3448e292fbf05ffe176fe1e43f135013d50b1e7d324ad1a558f623d3bb6f6",
+    "dist/client/assets/GoalsView-C5uVVtzJ.js": "6f37423989ae840b09191d4d8d347e0e1d79e7c7109bc2b808550f1015fe86a4",
+    "dist/client/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2": "ca157063339ac4ad418f214f3abfed119b0798ab4d377386ce5c9e5a7a435ebd",
+    "dist/client/assets/vendor-DJZdsJVD.js": "29059db4b3c1bd0185e6ca9ed1ce4cc53001b3e29cdb288f57ff3e94e1614024",
+    "dist/client/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2": "5c66f9e07e90c6d4ac4922cc68d60de26c17b1858e677fb5e603fce3952b3ff2",
+    "dist/client/assets/index-CQUcnpey.css": "c01833038ea19ff643702bd38e6061f2db32e04b05cc49ae556e9e16fad5d801",
+    "dist/client/assets/react-ChIBbzMz.js": "b05d1b0254068c453f6b3f57638c49dc3f476fb2bc58fde76b3c17745f3116de",
+    "dist/client/assets/drag-and-drop-CaLBcZWB.js": "8cdd67fb28df72dbbf301f66a5e7caaab24269fbb2073de01dd8ca6c1db297ca",
+    "dist/client/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2": "71d5ee93cc1e9f1d520a3a8b66456de18c7879d8df09d57fcd2eaff75fef0075",
+    "dist/client/assets/StatsView-B8tdOQRC.js": "2c1abf371be43190598c2406748bdf424d04b1d26202fd4bda6878d4bd613b1a",
+    "dist/client/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2": "34b9c504cab7a73e37b746343a449132e56cf7b5481af2cb81dc74dcff25c956",
+    "dist/client/assets/vendor-CJjU_8H4.css": "259a406e116e5440ccc9c8137c48a1550942609f31628599226080e78fb1f9f5",
+    "dist/client/assets/SettingsModal-WQlmtd3t.js": "b6d63ac9851ffc84c2e280ffcb3ec9186cb386dd50f438075c4b50b378c48e11",
+    "dist/client/assets/inter-latin-wght-normal-Dx4kXJAl.woff2": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+    "dist/client/assets/index-d3ODoPLY.js": "7c95209cbb071c82c75febdaef64fc1b0dabe992333257230bf0eb948ced6f3b",
+    "dist/client/assets/GamificationView-DAl_mQF1.js": "38755ba7d5c0700009cf6807b49bb1632272acf4626a1a485cec49a058584297",
+    "dist/client/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2": "6e9e020a25f9b56d418f2c085b1d3c09725a4da23fe693a5b463064606732190"
+  }
+}

@@ -1,0 +1,166 @@
+[
+  {
+    "name": "release",
+    "command": [
+      "npm",
+      "run",
+      "verify:release"
+    ],
+    "exitCode": 0,
+    "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+    "durationSeconds": 21.04,
+    "counts": [
+      "Test Files  67 passed (67)",
+      "Tests  403 passed (403)"
+    ],
+    "evidence": "evidence/release.log"
+  },
+  {
+    "name": "identifiers",
+    "command": [
+      "npm",
+      "run",
+      "verify:identifiers"
+    ],
+    "exitCode": 0,
+    "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+    "durationSeconds": 0.16,
+    "counts": [],
+    "evidence": "evidence/identifiers.log"
+  },
+  {
+    "name": "migrations",
+    "command": [
+      "npm",
+      "run",
+      "verify:migrations"
+    ],
+    "exitCode": 0,
+    "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+    "durationSeconds": 0.16,
+    "counts": [],
+    "evidence": "evidence/migrations.log"
+  },
+  {
+    "name": "migration-hashes",
+    "command": [
+      "npm",
+      "run",
+      "verify:migration-hashes"
+    ],
+    "exitCode": 0,
+    "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+    "durationSeconds": 0.16,
+    "counts": [],
+    "evidence": "evidence/migration-hashes.log"
+  },
+  {
+    "name": "room-hashes",
+    "command": [
+      "npm",
+      "run",
+      "verify:room-hashes"
+    ],
+    "exitCode": 0,
+    "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+    "durationSeconds": 0.15,
+    "counts": [],
+    "evidence": "evidence/room-hashes.log"
+  },
+  {
+    "name": "s1-storage-1",
+    "command": [
+      "npm",
+      "run",
+      "test:s1:storage"
+    ],
+    "exitCode": 0,
+    "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+    "durationSeconds": 0.7,
+    "counts": [
+      "Test Files  2 passed (2)",
+      "Tests  15 passed (15)"
+    ],
+    "evidence": "evidence/s1-storage-1.log"
+  },
+  {
+    "name": "s1-storage-2",
+    "command": [
+      "npm",
+      "run",
+      "test:s1:storage"
+    ],
+    "exitCode": 0,
+    "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+    "durationSeconds": 0.67,
+    "counts": [
+      "Test Files  2 passed (2)",
+      "Tests  15 passed (15)"
+    ],
+    "evidence": "evidence/s1-storage-2.log"
+  },
+  {
+    "name": "s1-storage-3",
+    "command": [
+      "npm",
+      "run",
+      "test:s1:storage"
+    ],
+    "exitCode": 0,
+    "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+    "durationSeconds": 0.73,
+    "counts": [
+      "Test Files  2 passed (2)",
+      "Tests  15 passed (15)"
+    ],
+    "evidence": "evidence/s1-storage-3.log"
+  },
+  {
+    "name": "existing-e2e",
+    "command": [
+      "npm",
+      "run",
+      "test:e2e"
+    ],
+    "exitCode": 0,
+    "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+    "durationSeconds": 27.64,
+    "counts": [
+      "34 passed (27.0s)"
+    ],
+    "evidence": "evidence/existing-e2e.log"
+  },
+  {
+    "name": "s1-browser-repeat",
+    "command": [
+      "npm",
+      "run",
+      "test:s1:browser",
+      "--",
+      "--repeat-each=3"
+    ],
+    "exitCode": 0,
+    "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+    "durationSeconds": 30.16,
+    "counts": [
+      "30 passed (29.5s)"
+    ],
+    "evidence": "evidence/s1-browser-repeat.log"
+  },
+  {
+    "name": "connection-regression",
+    "command": [
+      "npx",
+      "vitest",
+      "run",
+      "docs/operations/reliability/connection-regression.test.ts"
+    ],
+    "exitCode": 0,
+    "commit": "9f5457919d015d895d057e592ae7c5685f6a4d9c",
+    "counts": [
+      "2 passed (2)"
+    ],
+    "evidence": "evidence/connection-regression.log",
+    "note": "Evidence-only additional fixtures; production source is the tested commit."
+  }
+]
