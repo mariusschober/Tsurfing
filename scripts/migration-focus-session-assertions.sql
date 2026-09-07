@@ -4,10 +4,26 @@ begin;
 delete from public.sync_records where user_id='11111111-1111-4111-8111-111111111111' and entity_type='tracking' and entity_id='singleton';
 create function pg_temp.push_focus_tracking(payload jsonb, changed_at timestamptz, mutation uuid default gen_random_uuid())
 returns jsonb language plpgsql as $$
-declare stored public.sync_records%rowtype;
+declare
+  stored public.sync_records%rowtype;
+  receipt jsonb;
+  reconciled jsonb;
+  candidate jsonb;
+  next_version integer;
 begin
   select * into stored from public.sync_records where user_id='11111111-1111-4111-8111-111111111111' and entity_type='tracking' and entity_id='singleton';
-  return public.push_sync_mutation_v2('11111111-1111-4111-8111-111111111111',mutation,'focus-test','tracking','singleton',stored.server_version,coalesce(stored.version,0)+1,payload,changed_at,null,null);
+  next_version := coalesce(stored.version,0)+1;
+  receipt := public.push_sync_mutation_v2('11111111-1111-4111-8111-111111111111',mutation,'focus-test','tracking','singleton',stored.server_version,next_version,payload,changed_at,null,null);
+  if (receipt->>'accepted')::boolean then
+    if receipt->'record'->'payload' is distinct from payload then raise exception 'An accepted receipt did not prove the exact submitted payload'; end if;
+    return receipt;
+  end if;
+  candidate := jsonb_build_object('conflictId',receipt->>'conflictId','sourceMutationId',mutation,
+    'entityType','tracking','entityId','singleton','localHistory',jsonb_build_array(jsonb_build_object(
+      'mutationId',mutation,'version',next_version,'payload',payload,'updatedAt',changed_at,'deletedAt',null)));
+  reconciled := public.reconcile_goalflow_sync_change('11111111-1111-4111-8111-111111111111',candidate);
+  if reconciled->'candidate'<>candidate then raise exception 'Reconciliation did not echo the exact candidate'; end if;
+  return jsonb_build_object('accepted',true,'serverVersion',reconciled->'record'->'server_version','record',reconciled->'record');
 end;
 $$;
 do $$
@@ -42,8 +58,16 @@ begin
   -- An unaware client can update its counters without deleting shared focus.
   original_answer := public.push_sync_mutation_v2(owner_id,original_id,'old-client','tracking','singleton',base_version,2,
     '{"date":"2026-09-07","planViewCount":2,"dailyPostponeCount":0}',base_time+interval '1 minute',null,null);
-  if original_answer->'record'->'payload'->'focusSession'<>active or original_answer->'record'->'payload'->>'planViewCount'<>'2' then
-    raise exception 'Legacy tracking writer removed focus or lost counters';
+  if (original_answer->>'accepted')::boolean is distinct from false then
+    raise exception 'A legacy payload was accepted despite requiring a canonical merge';
+  end if;
+  candidate := jsonb_build_object('conflictId',original_answer->>'conflictId','sourceMutationId',original_id,
+    'entityType','tracking','entityId','singleton','localHistory',jsonb_build_array(jsonb_build_object(
+      'mutationId',original_id,'version',2,'payload','{"date":"2026-09-07","planViewCount":2,"dailyPostponeCount":0}'::jsonb,
+      'updatedAt',base_time+interval '1 minute','deletedAt',null)));
+  answer := public.reconcile_goalflow_sync_change(owner_id,candidate);
+  if answer->'record'->'payload'->'focusSession'<>active or answer->'record'->'payload'->>'planViewCount'<>'2' then
+    raise exception 'Legacy tracking recovery removed focus or lost counters';
   end if;
   select request_hash into original_hash from public.sync_mutations where user_id=owner_id and mutation_id=original_id;
   paused := active || jsonb_build_object('phase','paused','elapsedSeconds',120,'pausedAt',base_time+interval '2 minutes','updatedAt',base_time+interval '2 minutes');

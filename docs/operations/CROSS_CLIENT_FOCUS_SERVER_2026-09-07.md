@@ -26,3 +26,9 @@ Migration hash checks and static integrity verification passed.
 
 This is local database evidence. Hosted application, Mac and Android convergence
 must be verified after integrating and deploying the client implementations.
+
+The receipt guard routes a push through the normal rejected-conflict path when
+focus preservation would change its payload. Only the separate audited
+reconciliation operation writes the combined canonical record. Every accepted
+v2 receipt still proves the exact original payload; API and client validation
+remain unchanged. This is necessary for older installed clients to keep syncing.

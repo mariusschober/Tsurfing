@@ -48,7 +48,8 @@ for migration in \
   "${repository_root}/supabase/migrations/202609040004_database_advisor_hardening.sql" \
   "${repository_root}/supabase/migrations/202609070001_legacy_mac_numeric_projection.sql" \
   "${repository_root}/supabase/migrations/202609070002_automatic_sync_reconciliation.sql" \
-  "${repository_root}/supabase/migrations/20260907122729_focus_session_preservation.sql"; do
+  "${repository_root}/supabase/migrations/20260907122729_focus_session_preservation.sql" \
+  "${repository_root}/supabase/migrations/20260907123917_focus_session_receipt_guard.sql"; do
   psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${migration}" >/dev/null
 done
 psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${repository_root}/scripts/migration-integrity-assertions.sql" >/dev/null
