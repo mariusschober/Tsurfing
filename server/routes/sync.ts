@@ -2,6 +2,7 @@ import { Router, type Response } from 'express';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { reconcileLegacyTasks } from '../taskReconciliation';
+import { readConflictPage } from '../conflictPages';
 
 const syncEntityType = z.enum([
   'tasks', 'goals', 'habits', 'stats', 'progress', 'hashtags', 'accountability',
@@ -268,6 +269,14 @@ export const createSyncRouter = (admin?: SupabaseClient) => {
         unresolvedConflicts: conflictCount ?? 0,
         serverRecordCount: recordCount ?? 0
       });
+    } catch (error) {
+      invalidRequest(response, error);
+    }
+  });
+
+  router.get('/sync/conflicts/page', async (request, response) => {
+    try {
+      response.json(await readConflictPage(requireDatabase(admin), request.user!.id, request.query));
     } catch (error) {
       invalidRequest(response, error);
     }

@@ -458,22 +458,48 @@ final class SyncEngine: @unchecked Sendable {
             }
             hasMore = hasMoreVal
         }
-        let (conflictData, conflictResponse) = try await requestWithRetry(
-            path: "/api/v1/sync/conflicts",
-            method: "GET",
-            body: nil
-        )
-        guard (200..<300).contains(conflictResponse.statusCode) else {
-            throw SyncError.validation("Server conflicts could not be verified (HTTP \(conflictResponse.statusCode)). Existing local state was not changed.")
-        }
-        guard let conflictBody = try JSONSerialization.jsonObject(with: conflictData) as? [String: Any],
-              conflictBody.keys.contains("conflicts") else {
-            throw SyncError.validation("Sync conflict response was invalid. Existing local state was not changed.")
-        }
-        let remoteConflicts = try parseServerConflictSet(conflictBody["conflicts"])
-        let mergedMeta = try mergeServerConflicts(try metaStore.load(), conflicts: remoteConflicts)
-        try metaStore.save(mergedMeta)
-        for conflict in mergedMeta.conflicts where conflict.status == "unresolved" {
+        var conflictAfter: String? = nil
+        repeat {
+            let (conflictData, conflictResponse) = try await requestWithRetry(
+                path: "/api/v1/sync/conflicts/page" + (conflictAfter.map { "?after=\($0)" } ?? ""),
+                method: "GET",
+                body: nil
+            )
+            guard (200..<300).contains(conflictResponse.statusCode) else {
+                throw SyncError.validation("Server conflicts could not be verified (HTTP \(conflictResponse.statusCode)). Existing local state was not changed.")
+            }
+            guard let conflictBody = try JSONSerialization.jsonObject(with: conflictData) as? [String: Any],
+                  conflictBody.keys.contains("conflicts") else {
+                throw SyncError.validation("Sync conflict response was invalid. Existing local state was not changed.")
+            }
+            let remoteConflicts = try parseServerConflictSet(conflictBody["conflicts"])
+            var previousConflictId = conflictAfter ?? ""
+            guard remoteConflicts.count <= 20 else { throw SyncError.validation("Sync conflict page exceeds its limit.") }
+            for conflict in remoteConflicts {
+                guard conflict.id == conflict.id.lowercased(), conflict.id > previousConflictId else {
+                    throw SyncError.validation("Sync conflict page did not advance safely.")
+                }
+                previousConflictId = conflict.id
+            }
+            guard let moreNumber = conflictBody["hasMore"] as? NSNumber,
+                  CFGetTypeID(moreNumber) == CFBooleanGetTypeID() else {
+                throw SyncError.validation("Sync conflict page has no continuation flag.")
+            }
+            let moreConflicts = moreNumber.boolValue
+            if remoteConflicts.isEmpty {
+                guard !moreConflicts, conflictBody["nextAfter"] is NSNull else {
+                    throw SyncError.validation("Sync conflict page has an invalid terminal cursor.")
+                }
+            } else {
+                guard moreConflicts, conflictBody["nextAfter"] as? String == previousConflictId else {
+                    throw SyncError.validation("Sync conflict page has an invalid continuation cursor.")
+                }
+            }
+            let mergedMeta = try mergeServerConflicts(try metaStore.load(), conflicts: remoteConflicts)
+            try metaStore.save(mergedMeta)
+            conflictAfter = remoteConflicts.isEmpty ? nil : previousConflictId
+        } while conflictAfter != nil
+        for conflict in try metaStore.load().conflicts where conflict.status == "unresolved" {
             let candidate = try automaticReconciliationCandidate(conflict)
             let body = try JSONSerialization.data(withJSONObject: candidate, options: [.sortedKeys])
             let (data, response) = try await requestWithRetry(path: "/api/v1/sync/conflicts/reconcile", method: "POST", body: body)

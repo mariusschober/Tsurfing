@@ -731,7 +731,10 @@ final class ServerConflictTests: XCTestCase {
         }
         transport.conflictHandler = { path, method, body in
             let object: [String: Any]
-            if method == "GET" { object = ["conflicts": [self.remoteConflict()]] }
+            if method == "GET" {
+                if path.contains("?after=") { object = ["conflicts": [], "hasMore": false, "nextAfter": NSNull()] }
+                else { object = ["conflicts": [self.remoteConflict()], "hasMore": true, "nextAfter": self.conflictId] }
+            }
             else {
                 XCTAssertTrue(path.hasSuffix("/reconcile"))
                 let candidate = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(body)) as? [String: Any])

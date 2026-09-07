@@ -5,12 +5,12 @@ import {
 } from './authService';
 import { readResponseBodyWithLimit, ResponseTooLargeError } from './boundedResponse';
 import { SyncMutationTooLargeError, wireMutation } from './syncEnvelope';
+import { validateConflictPage } from './conflictPages';
 import { DurableStorageError, storageService, STORES } from './storage';
 import {
   emptySyncMeta,
   normalizeSyncMeta,
   type PushResult,
-  type RemoteServerConflict,
   reconciliationCandidate,
   type RemoteSyncRecord,
   type SyncMeta,
@@ -288,15 +288,15 @@ export const synchronizeCloudOnce = async (
     hasMore = body.hasMore;
   }
 
-  const conflictResponse = await fetchSyncWithRetry('/api/v1/sync/conflicts', {}, dependencies);
-  const conflictBody = await parseJson<{ conflicts?: RemoteServerConflict[] }>(
-    conflictResponse,
-    'Sync conflicts could not be verified. Existing local state was not changed.'
-  );
-  if (!Array.isArray(conflictBody.conflicts)) {
-    throw new SyncProtocolError('Sync conflict response was invalid. Existing local state was not changed.');
-  }
-  meta = await storageService.mergeServerConflicts(userKey, conflictBody.conflicts);
+  let conflictAfter: string | null = null;
+  do {
+    const path = '/api/v1/sync/conflicts/page' + (conflictAfter ? `?after=${conflictAfter}` : '');
+    const conflictResponse = await fetchSyncWithRetry(path, {}, dependencies);
+    const page = validateConflictPage(await parseJson<unknown>(conflictResponse,
+      'Sync conflicts could not be verified. Existing local state was not changed.'), conflictAfter);
+    meta = await storageService.mergeServerConflicts(userKey, page.conflicts);
+    conflictAfter = page.nextAfter;
+  } while (conflictAfter !== null);
 
   for (const conflict of meta.conflicts.filter(item => item.status === 'unresolved')) {
     const candidate = reconciliationCandidate(conflict);

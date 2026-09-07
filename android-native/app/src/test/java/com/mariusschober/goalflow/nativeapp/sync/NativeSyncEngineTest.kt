@@ -59,6 +59,34 @@ class NativeSyncEngineTest {
         assertNull(oversized.attemptedAt)
     }
 
+    @Test
+    fun `failed continuation retains the first conflict page for retry`() = runTest {
+        val conflictId = "11111111-1111-4111-8111-111111111111"
+        val remote = JSONObject().put("id", conflictId)
+            .put("entity_type", "tasks").put("entity_id", "fixture-task")
+            .put("mutation_id", "22222222-2222-4222-8222-222222222222")
+            .put("local_payload", JSONObject().put("id", "fixture-task").put("notes", "retained"))
+            .put("server_payload", JSONObject().put("id", "fixture-task"))
+            .put("local_version", 1).put("server_version", 1)
+            .put("created_at", "2026-09-07T00:00:00.000Z")
+        var continuations = 0
+        val engine = engine(NativeSyncTransport { path, _, _, _ ->
+            if (path.startsWith("/api/v1/sync/pull")) emptyPull()
+            else {
+                assertEquals("/api/v1/sync/conflicts/page?after=$conflictId", path)
+                continuations++
+                NativeHttpResponse(200, JSONObject().put("conflicts", JSONArray()).toString())
+            }
+        }, conflictPage = NativeHttpResponse(200, JSONObject()
+            .put("conflicts", JSONArray().put(remote)).put("hasMore", true).put("nextAfter", conflictId).toString()))
+        try {
+            engine.synchronize()
+            fail("Missing terminal cursor must fail closed")
+        } catch (_: NativeSyncProtocolException) { }
+        assertEquals(1, continuations)
+        assertEquals(conflictId, repository.automaticSyncCandidates().single().id)
+    }
+
     private lateinit var database: GoalflowDatabase
     private lateinit var repository: GoalflowRepository
 
@@ -623,7 +651,8 @@ class NativeSyncEngineTest {
     private fun engine(
         transport: NativeSyncTransport,
         sessionProvider: NativeSessionProvider = NativeSessionProvider { validSession },
-        serverUserId: String = validSession.userId!!
+        serverUserId: String = validSession.userId!!,
+        conflictPage: NativeHttpResponse? = null
     ): NativeSyncEngine = NativeSyncEngine(
         repository = repository,
         sessionProvider = sessionProvider,
@@ -634,9 +663,9 @@ class NativeSyncEngineTest {
                     JSONObject().put("userId", serverUserId).put("serverVersion", 0)
                         .put("unresolvedConflicts", 0).toString()
                 )
-                "/api/v1/sync/conflicts" -> NativeHttpResponse(
+                "/api/v1/sync/conflicts/page" -> conflictPage ?: NativeHttpResponse(
                     200,
-                    JSONObject().put("conflicts", JSONArray()).toString()
+                    JSONObject().put("conflicts", JSONArray()).put("hasMore", false).put("nextAfter", JSONObject.NULL).toString()
                 )
                 else -> transport.request(path, token, method, body)
             }

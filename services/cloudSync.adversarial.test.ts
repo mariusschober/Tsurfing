@@ -108,7 +108,12 @@ class DurableFakeServer {
           updated_at: record.updatedAt, deleted_at: record.deletedAt
         } : null });
     }
-    if (path.endsWith('/sync/conflicts')) return Response.json({ conflicts: this.conflicts });
+    if (path.includes('/sync/conflicts/page')) {
+      const after = new URL(path, 'https://synthetic.invalid').searchParams.get('after') ?? '';
+      const conflicts = this.conflicts.filter(row => String(row.id) > after)
+        .sort((a, b) => String(a.id).localeCompare(String(b.id))).slice(0, 20);
+      return Response.json({ conflicts, hasMore: conflicts.length > 0, nextAfter: conflicts.at(-1)?.id ?? null });
+    }
     return new Response(null, { status: 404 });
   };
 
@@ -362,7 +367,7 @@ describe('adversarial cloud synchronization', () => {
             hasMore: false
           });
         }
-        if (path.endsWith('/sync/conflicts')) return Response.json({ conflicts: [] });
+        if (path.includes('/sync/conflicts/page')) return Response.json({ conflicts: [], hasMore: false, nextAfter: null });
         return new Response(null, { status: 404 });
       }
     };

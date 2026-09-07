@@ -228,7 +228,7 @@ final class MockSyncTransport: SyncTransport, @unchecked Sendable {
         }
         if path.hasPrefix("/api/v1/sync/conflicts") {
             if let handler = conflictHandler { return try await handler(path, method, body) }
-            let data = try JSONSerialization.data(withJSONObject: ["conflicts": []])
+            let data = try JSONSerialization.data(withJSONObject: ["conflicts": [], "hasMore": false, "nextAfter": NSNull()])
             let response = HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             return (data, response)
         }
