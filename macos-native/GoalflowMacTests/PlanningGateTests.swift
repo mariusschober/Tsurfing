@@ -2,6 +2,30 @@ import XCTest
 @testable import GoalflowMac
 
 final class PlanningGateTests: XCTestCase {
+    func testWebDailyPlanMillisecondsAreAcceptedWithoutRewritingWireData() throws {
+        let payload: [String: Any] = ["id": "2026-09-07", "localDate": "2026-09-07", "confirmedAt": 1_788_775_363_064 as Int64, "taskIds": ["task-a"]]
+        let bridge = FileSyncStoreBridge(baseDir: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString))
+        let writes = try bridge.preparedWrites(["daily_plans": [payload]], stores: ["daily_plans"])
+        let data = try XCTUnwrap(writes.first?.data)
+        let plans = try JSONDecoder().decode([DailyPlan].self, from: data)
+        XCTAssertEqual(plans.first?.confirmedAt, "2026-09-07T10:02:43.064Z")
+        XCTAssertEqual(plans.first?.taskIds, ["task-a"])
+        let wire = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [[String: Any]])
+        XCTAssertEqual((wire.first?["confirmedAt"] as? NSNumber)?.int64Value, 1_788_775_363_064)
+    }
+
+    func testNativeDailyPlanIsoConfirmationStillDecodes() throws {
+        let data = Data(#"{"localDate":"2026-09-07","confirmedAt":"2026-09-07T10:02:43Z","taskIds":["task-a"]}"#.utf8)
+        XCTAssertEqual(try JSONDecoder().decode(DailyPlan.self, from: data).confirmedAt, "2026-09-07T10:02:43Z")
+    }
+
+    func testInvalidNumericPlanConfirmationsAreRejected() {
+        for value in ["true", "0", "-1", "1.5", "null"] {
+            let data = Data("{\"localDate\":\"2026-09-07\",\"confirmedAt\":\(value),\"taskIds\":[]}".utf8)
+            XCTAssertThrowsError(try JSONDecoder().decode(DailyPlan.self, from: data))
+        }
+    }
+
     func makeTask(id: String, title: String = "T", scheduledFor: String, precision: SchedulePrecision = .day, plannedOrder: Int = 0, status: TaskStatus = .open) -> GoalflowTask {
         GoalflowTask(id: id, title: title, schedulePrecision: precision, scheduledFor: scheduledFor, plannedOrder: plannedOrder, status: status)
     }

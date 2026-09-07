@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct GoalflowMacApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    @State private var showAccount = false
 
     var body: some Scene {
         // MenuBarExtra is SwiftUI-native but we use AppKit controller for Tahoe control.
@@ -15,8 +16,11 @@ struct GoalflowMacApp: App {
                     get: { LoginItemService.shared.isEnabled },
                     set: { LoginItemService.shared.setEnabled($0) }
                 )).toggleStyle(.switch)
-                Text("Version 0.4.0 (3) • Tahoe 26 • Sync parity 2")
+                Text("Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown")) • \(MacCloudConfiguration.current.environment.capitalized)")
                     .font(.caption2).foregroundStyle(.tertiary)
+                Text(MacCloudConfiguration.current.apiOrigin?.host ?? "Cloud not configured")
+                    .font(.caption).foregroundStyle(.secondary)
+                Button("Account / Sign in…") { showAccount = true }
                 Button("Check for Updates…") { UpdaterService.shared.checkForUpdates() }
                     .buttonStyle(.bordered).controlSize(.small)
                 Button("Quit Tsurfing") { NSApplication.shared.terminate(nil) }
@@ -24,6 +28,9 @@ struct GoalflowMacApp: App {
             }
             .padding(20)
             .frame(width: 360)
+            .sheet(isPresented: $showAccount) {
+                SignInView(accountMode: true, onClose: { showAccount = false })
+            }
         }
     }
 }
