@@ -85,6 +85,29 @@ The two additive SQL migrations install private pure transition helpers;
 client execution is denied. No live schema was changed. Coordinator integration,
 trusted baseline admission and versioned server action receipts remain required.
 
+## Browser cutover checkpoint
+
+`35b37d006d4263a1b500b9dc48a7e58643e25468`: **PASS_LOCAL** for a dormant atomic IndexedDB
+migration. It preserves all tracking keys and original sync preimages in private
+authority, then recreates the existing tracking store with an inline key. Direct
+old `put(value, accountKey)` fails even after reopening the latest DB. The actual
+S1 flush rejects earlier on preservation validation and retains its exact WAL.
+Legacy deletion of the compatibility projection leaves private authority intact.
+
+Four new Chromium/WebKit journeys passed, along with 42 existing S1 journeys,
+462 Web tests and 22 identifier checks. A failed preservation write aborts the
+whole schema upgrade; concurrent/repeated upgrades retain original preimages.
+An uncooperative older connection delays migration until it closes; its final
+write is then preserved. The current connection handler incorrectly accessed
+`event.target.result`; it now closes the actual database target.
+
+The initial browser expectation of DataError on S1 flush failed: its existing
+preservation check rejects first with DurableStorageError. Both observed checks
+are now asserted separately; no production validator was weakened. Original
+failure evidence is retained. Migration is not invoked by production application
+flows yet. Durable WAL quarantine, new admission/readers, backup/import and
+server capability activation remain required before use.
+
 ## Remaining acceptance work
 
 Implement/prove the private counter/action ledger, baseline/legacy ambiguities,

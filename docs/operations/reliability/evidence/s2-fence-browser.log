@@ -1,0 +1,84 @@
+[WebServer] (node:53527) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:53547) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:53576) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 2 workers
+
+(node:53580) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:53581) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [chromium] › tests/e2e/s2-storage-fence.spec.ts:9:1 › real S1 storage rejects a tracking flush after cutover and retains exact captured WAL (603ms)
+(node:53601) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  3 [chromium] › tests/e2e/s2-storage-fence.spec.ts:35:1 › an uncooperative older connection delays cutover; its final committed write is preserved (406ms)
+  ✘  1 [webkit] › tests/e2e/s2-storage-fence.spec.ts:9:1 › real S1 storage rejects a tracking flush after cutover and retains exact captured WAL (1.4s)
+(node:53613) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  4 [webkit] › tests/e2e/s2-storage-fence.spec.ts:35:1 › an uncooperative older connection delays cutover; its final committed write is preserved (985ms)
+
+
+  1) [chromium] › tests/e2e/s2-storage-fence.spec.ts:9:1 › real S1 storage rejects a tracking flush after cutover and retains exact captured WAL 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "DataError"
+    Received: "DurableStorageError"
+
+      26 |     return { error, wal, after, authority, tracking };
+      27 |   });
+    > 28 |   expect(result.error).toBe('DataError');
+         |                        ^
+      29 |   expect(Object.keys(result.wal)).toHaveLength(1);
+      30 |   expect(result.after).toEqual(result.wal);
+      31 |   expect(result.authority.trackingValue).toEqual(result.tracking);
+        at /Users/schober/Projects/TSurfing/tests/e2e/s2-storage-fence.spec.ts:28:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-real-S1-s-b2e39--retains-exact-captured-WAL-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-real-S1-s-b2e39--retains-exact-captured-WAL-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s2-storage-fence-real-S1-s-b2e39--retains-exact-captured-WAL-chromium/error-context.md
+
+  2) [webkit] › tests/e2e/s2-storage-fence.spec.ts:9:1 › real S1 storage rejects a tracking flush after cutover and retains exact captured WAL 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "DataError"
+    Received: "DurableStorageError"
+
+      26 |     return { error, wal, after, authority, tracking };
+      27 |   });
+    > 28 |   expect(result.error).toBe('DataError');
+         |                        ^
+      29 |   expect(Object.keys(result.wal)).toHaveLength(1);
+      30 |   expect(result.after).toEqual(result.wal);
+      31 |   expect(result.authority.trackingValue).toEqual(result.tracking);
+        at /Users/schober/Projects/TSurfing/tests/e2e/s2-storage-fence.spec.ts:28:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-real-S1-s-b2e39--retains-exact-captured-WAL-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-real-S1-s-b2e39--retains-exact-captured-WAL-webkit/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s2-storage-fence-real-S1-s-b2e39--retains-exact-captured-WAL-webkit/error-context.md
+
+  2 failed
+    [chromium] › tests/e2e/s2-storage-fence.spec.ts:9:1 › real S1 storage rejects a tracking flush after cutover and retains exact captured WAL 
+    [webkit] › tests/e2e/s2-storage-fence.spec.ts:9:1 › real S1 storage rejects a tracking flush after cutover and retains exact captured WAL 
+  2 passed (9.2s)

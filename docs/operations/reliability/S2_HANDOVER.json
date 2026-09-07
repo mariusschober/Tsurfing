@@ -183,6 +183,58 @@
         "android-native/app/build/outputs/apk/production/debug/app-production-debug.apk": "5646ff3f2deb4802c733fe1ed986d05c00ca53634aad6df48c5d38292f965fd0",
         "/private/tmp/s2-macos-tests/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib": "cadf54dfc92d6841d0d6bec1651f9ebfc102f2d7dd875f312b60d357ddc570a9"
       }
+    },
+    {
+      "commit": "35b37d006d4263a1b500b9dc48a7e58643e25468",
+      "scope": "Dormant atomic browser tracking fence; existing connection close corrected; new action admission not connected",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "config/durable-identifiers.json",
+        "playwright.s2.config.ts",
+        "scripts/check-durable-identifiers.mjs",
+        "services/causalStorage.test.ts",
+        "services/causalStorage.ts",
+        "services/storage.ts",
+        "tests/browser/s1Harness.ts",
+        "tests/e2e/s2-storage-fence.spec.ts"
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 462
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0,
+          "identifiers": 22
+        },
+        {
+          "command": "npx playwright test --config playwright.s2.config.ts",
+          "exitCode": 0,
+          "tests": 4,
+          "engines": [
+            "chromium",
+            "webkit"
+          ]
+        },
+        {
+          "command": "npx playwright test --config playwright.s1.config.ts",
+          "exitCode": 0,
+          "tests": 42,
+          "engines": [
+            "chromium",
+            "webkit"
+          ]
+        }
+      ],
+      "compatibility": [
+        "No automatic production invocation or owner database upgrade",
+        "Uncooperative older connection must close before versionchange can complete; final pre-cutover writes preserved",
+        "Old S1 flush fails earlier on preservation validation; direct old explicit-key writes fail DataError",
+        "Original WAL remains in localStorage; new admission still needs durable quarantine/import",
+        "Private preimages retain original sync state and all tracking keys; no backup authority integration yet"
+      ]
     }
   ],
   "findings": [
@@ -225,7 +277,12 @@
     "evidence/s2-domain-macos-final.log",
     "evidence/s2-domain-postgres-final.log",
     "evidence/s2-domain-swift.log",
-    "evidence/s2-domain-identifiers.log"
+    "evidence/s2-domain-identifiers.log",
+    "evidence/s2-fence-browser.log",
+    "evidence/s2-fence-browser-final.log",
+    "evidence/s2-fence-s1-browser.log",
+    "evidence/s2-fence-release.log",
+    "evidence/s2-fence-identifiers.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

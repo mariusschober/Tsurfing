@@ -93,10 +93,11 @@ Read-only staging inspection is retained in `s2-live-definitions.json`. Applied
 migration timestamps differ from source filenames; compare definitions/history,
 not filenames alone. The global transaction advisory lock in
 `goalflow_next_change_version` protects commit/publication ordering and must
-remain. The inspected explicit push locks conflict before entity; reconciliation
-locks entity before conflict. Reproduce the cycle in isolated PostgreSQL before
-altering it. Adopt a consistent order across all writers, with bounded retries
-only for serialization/deadlock failures and the same logical action ID.
+remain. The inspected explicit push locked conflict before entity; reconciliation
+locked entity before conflict. Isolated PostgreSQL reproduced 40P01; the forward
+lock-order migration now acquires entity before conflict. Real committed-cursor
+and rollback regressions pass. Future action writers must use the same order;
+retries are limited to genuine serialization/deadlock failures with the same ID.
 
 Legacy accepted receipts remain exact submitted-payload proofs. Action receipt
 schema v2 must bind the exact operation, outcome and canonical projection
@@ -108,8 +109,8 @@ The existing JSON body budget is 262144 UTF-8 bytes, maximum 50 mutations. HTTP
 headers are not counted by Express's JSON-body limit. Web now selects an ordered
 prefix using the exact serialized wire fields, delimiters, escaping and UTF-8
 bytes before marking attempts. A single oversized legacy request remains intact
-and blocked without futile requests. Its explicit resumable recovery, native
-batching and pre-admission validation remain implementation work.
+and blocked without futile requests. All three clients now use byte-bounded batches. Explicit resumable recovery
+and pre-admission validation remain implementation work.
 
 Unbounded historical evidence must use authenticated staged chunks with a full
 manifest, per-chunk hash verification and deterministic final operation ID.
