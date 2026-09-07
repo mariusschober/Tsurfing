@@ -17,7 +17,7 @@ struct TsurfingSettingsView: View {
             Text("Keyboard shortcuts").font(.title2.bold())
             Text("Quick Capture · \(saved.label)").font(.headline)
             Text("Opens Quick Capture from any app. This is Tsurfing’s only global shortcut.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             HStack {
                 Toggle("⌘", isOn: $shortcut.command).help("Command")
                 Toggle("⇧", isOn: $shortcut.shift).help("Shift")
@@ -33,11 +33,11 @@ struct TsurfingSettingsView: View {
                 Button("Save Shortcut", action: apply).disabled(!shortcut.isValid || shortcut == saved)
                     .buttonStyle(.borderedProminent)
             }
-            if let message { Text(message).font(.callout).foregroundStyle(.secondary) }
+            if let message { Text(message).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true) }
             Divider()
             Text("In Quick Capture").font(.headline)
             Text("Return: add task\n⌘Return: show notes\n⌘⇧Return: add and start\nEsc: dismiss")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Toggle("Launch at login", isOn: .init(
                 get: { LoginItemService.shared.isEnabled },
                 set: { LoginItemService.shared.setEnabled($0) }

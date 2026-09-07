@@ -10,14 +10,22 @@ The Mac settings gear and Settings scene show the current global capture shortcu
 
 ## Verification and installed scope
 
-- Web: TypeScript lint passed; 367 tests passed with local server access. An initial sandboxed full run could not bind local test ports and is not counted as code failure.
-- Mac: 217 tests, 1 explicit live-sync skip, 0 failures. Final settings delegate routing was subsequently compiled successfully. Installed build `2026090716` retains all six public environment settings, existing authentication behavior, and local data; strict code-signature verification passed.
+- Web: TypeScript lint passed; 369 tests passed with local server access. An initial sandboxed full run could not bind local test ports and is not counted as code failure.
+- Mac: 217 tests, 1 explicit live-sync skip, 0 failures. Final settings delegate routing was subsequently compiled successfully. Installed build `2026090717` retains all six public environment settings, existing authentication behavior, and local data; strict code-signature verification passed.
 - Android: production-debug unit tests, lint, and APK assembly passed. Installed with replacement mode on the existing TCL device, without clearing data.
 - Live Mac: the updated capture title field visibly contained the owner's text and was reported as focused. The owner's draft was left untouched. Automated shortcut customization and global key injection have not yet been independently proven in the live app.
-- Mac backup: `~/Library/Application Support/Tsurfing-install-backups/20260907-144746-capture-settings`.
+- Mac backup: `~/Library/Application Support/Tsurfing-install-backups/20260907-150221-capture-settings`.
 
 The reported web tracking recovery error is a separate fix and must be verified in the existing browser profile before claiming the sync problem resolved. This checkpoint does not establish public release readiness.
 
 ## Previous CI and async focus smoke test
 
 Run `34126287031` on the previous staging commit passed web release, hosted staging, macOS, migration, security, dependency, and legacy Android jobs. Native Android failed when the smoke test asserted the focus screen immediately after starting the newly asynchronous shared focus save. The downstream cross-client and beta jobs therefore did not pass. The new smoke test explicitly waits, with the same bounded ten-second limit used elsewhere, for the Room-backed focus state before asserting that the screen is displayed. Its instrumentation Kotlin compilation passed; a successful emulator run remains required before calling that gate green.
+
+## Tracking recovery
+
+Read-only inspection of the owner's existing Brave profile identified two preserved same-day tracking WAL transactions: plan-view count 27 to 28, one carrying an older active focus projection and one carrying the newer completed projection. IndexedDB retained the completed projection with count 27 and an empty tracking outbox.
+
+Recovery is bounded to same-day counter updates whose focus projection is unchanged from their own baseline. A strictly newer valid stored focus projection is retained. Ambiguous counter changes or conflicting focus actions still fail closed. Every original staged change and outbox fingerprint remains unchanged, including on attempted-request replay. Existing deployed server focus preservation prevents an older counter payload from reviving a completed timer.
+
+The combined web release suite passed: 64 files, 369 tests, lint, web/Mini App/API builds, server startup, maintenance, client-secret and artifact checks. Settings rendering was inspected offscreen; all shortcut descriptions now fit without truncation. Live browser recovery and hosted deployment outcome are recorded after rollout verification.
