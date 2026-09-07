@@ -1,0 +1,11 @@
+
+> tsurfing@0.4.0-beta.1 verify:server
+> node scripts/verify-production.mjs
+
+{"level":"error","event":"server.production_configuration_invalid","problems":["supabase_url_missing","supabase_public_key_missing","supabase_server_key_missing","owner_user_id_missing"]}
+{"level":"info","event":"server.started","host":"127.0.0.1","port":43973,"environment":"production"}
+{"timestamp":"2026-09-07T22:50:17.883Z","level":"info","event":"http.request","requestId":"25f89f7c-9a7b-49dd-9b6b-d0de150fd7c7","method":"GET","path":"/api/v1/health/live","status":200,"durationMs":8}
+{"timestamp":"2026-09-07T22:50:17.890Z","level":"info","event":"http.request","requestId":"feef8f00-c5da-4a17-bf5f-ccd1b118a19c","method":"GET","path":"/api/v1/health/ready","status":503,"durationMs":1}
+{"timestamp":"2026-09-07T22:50:17.892Z","level":"info","event":"http.request","requestId":"0b943e46-ded0-468e-848b-31159c9b54e2","method":"GET","path":"/api/v1/health","status":503,"durationMs":1}
+{"status":"ok","contract":"production-fails-closed"}
+{"level":"info","event":"server.stopping","signal":"SIGTERM"}

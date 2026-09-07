@@ -1,0 +1,15 @@
+Traceback (most recent call last):
+  File "/Users/schober/Projects/TSurfing/scripts/test-s2-staged-reconciliation.py", line 93, in <module>
+    if __name__=='__main__': main()
+                             ~~~~^^
+  File "/Users/schober/Projects/TSurfing/scripts/test-s2-staged-reconciliation.py", line 54, in main
+    stage(chunks[2])
+    ~~~~~^^^^^^^^^^^
+  File "/Users/schober/Projects/TSurfing/scripts/test-s2-staged-reconciliation.py", line 47, in stage
+    reply=query(f"set role service_role; select public.goalflow_stage_reconciliation_chunk_v1('{owner}',{literal(chunk)})",error)
+  File "/Users/schober/Projects/TSurfing/scripts/test-s2-staged-reconciliation.py", line 23, in query
+    assert result.returncode == 0, result.stderr[:1000]
+           ^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: ERROR:  permission denied for function digest
+CONTEXT:  PL/pgSQL function goalflow_stage_reconciliation_chunk_v1(uuid,jsonb) line 12 at assignment
+

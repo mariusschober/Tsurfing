@@ -1,0 +1,49 @@
+
+> tsurfing@0.4.0-beta.1 verify:release
+> npm run lint && npm test && npm run build && npm run verify:server && npm run verify:maintenance && npm run verify:client-secrets && npm run verify:client-artifacts
+
+
+> tsurfing@0.4.0-beta.1 lint
+> tsc --noEmit
+
+
+> tsurfing@0.4.0-beta.1 test
+> vitest run
+
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+ ❯ server/routes/sync.reconciliation.test.ts (3 tests | 1 failed) 102ms
+     × rejects a client-supplied owner override and duplicate mutation identities 60ms
+macOS bundle key gate failed: a current server-only Supabase key reached the application bundle
+macOS bundle key gate failed: the configured legacy JWT is not an anonymous client key
+macOS bundle key gate failed: the configured key is neither publishable nor a legacy JWT
+macOS bundle key gate failed: the public key could not be read from the application Info.plist
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  server/routes/sync.reconciliation.test.ts > automatic sync API boundary > rejects a client-supplied owner override and duplicate mutation identities
+AssertionError: expected 500 to be 400 // Object.is equality
+
+- Expected
++ Received
+
+- 400
++ 500
+
+ ❯ server/routes/sync.reconciliation.test.ts:26:130
+     24|     const rpc=vi.fn();const url=await endpoint(rpc);const body=candida…
+     25|     for(const invalid of [{...body,userId:'other'},{...body,localHisto…
+     26|       expect((await fetch(url,{method:'POST',headers:{'content-type':'…
+       |                                                                                                                                  ^
+     27|     }
+     28|     expect(rpc).not.toHaveBeenCalled();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 80 passed (81)
+      Tests  1 failed | 487 passed (488)
+   Start at  23:45:07
+   Duration  9.21s (transform 3.45s, setup 0ms, import 9.62s, tests 17.52s, environment 7ms)
+

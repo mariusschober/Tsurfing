@@ -1,0 +1,15 @@
+
+> tsurfing@0.4.0-beta.1 verify:maintenance
+> node scripts/verify-maintenance.mjs
+
+{"status":"ok","contract":"maintenance-fails-closed"}
+
+> tsurfing@0.4.0-beta.1 verify:client-secrets
+> node scripts/scan-client-secrets.mjs
+
+Client secret scan passed across 30 built files.
+
+> tsurfing@0.4.0-beta.1 verify:client-artifacts
+> node scripts/verify-client-artifacts.mjs
+
+{"status":"PASS","manifest":{"name":"Tsurfing","short_name":"Tsurfing","display":"standalone","start_url":"/","scope":"/"},"requiredIcons":2,"telegramMiniApp":"secure-cookie-and-wake-relay","javascriptFiles":11,"testBackdoors":"absent"}

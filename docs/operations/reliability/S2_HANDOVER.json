@@ -441,6 +441,93 @@
         "evidence/s2-android-atomic-completion-unit.log",
         "evidence/s2-android-atomic-completion-final.log"
       ]
+    },
+    {
+      "commit": "2fa1423b06cadf904557de9d429c097e89013010",
+      "status": "PASS_LOCAL",
+      "scope": "Complete bounded staged reconciliation across clients",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeSyncEngine.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/ReconciliationStaging.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/sync/ReconciliationStagingTest.kt",
+        "config/durable-identifiers.json",
+        "macos-native/GoalflowMac/Sync/SyncEngine.swift",
+        "macos-native/GoalflowMacTests/SyncTests.swift",
+        "scripts/test-postgres-migrations.sh",
+        "scripts/test-s2-staged-reconciliation.py",
+        "server/reconciliationStaging.test.ts",
+        "server/reconciliationStaging.ts",
+        "server/routes/sync.ts",
+        "services/cloudSync.adversarial.test.ts",
+        "services/cloudSync.ts",
+        "services/reconciliationStaging.test.ts",
+        "services/reconciliationStaging.ts",
+        "supabase/migrations/20260907222904_s2_staged_reconciliation.sql",
+        "supabase/migrations/MIGRATION_SHA256_MANIFEST.json",
+        "tests/fixtures/s2/reconciliation-staging-v1.json"
+      ],
+      "migrations": [
+        "20260907222904_s2_staged_reconciliation.sql"
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 1,
+          "passedTests": 488,
+          "lint": "PASS",
+          "build": "PASS",
+          "failure": "Liveness port 4173 occupied by unrelated Python process"
+        },
+        {
+          "command": "VERIFY_PORT=43973 npm run verify:server",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:maintenance && npm run verify:client-secrets && npm run verify:client-artifacts",
+          "exitCode": 0
+        },
+        {
+          "command": "PGHOST=127.0.0.1 PGPORT=55437 PATH=/opt/homebrew/bin:$PATH npm run test:migrations:postgres",
+          "exitCode": 0,
+          "matrices": [
+            "empty",
+            "upgrade"
+          ],
+          "historyEntries": 1001
+        },
+        {
+          "command": "npm run verify:migrations && npm run verify:migration-hashes && npm run verify:identifiers",
+          "exitCode": 0,
+          "migrations": 27
+        },
+        {
+          "command": "JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native testProductionDebugUnitTest lintProductionDebug assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "passed": 145,
+          "skipped": 1
+        },
+        {
+          "command": "xcodebuild test -project macos-native/GoalflowMac.xcodeproj -scheme GoalflowMac -configuration Debug -destination 'platform=macOS' -derivedDataPath /private/tmp/s2-conflict-pages-macos CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0,
+          "passed": 224,
+          "skipped": 1
+        }
+      ],
+      "compatibility": "Migration/server first. Staging maximum 4 MiB, 100000 entries, 64 chunks of 64 KiB. Original whole-candidate receipt validation unchanged. Oversize individual legacy push remediation remains.",
+      "evidence": [
+        "evidence/s2-staged-web-integration.log",
+        "evidence/s2-staged-release.log",
+        "evidence/s2-staged-release-final.log",
+        "evidence/s2-staged-server-retry.log",
+        "evidence/s2-staged-remaining-release.log",
+        "evidence/s2-staged-postgres-first.log",
+        "evidence/s2-staged-matrix-final.log",
+        "evidence/s2-staged-static.log",
+        "evidence/s2-staged-android-verified.log",
+        "evidence/s2-staged-macos-verified.log",
+        "evidence/s2-staged-macos-focus-retry.log",
+        "evidence/s2-staged-macos-final-gates.log"
+      ]
     }
   ],
   "findings": [
@@ -521,7 +608,19 @@
     "evidence/s2-action-ledger-matrix.log",
     "evidence/s2-action-ledger-identifiers.log",
     "evidence/s2-android-atomic-completion-unit.log",
-    "evidence/s2-android-atomic-completion-final.log"
+    "evidence/s2-android-atomic-completion-final.log",
+    "evidence/s2-staged-web-integration.log",
+    "evidence/s2-staged-release.log",
+    "evidence/s2-staged-release-final.log",
+    "evidence/s2-staged-server-retry.log",
+    "evidence/s2-staged-remaining-release.log",
+    "evidence/s2-staged-postgres-first.log",
+    "evidence/s2-staged-matrix-final.log",
+    "evidence/s2-staged-static.log",
+    "evidence/s2-staged-android-verified.log",
+    "evidence/s2-staged-macos-verified.log",
+    "evidence/s2-staged-macos-focus-retry.log",
+    "evidence/s2-staged-macos-final-gates.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

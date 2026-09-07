@@ -235,3 +235,41 @@ rollback/retry/deduplication/undo and stale same-task session replacement. All
 143 native Android tests passed; one hosted test skipped. Native lint and debug
 build passed. No schema change or app installation. This fixes local atomicity;
 the current legacy multi-entity transport is not a server-atomic completion receipt.
+
+## Complete staged reconciliation checkpoint
+
+`2fa1423b06cadf904557de9d429c097e89013010`: **PASS_LOCAL** for Web/Android/macOS staged reconciliation.
+Candidates above 1,000 history entries or 262,144 UTF-8 bytes are captured whole
+and uploaded as immutable 64 KiB byte chunks. The manifest binds every chunk
+hash, complete hash, byte length and chunk count. Staging keys include the full
+manifest identity; a poisoned manifest cannot block a correct upload of the
+same candidate. Every chunk acknowledgment is verified. Retries reuse captured
+bytes; interrupted upload retains the entire local conflict. No history slice
+is selected. After complete verification, the existing reconciliation RPC and
+its exact whole-candidate receipt remain authoritative.
+
+Supported candidate envelope: 4 MiB, 100,000 entries, at most 64 chunks. Each
+chunk request fits 256 KiB even if an encoder escapes every base64 slash. The
+existing 16 MiB response limit remains. Larger historical candidates remain
+intact with an explicit recovery error. This does not yet remediate a single
+oversized legacy push mutation. The legacy reconciliation endpoint retains its
+1,000-entry limit. Deploy migration/server before client upgrade; failed staging
+on an old server retains local evidence. Nothing was deployed.
+
+Shared fixture hashes passed in TypeScript, Kotlin, Swift and PostgreSQL. Real
+PostgreSQL tested incomplete uploads, exact replay, inconsistent-manifest
+isolation, cross-account denial and reconciliation of all 1,001 history entries.
+Both full migration matrices passed; 27 migrations and identifier checks passed.
+Web integration resumed an interrupted upload with all entries intact. Web
+lint, 488 tests and build passed. The combined release command subsequently
+failed its liveness check because a separate Python process occupied port 4173;
+`VERIFY_PORT=43973 npm run verify:server` passed, and remaining maintenance and
+artifact gates passed separately. Initial refactoring changed duplicate-history
+HTTP 400 to 500; the existing regression caught it and the 400 behavior was restored.
+
+Android: 145 passed, one hosted skip, lint/debug build passed. macOS: 224 passed,
+one hosted skip. An initial AppKit test received unrelated extra keyboard text;
+`4a40232` removes explicit foreground activation without weakening responder
+assertions. Its targeted test and full suite passed afterward. The first SQL
+staging attempt lacked extension-digest permission; built-in PostgreSQL SHA-256
+now verifies hashes without widening extension privileges. Failed logs remain.
