@@ -242,19 +242,7 @@ const wireMutation = (mutation: SyncMutation) => ({
     : undefined
 });
 
-const seedUnsynchronizedLocalData = async (userKey: string): Promise<void> => {
-  const meta = await storageService.flushPendingLocalChanges(userKey);
-  for (const storeName of SYNCED_STORES) {
-    const hasSyncState = Object.keys(meta.versions).some(key => key === storeName || key.startsWith(`${storeName}:`))
-      || meta.outbox.some(item => item.entityType === storeName)
-      || meta.conflicts.some(item => item.entityType === storeName);
-    if (hasSyncState) continue;
-    const value = await storageService.get(storeName, userKey);
-    if (value === undefined) continue;
-    storageService.stageLocalValue(storeName, userKey, undefined, value, true);
-  }
-  await storageService.flushPendingLocalChanges(userKey);
-};
+const seedUnsynchronizedLocalData = (userKey: string): Promise<void> => storageService.seedUnsynchronizedLocalData(userKey);
 
 /** One crash-safe, retry-safe synchronization cycle. Exported for adversarial tests. */
 export const synchronizeCloudOnce = async (
@@ -481,7 +469,7 @@ export const startCloudSync = (userKey: string): (() => void) => {
         } catch (_) {
           meta = emptySyncMeta();
         }
-        emit(userKey, navigator.onLine ? 'error' : 'offline', meta, error instanceof Error ? error.message : 'Synchronization failed.');
+        emit(userKey, isPermanentSyncFailure(error) || navigator.onLine ? 'error' : 'offline', meta, error instanceof Error ? error.message : 'Synchronization failed.');
       }
     }
   );

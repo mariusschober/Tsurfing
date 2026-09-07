@@ -35,6 +35,7 @@ interface StagedLocalTransactionGroup {
   schemaVersion: 1;
   userKey: string;
   transactions: StagedLocalTransaction[];
+  admissionVersion?: 1;
 }
 
 export interface LocalValueChange {
@@ -76,7 +77,7 @@ export interface GoalflowBackup {
 }
 
 export class DurableStorageError extends Error {
-  constructor(message = 'This change could not be saved durably. Nothing was changed.') {
+  constructor(message = 'This change could not be saved durably. Nothing was changed.', public readonly code = 'LOCAL_STORAGE_BLOCKED') {
     super(message);
     this.name = 'DurableStorageError';
   }
@@ -280,11 +281,11 @@ const writeFallback = (storeName: string, key: string, value: unknown): void => 
   safeLocalStorageRemove(deletedKey(storeName, key));
 };
 
-const readFallbackCopy = <T>(storeName: string, key: string): { found: boolean; value?: T } => {
+const readFallbackCopy = <T>(storeName: string, key: string): { found: boolean; value?: T; raw?: string } => {
   if (!hasWindow()) return { found: false };
   try {
     const serialized = window.localStorage.getItem(fallbackKey(storeName, key));
-    return serialized === null ? { found: false } : { found: true, value: JSON.parse(serialized) as T };
+    return serialized === null ? { found: false } : { found: true, value: JSON.parse(serialized) as T, raw: serialized };
   } catch (_) {
     throw new DurableStorageError('A durable fallback copy is damaged. It was not discarded.');
   }
@@ -307,6 +308,8 @@ interface WalEntry {
   key: string;
   transaction: StagedLocalTransaction;
   grouped: boolean;
+  raw: string;
+  recoverableGroup: boolean;
 }
 
 const validStagedTransaction = (value: unknown, userKey: string): value is StagedLocalTransaction =>
@@ -335,11 +338,11 @@ const listWal = (userKey: string, storeName?: string): WalEntry[] => {
           throw new Error('invalid grouped WAL entry');
         }
         for (const transaction of parsed.transactions as StagedLocalTransaction[]) {
-          if (!storeName || transaction.storeName === storeName) entries.push({ key, transaction, grouped: true });
+          if (!storeName || transaction.storeName === storeName) entries.push({ key, transaction, grouped: true, raw: raw!, recoverableGroup: parsed.admissionVersion === 1 });
         }
       } else {
         if (!validStagedTransaction(parsed, userKey)) throw new Error('invalid WAL entry');
-        if (!storeName || parsed.storeName === storeName) entries.push({ key, transaction: parsed, grouped: false });
+        if (!storeName || parsed.storeName === storeName) entries.push({ key, transaction: parsed, grouped: false, raw: raw!, recoverableGroup: false });
       }
     } catch (_) {
       throw new DurableStorageError('A pending local change is damaged. Synchronization stopped without discarding it.');
@@ -481,7 +484,12 @@ const mergeRestoredSyncMeta = (currentValue: unknown, incomingValue: unknown): S
     journal: mergeEvidence(current.localState?.journal, incoming.localState?.journal),
     receipts: mergeEvidence(current.localState?.receipts, incoming.localState?.receipts),
     blocked: mergeEvidence(current.localState?.blocked, incoming.localState?.blocked),
-    migrations: mergeEvidence(current.localState?.migrations, incoming.localState?.migrations)
+    migrations: mergeEvidence(current.localState?.migrations, incoming.localState?.migrations),
+    groups: mergeEvidence(current.localState?.groups, incoming.localState?.groups),
+    resolvedConflicts: mergeEvidence(current.localState?.resolvedConflicts, incoming.localState?.resolvedConflicts),
+    reconciliations: mergeEvidence(current.localState?.reconciliations, incoming.localState?.reconciliations),
+    fallbackCopies: Object.fromEntries([...new Set([...Object.keys(current.localState?.fallbackCopies ?? {}), ...Object.keys(incoming.localState?.fallbackCopies ?? {})])].map(store =>
+      [store, [...new Set([...(current.localState?.fallbackCopies?.[store] ?? []), ...(incoming.localState?.fallbackCopies?.[store] ?? [])])]]))
   };
   return {
     localState,
@@ -656,12 +664,34 @@ const reconcileStagedTransactions = (
   return current;
 };
 
+const overlayPendingValues = (committed: Record<string, unknown>, entries: WalEntry[]): Record<string, unknown> => {
+  const values = { ...committed };
+  for (const key of new Set(entries.map(entry => entry.key))) {
+    const candidate = { ...values };
+    try {
+      for (const entry of entries.filter(entry => entry.key === key)) {
+        candidate[entry.transaction.storeName] = reconcileStagedTransactions(candidate[entry.transaction.storeName], [entry.transaction]);
+      }
+      Object.assign(values, candidate);
+    } catch (error) {
+      if (!(error instanceof DurableStorageError)) throw error;
+      // An ambiguous group has no partial rendering authority. Its original
+      // envelope stays in WAL until the materializer classifies it durably.
+    }
+  }
+  return values;
+};
+
 const recoverFallbackState = async (userKey: string): Promise<void> => {
   if (useFallbackStorage) return;
   const fallbackValues = new Map<string, unknown>();
+  const fallbackBytes = new Map<string, string>();
   for (const storeName of [...DATA_STORES, STORES.SYNC]) {
     const fallback = readFallbackCopy(storeName, userKey);
-    if (fallback.found) fallbackValues.set(storeName, fallback.value);
+    if (fallback.found) {
+      fallbackValues.set(storeName, fallback.value);
+      fallbackBytes.set(storeName, fallback.raw!);
+    }
   }
   if (!fallbackValues.size) return;
   const db = await getDB();
@@ -669,20 +699,52 @@ const recoverFallbackState = async (userKey: string): Promise<void> => {
   const stores = Array.from(new Set([...fallbackValues.keys(), STORES.SYNC]));
   const tx = db.transaction(stores, 'readwrite');
   const recoveredValues = new Map<string, unknown>();
+  const beforeValues = new Map<string, unknown>();
+  let recoveredMeta: SyncMeta;
   try {
+    const syncStore = tx.objectStore(STORES.SYNC);
+    const committedMeta = normalizeSyncMeta(await syncStore.get(userKey));
+    for (const [store, raw] of fallbackBytes) {
+      if (committedMeta.localState?.fallbackCopies?.[store]?.includes(raw)) fallbackValues.delete(store);
+    }
+    if (!fallbackValues.size) { await tx.done; return; }
+    const fallbackMeta = normalizeSyncMeta(fallbackValues.get(STORES.SYNC));
+    if (fallbackMeta.cursor > committedMeta.cursor) throw new DurableStorageError('An interrupted fallback cursor cannot be verified against atomically installed records. Both histories were retained.', 'FALLBACK_HISTORY_CONFLICT');
     for (const [storeName, value] of fallbackValues) {
       if (storeName === STORES.SYNC) continue;
       const store = tx.objectStore(storeName);
       const existing = await store.get(userKey);
+      beforeValues.set(storeName, existing);
+      // A missing projection with a version is not an empty initial store:
+      // it can be an acknowledged tombstone. Never resurrect it from a mirror.
+      const candidates = RECORD_LEVEL_STORES.has(storeName) && Array.isArray(value)
+        ? value.filter(item => !Array.isArray(existing) || !existing.some(row => row.id === item.id)).map(item => item.id)
+        : existing === undefined ? ['singleton'] : [];
+      if (candidates.some(id => committedMeta.versions[`${storeName}:${id}`])) {
+        throw new DurableStorageError('Fallback data disagrees with committed deletion evidence. Both histories were retained.', 'FALLBACK_HISTORY_CONFLICT');
+      }
       const recovered = existing === undefined ? value : mergeBackupCollection(existing, value);
       await store.put(recovered, userKey);
       recoveredValues.set(storeName, recovered);
     }
-    const syncStore = tx.objectStore(STORES.SYNC);
-    const committedMeta = normalizeSyncMeta(await syncStore.get(userKey));
-    const fallbackMeta = normalizeSyncMeta(fallbackValues.get(STORES.SYNC));
-    if (fallbackMeta.cursor > committedMeta.cursor) throw new DurableStorageError('An interrupted fallback cursor cannot be verified against atomically installed records. Both histories were retained.');
-    const recoveredMeta = mergeRestoredSyncMeta(committedMeta, fallbackMeta);
+    recoveredMeta = mergeRestoredSyncMeta(committedMeta, fallbackMeta);
+    for (const [storeName, value] of recoveredValues) {
+      const action = buildStagedLocalTransaction(storeName, userKey, beforeValues.get(storeName), value, nextWalOrder(), new Date().toISOString(), randomUuid, true);
+      if (!action) continue;
+      const unrepresented = action.changes.filter(change => !recoveredMeta.versions[`${change.entityType}:${change.entityId}`]
+        && !recoveredMeta.outbox.some(item => item.entityType === change.entityType && item.entityId === change.entityId)
+        && !recoveredMeta.conflicts.some(item => item.entityType === change.entityType && item.entityId === change.entityId));
+      if (unrepresented.length) {
+        const recoveryAction = { ...action, changes: unrepresented };
+        recoveredMeta = appendStagedTransactions(recoveredMeta, [recoveryAction], readDeviceId());
+        localEvidence(recoveredMeta).journal[recoveryAction.id] = recoveryAction;
+      }
+    }
+    localEvidence(recoveredMeta).fallbackCopies ??= {};
+    for (const store of fallbackValues.keys()) {
+      const copies = localEvidence(recoveredMeta).fallbackCopies!;
+      copies[store] = [...new Set([...(copies[store] ?? []), fallbackBytes.get(store)!])];
+    }
     await putMeta(tx, userKey, recoveredMeta);
     await tx.done;
   } catch (error) {
@@ -691,14 +753,28 @@ const recoverFallbackState = async (userKey: string): Promise<void> => {
     throw error;
   }
   for (const [storeName, value] of fallbackValues) {
-    safeLocalStorageRemove(fallbackKey(storeName, userKey));
+    // localStorage has no compare-and-delete primitive. Keep the source bytes
+    // and acknowledge this exact copy in IDB; a peer replacement cannot be lost.
     if (storeName !== STORES.SYNC) writeRecovery(storeName, userKey, recoveredValues.get(storeName) ?? value);
   }
+  publishCommit(userKey, recoveredMeta!, [...recoveredValues.keys()]);
 };
 
 type StorageTransaction = IDBPTransaction<unknown, string[], 'readwrite'>;
 const localEvidence = (meta: SyncMeta): NonNullable<SyncMeta['localState']> =>
   meta.localState ??= { generation: 0, journal: {}, receipts: {} };
+
+const retainResolvedConflicts = (before: SyncMeta, after: SyncMeta): void => {
+  for (const conflict of before.conflicts) {
+    if (!after.conflicts.some(item => item.id === conflict.id)) {
+      const evidence = localEvidence(after);
+      evidence.resolvedConflicts ??= {};
+      // Include the full candidate identity so a reused ID cannot overwrite an
+      // earlier resolution. This is local audit history, never a wire field.
+      evidence.resolvedConflicts[stableJson(conflict)] = conflict;
+    }
+  }
+};
 
 const putMeta = async (tx: StorageTransaction, userKey: string, meta: SyncMeta): Promise<void> => {
   const evidence = localEvidence(meta);
@@ -707,41 +783,69 @@ const putMeta = async (tx: StorageTransaction, userKey: string, meta: SyncMeta):
   await tx.objectStore(STORES.SYNC).put(meta, userKey);
 };
 
-const freshWal = (meta: SyncMeta, entries: WalEntry[]): WalEntry[] => entries.filter(entry => {
-  const prior = localEvidence(meta).journal[entry.transaction.id];
-  if (prior && !jsonEqual(prior, entry.transaction)) {
-    throw new DurableStorageError('A captured intent identity has incompatible history. Both copies were retained.');
+const freshWal = (meta: SyncMeta, entries: WalEntry[]): WalEntry[] => {
+  const evidence = localEvidence(meta);
+  for (const key of new Set(entries.filter(entry => entry.grouped).map(entry => entry.key))) {
+    const group = entries.filter(entry => entry.key === key);
+    if (evidence.groups?.[key] !== undefined && evidence.groups[key] !== group[0].raw) throw new DurableStorageError('A grouped capture identity has incompatible envelopes. Both copies were retained.');
+    const represented = group.filter(entry => evidence.journal[entry.transaction.id]).length;
+    if (represented && represented !== group.length) throw new DurableStorageError('A grouped capture has incomplete journal evidence. Its original envelope was retained.');
   }
-  return !prior;
-});
+  return entries.filter(entry => {
+    const prior = evidence.journal[entry.transaction.id];
+    if (prior && !jsonEqual(prior, entry.transaction)) throw new DurableStorageError('A captured intent identity has incompatible history. Both copies were retained.');
+    return !prior;
+  });
+};
 
 /** Materialize the entire captured group before inbound transitions inspect pending work. */
 const materializeWal = async (tx: StorageTransaction, userKey: string, input: SyncMeta): Promise<SyncMeta> => {
   const entries = freshWal(input, listWal(userKey));
-  let meta = appendStagedTransactions(input, entries.map(entry => entry.transaction), readDeviceId());
-  const evidence = localEvidence(meta);
-  const stores = new Set(entries.map(entry => entry.transaction.storeName));
-  for (const storeName of stores) {
-    const store = tx.objectStore(storeName);
-    let current = await store.get(userKey);
-    for (const entry of entries.filter(entry => entry.transaction.storeName === storeName)) {
-      const intent = entry.transaction;
-      try {
-        current = reconcileStagedTransactions(current, [intent], meta);
-      } catch (error) {
-        // New focus admissions may be stale. Preserve their exact intent as a
-        // blocked journal entry, without assigning an obsolete snapshot authority.
-        // Legacy and grouped histories keep their existing fail-closed behavior.
-        if (!intent.admission || entry.grouped || !(error instanceof DurableStorageError)) throw error;
-        evidence.blocked ??= {};
-        evidence.blocked[intent.id] = 'STALE_FOCUS_INTENT: the captured session changed before commit. The action is preserved for review.';
-        const ids = new Set(intent.changes.map(change => change.mutationId));
-        meta.outbox = meta.outbox.filter(item => !ids.has(item.mutationId));
+  let meta = input;
+  // Evaluate an entire capture envelope against a private candidate before
+  // putting any member. IDB still serializes every participating store.
+  for (const key of new Set(entries.map(entry => entry.key))) {
+    const group = entries.filter(entry => entry.key === key);
+    let candidate = appendStagedTransactions(structuredClone(meta), group.map(entry => entry.transaction), readDeviceId());
+    const values = new Map<string, unknown>();
+    try {
+      if (group[0].recoverableGroup && stableJson(candidate.conflicts) !== stableJson(meta.conflicts)) throw new DurableStorageError('A grouped action belongs to an unresolved conflict.');
+      for (const entry of group) {
+        const intent = entry.transaction;
+        const current = values.has(intent.storeName) ? values.get(intent.storeName) : await tx.objectStore(intent.storeName).get(userKey);
+        const conflictsBefore = stableJson(candidate.conflicts);
+        const value = reconcileStagedTransactions(current, [intent], candidate);
+        if (entry.recoverableGroup && stableJson(candidate.conflicts) !== conflictsBefore) {
+          throw new DurableStorageError('A grouped action conflicts with the current projection.');
+        }
+        values.set(intent.storeName, value);
+        localEvidence(candidate).journal[intent.id] = intent;
       }
-      evidence.journal[intent.id] = intent;
+    } catch (error) {
+      const recoverable = group[0].recoverableGroup || (!group[0].grouped && Boolean(group[0].transaction.admission));
+      if (!recoverable || !(error instanceof DurableStorageError)) throw error;
+      // Do not transfer part of a logical completion to outbox/conflict while
+      // applying another part. The exact whole action remains blocked evidence.
+      candidate = structuredClone(meta);
+      const evidence = localEvidence(candidate);
+      evidence.blocked ??= {};
+      for (const entry of group) {
+        evidence.journal[entry.transaction.id] = entry.transaction;
+        evidence.blocked[entry.transaction.id] = group[0].grouped
+          ? 'STALE_GROUP_INTENT: the grouped action changed before commit. Every member is preserved for review.'
+          : 'STALE_FOCUS_INTENT: the captured session changed before commit. The action is preserved for review.';
+      }
+      values.clear();
     }
-    if (current === undefined) await store.delete(userKey);
-    else await store.put(current, userKey);
+    if (group[0].grouped) {
+      localEvidence(candidate).groups ??= {};
+      localEvidence(candidate).groups![key] = group[0].raw;
+    }
+    for (const [storeName, value] of values) {
+      if (value === undefined) await tx.objectStore(storeName).delete(userKey);
+      else await tx.objectStore(storeName).put(value, userKey);
+    }
+    meta = candidate;
   }
   return meta;
 };
@@ -771,7 +875,9 @@ const updateSyncMeta = async (
   if (!db) throw new DurableStorageError('Sync metadata needs atomic storage. Captured changes remain on this device.');
   const tx = db.transaction(STORES.SYNC, 'readwrite');
   try {
-    const next = update(normalizeSyncMeta(await tx.store.get(userKey)));
+    const current = normalizeSyncMeta(await tx.store.get(userKey));
+    const next = update(structuredClone(current));
+    retainResolvedConflicts(current, next);
     await putMeta(tx as StorageTransaction, userKey, next);
     await tx.done;
     publishCommit(userKey, next, []);
@@ -814,7 +920,7 @@ export const storageService = {
     const serialized = JSON.stringify(transaction);
     if (serialized === undefined) throw new DurableStorageError();
     captureWal(key, walKey(transaction), serialized);
-    window.dispatchEvent(new CustomEvent('goalflow:captured', { detail: { userKey: key } }));
+    window.dispatchEvent(new CustomEvent('goalflow:captured', { detail: { userKey: key, actionId: transaction.id } }));
     return transaction.id;
   },
 
@@ -857,11 +963,11 @@ export const storageService = {
     }
     if (!transactions.length) return null;
     const id = randomUuid();
-    const group: StagedLocalTransactionGroup = { schemaVersion: 1, userKey: key, transactions };
+    const group: StagedLocalTransactionGroup = { schemaVersion: 1, admissionVersion: 1, userKey: key, transactions };
     const serialized = JSON.stringify(group);
     if (serialized === undefined) throw new DurableStorageError();
     captureWal(key, `${walPrefixForUser(key)}batch-${id}`, serialized);
-    window.dispatchEvent(new CustomEvent('goalflow:captured', { detail: { userKey: key } }));
+    window.dispatchEvent(new CustomEvent('goalflow:captured', { detail: { userKey: key, actionId: id } }));
     return id;
   },
 
@@ -875,19 +981,12 @@ export const storageService = {
     if (!db) throw new DurableStorageError('Committed local state cannot be verified while IndexedDB is unavailable.');
     const tx = db.transaction([...DATA_STORES, STORES.SYNC], 'readonly');
     const meta = normalizeSyncMeta(await tx.objectStore(STORES.SYNC).get(userKey));
-    const values: Record<string, unknown> = {};
-    for (const storeName of DATA_STORES) values[storeName] = await tx.objectStore(storeName).get(userKey);
+    const committed: Record<string, unknown> = {};
+    for (const storeName of DATA_STORES) committed[storeName] = await tx.objectStore(storeName).get(userKey);
     await tx.done;
-    const pending = freshWal(meta, listWal(userKey));
-    for (const storeName of new Set(pending.map(entry => entry.transaction.storeName))) {
-      try {
-        values[storeName] = reconcileStagedTransactions(values[storeName], pending
-          .filter(entry => entry.transaction.storeName === storeName).map(entry => entry.transaction));
-      } catch (_) {
-        // An incompatible intent remains in the WAL. Rendering the canonical
-        // value does not resolve it or turn it into a new action.
-      }
-    }
+    const captured = listWal(userKey);
+    const pending = freshWal(meta, captured);
+    const values = overlayPendingValues(committed, pending);
     for (const storeName of [STORES.TRACKING, STORES.PROGRESS, STORES.SETTINGS, STORES.STATS, STORES.ACCOUNTABILITY, STORES.CIRCADIAN]) {
       const value = values[storeName];
       if ((value !== undefined && !isRecord(value))
@@ -895,7 +994,7 @@ export const storageService = {
         throw new DurableStorageError(`The committed ${storeName} projection cannot be rendered safely. Its data and history remain preserved.`);
       }
     }
-    return { userKey, generation: meta.localState?.generation ?? 0, values, meta, pendingCount: pending.length, walRevision: stableJson(listWal(userKey)) };
+    return { userKey, generation: meta.localState?.generation ?? 0, values, meta, pendingCount: pending.length + [...DATA_STORES, STORES.SYNC].filter(store => { const raw = window.localStorage.getItem(fallbackKey(store, userKey)); return raw !== null && !meta.localState?.fallbackCopies?.[store]?.includes(raw); }).length, walRevision: stableJson(captured) };
   },
 
   subscribeCommitted(userKey: string, receive: (snapshot: CommittedSnapshot) => void): () => void {
@@ -955,29 +1054,29 @@ export const storageService = {
   },
 
   async get<T>(storeName: string, key: string): Promise<T | undefined> {
-    if (SYNCABLE_STORES.has(storeName)) {
-      const staged = latestWalValue<T>(storeName, key);
-      if (staged.found) return staged.value;
+    const db = await getDB();
+    const stores = SYNCABLE_STORES.has(storeName) ? DATA_STORES : [storeName];
+    if (db) {
+      const tx = db.transaction([...new Set([...stores, STORES.SYNC])], 'readonly');
+      const meta = normalizeSyncMeta(await tx.objectStore(STORES.SYNC).get(key));
+      const committed: Record<string, unknown> = {};
+      for (const store of stores) committed[store] = store === STORES.SYNC ? meta : await tx.objectStore(store).get(key);
+      await tx.done;
+      return (SYNCABLE_STORES.has(storeName)
+        ? overlayPendingValues(committed, freshWal(meta, listWal(key)))[storeName]
+        : committed[storeName]) as T | undefined;
     }
-    const fallback = readFallbackCopy<T>(storeName, key);
-    if (fallback.found) return fallback.value;
-    if (!useFallbackStorage) {
-      try {
-        const db = await getDB();
-        if (db) return await db.get(storeName, key) as T | undefined;
-      } catch (error) {
-        console.warn(`[Storage] IndexedDB read failed for ${storeName}.`, error);
-        throw new DurableStorageError(
-          `IndexedDB could not verify the current ${storeName} value. An older mirror was not substituted.`
-        );
-      }
-    }
-    return readLocalCopy<T>(storeName, key);
+    // Degraded reads never certify a generation or a cursor.
+    const copies = Object.fromEntries(stores.map(store => [store, readLocalCopy(store, key)]));
+    return overlayPendingValues(copies, listWal(key))[storeName] as T | undefined;
   },
 
   set<T>(storeName: string, key: string, value: T, source: 'local' | 'cloud' = 'local'): Promise<void> {
-    if (storeName === STORES.SYNC) return queueMutation(() => updateSyncMeta(key, current => mergeRestoredSyncMeta(current, value))).then(() => undefined);
-    if (source === 'local' && listWal(key).length) return this.flushPendingLocalChanges(key).then(() => undefined);
+    if (storeName === STORES.SYNC) return queueMutation(() => updateSyncMeta(key, current => {
+      if (normalizeSyncMeta(value).cursor > current.cursor) throw new DurableStorageError('Metadata alone cannot advance the inbound cursor.', 'CURSOR_REQUIRES_PROJECTION');
+      return mergeRestoredSyncMeta(current, value);
+    })).then(() => undefined);
+    if (source === 'cloud' && import.meta.env.MODE !== 'test') return Promise.reject(new DurableStorageError('Raw seeds are restricted to isolated tests; use atomic inbound application.'));
     return queueMutation(async () => {
       const db = await getDB();
       if (!db) {
@@ -987,13 +1086,15 @@ export const storageService = {
       const tx = db.transaction([...DATA_STORES, STORES.SYNC], 'readwrite');
       let meta: SyncMeta;
       let committedValue: unknown;
+      let admitted: string | null = null;
       try {
         meta = normalizeSyncMeta(await tx.objectStore(STORES.SYNC).get(key));
-        const previous = await tx.objectStore(storeName).get(key);
         if (source === 'local') {
+          meta = await materializeWal(tx, key, meta);
+          const previous = await tx.objectStore(storeName).get(key);
           // Explicit initialization/import callers use this API. React effects
           // may only drain; they cannot submit a delayed collection here.
-          this.stageLocalValue(storeName, key, previous, value);
+          admitted = this.stageLocalValue(storeName, key, previous, value);
           meta = await materializeWal(tx, key, meta);
         } else {
           // Raw seed/hydration writes carry a generation but never a mutation.
@@ -1008,10 +1109,11 @@ export const storageService = {
         throw error;
       }
       retireMaterializedWal(key, meta);
-      safeLocalStorageRemove(fallbackKey(storeName, key));
+      // Retained fallback is independent evidence, not an optional mirror.
       writeRecovery(storeName, key, committedValue);
       publishCommit(key, meta, [storeName]);
       if (source === 'local') announceLocalChange(storeName, key, undefined);
+      if (admitted && meta.localState?.blocked?.[admitted]) throw new DurableStorageError(meta.localState.blocked[admitted], 'STALE_INTENT');
     });
   },
 
@@ -1133,6 +1235,9 @@ export const storageService = {
         const store = tx.objectStore(candidate.entityType);
         const meta = await materializeWal(tx, userKey, normalizeSyncMeta(await tx.objectStore(STORES.SYNC).get(userKey)));
         transition = applyAutomaticReconciliation(meta, await store.get(userKey), candidate, reply);
+        retainResolvedConflicts(meta, transition.meta);
+        localEvidence(transition.meta).reconciliations ??= {};
+        localEvidence(transition.meta).reconciliations![stableJson(candidate)] = { candidate, reply };
         if (transition.changed) {
           if (transition.value === undefined) await store.delete(userKey);
           else await store.put(transition.value, userKey);
@@ -1177,14 +1282,24 @@ export const storageService = {
       try {
         currentMeta = await materializeWal(tx, userKey, normalizeSyncMeta(await tx.objectStore(STORES.SYNC).get(userKey)));
         conflict = currentMeta.conflicts.find(item => item.id === conflictId);
-        if (!conflict) { await tx.done; return currentMeta; }
+        if (!conflict) {
+          // Materialization may have installed unrelated WAL even when this
+          // conflict was already resolved by a peer. Commit its journal too.
+          await putMeta(tx, userKey, currentMeta);
+          await tx.done;
+          retireMaterializedWal(userKey, currentMeta);
+          publishCommit(userKey, currentMeta, DATA_STORES);
+          return currentMeta;
+        }
         if (expected && !jsonEqual(expected, conflict)) throw new DurableStorageError('The conflict changed while the response was in flight. New intent remains preserved.');
         const store = tx.objectStore(conflict.entityType);
         const currentValue = await store.get(userKey);
         nextValue = applyConflictCloudValue(currentValue, conflict);
         if (nextValue === undefined) await store.delete(userKey);
         else await store.put(nextValue, userKey);
+        const beforeResolution = structuredClone(currentMeta);
         currentMeta.conflicts = currentMeta.conflicts.filter(item => item.id !== conflictId);
+        retainResolvedConflicts(beforeResolution, currentMeta);
         await putMeta(tx, userKey, currentMeta);
         await tx.done;
       } catch (error) {
@@ -1227,6 +1342,40 @@ export const storageService = {
         }
         keys.forEach(safeLocalStorageRemove);
       }
+    });
+  },
+
+  /** Initial cloud seeding reads both ownership and projection in one transaction. */
+  async seedUnsynchronizedLocalData(userKey: string): Promise<void> {
+    await this.flushPendingLocalChanges(userKey);
+    return queueMutation(async () => {
+      const db = await getDB();
+      if (!db) throw new DurableStorageError('Cloud seeding awaits atomic storage.');
+      const tx = db.transaction([...DATA_STORES, STORES.SYNC], 'readwrite');
+      let meta: SyncMeta;
+      try {
+        meta = await materializeWal(tx, userKey, normalizeSyncMeta(await tx.objectStore(STORES.SYNC).get(userKey)));
+        for (const storeName of DATA_STORES) {
+          if (Object.keys(meta.versions).some(key => key === storeName || key.startsWith(`${storeName}:`))
+            || meta.outbox.some(item => item.entityType === storeName)
+            || meta.conflicts.some(item => item.entityType === storeName)) continue;
+          const value = await tx.objectStore(storeName).get(userKey);
+          if (value === undefined) continue;
+          const action = buildStagedLocalTransaction(storeName, userKey, undefined, value, nextWalOrder(), new Date().toISOString(), randomUuid, true);
+          if (action) {
+            meta = appendStagedTransactions(meta, [action], readDeviceId());
+            localEvidence(meta).journal[action.id] = action;
+          }
+        }
+        await putMeta(tx, userKey, meta);
+        await tx.done;
+      } catch (error) {
+        try { tx.abort(); } catch (_) {}
+        try { await tx.done; } catch (_) {}
+        throw error;
+      }
+      retireMaterializedWal(userKey, meta);
+      publishCommit(userKey, meta, DATA_STORES);
     });
   },
 

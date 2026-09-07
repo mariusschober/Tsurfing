@@ -287,10 +287,10 @@ describe('durable storage failure boundaries', () => {
     storageService.stageLocalValue(STORES.TASKS, key, [], first);
     storageService.stageLocalValue(STORES.TASKS, key, first, newest);
 
-    await storageService.set(STORES.TASKS, key, first);
+    await storageService.flushPendingLocalChanges(key);
     expect(await storageService.get(STORES.TASKS, key)).toEqual(newest);
     const beforeSecondEffect = await storageService.get<any>(STORES.SYNC, key);
-    await storageService.set(STORES.TASKS, key, newest);
+    await storageService.flushPendingLocalChanges(key);
     const afterSecondEffect = await storageService.get<any>(STORES.SYNC, key);
     expect(afterSecondEffect.outbox.map((item: any) => item.mutationId))
       .toEqual(beforeSecondEffect.outbox.map((item: any) => item.mutationId));
@@ -351,7 +351,7 @@ describe('durable storage failure boundaries', () => {
     const offline = [{ id: 'same', title: 'Local' }];
     await storageService.set(STORES.TASKS, key, recovered, 'cloud');
     storageService.stageLocalValue(STORES.TASKS, key, [{ id: 'same', title: 'Old' }], offline);
-    await storageService.set(STORES.TASKS, key, offline);
+    await storageService.flushPendingLocalChanges(key);
     expect(await storageService.get(STORES.TASKS, key)).toEqual(recovered);
     const meta = await storageService.flushPendingLocalChanges(key);
     expect(meta.conflicts[0].localPayload).toEqual(offline[0]);
@@ -385,8 +385,10 @@ describe('durable storage failure boundaries', () => {
     const recovered = await storageService.flushPendingLocalChanges(key);
     expect(await storageService.get(STORES.TASKS, key)).toEqual(tasks);
     expect(recovered.outbox).toHaveLength(1);
-    expect(window.localStorage.getItem(`goalflow_fallback_${STORES.TASKS}_${key}`)).toBeNull();
-    expect(window.localStorage.getItem(`goalflow_fallback_${STORES.SYNC}_${key}`)).toBeNull();
+    expect(window.localStorage.getItem(`goalflow_fallback_${STORES.TASKS}_${key}`)).toBe(JSON.stringify(tasks));
+    expect((await storageService.get<any>(STORES.SYNC, key)).localState.fallbackCopies.tasks).toContain(JSON.stringify(tasks));
+    expect(window.localStorage.getItem(`goalflow_fallback_${STORES.SYNC}_${key}`)).toBe(JSON.stringify(pending));
+    expect((await storageService.get<any>(STORES.SYNC, key)).localState.fallbackCopies.sync).toContain(JSON.stringify(pending));
   });
 
   it('merges independent fallback records instead of replacing recovered IndexedDB data', async () => {

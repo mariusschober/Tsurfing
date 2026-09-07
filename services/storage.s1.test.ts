@@ -33,12 +33,18 @@ describe('S1 deterministic storage schedules', () => {
     expect(await storageService.get(STORES.TASKS, user)).toEqual([{ id: 'b', title: 'B' }]);
   });
 
-  it.each(['markSyncSuccessful', 'mergeServerConflicts', 'commitPushResults', 'preparePushBatch', 'resolveConflictLocally', 'resolveConflictWithCloud'] as const)(
+  it.each(['markSyncSuccessful', 'mergeServerConflicts', 'commitPushResults', 'preparePushBatch', 'resolveConflictLocally', 'resolveConflictWithCloud', 'metadataImport', 'fallbackRecovery', 'seedUnsynchronizedLocalData'] as const)(
     'B: %s must not replace a concurrently appended outbox', async method => {
-      install();
+      const bytes = install();
       const user = crypto.randomUUID();
       await storageService.set(STORES.TASKS, user, [], 'cloud');
       let conflictId = '';
+      let batch: any[] = [];
+      if (method === 'commitPushResults') {
+        storageService.stageLocalValue(STORES.TASKS, user, [], [{ id: 'a', title: 'accepted A' }]);
+        batch = await storageService.preparePushBatch(user);
+      }
+      if (method === 'fallbackRecovery') bytes.set(`goalflow_fallback_tasks_${user}`, '[]');
       if (method === 'preparePushBatch' || method.startsWith('resolveConflict')) {
         storageService.stageLocalValue(STORES.TASKS, user, [], [{ id: 'a', title: 'A' }]);
         await storageService.flushPendingLocalChanges(user);
@@ -78,8 +84,18 @@ describe('S1 deterministic storage schedules', () => {
       });
       try {
         if (method === 'markSyncSuccessful') await storageService.markSyncSuccessful(user);
-        if (method === 'mergeServerConflicts') await storageService.mergeServerConflicts(user, []);
-        if (method === 'commitPushResults') await storageService.commitPushResults(user, [], []);
+        if (method === 'mergeServerConflicts') await storageService.mergeServerConflicts(user, [{
+          id: crypto.randomUUID(), mutationId: crypto.randomUUID(), entityType: 'tasks', entityId: 'c',
+          localPayload: { id: 'c', title: 'local C' }, serverPayload: { id: 'c', title: 'remote C' },
+          localVersion: 1, serverVersion: 1, localDeletedAt: null, serverDeletedAt: null,
+          localUpdatedAt: '2026-09-07T10:00:00.000Z', createdAt: '2026-09-07T10:00:00.000Z'
+        }]);
+        if (method === 'commitPushResults') await storageService.commitPushResults(user, batch, batch.map(m => ({
+          mutationId: m.mutationId, accepted: true, serverVersion: 1, record: { ...m, serverVersion: 1 }
+        })));
+        if (method === 'metadataImport') await storageService.set(STORES.SYNC, user, { schemaVersion: 2, cursor: 0, versions: {}, outbox: [], conflicts: [] });
+        if (method === 'fallbackRecovery') await storageService.flushPendingLocalChanges(user);
+        if (method === 'seedUnsynchronizedLocalData') await storageService.seedUnsynchronizedLocalData(user);
         if (method === 'preparePushBatch') await storageService.preparePushBatch(user);
         if (method === 'resolveConflictLocally') await storageService.resolveConflictLocally(user, conflictId);
         if (method === 'resolveConflictWithCloud') await storageService.resolveConflictWithCloud(user, conflictId);
@@ -88,6 +104,8 @@ describe('S1 deterministic storage schedules', () => {
       expect(injected).toBe(true);
       const restarted = await openDB('GoalflowDB');
       const meta = await restarted.get(STORES.SYNC, user);
+      if (method === 'commitPushResults') expect(meta.localState.receipts[batch[0].mutationId].request).toEqual(batch[0]);
+      if (method === 'mergeServerConflicts') expect(meta.conflicts.some((c: any) => c.entityId === 'c')).toBe(true);
       expect(meta.outbox.map((m: any) => m.mutationId)).toContain(staged.changes[0].mutationId);
       expect(await restarted.get(STORES.TASKS, user)).toEqual(staged.value);
     });

@@ -73,6 +73,11 @@ export interface SyncMeta {
     journal: Record<string, StagedLocalTransaction>;
     receipts: Record<string, { request: SyncMutation; result: PushResult }>;
     blocked?: Record<string, string>;
+    /** Exact grouped capture envelopes, retained after WAL retirement. */
+    groups?: Record<string, string>;
+    fallbackCopies?: Record<string, string[]>;
+    resolvedConflicts?: Record<string, LocalConflict>;
+    reconciliations?: Record<string, { candidate: ReconciliationCandidate; reply: unknown }>;
     migrations?: Record<string, string | null>;
   };
 }
@@ -313,6 +318,17 @@ export const normalizeSyncMeta = (value: unknown): SyncMeta => {
     || typeof value.localState.generation !== 'number' || !Number.isSafeInteger(value.localState.generation) || value.localState.generation < 0
     || !isRecord(value.localState.journal) || !isRecord(value.localState.receipts))) {
     throw new Error('Local synchronization evidence is damaged. It was not discarded.');
+  }
+  if (value.localState !== undefined) {
+    const state = value.localState as Record<string, unknown>;
+    for (const key of ['blocked', 'groups', 'fallbackCopies', 'resolvedConflicts', 'reconciliations', 'migrations']) {
+      if (state[key] !== undefined && !isRecord(state[key])) throw new Error('Local synchronization evidence is damaged. It was not discarded.');
+    }
+    if (Object.values(state.blocked ?? {}).some(item => typeof item !== 'string')
+      || Object.values(state.groups ?? {}).some(item => typeof item !== 'string')
+      || Object.values(state.fallbackCopies ?? {}).some(item => !Array.isArray(item) || item.some(raw => typeof raw !== 'string'))) {
+      throw new Error('Local synchronization evidence is damaged. It was not discarded.');
+    }
   }
   return {
     schemaVersion: SYNC_META_SCHEMA_VERSION,

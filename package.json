@@ -49,7 +49,7 @@
     "native:android:assembleDebug": "cd android-native && ./gradlew assembleDebug",
     "native:android:assembleRelease": "cd android-native && ./gradlew assembleRelease",
     "native:android:check": "npm run native:android:test && npm run native:android:lint && npm run native:android:assembleDebug",
-    "test:s1:storage": "vitest run services/storage.s1.test.ts services/storage.s1-fallback.test.ts",
+    "test:s1:storage": "vitest run services/storage.s1.test.ts services/storage.s1-fallback.test.ts services/storage.s1-completion.test.ts docs/operations/reliability/s1-review-regression.test.ts docs/operations/reliability/connection-regression.test.ts",
     "test:s1:browser": "playwright test --config playwright.s1.config.ts"
   },
   "dependencies": {
