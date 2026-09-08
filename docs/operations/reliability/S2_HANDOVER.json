@@ -3,7 +3,7 @@
   "status": "BLOCKED",
   "acceptanceReason": "Implementation continues. Web automatic enrollment and fresh-account server initialization are locally verified. Divergent legacy reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
-  "finalCommit": "d9be0ac007d4107c543fb3cf18ef692eaa9c924f",
+  "finalCommit": "32743d3bb2c7c15354212520b123d3c398e2299e",
   "prerequisites": [
     {
       "stageId": "S1",
@@ -3524,6 +3524,97 @@
         "macOS integration, divergent legacy recovery and comprehensive cross-client acceptance remain incomplete."
       ],
       "permittedNextStage": "Continue S2; S3 blocked"
+    },
+    {
+      "commit": "32743d3bb2c7c15354212520b123d3c398e2299e",
+      "baselineCommit": "bd9fc12bdd0e4f300f085e77dba559bf76fdbb07",
+      "scope": "Native completion request preparation, staged transport, exact history retirement and bounded journal reads",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowDatabase.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalCompletionProjection.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalRequestStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalTimeline.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCompletionRequestEvidence.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeCausalTransport.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalAccountDaoTest.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/sync/NativeCausalActionSyncTest.kt"
+      ],
+      "findingIds": [
+        "S2-NATIVE-COMPLETION-SEND",
+        "S2-NATIVE-JOURNAL-CURSOR-WINDOW"
+      ],
+      "commands": [
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": {
+            "passed": 212,
+            "failed": 0,
+            "skipped": 1
+          },
+          "skipped": "hostedBrowserRecordConvergesThroughProductionTransport"
+        },
+        {
+          "command": "env VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "tests": {
+            "passed": 719,
+            "failed": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "command": "npm run verify:room-hashes; npm run verify:identifiers; git diff --check",
+          "exitCode": 0,
+          "checked": [
+            9,
+            24
+          ]
+        },
+        {
+          "command": "git fetch --all --tags",
+          "exitCode": 0
+        },
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 1,
+          "reason": "Prior full gate failed because Robolectric native runtime extraction exhausted disk space. Nine unused generated ModuleCache.noindex directories from earlier /private/tmp/tsurfing-derived* builds were removed after an open-file check; source, products and logs were retained. The full gate then passed."
+        },
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest --tests '*NativeCausalActionSyncTest' --offline -PgoalflowSkipSigning=true",
+          "exitCode": 1,
+          "reason": "Initial test setup selected a fixture prefix without a focus session; corrected to inspected revision 2. The large completion then reproduced SQLiteBlobTooBigException, fixed by bounded transactional journal reads; subsequent focused and full gates passed."
+        }
+      ],
+      "migrations": [],
+      "compatibility": "No SQL or Room schema changes. Existing account payload bytes are read via 16384-character SQLite substr chunks in a Room transaction. Completion requests use the existing private causalRequests/causalReceipts fields and dedicated completion endpoints. Existing legacy receipts are unchanged. Normal scheduler/UI activation remains incomplete.",
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-completion-send-android.log",
+          "sha256": "aebee72828b8bc1ff880dc2319067d05ee0eb777f042dfe55467bf70ef626005"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-completion-send-release.log",
+          "sha256": "468d8bae7b7378def2212328063fc3cf86938b3cc60793b1bd3cbc2afdef5e2d"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-completion-send-disk-failure.log",
+          "sha256": "559d919ffb3f1dab89d0a7fdb7e35acf6157b562d0b4d5ae7096f435fbadf20e"
+        }
+      ],
+      "testIdentity": "213 native Robolectric/Room tests: 212 passed, one hosted test skipped. Five additional production-engine tests exercise completion staging, corrupt chunk acknowledgment, lost responses, later pending and acknowledged edits, predecessor receipts and rollback. One DAO test proves multi-megabyte astral/CJK Unicode round trips. Synthetic server responses are not PostgreSQL or hosted acceptance.",
+      "buildArtifact": {
+        "path": "android-native/app/build/outputs/apk/production/debug/app-production-debug.apk",
+        "sha256": "676d29daa1f720664ac464651bc691cac2741eaa3473fa17fe7d1cb28f55cbd0",
+        "kind": "unsigned production-debug APK; not installed"
+      },
+      "blockers": [
+        "Normal native scheduler/UI activation and combined ordinary/causal scheduling remain incomplete.",
+        "Rejected/conflicting completion recovery, divergent legacy recovery, macOS integration and comprehensive cross-client acceptance remain incomplete.",
+        "No hosted/native-device or new CI acceptance is claimed."
+      ],
+      "permittedNextStage": "Continue S2; S3 blocked"
     }
   ],
   "findings": [
@@ -3562,6 +3653,14 @@
     {
       "id": "S2-NATIVE-COMPLETION-ADMISSION",
       "disposition": "PASS_LOCAL: actual focus parent, exact final notes, task/reward/event effects, original preimages and stable member reservations share one Room commit. Old attempted predecessors remain unchanged. Later edits wait behind the reserved member. Transport integration remains incomplete."
+    },
+    {
+      "id": "S2-NATIVE-COMPLETION-SEND",
+      "disposition": "PASS_LOCAL: completion requests wait for exact dependency receipts, retain immutable wire bytes, stage large bodies, and retire only after exact history application. Local effects are acknowledged without re-awarding or overwriting later notes; dependent rows release atomically."
+    },
+    {
+      "id": "S2-NATIVE-JOURNAL-CURSOR-WINDOW",
+      "disposition": "Reproduced SQLiteBlobTooBigException with a valid large completion journal. Replaced whole-row account reads with bounded Unicode-safe chunks inside one Room transaction; no payload rewriting or schema migration."
     }
   ],
   "migrations": [
@@ -3768,7 +3867,10 @@
     "evidence/s2-account-storage-room-hashes.log",
     "evidence/s2-account-storage-identifiers.log",
     "docs/operations/reliability/evidence/s2-native-completion-admission-android.log",
-    "docs/operations/reliability/evidence/s2-native-completion-admission-release.log"
+    "docs/operations/reliability/evidence/s2-native-completion-admission-release.log",
+    "docs/operations/reliability/evidence/s2-native-completion-send-android.log",
+    "docs/operations/reliability/evidence/s2-native-completion-send-release.log",
+    "docs/operations/reliability/evidence/s2-native-completion-send-disk-failure.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

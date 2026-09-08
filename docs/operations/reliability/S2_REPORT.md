@@ -2,7 +2,7 @@
 
 Stage acceptance: **BLOCKED — implementation continues. S3 is not permitted.**
 
-Latest tested source: `d9be0ac007d4107c543fb3cf18ef692eaa9c924f`. Native local causal completion admission: **PASS_LOCAL** (206 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release verification passed). Completion request/send/retirement integration, UI/scheduler activation, macOS and legacy recovery remain incomplete. S3 remains blocked.
+Latest tested source: `32743d3bb2c7c15354212520b123d3c398e2299e`. Native completion synchronization through the production engine and Room against synthetic server responses: **PASS_LOCAL** (212 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release verification passed). Normal activation, recovery, macOS and cross-client acceptance remain incomplete. S3 remains blocked.
 
 S1's tested commit `09245261b6174ec878f0296ca61682c603f54304` is integrated.
 S1.2 correction `262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d` is integrated;
@@ -717,3 +717,15 @@ Existing attempted predecessors remain unchanged. Subsequent edits depend on the
 Verification: 207 native tests, 206 passed and one hosted test skipped; native lint and debug APK passed. Release verification passed with 719 tests in 105 files. Nine Room hashes and 24 identifiers passed. Initial focused test compilation failed on an incorrect test-only updateTask signature, then passed after correction. Sanitized logs and APK SHA-256 are in the JSON checkpoint. No schema migration, installed-app replacement, live write, deployment or CI acceptance is claimed.
 
 Remaining: wire completion request preparation, staged send and exact receipt/history retirement into the native action pass. Completion is deliberately excluded from the ordinary focus endpoint while that integration remains unfinished. This is local admission evidence, not end-to-end native completion acceptance.
+
+## Native completion send and retirement checkpoint
+
+`32743d3bb2c7c15354212520b123d3c398e2299e`: **PASS_LOCAL** for the explicit native causal action pass. Completion waits for exact ordinary and focus predecessor receipts before freezing its bases. Requests up to 4 MiB use the existing staged upload manifest and dedicated completion endpoint. Every chunk acknowledgment and final receipt is validated; retries preserve exact saved bytes.
+
+Accepted local completion history represents effects already committed at admission. It releases member-dependent mutations and advances their metadata in the same Room transaction as the applied history basis. It never awards again or replaces later notes, including a later edit that has itself been acknowledged. A lost completion response recovers from history without another send. An application failure rolls back dependency release and metadata; pending intent and exact receipts remain retained.
+
+The large-note test reproduced a real SQLite CursorWindow limit in whole-row causal journal reads. The DAO now reads 16,384 Unicode characters per query inside a Room transaction. Existing bytes, account IDs and schema are unchanged. A separate multi-megabyte astral/CJK Unicode test and the staged completion engine tests verify the fix.
+
+Final verification: 213 native tests, 212 passed and one hosted test skipped; lint and debug APK passed. Release verification passed with 719 tests in 105 files. Nine Room hashes and 24 identifiers passed. An earlier full run failed during native-runtime extraction because the disk was full; its failure excerpt is retained. Removing only unused generated compiler module caches restored space and the complete gate was rerun successfully.
+
+Remaining: normal native UI/scheduler activation, recovery for rejected/conflicting completions, macOS integration and the full cross-client campaign. The engine tests use synthetic server responses and do not establish live PostgreSQL, hosted or physical-device acceptance. No deployment or app replacement occurred.
