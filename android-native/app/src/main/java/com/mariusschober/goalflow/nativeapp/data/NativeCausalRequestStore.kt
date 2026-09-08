@@ -102,6 +102,28 @@ class NativeCausalRequestStore(private val database: GoalflowDatabase) {
         return entity to NativeCausalJournal.validate(entity)
     }
 
+    /** Original admission order supplies dependencies, never wall-clock order.
+     * A retained rejection waits for resolution instead of being sent forever. */
+    suspend fun nextReady(accountId: String): String? = database.withTransaction {
+        val (_, state) = state(accountId)
+        val revision = NativeCausalRequestJournal.appliedRevision(state)
+        require(revision >= 0) { "Apply verified history before selecting an action." }
+        val canonical = NativeCausalReplay.replayAt(accountId, state.getJSONObject("causalHistory"), revision)
+        val candidates = mutableListOf<Pair<Long, String>>()
+        for ((admissionKey, pendingKey) in listOf("focusAdmissions" to "focusOutbox", "counterAdmissions" to "counterOutbox",
+            "counterDayAdmissions" to "counterDayOutbox")) {
+            val pending = state.optJSONObject(pendingKey) ?: continue
+            for (id in pending.keys()) {
+                if (state.optJSONObject("causalReceipts")?.has(id) == true) continue
+                val command = pending.getJSONObject(id)
+                if (pendingKey == "counterOutbox" && !canonical.baselines.has(command.getString("day"))) continue
+                if (pendingKey == "focusOutbox" && state.optJSONObject("causalProjectionReviews")?.optJSONObject(id)?.opt("code") == "TASK_REVIEW_REQUIRED") continue
+                candidates.add(state.getJSONObject(admissionKey).getJSONObject(id).getLong("sequence") to id)
+            }
+        }
+        candidates.minByOrNull { it.first }?.second
+    }
+
     suspend fun prepare(accountId: String, actionId: String): String = database.withTransaction {
         val (entity, state) = state(accountId)
         val requests = state.optJSONObject("causalRequests") ?: JSONObject()

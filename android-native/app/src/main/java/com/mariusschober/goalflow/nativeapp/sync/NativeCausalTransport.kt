@@ -25,9 +25,22 @@ object NativeCausalTransport {
     }
 
     fun send(accountId: String, savedRequest: String, request: (String, String, String) -> NativeHttpResponse): JSONObject {
+        val operation = prepared(accountId, savedRequest)
+        return received(accountId, operation, request("/api/v1/sync/actions", "POST", savedRequest))
+    }
+
+    suspend fun sendBound(accountId: String, savedRequest: String,
+        request: suspend (String, String, String?) -> NativeHttpResponse): JSONObject {
+        val operation = prepared(accountId, savedRequest)
+        return received(accountId, operation, request("/api/v1/sync/actions", "POST", savedRequest))
+    }
+
+    private fun prepared(accountId: String, savedRequest: String): JSONObject {
         if (savedRequest.toByteArray(Charsets.UTF_8).size > 256 * 1024) throw NativeCausalTransportException(413, false)
-        val operation = NativeCausalProtocol.operation(accountId, JSONObject(savedRequest))
-        val response = request("/api/v1/sync/actions", "POST", savedRequest)
+        return NativeCausalProtocol.operation(accountId, JSONObject(savedRequest))
+    }
+
+    private fun received(accountId: String, operation: JSONObject, response: NativeHttpResponse): JSONObject {
         if (response.code !in 200..299) throw NativeCausalTransportException(response.code,
             response.code in setOf(408, 425, 429) || response.code >= 500)
         if (response.body.toByteArray(Charsets.UTF_8).size > 8 * 1024 * 1024) {

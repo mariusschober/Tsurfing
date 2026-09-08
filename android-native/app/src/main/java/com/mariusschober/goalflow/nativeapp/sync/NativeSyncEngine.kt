@@ -170,6 +170,19 @@ class NativeSyncEngine(
         }
     }
 
+    /** Explicit causal pass while completion/UI rollout remains unfinished. */
+    suspend fun synchronizeCausalActions(maximumActions: Int = 50): NativeCausalActionSyncResult = synchronizationMutex.withLock {
+        withContext(Dispatchers.IO) {
+            require(maximumActions in 1..50 && cloudAvailable()) { "Causal synchronization is unavailable or its pass limit is invalid." }
+            val session = sessionProvider.read() ?: throw AuthenticationExpiredDuringSync()
+            if (session.expiresAtMillis <= System.currentTimeMillis() + 60_000L) throw AuthenticationExpiredDuringSync()
+            val accountId = verifiedUserId(session)
+            repository.bindSyncAccount(accountId)
+            NativeCausalActionSync(repository) { path, method, body -> requestForSession(session, path, method, body) }
+                .synchronize(accountId, maximumActions)
+        }
+    }
+
     private suspend fun synchronizeOnce(): SyncResult = withContext(Dispatchers.IO) {
         if (!cloudAvailable()) return@withContext SyncResult.Skipped
         val session = sessionProvider.read() ?: return@withContext SyncResult.Skipped
