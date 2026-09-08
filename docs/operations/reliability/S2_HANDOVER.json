@@ -1,9 +1,9 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Web automatic enrollment and fresh-account server initialization are locally verified. Divergent legacy reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
+  "acceptanceReason": "Implementation continues. Web automatic enrollment, fresh-account server initialization, non-focus task completion, blocked-review and rejected-completion dismissal, and Android focus/task UI admission are locally verified. Divergent legacy ambiguity import, nonempty-restore reconciliation, macOS causal integration, native recovery/enrollment activation, mixed-version rollout, and comprehensive cross-client acceptance remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
-  "finalCommit": "32743d3bb2c7c15354212520b123d3c398e2299e",
+  "finalCommit": "0a207b751e32345690d988c68cf6424ef44d5666",
   "prerequisites": [
     {
       "stageId": "S1",
