@@ -168,3 +168,79 @@ it('hydrates a causal new day as a retained request instead of resetting counter
   await storageService.rolloverTrackingDay(f.user, '2026-09-09');
   expect(await storageService.readCommittedSnapshot(f.user)).toEqual(snapshot);
 });
+
+it('initializes a newly used account behind the global fence without inventing a server baseline', async () => {
+  const f = await fixture(), user = crypto.randomUUID(), before = await f.read();
+  const defaults = { date: '2026-09-08', planViewCount: 0, dailyPostponeCount: 0, focusSession: null, future: 'retained default' };
+  const results = await Promise.all([
+    storageService.initializeIfAbsent('tracking', user, defaults),
+    storageService.initializeIfAbsent('tracking', user, { ...defaults, date: '2026-09-09' })
+  ]);
+  expect(results).toEqual([defaults, defaults]);
+  const db = await openDB(f.name), state = await db.get(CAUSAL_STORE, user); db.close();
+  expect(state.cutover.trackingPresent).toBe(false); expect(state.cutover.trackingValue).toBeUndefined();
+  expect(state.trackingValue).toEqual(defaults); expect(state.localInitialization.trackingValue).toEqual(defaults);
+  expect(state.counterBaselines).toBeUndefined();
+  expect(state.counterDaySelection).toMatchObject({ requestedDay: defaults.date, status: 'WAITING_BASELINE' });
+  expect(Object.keys(state.counterDayAdmissions)).toEqual([state.localInitialization.dayActionId]);
+  const visit = await storageService.admitPlanningVisit(user, { schemaVersion: 1, actionId: crypto.randomUUID(), accountId: user,
+    day: defaults.date, timeZone: 'UTC', capturedAt: '2026-09-08T10:00:00.000Z' });
+  expect(visit.admission.effect.status).toBe('WAITING_BASELINE');
+  expect(await storageService.get('tracking', user)).toEqual(defaults);
+  expect(await f.read()).toEqual(before);
+});
+
+it('rolls back new-account authority, day intent and sync initialization if the tracking mirror fails', async () => {
+  const f = await fixture(), user = crypto.randomUUID(), before = await f.read();
+  const defaults = { date: '2026-09-08', planViewCount: 0, dailyPostponeCount: 0 };
+  const add = IDBObjectStore.prototype.add;
+  const spy = vi.spyOn(IDBObjectStore.prototype, 'add').mockImplementation(function(this: IDBObjectStore, ...args) {
+    if (this.name === 'tracking') throw new Error('Synthetic account initialization failure');
+    return add.apply(this, args);
+  });
+  try { await expect(storageService.initializeIfAbsent('tracking', user, defaults)).rejects.toThrow('Synthetic'); } finally { spy.mockRestore(); }
+  const db = await openDB(f.name);
+  expect(await db.get(CAUSAL_STORE, user)).toBeUndefined(); expect(await db.get('tracking', user)).toBeUndefined();
+  expect(await db.get(CAUSAL_BUSINESS_STORE, ['sync', user])).toBeUndefined(); db.close();
+  expect(await f.read()).toEqual(before);
+  expect(await storageService.initializeIfAbsent('tracking', user, defaults)).toEqual(defaults);
+  const snapshot = await storageService.readCommittedSnapshot(user);
+  expect(snapshot.pendingCount).toBe(1);
+});
+
+it('never treats retained mirrors, fallback evidence or imported legacy tracking as a new account', async () => {
+  const f = await fixture(), defaults = { date: '2026-09-08', planViewCount: 0, dailyPostponeCount: 0 };
+  const mirrorUser = crypto.randomUUID(), db = await openDB(f.name);
+  await db.put('tracking', { causalAccountKey: mirrorUser, payload: { ...defaults, planViewCount: 27 } }); db.close();
+  await expect(storageService.initializeIfAbsent('tracking', mirrorUser, defaults)).rejects.toThrow('explicit recovery');
+  const fallbackUser = crypto.randomUUID(), key = `goalflow_fallback_tracking_${fallbackUser}`, raw = JSON.stringify({ ...defaults, planViewCount: 27 });
+  f.values.set(key, raw);
+  await expect(storageService.initializeIfAbsent('tracking', fallbackUser, defaults)).rejects.toThrow('explicit recovery');
+  expect(f.values.get(key)).toBe(raw);
+  const legacyUser = crypto.randomUUID();
+  await expect(storageService.initializeIfAbsent('tracking', legacyUser, defaults, true)).rejects.toThrow('explicit recovery');
+  const inspect = await openDB(f.name);
+  for (const user of [mirrorUser, fallbackUser, legacyUser]) expect(await inspect.get(CAUSAL_STORE, user)).toBeUndefined();
+  expect((await inspect.get('tracking', mirrorUser)).payload.planViewCount).toBe(27); inspect.close();
+});
+
+it('does not initialize recorded tracking absence or caller-supplied nonzero defaults', async () => {
+  const f = await fixture(), db = await openDB(f.name), state = await db.get(CAUSAL_STORE, f.user);
+  state.trackingPresent = false; state.trackingValue = undefined; await db.put(CAUSAL_STORE, state); db.close();
+  const defaults = { date: '2026-09-08', planViewCount: 0, dailyPostponeCount: 0 };
+  await expect(storageService.initializeIfAbsent('tracking', f.user, defaults)).rejects.toThrow('explicit recovery');
+  await expect(storageService.initializeIfAbsent('tracking', crypto.randomUUID(), { ...defaults, planViewCount: 27 })).rejects.toThrow('explicit recovery');
+  expect((await f.read()).state).toEqual(state);
+});
+
+
+it('treats an empty legacy lookup as a no-op but never rebinds retained source evidence', async () => {
+  const f = await fixture(), before = await f.read(), source = 'unused@example.test';
+  await storageService.migrateUserKey(source, f.user);
+  expect(await f.read()).toEqual(before);
+  const key = `goalflow_tasks_${source}`, raw = JSON.stringify([{ id: 'retained-legacy-task' }]);
+  f.values.set(key, raw);
+  await expect(storageService.migrateUserKey(source, f.user)).rejects.toThrow('cannot be rebound');
+  expect(f.values.get(key)).toBe(raw); expect(await f.read()).toEqual(before);
+  await expect(storageService.initializeIfAbsent('tasks', crypto.randomUUID(), [{ id: 'legacy' }], true)).rejects.toThrow('explicit recovery');
+});

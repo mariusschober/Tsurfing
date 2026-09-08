@@ -28,8 +28,8 @@ export const installS1Harness = (root: Root) => {
     __s1AdmitCounter: admitLocalCounter,
     __s1Sync: synchronizeCloudOnce,
     __s1Candidate: reconciliationCandidate,
-    __s1RenderAccount: (user: string) => root.render(React.createElement(App, {
-      key: user, userKey: user, userEmail: user, userRole: 'owner', onLogout: () => root.render(null)
+    __s1RenderAccount: (user: string, legacyEmail = user) => root.render(React.createElement(App, {
+      key: user, userKey: user, userEmail: legacyEmail, userRole: 'owner', onLogout: () => root.render(null)
     })),
     __s1Unmount: () => root.render(null)
   });

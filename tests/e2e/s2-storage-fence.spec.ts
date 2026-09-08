@@ -493,3 +493,36 @@ test('rendered planning visits warn on six and retry a failed seventh penalty ex
   expect(saved.snapshot.values.progress.xp).toBe(55); expect(saved.snapshot.values.progress.unknown).toBe('retained');
   expect(saved.snapshot.values.tracking.focusSession).toEqual(before.tracking.focusSession);
 });
+
+test('a new UUID account hydrates behind an existing fence and captures offline planning and focus', async ({ page }) => {
+  const existing = await fencedFocusApp(page), fresh = crypto.randomUUID();
+  const before = await page.evaluate(async account => (window as any).__s1Storage.readCommittedSnapshot(account), existing.account);
+  await page.evaluate(fresh => {
+    const api = window as any; api.__s1Unmount(); api.__s1RenderAccount(fresh, 'new-local-account@example.test');
+  }, fresh);
+  await page.getByTitle('Add new task (a)').click();
+  const form = page.getByRole('dialog', { name: 'New Task' });
+  await form.getByPlaceholder('What is the next action?').fill('Synthetic new-account task');
+  await form.locator('[aria-label="Task schedule"]').getByRole('button', { name: 'Today', exact: true }).click();
+  await form.getByRole('button', { name: 'Create Task', exact: true }).click();
+  await expect(form).toBeHidden();
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await page.getByRole('button', { name: 'Start focus', exact: true }).click();
+  await page.getByTitle('Start Focus (Space)').click();
+  await expect(page.getByTitle('Pause Timer (Space)')).toBeVisible();
+  const result = await page.evaluate(async ({ fresh, prior }) => {
+    const api = window as any; const snapshot = await api.__s1Storage.readCommittedSnapshot(fresh);
+    const name = localStorage.getItem('goalflow_active_database_v2') || 'GoalflowDB';
+    const db = await api.__s1Fence(name); const state = await db.get('causal_actions', fresh); db.close();
+    return { snapshot, state, prior: await api.__s1Storage.readCommittedSnapshot(prior) };
+  }, { fresh, prior: existing.account });
+  expect(result.snapshot.values.tasks).toHaveLength(1);
+  expect(result.state.cutover.trackingPresent).toBe(false);
+  expect(result.state.localInitialization.trackingValue.planViewCount).toBe(0);
+  expect(result.state.counterBaselines).toBeUndefined();
+  expect(result.state.counterDaySelection.status).toBe('WAITING_BASELINE');
+  expect(Object.keys(result.state.counterDayOutbox)).toHaveLength(1);
+  expect(Object.keys(result.state.counterOutbox)).toHaveLength(1);
+  expect(Object.keys(result.state.focusOutbox)).toHaveLength(1);
+  expect(result.prior.values).toEqual(before.values); expect(result.prior.meta).toEqual(before.meta);
+});

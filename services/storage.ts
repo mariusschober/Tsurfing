@@ -34,6 +34,7 @@ import { CAUSAL_BUSINESS_STORE, CAUSAL_BUSINESS_STORES, BUSINESS_KEY_PATH, causa
 import { encodeCausalBackup, readCausalBackup } from './causalBackup';
 import { admitLocalFocusControl, type LocalFocusControl, type FocusAccountState } from './causalFocusCoordinator';
 import { admitLocalCounterDay, type CounterDayAccountState } from './causalCounterDayCoordinator';
+import { parseCounterDayCommand } from './causalProtocol';
 import { admitLocalCompletionControl, type CompletionControlIntent } from './causalCompletionCoordinator';
 
 const BASE_DB_NAME = 'GoalflowDB';
@@ -1666,6 +1667,7 @@ export const storageService = {
   },
 
   async initializeIfAbsent<T>(storeName: string, userKey: string, value: T, migrate = false): Promise<T> {
+    value = structuredClone(value);
     return queueMutation(async () => {
       const db = await getDB();
       if (!db) throw new DurableStorageError('Initialization awaits atomic storage; existing data was not replaced.');
@@ -1677,6 +1679,7 @@ export const storageService = {
         const existing = await readAccountValue(tx, storeName, userKey);
         installed = existing === undefined ? value : existing as T;
         if (existing === undefined) {
+          if (migrate && tx.objectStoreNames.contains(CAUSAL_STORE)) throw new DurableStorageError('Legacy account data requires explicit recovery after causal cutover. Its source remains unchanged.');
           if (tx.objectStoreNames.contains(CAUSAL_BUSINESS_STORE) && (CAUSAL_BUSINESS_STORES as readonly string[]).includes(storeName)
             && await tx.objectStore(CAUSAL_BUSINESS_STORE).getKey([storeName, userKey]) !== undefined) {
             throw new DurableStorageError('Recorded absence or an undefined authoritative value requires explicit recovery before initialization.');
@@ -1688,7 +1691,33 @@ export const storageService = {
               localEvidence(meta).journal[action.id] = action;
             }
           }
-          await writeAccountValue(tx, storeName, userKey, value);
+          if (storeName === STORES.TRACKING && tx.objectStoreNames.contains(CAUSAL_STORE)) {
+            const tracking: unknown = value;
+            if (!isRecord(tracking)) throw new DurableStorageError('New-account tracking defaults must be an object.');
+            const prior = await readCausalAccount(tx, userKey);
+            const retainedCopies = hasWindow() && [fallbackKey(storeName, userKey), recoveryKey(storeName, userKey), deletedKey(storeName, userKey)]
+              .some(key => window.localStorage.getItem(key) !== null);
+            if (prior || migrate || retainedCopies || await tx.objectStore(STORES.TRACKING).getKey(userKey) !== undefined
+              || !isDailyTrackingValue({ date: tracking.date, planViewCount: tracking.planViewCount, dailyPostponeCount: tracking.dailyPostponeCount })
+              || tracking.planViewCount !== 0 || tracking.dailyPostponeCount !== 0 || tracking.focusSession != null) {
+              throw new DurableStorageError('Retained tracking requires explicit recovery; new-account defaults were not installed.');
+            }
+            const day = parseCounterDayCommand({ schemaVersion: 1, actionId: randomUuid(), accountId: userKey,
+              actorId: readDeviceId(), kind: 'select', day: tracking.date, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              capturedAt: new Date().toISOString() });
+            const rawSync = await readAccountValue(tx, STORES.SYNC, userKey);
+            // Local defaults are not proof of a cloud baseline. Preserve the
+            // original absence and explicitly wait for verified day evidence.
+            const state: CounterDayAccountState = { schemaVersion: 1, accountKey: userKey, generation: 1,
+              trackingPresent: true, trackingValue: value,
+              cutover: { trackingPresent: false, trackingValue: undefined, syncPresent: rawSync !== undefined, syncValue: rawSync },
+              localInitialization: { schemaVersion: 1, trackingValue: structuredClone(value), dayActionId: day.actionId },
+              actionIdentities: { [day.actionId]: { kind: 'counterDay', intent: day } },
+              counterDayAdmissions: { [day.actionId]: { command: day, sequence: 1 } }, counterDayOutbox: { [day.actionId]: day },
+              counterDaySelection: { actionId: day.actionId, requestedDay: day.day, status: 'WAITING_BASELINE' } };
+            await tx.objectStore(CAUSAL_STORE).add(state);
+            await tx.objectStore(STORES.TRACKING).add({ [TRACKING_KEY_PATH]: userKey, payload: value });
+          } else await writeAccountValue(tx, storeName, userKey, value);
         }
         await putMeta(tx, userKey, meta);
         await tx.done;
@@ -1727,7 +1756,25 @@ export const storageService = {
 
   async migrateUserKey(sourceKey: string, targetKey: string): Promise<void> {
     if (!sourceKey || sourceKey === targetKey) return;
-    if ((await getDB())?.objectStoreNames.contains(CAUSAL_STORE)) throw new DurableStorageError('Causal account identities require explicit recovery and cannot be rebound by a legacy key migration.');
+    const db = await getDB();
+    if (db?.objectStoreNames.contains(CAUSAL_STORE)) {
+      const tx = db.transaction(accountTransactionStores(db, [...DATA_STORES, STORES.SYNC, STORES.SNAPSHOTS]), 'readonly');
+      let sourcePresent = await tx.objectStore(CAUSAL_STORE).getKey(sourceKey) !== undefined;
+      for (const store of [...DATA_STORES, STORES.SYNC]) {
+        if (await tx.objectStore(store).getKey(sourceKey) !== undefined) sourcePresent = true;
+        if (tx.objectStoreNames.contains(CAUSAL_BUSINESS_STORE) && (CAUSAL_BUSINESS_STORES as readonly string[]).includes(store)
+          && await tx.objectStore(CAUSAL_BUSINESS_STORE).getKey([store, sourceKey]) !== undefined) sourcePresent = true;
+      }
+      if ((await tx.objectStore(STORES.SNAPSHOTS).getAllKeys()).some(key => typeof key === 'string' && key.startsWith(`${sourceKey}:`))) sourcePresent = true;
+      await tx.done;
+      const legacyKeys = [...DATA_STORES, STORES.SYNC].map(store => `goalflow_${store}_${sourceKey}`);
+      legacyKeys.push(`goalflow-daily-plan:${sourceKey}`);
+      if (Object.keys(backupLocalCaptures(sourceKey)).length || (hasWindow() && legacyKeys.some(key => window.localStorage.getItem(key) !== null))) sourcePresent = true;
+      if (sourcePresent) throw new DurableStorageError('Causal account identities require explicit recovery and cannot be rebound by a legacy key migration.');
+      // Nothing is migrated. Current UUID accounts must still hydrate when
+      // their legacy email lookup has no source data at all.
+      return;
+    }
     for (const storeName of DATA_STORES) {
       const targetValue = await this.get(storeName, targetKey);
       if (targetValue !== undefined) continue;

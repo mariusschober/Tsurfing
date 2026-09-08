@@ -10,6 +10,9 @@ export interface CausalAccountState {
   actionIdentities?: Record<string, { kind: string; intent: unknown }>;
   trackingPresent: boolean;
   trackingValue: unknown;
+  /** A newly used local account behind the database-wide fence. This preserves
+   * actual prior absence; it is not server enrollment or a counter baseline. */
+  localInitialization?: { schemaVersion: 1; trackingValue: unknown; dayActionId: string };
   /** Immutable structured-clone preimages, including malformed/unknown values. */
   cutover: {
     trackingPresent: boolean;
