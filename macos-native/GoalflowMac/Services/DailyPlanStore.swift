@@ -50,10 +50,20 @@ final class DailyPlanStore: @unchecked Sendable {
         let previous = try loadAll()
         // Preserve confirmed policy before any legacy plan-clearing operation.
         for plan in previous { _ = try isOrderLocked(for: plan.localDate) }
+        let account = try syncMetaStore.load().accountUserId ?? "unbound-local-workspace"
+        let planning = DeliberatePlanningStore(metaStore: syncMetaStore)
         for plan in norm {
-            if let before = previous.first(where: { $0.localDate == plan.localDate }),
-               try isOrderLocked(for: plan.localDate), DeliberatePlanning.changed(before.taskIds, plan.taskIds) {
-                throw SyncError.validation("Order is locked. Open Replan in today's plan to confirm a new order.")
+            // The shared plan may have been cleared. Its retained policy, not
+            // the presence of a previous projection, is the order authority.
+            let policy = try planning.policy(accountID: account, day: plan.localDate,
+                legacy: previous.first(where: { $0.localDate == plan.localDate }))
+            if !(policy["revision"] is NSNull) {
+                guard let confirmed = policy["confirmedOrder"] as? [String] else {
+                    throw SyncError.validation("The retained planning order is invalid. Nothing was replaced.")
+                }
+                if DeliberatePlanning.changed(confirmed, plan.taskIds) {
+                    throw SyncError.validation("Order is locked. Open Replan in today's plan to confirm a new order.")
+                }
             }
         }
         let prevVal: Any? = previous.map { ["id": $0.localDate, "localDate": $0.localDate, "confirmedAt": $0.confirmedAt, "taskIds": $0.taskIds] as [String: Any] }

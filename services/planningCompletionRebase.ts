@@ -175,6 +175,12 @@ export function rebasePlanningCompletionMember(entityType: string, before: unkno
   for (const key of new Set([...Object.keys(before), ...Object.keys(after)])) {
     if (same(before[key], after[key])) continue;
     if (!owned.has(key)) throw new Error('The saved completion also changes unrelated task fields.');
+    // These fields can also be edited independently on another device. A
+    // completion owns its delta, not permission to overwrite concurrent work.
+    if (['description', 'actualDuration', 'flowState'].includes(key)
+      && !same(synced[key], before[key]) && !same(synced[key], after[key])) {
+      throw new Error(`Both devices changed ${key}. Your completion is retained for review.`);
+    }
     if (key in after) result[key] = after[key]; else delete result[key];
   }
   return result;
