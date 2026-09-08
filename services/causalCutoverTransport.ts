@@ -2,15 +2,27 @@ import { parseCausalCutover, assertCausalCutoverReceipt } from './causalCutoverP
 import { prepareStagedBody, verifyReconciliationChunkAck } from './reconciliationStaging';
 import { readResponseBodyWithLimit } from './boundedResponse';
 import { CausalTransportError } from './causalTransport';
+import { parseCausalInitialization, assertCausalInitializationReceipt } from './causalInitializationProtocol';
+
+type EnrollmentRuntime = {
+  authenticatedFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  signal?: AbortSignal; timeoutMs?: number;
+};
 
 /** Sends previously durable bytes. Chunk retries preserve the complete
  * cutover baseline and identity; no local evidence is retired here. */
-export async function sendCausalCutover(accountId: string, savedRequest: string, runtime: {
-  authenticatedFetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
-  signal?: AbortSignal; timeoutMs?: number;
-}) {
-  runtime.signal?.throwIfAborted();
+export async function sendCausalCutover(accountId: string, savedRequest: string, runtime: EnrollmentRuntime) {
   const operation = parseCausalCutover(accountId, JSON.parse(savedRequest));
+  return assertCausalCutoverReceipt(accountId, operation, await sendEnrollment(savedRequest, runtime, 'causal-cutover'));
+}
+
+export async function sendCausalInitialization(accountId: string, savedRequest: string, runtime: EnrollmentRuntime) {
+  const operation = parseCausalInitialization(accountId, JSON.parse(savedRequest));
+  return assertCausalInitializationReceipt(accountId, operation, await sendEnrollment(savedRequest, runtime, 'causal-initialize'));
+}
+
+async function sendEnrollment(savedRequest: string, runtime: EnrollmentRuntime, route: 'causal-cutover' | 'causal-initialize') {
+  runtime.signal?.throwIfAborted();
   const timeout = runtime.timeoutMs ?? 30_000;
   if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 120_000) throw new RangeError('Invalid cutover request deadline.');
   const upload = await prepareStagedBody(savedRequest);
@@ -36,7 +48,6 @@ export async function sendCausalCutover(accountId: string, savedRequest: string,
     const ack = await request('/api/v1/sync/conflicts/stage', JSON.stringify(chunk), 16 * 1024);
     verifyReconciliationChunkAck(chunk, ack);
   }
-  const receipt = await request(upload.manifest ? '/api/v1/sync/causal-cutover-staged' : '/api/v1/sync/causal-cutover',
+  return await request(`/api/v1/sync/${route}${upload.manifest ? '-staged' : ''}`,
     upload.manifest ? JSON.stringify(upload.manifest) : savedRequest, 16 * 1024 * 1024);
-  return assertCausalCutoverReceipt(accountId, operation, receipt);
 }

@@ -58,7 +58,8 @@ for migration in \
   "${repository_root}/supabase/migrations/20260907234144_s2_counter_day_admission.sql" \
   "${repository_root}/supabase/migrations/20260908004753_s2_causal_capability_discovery.sql" \
   "${repository_root}/supabase/migrations/20260908011224_s2_causal_history_chunks.sql" \
-  "${repository_root}/supabase/migrations/20260908015740_s2_atomic_focus_completion.sql"; do
+  "${repository_root}/supabase/migrations/20260908015740_s2_atomic_focus_completion.sql" \
+  "${repository_root}/supabase/migrations/20260908065315_s2_causal_account_initialization.sql"; do
   psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${migration}" >/dev/null
 done
 psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${repository_root}/scripts/migration-integrity-assertions.sql" >/dev/null
@@ -109,6 +110,8 @@ done
 
 for test_database in "${empty_database}" "${upgrade_database}"; do
   PGDATABASE="${test_database}" python3 "${repository_root}/scripts/test-s2-action-ledger.py"
+  PGDATABASE="${test_database}" python3 "${repository_root}/scripts/test-s2-initialization.py"
+  PGDATABASE="${test_database}" node --import tsx "${repository_root}/scripts/test-s2-initialization-api-postgres.ts"
 done
 
 for test_database in "${empty_database}" "${upgrade_database}"; do

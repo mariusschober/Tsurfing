@@ -2,6 +2,7 @@ import { parseCounterDayCommand } from './causalProtocol';
 import { assertCausalHistoryEntry } from './causalHistoryProtocol';
 import { stableJson } from './syncProtocol';
 import type { CausalAccountState } from './causalStorage';
+import { parseCausalInitialization, assertCausalInitializationReceipt } from './causalInitializationProtocol';
 
 type State = CausalAccountState & Record<string, any>;
 const same = (a: unknown, b: unknown) => stableJson(a) === stableJson(b);
@@ -11,7 +12,8 @@ const same = (a: unknown, b: unknown) => stableJson(a) === stableJson(b);
 export function validateLocalInitialization(accountId: string, state: State) {
   const initial = state.localInitialization;
   if (initial === undefined) {
-    if (state.localInitializationHistory !== undefined) throw new Error('The original local initialization is missing.');
+    if (state.localInitializationHistory !== undefined || state.serverInitializationRequest !== undefined
+      || state.serverInitializationReceipt !== undefined) throw new Error('The original local initialization is missing.');
     return;
   }
   const value = initial?.trackingValue as Record<string, unknown> | undefined;
@@ -33,6 +35,17 @@ export function validateLocalInitialization(accountId: string, state: State) {
       || proof.body !== entry.body || proof.sha256 !== entry.sha256) throw new Error('The initialization history differs from retained evidence.');
     assertCausalHistoryEntry(accountId, state.causalHistory.epoch, 0, JSON.parse(proof.body));
   }
+  if (state.serverInitializationRequest !== undefined) {
+    if (typeof state.serverInitializationRequest !== 'string') throw new Error('The initialization request is invalid.');
+    const operation = parseCausalInitialization(accountId, JSON.parse(state.serverInitializationRequest));
+    if (!same(operation.initialTracking, value) || state.actionIdentities?.[operation.initializationId]) {
+      throw new Error('The initialization request differs from its original local evidence.');
+    }
+    if (state.serverInitializationReceipt !== undefined) {
+      const receipt = assertCausalInitializationReceipt(accountId, operation, state.serverInitializationReceipt);
+      if (proof && !same(JSON.parse(proof.body).receipt, receipt.cutoverReceipt)) throw new Error('Initialization and retained history disagree.');
+    }
+  } else if (state.serverInitializationReceipt !== undefined) throw new Error('The exact initialization request is missing.');
 }
 
 export function bindLocalInitializationHistory(accountId: string, state: State) {

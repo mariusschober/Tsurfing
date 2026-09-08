@@ -9,8 +9,11 @@ import { validateCounterDayEvidence, type CounterDayAccountState } from './causa
 import { causalBusinessTransactionStores, readCausalBusiness } from './causalBusinessStorage';
 import { normalizeSyncMeta, stableJson, type SyncMeta } from './syncProtocol';
 import type { CausalOperation } from './causalProtocol';
+import { initializeServerAccount } from './causalServerInitialization';
+import { parseCausalInitialization } from './causalInitializationProtocol';
 
-type State = CompletionAccountState & CounterDayAccountState & { causalHistory?: SavedCausalHistory };
+type State = CompletionAccountState & CounterDayAccountState & { causalHistory?: SavedCausalHistory;
+  serverInitializationRequest?: string; serverInitializationReceipt?: Record<string, any> };
 export type CausalQueueWork = { type: 'completion'; actionId: string } | { type: 'action'; operation: CausalOperation };
 const same = (a: unknown, b: unknown) => stableJson(a) === stableJson(b);
 
@@ -73,10 +76,16 @@ export async function synchronizeCausalQueues(name: string, accountId: string, r
     let capability = await discoverCausalCapability(name, accountId, runtime);
     if (!capability.enrolled) {
       const bytes = await prepareKnownCausalCutover(name, accountId);
-      if (bytes === null) return { ready: false, sent, pending: pendingCount((await snapshot(name, accountId)).state), reason: 'ENROLLMENT_REQUIRED' as const };
-      await syncCausalCutover(name, accountId, JSON.parse(bytes), runtime);
+      if (bytes === null) {
+        if (!await initializeServerAccount(name, accountId, runtime)) return { ready: false, sent, pending: pendingCount((await snapshot(name, accountId)).state), reason: 'ENROLLMENT_REQUIRED' as const };
+      } else await syncCausalCutover(name, accountId, JSON.parse(bytes), runtime);
       capability = await discoverCausalCapability(name, accountId, runtime);
       if (!capability.enrolled) throw new Error('The acknowledged cutover is not visible yet. Retry the retained enrollment.');
+    }
+    const enrollment = (await snapshot(name, accountId)).state;
+    if (enrollment.serverInitializationRequest !== undefined && enrollment.serverInitializationReceipt === undefined
+      && parseCausalInitialization(accountId, JSON.parse(enrollment.serverInitializationRequest)).initializationId === capability.epoch) {
+      await initializeServerAccount(name, accountId, runtime);
     }
     for (;;) {
       const history = await pullCausalHistory(name, accountId, runtime);

@@ -17,6 +17,34 @@ async function endpoint(rpc:any) {
   return `http://127.0.0.1:${(server.address() as any).port}/sync/conflicts/reconcile`;
 }
 describe('automatic sync API boundary',()=>{
+  it('binds initialization to the authenticated owner and validates the selected legacy baseline', async () => {
+    const epoch = '33333333-3333-4333-8333-333333333333';
+    const operation = { schemaVersion: 2, accountId: owner, initializationId: epoch,
+      initialTracking: { date: '2026-09-08', planViewCount: 0, dailyPostponeCount: 0 } };
+    const payload = { date: '2026-09-08', planViewCount: 27, dailyPostponeCount: 3, legacy: 'retained' };
+    const receipt = { schemaVersion: 2, type: 'initialization', operation, created: false,
+      cutoverReceipt: { schemaVersion: 2, epoch, projectionRevision: 0,
+        operation: { schemaVersion: 2, accountId: owner, cutoverId: epoch, expectedTrackingServerVersion: 7, expectedTrackingPayload: payload },
+        baseline: { schemaVersion: 1, baselineId: epoch, accountId: owner, day: payload.date,
+          counts: { planViewCount: 27, dailyPostponeCount: 3 }, evidenceIds: [epoch] },
+        record: { user_id: owner, entity_type: 'tracking', entity_id: 'singleton', version: 1, server_version: 7,
+          device_id: 'legacy', updated_at: '2026-09-08T10:00:00.000Z', deleted_at: null, payload } } };
+    const rpc = vi.fn(async (name: string) => ({ data: name === 'goalflow_read_staged_reconciliation_v1' ? operation : receipt, error: null }));
+    const url = (await endpoint(rpc)).replace('/conflicts/reconcile', '/causal-initialize');
+    const send = (body: unknown, staged = false) => fetch(url + (staged ? '-staged' : ''), {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const response = await send(operation);
+    expect(response.status).toBe(200); expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(await response.json()).toEqual(receipt);
+    const upload = await prepareStagedBody(JSON.stringify(operation), true);
+    expect((await send(upload.manifest, true)).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('goalflow_causal_initialize_v2', { target_user_id: owner, operation });
+    rpc.mockClear();
+    expect((await send({ ...operation, accountId: epoch })).status).toBe(400);
+    expect(rpc).not.toHaveBeenCalled();
+    receipt.created = true;
+    expect((await send(operation)).status).toBe(503);
+  });
   it('binds direct and staged enrollment to the owner and preserves changed-baseline review', async () => {
     const epoch = '33333333-3333-4333-8333-333333333333';
     const payload = { date: '2026-09-08', planViewCount: 27, dailyPostponeCount: 3 };

@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { reconcileLegacyTasks } from '../taskReconciliation';
 import { readConflictPage } from '../conflictPages';
 import { readStagedReconciliation, stageReconciliationChunk } from '../reconciliationStaging';
-import { admitCausalOperation, readCausalCapability, establishCausalCutover } from '../causalActions';
+import { admitCausalOperation, readCausalCapability, establishCausalCutover, initializeCausalAccount } from '../causalActions';
 import { readCausalHistoryChunk } from '../causalHistory';
 import { completeCausalFocus } from '../causalCompletion';
 
@@ -217,6 +217,19 @@ export const reconcileCandidate = async (database: SupabaseClient, userId: strin
 export const createSyncRouter = (admin?: SupabaseClient) => {
   const router = Router();
   const requireHardenedProtocol = admin ? createSyncProtocolGuard(admin) : undefined;
+
+  for (const staged of [false, true]) router.post(staged ? '/sync/causal-initialize-staged' : '/sync/causal-initialize', async (request, response) => {
+    response.setHeader('Cache-Control', 'no-store');
+    try {
+      const input = staged ? await readStagedReconciliation(requireDatabase(admin), request.user!.id, request.body) : request.body;
+      response.json(await initializeCausalAccount(requireDatabase(admin), request.user!.id, input));
+    } catch (error) {
+      if (isRecord(error) && ['22023', '40001'].includes(String(error.code))) {
+        response.status(409).json({ error: { code: 'causal_initialization_review_required', message: 'Preserve initialization evidence and refresh account history.' } });
+      } else if (error instanceof z.ZodError) invalidRequest(response, error);
+      else response.status(503).json({ error: { code: 'causal_initialization_unavailable', message: 'Retry the exact saved initialization request.' } });
+    }
+  });
 
   // Enrollment is explicit and compare-and-establish. Discovery never writes.
   for (const staged of [false, true]) router.post(staged ? '/sync/causal-cutover-staged' : '/sync/causal-cutover', async (request, response) => {

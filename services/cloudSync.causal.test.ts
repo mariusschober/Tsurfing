@@ -10,9 +10,11 @@ import { initialFocusJournal, applyFocusCommand } from '../src/domain/causalFocu
 import { projectCounters, type CounterDelta } from '../src/domain/counterLedger';
 import { causalHistoryHash } from './causalHistoryProtocol';
 import { emptySyncMeta, normalizeSyncMeta } from './syncProtocol';
+import { IDBObjectStore } from 'fake-indexeddb';
+import { encodeCausalBackup, readCausalBackup } from './causalBackup';
 afterEach(() => { vi.unstubAllGlobals(); });
 
-async function fixture(enrolled = true, emptyLocal = false) {
+async function fixture(enrolled = true, emptyLocal = false, serverAbsent = false) {
   const accountId = crypto.randomUUID(), sessionId = crypto.randomUUID(), name = 's2-cloud-' + crypto.randomUUID();
   let epoch = crypto.randomUUID();
   const values = new Map<string, string>([['goalflow_active_database_v2', name]]);
@@ -40,12 +42,38 @@ async function fixture(enrolled = true, emptyLocal = false) {
   const events: CounterDelta[] = [], requests: string[] = [];
   let loseResponse = false;
   let loseEnrollmentResponse = false;
+  let initializationReceipt: any;
+  let peerInitializationWins = false;
   let unverifiedPull = false;
   let beforePull: (() => Promise<void>) | undefined;
   const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), 'https://fixture.invalid');
     if (url.pathname.endsWith('/causal-capability')) return Response.json({ schemaVersion: 2, accountId, enrolled,
       epoch: enrolled ? epoch : null, projectionRevision: enrolled ? receipts.length - 1 : null, rolloutReady: false });
+    if (url.pathname.endsWith('/causal-initialize')) {
+      const submitted = JSON.parse(String(init?.body));
+      const peerWon = peerInitializationWins; peerInitializationWins = false;
+      const operation = peerWon ? { ...submitted, initializationId: crypto.randomUUID() } : submitted;
+      if (initializationReceipt) {
+        expect(operation).toEqual(initializationReceipt.operation);
+        return Response.json(initializationReceipt);
+      }
+      expect(operation.initialTracking.planViewCount).toBe(0);
+      epoch = operation.initializationId; enrolled = true;
+      if (serverAbsent) {
+        serverTracking = structuredClone(operation.initialTracking);
+        journal = initialFocusJournal(accountId, serverTracking.focusSession);
+        baseline.counts = { planViewCount: 0, dailyPostponeCount: 0 };
+      }
+      baseline.baselineId = epoch; baseline.evidenceIds = [epoch];
+      receipts[0] = { schemaVersion: 2, epoch, projectionRevision: 0, baseline,
+        operation: { schemaVersion: 2, accountId, cutoverId: epoch, expectedTrackingServerVersion: 1, expectedTrackingPayload: serverTracking },
+        record: { ...record(structuredClone(serverTracking), 0), device_id: serverAbsent ? 'causal-initialization-v2' : 'causal-v2' } };
+      initializationReceipt = structuredClone({ schemaVersion: 2, type: 'initialization', operation, created: serverAbsent, cutoverReceipt: receipts[0] });
+      if (peerWon) return Response.json({ error: { code: 'causal_initialization_review_required' } }, { status: 409 });
+      if (loseEnrollmentResponse) { loseEnrollmentResponse = false; throw new Error('Synthetic lost initialization response'); }
+      return Response.json(initializationReceipt);
+    }
     if (url.pathname.endsWith('/causal-cutover')) {
       const operation = JSON.parse(String(init?.body));
       expect(operation.expectedTrackingPayload).toEqual(tracking);
@@ -99,9 +127,77 @@ async function fixture(enrolled = true, emptyLocal = false) {
   const run = () => synchronizeCloudOnce(accountId, { fetch, isOnline: () => true, now: () => new Date(), deviceId: () => 'local', maxAttempts: 1 }, { seedLocalData: false });
   return { accountId, name, epoch, sessionId, tracking, baseline, event, requests, run, unverified: () => { unverifiedPull = true; }, onPull: (callback: () => Promise<void>) => { beforePull = callback; },
     loseEnrollment: () => { loseEnrollmentResponse = true; },
+    peerEnrollment: () => { peerInitializationWins = true; },
     peerIncrement: () => fetch('/api/v1/sync/actions', { method: 'POST', body: JSON.stringify({ schemaVersion: 2, epoch, type: 'counter',
       command: { ...event, actionId: crypto.randomUUID(), actorId: 'peer' } }) }).then(() => undefined), lose: () => { loseResponse = true; } };
 }
+
+it.each([[false, false], [false, true], [true, false], [true, true]])(
+  'initializes unenrolled server state without inventing pending counts (absent: %s, lost response: %s)', async (absent, lost) => {
+    const f = await fixture(false, true, absent);
+    await admitLocalCounter(f.name, f.event);
+    const db = await openDB(f.name), before = await db.get(CAUSAL_STORE, f.accountId);
+    if (lost) {
+      f.loseEnrollment();
+      await expect(f.run()).rejects.toThrow('Synthetic lost initialization');
+    }
+    const meta = await f.run(), after = await db.get(CAUSAL_STORE, f.accountId);
+    expect(after.cutover).toEqual(before.cutover);
+    expect(after.localInitialization).toEqual(before.localInitialization);
+    expect(after.serverInitializationReceipt.operation).toEqual(JSON.parse(after.serverInitializationRequest));
+    expect(after.serverInitializationReceipt.created).toBe(absent);
+    expect(after.trackingValue.planViewCount).toBe(absent ? 1 : 28);
+    expect(after.trackingValue.dailyPostponeCount).toBe(absent ? 0 : 3);
+    expect(after.trackingValue.focusSession).toEqual(absent ? null : f.tracking.focusSession);
+    expect(after.counterEvents[f.event.actionId]).toEqual(f.event);
+    expect(after.counterOutbox).toEqual({}); expect(after.counterDayOutbox).toEqual({});
+    expect(meta.cursor).toBe(3);
+    await f.run(); expect(f.requests).toHaveLength(2);
+    db.close();
+  });
+
+it('recovers an initialization receipt write failure and validates its backup evidence', async () => {
+  const f = await fixture(false, true, true);
+  await admitLocalCounter(f.name, f.event);
+  const put = IDBObjectStore.prototype.put;
+  const spy = vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function(this: IDBObjectStore, ...args) {
+    if (this.name === CAUSAL_STORE && args[0]?.serverInitializationReceipt) throw new Error('Synthetic initialization receipt failure');
+    return put.apply(this, args);
+  });
+  try { await expect(f.run()).rejects.toThrow('Synthetic initialization receipt failure'); }
+  finally { spy.mockRestore(); }
+  const db = await openDB(f.name), interrupted = await db.get(CAUSAL_STORE, f.accountId);
+  expect(interrupted.serverInitializationReceipt).toBeUndefined();
+  expect(interrupted.counterOutbox[f.event.actionId]).toEqual(f.event);
+  await f.run();
+  const state = await db.get(CAUSAL_STORE, f.accountId);
+  expect(state.serverInitializationRequest).toBe(interrupted.serverInitializationRequest);
+  expect(state.trackingValue.planViewCount).toBe(1);
+  const evidence = { authority: state, trackingMirror: await db.get('tracking', f.accountId),
+    sync: await storageService.get('sync', f.accountId), captures: {} };
+  const backup = () => ({ schemaVersion: 1, encoded: encodeCausalBackup(evidence) });
+  expect(readCausalBackup(f.accountId, backup()).authority.serverInitializationReceipt).toEqual(state.serverInitializationReceipt);
+  evidence.authority.serverInitializationReceipt.operation.initialTracking.planViewCount = 1;
+  expect(() => readCausalBackup(f.accountId, backup())).toThrow();
+  db.close();
+});
+
+it('retains a competing initialization attempt while joining the winning verified epoch', async () => {
+  const f = await fixture(false, true, true);
+  await admitLocalCounter(f.name, f.event); f.peerEnrollment();
+  await expect(f.run()).rejects.toThrow();
+  const db = await openDB(f.name), before = await db.get(CAUSAL_STORE, f.accountId);
+  await f.run();
+  const after = await db.get(CAUSAL_STORE, f.accountId);
+  expect(after.serverInitializationRequest).toBe(before.serverInitializationRequest);
+  expect(after.serverInitializationReceipt).toBeUndefined();
+  expect(JSON.parse(after.serverInitializationRequest).initializationId).not.toBe(after.causalHistory.epoch);
+  expect(after.localInitializationHistory.body).toBe(after.causalHistory.entries['0'].body);
+  expect(after.trackingValue.planViewCount).toBe(1);
+  expect(after.counterEvents[f.event.actionId]).toEqual(f.event);
+  expect(after.counterOutbox).toEqual({});
+  db.close();
+});
 
 it('joins enrolled history from preserved local absence before sending a queued increment', async () => {
   const f = await fixture(true, true);
