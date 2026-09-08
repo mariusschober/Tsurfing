@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Rendered Web focus completion now awaits atomic admission and preserves failed checkout retries. Counter business actions, non-focus completion concurrency, causal scheduling/enrollment, native integration and recovery remain incomplete.",
+  "acceptanceReason": "Implementation continues. Fenced Web rescheduling now admits task and counter effects atomically with a rendered retry flow. Planning-visit penalties, non-focus completion concurrency, causal scheduling/enrollment, native integration and recovery remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -2187,6 +2187,77 @@
         "Non-focus task completion retains the ordinary path; its concurrency boundary remains to be integrated/reviewed.",
         "Counter business actions, network scheduling/enrollment, native integration and recovery remain incomplete.",
         "No SQL/native changes or PostgreSQL/native rerun; no installation or deployment."
+      ]
+    },
+    {
+      "commit": "f66bc40c77b12991de3ab63f4b76377e3d6801dc",
+      "scope": "Atomic local Web reschedule/counter business admission and rendered retry",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "components/PlanningView.tsx",
+        "docs/operations/reliability/S2_PROTOCOL_ADR.md",
+        "hooks/useGoalflow.ts",
+        "services/causalCounterCoordinator.ts",
+        "services/causalRescheduleCoordinator.test.ts",
+        "services/causalRescheduleCoordinator.ts",
+        "services/storage.ts",
+        "tests/e2e/s2-storage-fence.spec.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-RESCHEDULE-COUNTER-ATOMIC",
+          "disposition": "Fixed locally: current task derivation, ordinary task queue and uniquely identified day counter share the same transaction."
+        },
+        {
+          "id": "S2-RESCHEDULE-UI-ACK",
+          "disposition": "Fixed locally: dialog waits for durable success, retains failure and reuses original matching capture on retry."
+        }
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 660,
+          "testFiles": 100
+        },
+        {
+          "command": "S1_INCLUDE_EXISTING=1 npx playwright test --config playwright.s1.config.ts tests/e2e/s1-local-storage.spec.ts tests/e2e/s2-storage-fence.spec.ts",
+          "exitCode": 0,
+          "tests": 62,
+          "platforms": [
+            "Chromium",
+            "WebKit"
+          ]
+        },
+        {
+          "command": "npm run build",
+          "exitCode": 0
+        }
+      ],
+      "evidence": [
+        {
+          "path": "evidence/s2-reschedule-release-verified.log",
+          "sha256": "389ad667ad1df0bc43d15937a758eb982fb98d781da0c4d85569ddc6d4d5ac53"
+        },
+        {
+          "path": "evidence/s2-reschedule-browser-combined.log",
+          "sha256": "58f4f8a18729a34193194f5755d580b583b0148f16cb76100b8a645373339269"
+        },
+        {
+          "path": "evidence/s2-reschedule-production-build.log",
+          "sha256": "6fe6057ca18d81769eeac3cc1062aa3afa601fb674150846d926ca6c936e6a0e"
+        }
+      ],
+      "failedAttempts": [
+        "Initial sandbox browser startup failed with loopback EPERM; approved local-server retry ran.",
+        "Initial release run failed in loopback-dependent server tests (59 failed, 601 passed); approved full rerun passed.",
+        "Initial rendered fixture expected an overdue-only Reschedule button after remount. Corrected fixture to open the real planning drag/drop dialog and retain its mounted state through the explicit test-only fence; both browsers passed."
+      ],
+      "limitations": [
+        "Planning-visit penalty admission and causal scheduling remain unfinished.",
+        "This proves local reschedule/counter atomicity; task transport retains its existing exact ordinary receipts.",
+        "Non-focus completion concurrency, native integration, enrollment and full backup/recovery acceptance remain.",
+        "No SQL/native changes, PostgreSQL/native rerun, installation, configuration or deployment."
       ]
     }
   ],

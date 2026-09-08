@@ -531,3 +531,14 @@ The real browser test injects failure only at the terminal-focus write. It verif
 Validation: full release exit 0, 654 tests in 99 files; combined S1/S2 Chromium/WebKit journeys exit 0, 60 tests; final production build/artifact scans exit 0. Six sanitized logs and hashes are in the JSON checkpoint. Remote fetch recovered from one transient TLS error.
 
 Non-focus task completion still uses the ordinary path and requires its concurrency boundary review. Counter business effects, enrollment/scheduling, native integration, recovery and mixed-version acceptance remain incomplete. No SQL/native change or rerun, installation, live configuration or deployment. Overall S2 acceptance remains **BLOCKED** and S3 is not permitted.
+
+
+## Web reschedule business checkpoint
+
+`f66bc40c77b12991de3ab63f4b76377e3d6801dc`: **PASS_LOCAL**. Fenced Web rescheduling derives the current task and postponement increment inside one transaction. Task changes, the existing ordinary mutation queue/journal, the immutable reschedule admission and its child counter event commit together. Concurrent moves use their actual task parent, existing frog commitments remain enforced, and retries do not duplicate either effect. A delayed action retains its captured day; an unknown baseline retains the event without inventing a visible count.
+
+The dialog waits for durable admission, stays open on failure and blocks simultaneous submissions. Unit regressions cover concurrent parents, frog rejection, full rollback, delayed/unknown-day attribution and retries after unrelated counter activity. The real browser test opens the planning drag/drop reschedule dialog, injects a failed write, then verifies identical retry capture and one resulting task/counter admission.
+
+Validation: full release exit 0, 660 tests in 100 files; combined S1/S2 Chromium/WebKit journeys exit 0, 62 tests; final production build and artifact checks exit 0. Three sanitized logs and SHA-256 hashes are recorded in the JSON handover. Initial sandbox loopback failures and the corrected browser fixture are recorded as failed attempts, not passes.
+
+Planning-visit penalty admission, causal scheduling/enrollment, non-focus completion concurrency, native integration and full recovery/mixed-version acceptance remain incomplete. No SQL/native changes or reruns, installation, live configuration or deployment. S2 remains **BLOCKED** and S3 is not permitted.
