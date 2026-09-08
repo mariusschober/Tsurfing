@@ -101,6 +101,7 @@ object NativeCausalJournal {
         NativeCausalEnrollmentProtocol.validate(account.accountId, state)
         NativeCausalRequestJournal.validate(account.accountId, state)
         NativeCompletionApplicationEvidence.validate(state)
+        NativeLegacyReceiptEvidence.validate(account.accountId, state)
         return state
     }
 

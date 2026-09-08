@@ -52,7 +52,8 @@ data class NativePushResult(
     val recordServerVersion: Long? = null,
     val recordPayload: String? = null,
     val recordUpdatedAt: String? = null,
-    val recordDeletedAt: String? = null
+    val recordDeletedAt: String? = null,
+    val receiptJson: String? = null
 )
 
 data class NativeRemoteRecord(
@@ -2157,11 +2158,26 @@ class GoalflowRepository(
         return database.withTransaction {
             var conflictCount = 0
             val resultById = results.associateBy { it.mutationId }
+            val causalAccount = accounts.get()?.userId?.let { causalAccounts.get(it) }
+            val causalState = causalAccount?.let { NativeCausalJournal.validate(it) }
             batch.forEach { sent ->
+                val result = resultById.getValue(sent.mutationId)
                 val mutation = outbox.getForEntity(sent.entityType, sent.entityId)
                     .firstOrNull { it.mutationId == sent.mutationId }
-                    ?: return@forEach // A duplicate response after a committed local transition.
-                val result = resultById.getValue(mutation.mutationId)
+                require(mutation == null || mutation == sent.copy(attemptedAt = mutation.attemptedAt)) {
+                    "The pending mutation changed after it was sent. Original evidence remains retained."
+                }
+                if (causalState != null && result.accepted) {
+                    require(mutation != null || causalState.optJSONObject("legacyPushReceipts")?.has(sent.mutationId) == true) {
+                        "The predecessor acknowledgment has no retained pending request or receipt."
+                    }
+                    val rawReceipt = result.receiptJson ?: error("The complete predecessor receipt is required before retirement.")
+                    require(ActionJson.integer(JSONObject(rawReceipt).opt("serverVersion")) == result.serverVersion) {
+                        "The full predecessor receipt differs from its parsed acknowledgment."
+                    }
+                    NativeLegacyReceiptEvidence.retain(requireNotNull(causalAccount).accountId, causalState, mutation ?: sent, rawReceipt)
+                }
+                if (mutation == null) return@forEach
                 val metaKey = syncMetaKey(mutation.entityType, mutation.entityId)
                 val currentMeta = syncMeta.get(metaKey)
                 if (result.accepted && !result.replayMismatch) {
@@ -2214,6 +2230,10 @@ class GoalflowRepository(
                     )
                     conflictCount += 1
                 }
+            }
+            if (causalState != null) {
+                val updated = requireNotNull(causalAccount).copy(payload = causalState.toString()); NativeCausalJournal.validate(updated)
+                check(causalAccounts.update(updated) == 1)
             }
             conflictCount
         }

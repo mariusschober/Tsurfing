@@ -277,7 +277,8 @@ class NativeSyncEngine(
                             recordServerVersion = recordServerVersion,
                             recordPayload = recordPayload,
                             recordUpdatedAt = recordUpdatedAt,
-                            recordDeletedAt = recordDeletedAt
+                            recordDeletedAt = recordDeletedAt,
+                            receiptJson = result.toString()
                         )
                     )
                 }
