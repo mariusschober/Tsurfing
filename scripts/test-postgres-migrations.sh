@@ -56,12 +56,14 @@ for migration in \
   "${repository_root}/supabase/migrations/20260907220709_s2_private_action_ledger.sql" \
   "${repository_root}/supabase/migrations/20260907222904_s2_staged_reconciliation.sql" \
   "${repository_root}/supabase/migrations/20260907234144_s2_counter_day_admission.sql" \
-  "${repository_root}/supabase/migrations/20260908004753_s2_causal_capability_discovery.sql"; do
+  "${repository_root}/supabase/migrations/20260908004753_s2_causal_capability_discovery.sql" \
+  "${repository_root}/supabase/migrations/20260908011224_s2_causal_history_chunks.sql"; do
   psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${migration}" >/dev/null
 done
 psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${repository_root}/scripts/migration-integrity-assertions.sql" >/dev/null
 for test_database in "${empty_database}" "${upgrade_database}"; do
   psql -v ON_ERROR_STOP=1 -d "${test_database}" -f "${repository_root}/scripts/migration-causal-capability-assertions.sql" >/dev/null
+  psql -v ON_ERROR_STOP=1 -d "${test_database}" -f "${repository_root}/scripts/migration-causal-history-assertions.sql" >/dev/null
 done
 access_assertions="${repository_root}/scripts/migration-access-boundary-assertions.sql"
 psql -v ON_ERROR_STOP=1 -d "${empty_database}" -f "${access_assertions}" >/dev/null
