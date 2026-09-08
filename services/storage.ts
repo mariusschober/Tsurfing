@@ -27,12 +27,13 @@ import {
 import { mergeTrackingFocusSession, normalizeFocusSession } from '../src/domain/focusSession';
 import { assertNewSyncPayload, transportablePushBatch } from './syncEnvelope';
 import { CAUSAL_STORE, TRACKING_KEY_PATH, fenceLegacyTracking, readCausalAccount } from './causalStorage';
-import { CAUSAL_BUSINESS_STORE } from './causalBusinessStorage';
+import { CAUSAL_BUSINESS_STORE, CAUSAL_BUSINESS_STORES, BUSINESS_KEY_PATH, causalBusinessTransactionStores,
+  fenceLegacyBusinessStores, readCausalBusiness, readCausalBusinessBackup, writeCausalBusiness } from './causalBusinessStorage';
 import { encodeCausalBackup, readCausalBackup } from './causalBackup';
 
 const BASE_DB_NAME = 'GoalflowDB';
 const ACTIVE_DB_KEY = 'goalflow_active_database_v2';
-const BACKUP_SCHEMA_VERSION = 5;
+const BACKUP_SCHEMA_VERSION = 6;
 const WAL_PREFIX = 'goalflow_wal_v2_';
 const LOCAL_SYNC_CONTEXT = import.meta.env.VITE_LOCAL_SYNC_CONTEXT || 's1-v1-unbundled';
 
@@ -117,7 +118,7 @@ export const validateBackupCollections = (backup: unknown): Record<string, any> 
     ? envelope.collections
     : backup;
   if (!isRecord(collections)) throw new Error('The backup does not contain typed collections.');
-  if (envelope.schemaVersion === 5 && !Object.hasOwn(collections, CAUSAL_STORE)) {
+  if (Number(envelope.schemaVersion) >= 5 && !Object.hasOwn(collections, CAUSAL_STORE)) {
     throw new Error('The causal backup journal is missing. Nothing was restored.');
   }
   if (envelope.checksum !== undefined && !/^[a-f0-9]{64}$/i.test(String(envelope.checksum))) {
@@ -1551,25 +1552,29 @@ export const storageService = {
     if (!initialDb?.objectStoreNames.contains(CAUSAL_STORE)) await this.flushPendingLocalChanges(userKey);
     return queueMutation(async () => {
       const collections: Record<string, unknown> = {};
+      let schemaVersion = 4;
       const db = await getDB();
       if (db) {
-        if (db.objectStoreNames.contains(CAUSAL_BUSINESS_STORE)) throw new DurableStorageError('Business authority backup support is required before export. No incomplete backup was generated; existing data is unchanged.');
         const causal = db.objectStoreNames.contains(CAUSAL_STORE);
-        const tx = db.transaction([...DATA_STORES, STORES.SYNC, ...(causal ? [CAUSAL_STORE] : [])], 'readonly');
+        const businessFenced = db.objectStoreNames.contains(CAUSAL_BUSINESS_STORE);
+        const tx = db.transaction(causalBusinessTransactionStores(db, [...DATA_STORES, STORES.SYNC, ...(causal ? [CAUSAL_STORE] : [])]), 'readonly');
         const authority = causal ? await readCausalAccount(tx, userKey) : undefined;
         for (const storeName of DATA_STORES) {
-          const value = causal && storeName === STORES.TRACKING
-            ? (authority?.trackingPresent ? authority.trackingValue : undefined)
-            : await tx.objectStore(storeName).get(userKey);
+          const value = storeName === STORES.TRACKING
+            ? (causal ? (authority?.trackingPresent ? authority.trackingValue : undefined) : await tx.objectStore(storeName).get(userKey))
+            : await readCausalBusiness(tx, storeName, userKey);
           if (value !== undefined) collections[storeName] = value;
         }
-        const meta = await tx.objectStore(STORES.SYNC).get(userKey);
+        const meta = await readCausalBusiness(tx, STORES.SYNC, userKey);
         const trackingMirror = causal ? await tx.objectStore(STORES.TRACKING).get(userKey) : undefined;
+        const business = businessFenced ? await readCausalBusinessBackup(tx, userKey) : undefined;
         if (meta !== undefined) collections[STORES.SYNC] = normalizeSyncMeta(meta);
         await tx.done;
         if (causal) {
           const captures = backupLocalCaptures(userKey);
-          collections[CAUSAL_STORE] = { schemaVersion: 1, encoded: encodeCausalBackup({ authority, trackingMirror, sync: meta, captures }) };
+          collections[CAUSAL_STORE] = { schemaVersion: 1, encoded: encodeCausalBackup({ authority, trackingMirror, sync: meta, captures,
+            ...(business ? { business } : {}) }) };
+          schemaVersion = business ? 6 : 5;
         }
       } else {
         for (const storeName of [...DATA_STORES, STORES.SYNC]) {
@@ -1578,7 +1583,7 @@ export const storageService = {
         }
       }
       return {
-        schemaVersion: Object.hasOwn(collections, CAUSAL_STORE) ? BACKUP_SCHEMA_VERSION : 4,
+        schemaVersion,
         exportedAt: new Date().toISOString(),
         ownerKey: userKey,
         checksum: await checksumCollections(collections),
@@ -1598,8 +1603,8 @@ export const storageService = {
       throw new Error('Backup checksum validation failed. The file may be incomplete or modified.');
     }
     if (Object.hasOwn(verifiedCollections, CAUSAL_STORE)) {
-      if (envelope.schemaVersion !== 5 || envelope.ownerKey !== userKey || !envelope.checksum) throw new DurableStorageError('A bound schema-5 causal backup is required.');
-      const evidence = readCausalBackup(userKey, verifiedCollections[CAUSAL_STORE], verifiedCollections);
+      if (![5, 6].includes(envelope.schemaVersion!) || envelope.ownerKey !== userKey || !envelope.checksum) throw new DurableStorageError('A bound schema-5 or schema-6 causal backup is required.');
+      const evidence = readCausalBackup(userKey, verifiedCollections[CAUSAL_STORE], verifiedCollections, envelope.schemaVersion === 6);
       await validateCompletionApplicationEvidence(userKey, evidence.authority);
       if (stableJson(verifiedCollections[STORES.TRACKING]) !== stableJson(evidence.authority.trackingPresent ? evidence.authority.trackingValue : undefined)
         || stableJson(verifiedCollections[STORES.SYNC]) !== stableJson(evidence.sync === undefined ? undefined : normalizeSyncMeta(evidence.sync))) {
@@ -1618,18 +1623,25 @@ export const storageService = {
             }
           }
           for (const store of tx.objectStoreNames) {
+            if (store === CAUSAL_BUSINESS_STORE) {
+              for (const name of CAUSAL_BUSINESS_STORES) {
+                if (await tx.objectStore(store).getKey([name, userKey]) !== undefined) throw new DurableStorageError('Existing business authority requires journal reconciliation before restore. Existing data is unchanged.');
+              }
+              continue;
+            }
             if (await tx.objectStore(store).getKey(userKey) !== undefined) throw new DurableStorageError('Causal backup recovery requires journal reconciliation before restore into an existing account. Existing data is unchanged.');
           }
           if (Object.keys(backupLocalCaptures(userKey)).length) throw new DurableStorageError('Existing local captures require journal reconciliation before restore. They remain unchanged.');
           return false;
         };
-        const before = initial.transaction([...DATA_STORES, STORES.SYNC, ...(initial.objectStoreNames.contains(CAUSAL_STORE) ? [CAUSAL_STORE] : [])], 'readonly');
+        const before = initial.transaction(causalBusinessTransactionStores(initial, [...DATA_STORES, STORES.SYNC, ...(initial.objectStoreNames.contains(CAUSAL_STORE) ? [CAUSAL_STORE] : [])]), 'readonly');
         const duplicate = await assertEmpty(before);
         await before.done;
         if (duplicate) return;
-        const db = await fenceLegacyTracking(initial.name);
+        let db = await fenceLegacyTracking(initial.name);
+        if (evidence.business) { const name = db.name; db.close(); db = await fenceLegacyBusinessStores(name); }
         try {
-          const tx = db.transaction([...DATA_STORES, STORES.SYNC, CAUSAL_STORE], 'readwrite');
+          const tx = db.transaction(causalBusinessTransactionStores(db, [...DATA_STORES, STORES.SYNC, CAUSAL_STORE]), 'readwrite');
           void tx.done.catch(() => undefined);
           try {
             // Recheck inside the write transaction: a peer may have committed
@@ -1645,11 +1657,18 @@ export const storageService = {
             for (const store of DATA_STORES) {
               if (store === STORES.TRACKING) {
                 if (authority.trackingPresent) await tx.objectStore(store).add({ [TRACKING_KEY_PATH]: userKey, payload: authority.trackingValue });
-              } else if (Object.hasOwn(verifiedCollections, store)) {
-                await tx.objectStore(store).add(verifiedCollections[store], userKey);
+              } else if (!evidence.business && Object.hasOwn(verifiedCollections, store)) {
+                await writeCausalBusiness(tx, store, userKey, verifiedCollections[store]);
               }
             }
-            if (evidence.sync !== undefined) await tx.objectStore(STORES.SYNC).add(evidence.sync, userKey);
+            if (evidence.business) {
+              for (const store of CAUSAL_BUSINESS_STORES) {
+                const record = evidence.business.records[store];
+                if (record === undefined) continue;
+                await tx.objectStore(CAUSAL_BUSINESS_STORE).add(record);
+                if (record.present) await tx.objectStore(store).add({ [BUSINESS_KEY_PATH]: userKey, payload: record.value });
+              }
+            } else if (evidence.sync !== undefined) await writeCausalBusiness(tx, STORES.SYNC, userKey, evidence.sync);
             await tx.objectStore(CAUSAL_STORE).add(authority);
             await tx.done;
           } catch (error) {

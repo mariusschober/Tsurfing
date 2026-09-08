@@ -10,13 +10,19 @@ export const CAUSAL_BUSINESS_STORES = [
   'truenorth', 'amalgam', 'circadian', 'settings', 'daily_plans', 'task_events', 'sync'
 ] as const;
 type Transaction = IDBPTransaction<unknown, string[], 'readonly' | 'readwrite'>;
-interface BusinessRecord {
+export interface BusinessRecord {
   schemaVersion: 1;
   storeName: string;
   accountKey: IDBValidKey;
   present: boolean;
   value: unknown;
   cutover: { present: boolean; value: unknown };
+  [key: string]: unknown;
+}
+export interface BusinessBackupEvidence {
+  schemaVersion: 1;
+  records: Record<string, BusinessRecord | undefined>;
+  mirrors: Record<string, { present: boolean; value: unknown }>;
 }
 const closeOnUpgrade = (_a: number, _b: number | null, event: IDBVersionChangeEvent) => {
   (event.target as IDBDatabase).close();
@@ -128,6 +134,18 @@ export async function readCausalBusiness(tx: Transaction, store: string, account
   const record = await readRecord(tx, store, accountKey);
   return record?.present ? record.value : undefined;
 }
+/** Read every store in the same snapshot as the causal journal. Retain mirror
+ * discrepancies as evidence without selecting mirrors as current authority. */
+export async function readCausalBusinessBackup(tx: Transaction, accountKey: IDBValidKey): Promise<BusinessBackupEvidence> {
+  const records: BusinessBackupEvidence['records'] = {}, mirrors: BusinessBackupEvidence['mirrors'] = {};
+  for (const store of CAUSAL_BUSINESS_STORES) {
+    if (!isFenced(tx, store)) throw new Error('Business backup requires the complete authority fence.');
+    records[store] = await readRecord(tx, store, accountKey);
+    mirrors[store] = { present: await tx.objectStore(store).getKey(accountKey) !== undefined,
+      value: await tx.objectStore(store).get(accountKey) };
+  }
+  return { schemaVersion: 1, records, mirrors };
+}
 /** Caller owns transaction commit/abort. Deletion retains both original cutover
  * evidence and a private absent marker; it never reimports a legacy mirror. */
 export async function writeCausalBusiness(tx: IDBPTransaction<unknown, string[], 'readwrite'>,
@@ -138,7 +156,7 @@ export async function writeCausalBusiness(tx: IDBPTransaction<unknown, string[],
     return;
   }
   const prior = await readRecord(tx, store, accountKey);
-  await tx.objectStore(CAUSAL_BUSINESS_STORE).put({ schemaVersion: 1, storeName: store, accountKey,
+  await tx.objectStore(CAUSAL_BUSINESS_STORE).put({ ...prior, schemaVersion: 1, storeName: store, accountKey,
     present, value, cutover: prior?.cutover ?? { present: false, value: undefined } } satisfies BusinessRecord);
   if (present) await tx.objectStore(store).put({ [BUSINESS_KEY_PATH]: accountKey, payload: value });
   else await tx.objectStore(store).delete(accountKey);

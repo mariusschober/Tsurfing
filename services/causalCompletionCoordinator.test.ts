@@ -199,13 +199,13 @@ function installWindow(name: string) {
   return values;
 }
 
-it('restores the actual schema-5 backup and retries the original pending completion bytes', async () => {
-  const f = await fixture(), intent = f.intent(); installWindow(f.name);
+it.each([false, true])('restores the actual backup and retries pending completion bytes (business fence %s)', async fenced => {
+  const f = await fixture(fenced), intent = f.intent(); installWindow(f.name);
   await admitLocalCompletion(f.name, intent);
   const bytes = await prepareCompletionRequest(f.name, f.accountId, intent.focus.actionId);
   const before = await f.read();
   const backup = await storageService.exportBackup(f.accountId);
-  expect(backup.schemaVersion).toBe(5);
+  expect(backup.schemaVersion).toBe(fenced ? 6 : 5);
   const name = `s2-restored-completion-${crypto.randomUUID()}`; installWindow(name);
   await storageService.importBackup(f.accountId, JSON.parse(JSON.stringify(backup)));
   expect(await prepareCompletionRequest(name, f.accountId, intent.focus.actionId)).toBe(bytes);
@@ -213,9 +213,10 @@ it('restores the actual schema-5 backup and retries the original pending complet
   expect(await syncLocalCompletion(name, f.accountId, intent.focus.actionId, { authenticatedFetch: fetch })).toEqual({ accepted: true, duplicate: false });
   const db = await openDB(name), state = await db.get(CAUSAL_STORE, f.accountId);
   expect(state.completionRequests[intent.focus.actionId]).toBe(bytes);
-  expect(await db.get('tasks', f.accountId)).toEqual(before.tasks);
-  expect(await db.get('stats', f.accountId)).toEqual(before.stats);
-  expect((await db.get('sync', f.accountId)).cursor).toBe(7); db.close();
+  const tx = db.transaction(causalBusinessTransactionStores(db, ['tasks', 'stats', 'sync']));
+  expect(await readCausalBusiness(tx, 'tasks', f.accountId)).toEqual(before.tasks);
+  expect(await readCausalBusiness(tx, 'stats', f.accountId)).toEqual(before.stats);
+  expect((await readCausalBusiness(tx, 'sync', f.accountId) as any).cursor).toBe(7); await tx.done; db.close();
   expect((await syncLocalCompletion(name, f.accountId, intent.focus.actionId, { authenticatedFetch: fetch })).duplicate).toBe(true);
   expect(fetch).toHaveBeenCalledTimes(1);
 });

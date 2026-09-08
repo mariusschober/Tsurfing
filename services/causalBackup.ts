@@ -1,6 +1,8 @@
 import type { CausalAccountState } from './causalStorage';
 import { assertCausalReceipt, parseCausalOperation } from './causalProtocol';
 import { validateCompletionEvidence } from './causalCompletionCoordinator';
+import { CAUSAL_BUSINESS_STORES, type BusinessBackupEvidence } from './causalBusinessStorage';
+import { normalizeSyncMeta, stableJson } from './syncProtocol';
 
 /** Tagged JSON preserves absent/undefined fields in retained cutover preimages.
  * Unsupported structured-clone values fail export explicitly rather than being
@@ -50,12 +52,13 @@ export interface CausalBackupEvidence {
   trackingMirror: unknown;
   sync: unknown;
   captures: Record<string, string>;
+  business?: BusinessBackupEvidence;
   [key: string]: unknown;
 }
 
 /** Validate the restore binding, without interpreting legacy captures or
  * treating a checksum as server acceptance. Original evidence is retained. */
-export function readCausalBackup(accountKey: string, value: unknown, collections?: Record<string, unknown>): CausalBackupEvidence {
+export function readCausalBackup(accountKey: string, value: unknown, collections?: Record<string, unknown>, businessRequired = false): CausalBackupEvidence {
   const record = (item: unknown): item is Record<string, any> => item !== null && typeof item === 'object' && !Array.isArray(item);
   if (!record(value) || value.schemaVersion !== 1) throw new Error('The causal backup schema is unsupported.');
   const decoded = decodeCausalBackup(value.encoded);
@@ -66,6 +69,39 @@ export function readCausalBackup(accountKey: string, value: unknown, collections
     || state.generation < 0 || typeof state.trackingPresent !== 'boolean' || !record(state.cutover)
     || typeof state.cutover.trackingPresent !== 'boolean' || typeof state.cutover.syncPresent !== 'boolean') {
     throw new Error('The causal backup account binding is invalid.');
+  }
+  if (businessRequired !== Object.hasOwn(decoded, 'business')) throw new Error('The business backup schema binding is invalid.');
+  let effectiveCollections = collections;
+  if (businessRequired) {
+    const business = decoded.business;
+    const storesMatch = (item: unknown) => record(item) && Object.keys(item).length === CAUSAL_BUSINESS_STORES.length
+      && CAUSAL_BUSINESS_STORES.every(store => Object.hasOwn(item, store));
+    if (!record(business) || business.schemaVersion !== 1 || !storesMatch(business.records) || !storesMatch(business.mirrors)) {
+      throw new Error('The business backup store manifest is incomplete or unsupported.');
+    }
+    effectiveCollections = { ...collections };
+    for (const store of CAUSAL_BUSINESS_STORES) {
+      const item = business.records[store], mirror = business.mirrors[store];
+      if (item !== undefined && (!record(item) || item.schemaVersion !== 1 || item.storeName !== store || item.accountKey !== accountKey
+        || typeof item.present !== 'boolean' || !Object.hasOwn(item, 'value') || !record(item.cutover)
+        || typeof item.cutover.present !== 'boolean' || !Object.hasOwn(item.cutover, 'value'))) {
+        throw new Error('The business backup record binding is invalid.');
+      }
+      if (!record(mirror) || typeof mirror.present !== 'boolean' || !Object.hasOwn(mirror, 'value')
+        || (item === undefined && mirror.present)) throw new Error('The business backup mirror evidence is invalid.');
+      const current = item?.present ? item.value : undefined;
+      const projection = store === 'sync' && current !== undefined ? normalizeSyncMeta(current) : current;
+      if (!collections || stableJson(collections[store]) !== stableJson(projection)) {
+        throw new Error('The business backup projection differs from its authority.');
+      }
+      // The outer JSON collections are compatibility views; exact undefined
+      // fields and cutover values live in tagged authority, used for restore.
+      effectiveCollections[store] = current;
+    }
+    const sync = business.records.sync;
+    if (stableJson(encodeCausalBackup(decoded.sync)) !== stableJson(encodeCausalBackup(sync?.present ? sync.value : undefined))) {
+      throw new Error('The business backup sync evidence differs from its authority.');
+    }
   }
   // Exact receipt validation runs before any database schema or data change.
   const requests = state.causalRequests ?? {};
@@ -80,6 +116,6 @@ export function readCausalBackup(accountKey: string, value: unknown, collections
     if (Object.hasOwn(receipts, id)) assertCausalReceipt(accountKey, operation, receipts[id]);
   }
   if (Object.keys(receipts).some(id => !Object.hasOwn(requests, id))) throw new Error('A retained receipt has no exact request.');
-  validateCompletionEvidence(accountKey, state as any, decoded.sync, collections);
+  validateCompletionEvidence(accountKey, state as any, decoded.sync, effectiveCollections);
   return decoded as CausalBackupEvidence;
 }

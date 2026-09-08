@@ -254,8 +254,8 @@ it('does not overwrite a local edit admitted while history hashes are being veri
   expect(after[CAUSAL_STORE].causalProjection).toBeUndefined();
 });
 
-it('round-trips applied completion evidence through the actual schema-5 restore path', async () => {
-  const f = await fixture(), source = await f.replica(), target = await f.replica(); await f.complete(source); await f.save(target);
+it.each([false, true])('round-trips applied completion evidence through actual restore (business fence %s)', async fenced => {
+  const f = await fixture(fenced), source = await f.replica(), target = await f.replica(); await f.complete(source); await f.save(target);
   await applyDownloadedCausalHistory(target, f.accountId);
   const values = new Map<string, string>([['goalflow_active_database_v2', target]]);
   const localStorage = { get length() { return values.size; }, key: (index: number) => [...values.keys()][index] ?? null,
