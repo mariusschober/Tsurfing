@@ -1,0 +1,94 @@
+[WebServer] (node:73459) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:73477) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:73506) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 2 workers
+
+(node:73511) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:73510) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › tests/e2e/s2-storage-fence.spec.ts:313:1 › the rendered focus controls use causal admission after an existing account is fenced (1.8s)
+  ✓  2 [webkit] › tests/e2e/s2-storage-fence.spec.ts:313:1 › the rendered focus controls use causal admission after an existing account is fenced (2.6s)
+  ✘  3 [chromium] › tests/e2e/s2-storage-fence.spec.ts:336:1 › failed rendered completion keeps checkout and notes, then retries the same atomic action (8.5s)
+  ✘  4 [webkit] › tests/e2e/s2-storage-fence.spec.ts:336:1 › failed rendered completion keeps checkout and notes, then retries the same atomic action (9.2s)
+
+
+  1) [chromium] › tests/e2e/s2-storage-fence.spec.ts:336:1 › failed rendered completion keeps checkout and notes, then retries the same atomic action 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog', { name: 'Check Out', exact: true }).getByRole('alert')
+    Expected: visible
+    Timeout: 7000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 7000ms
+      - waiting for getByRole('dialog', { name: 'Check Out', exact: true }).getByRole('alert')
+
+
+      358 |   const checkout = page.getByRole('dialog', { name: 'Check Out', exact: true });
+      359 |   await checkout.getByRole('button', { name: /Good Focus/ }).click();
+    > 360 |   await expect(checkout.getByRole('alert')).toBeVisible();
+          |                                             ^
+      361 |   await expect(checkout).toBeVisible();
+      362 |   const failed = await page.evaluate(async account => {
+      363 |     const api = window as any; const snapshot = await api.__s1Storage.readCommittedSnapshot(account);
+        at /Users/schober/Projects/TSurfing/tests/e2e/s2-storage-fence.spec.ts:360:45
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-failed-re-3bd93-ries-the-same-atomic-action-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-failed-re-3bd93-ries-the-same-atomic-action-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s2-storage-fence-failed-re-3bd93-ries-the-same-atomic-action-chromium/error-context.md
+
+  2) [webkit] › tests/e2e/s2-storage-fence.spec.ts:336:1 › failed rendered completion keeps checkout and notes, then retries the same atomic action 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog', { name: 'Check Out', exact: true }).getByRole('alert')
+    Expected: visible
+    Timeout: 7000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 7000ms
+      - waiting for getByRole('dialog', { name: 'Check Out', exact: true }).getByRole('alert')
+
+
+      358 |   const checkout = page.getByRole('dialog', { name: 'Check Out', exact: true });
+      359 |   await checkout.getByRole('button', { name: /Good Focus/ }).click();
+    > 360 |   await expect(checkout.getByRole('alert')).toBeVisible();
+          |                                             ^
+      361 |   await expect(checkout).toBeVisible();
+      362 |   const failed = await page.evaluate(async account => {
+      363 |     const api = window as any; const snapshot = await api.__s1Storage.readCommittedSnapshot(account);
+        at /Users/schober/Projects/TSurfing/tests/e2e/s2-storage-fence.spec.ts:360:45
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-failed-re-3bd93-ries-the-same-atomic-action-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-failed-re-3bd93-ries-the-same-atomic-action-webkit/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s2-storage-fence-failed-re-3bd93-ries-the-same-atomic-action-webkit/error-context.md
+
+  2 failed
+    [chromium] › tests/e2e/s2-storage-fence.spec.ts:336:1 › failed rendered completion keeps checkout and notes, then retries the same atomic action 
+    [webkit] › tests/e2e/s2-storage-fence.spec.ts:336:1 › failed rendered completion keeps checkout and notes, then retries the same atomic action 
+  2 passed (17.9s)

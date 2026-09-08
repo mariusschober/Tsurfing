@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Offline Web day handling and rendered focus-control admission pass local and browser checks. Completion/counter business effects, enrollment, causal scheduling, native integration and recovery remain incomplete.",
+  "acceptanceReason": "Implementation continues. Rendered Web focus completion now awaits atomic admission and preserves failed checkout retries. Counter business actions, non-focus completion concurrency, causal scheduling/enrollment, native integration and recovery remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -2106,6 +2106,87 @@
         "Completion and counter business effects still use their existing UI paths and require integration.",
         "Causal network scheduling, native journals/transport, legacy recovery and mixed-version acceptance remain incomplete.",
         "No PostgreSQL/native rerun for these Web-only changes."
+      ]
+    },
+    {
+      "commit": "889bcd01e47c5184efd36fa1aac62b55f6fa20ba",
+      "scope": "Rendered focus completion awaits atomic admission and preserves checkout retry",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "App.tsx",
+        "components/CurrentView.tsx",
+        "docs/operations/reliability/S2_PROTOCOL_ADR.md",
+        "hooks/useGoalflow.ts",
+        "services/causalCompletionCoordinator.test.ts",
+        "services/causalCompletionCoordinator.ts",
+        "services/storage.ts",
+        "tests/e2e/s2-storage-fence.spec.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-COMPLETION-UI-ACK",
+          "disposition": "Fixed locally: App forwards observed target and awaits completion; checkout, sounds and celebration follow successful durable admission."
+        },
+        {
+          "id": "S2-COMPLETION-DRAFT-RETRY",
+          "disposition": "Fixed locally: original task/focus/notes and first-attempt identity, duration and attribution remain available through failure and retry."
+        }
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 654,
+          "testFiles": 99
+        },
+        {
+          "command": "S1_INCLUDE_EXISTING=1 npx playwright test --config playwright.s1.config.ts s1-local-storage.spec.ts s2-storage-fence.spec.ts",
+          "exitCode": 0,
+          "tests": 60,
+          "platforms": [
+            "Chromium",
+            "WebKit"
+          ]
+        },
+        {
+          "command": "npm run build",
+          "exitCode": 0
+        }
+      ],
+      "evidence": [
+        {
+          "path": "evidence/s2-completion-ui-focused.log",
+          "sha256": "e217ac0427aee636bfa52b9cbad261f3d802fde59e854ec0295abdfc7024421a"
+        },
+        {
+          "path": "evidence/s2-completion-ui-browser.log",
+          "sha256": "3a602c9e4461a9cd80bd88833f3738969aac42633276e9247f070c5cb9bee113"
+        },
+        {
+          "path": "evidence/s2-completion-ui-browser-retry.log",
+          "sha256": "4bd04367b75c3a5d217c987887cbef4da3d801b7824ca14a8310eff3c125f013"
+        },
+        {
+          "path": "evidence/s2-completion-ui-release.log",
+          "sha256": "6e31005d5ef1fbc7c6418714c66540585d600c7593565ebd4e9c9470fab4805e"
+        },
+        {
+          "path": "evidence/s2-completion-ui-browser-combined.log",
+          "sha256": "bda9940a72299e6f6144418f0d470759431ffe31c21bdd195403d8ad0a9a0ce7"
+        },
+        {
+          "path": "evidence/s2-completion-ui-production-build.log",
+          "sha256": "dc12be9ebcb90450ce7c0257dabd3d994a0da032877b9fe63bf6d9c768fdb051"
+        }
+      ],
+      "failedAttempts": [
+        "Initial targeted browser run: 2 completion failures and 2 focus passes. App discarded the returned completion promise and observed target; corrected the full callback chain.",
+        "Initial git fetch failed with a transient GitHub TLS connection error; retry succeeded."
+      ],
+      "limitations": [
+        "Non-focus task completion retains the ordinary path; its concurrency boundary remains to be integrated/reviewed.",
+        "Counter business actions, network scheduling/enrollment, native integration and recovery remain incomplete.",
+        "No SQL/native changes or PostgreSQL/native rerun; no installation or deployment."
       ]
     }
   ],

@@ -520,3 +520,14 @@ The real interaction test found the decorative timer SVG intercepting Edit Durat
 Validation: final `npm run verify:release` exit 0, 653 tests in 99 files; combined S1/S2 real Chromium/WebKit journeys exit 0, 58 tests; final production build/artifact scans exit 0. Initial browser attempts failed first on omitted fixture fence ordering, then on the actual SVG click obstruction; both are recorded and corrected. Sanitized logs/hashes are in the JSON checkpoint.
 
 This does not activate cutover or complete S2. Completion and counter business-effect UI paths, enrollment, causal network scheduling, native integration, recovery and mixed-version acceptance remain. No SQL/native source change, PostgreSQL/native rerun, installation, live configuration or deployment. S2 acceptance remains **BLOCKED**, with no permitted S3 handoff.
+
+
+## Rendered focus-completion checkpoint
+
+`889bcd01e47c5184efd36fa1aac62b55f6fa20ba`: **PASS_LOCAL**. Fenced active/paused focus completion now uses the atomic task/effects coordinator through the actual App and checkout callbacks. The transaction derives the original target epoch and actual parent, retaining the UI control alongside immutable completion evidence. Checkout holds its original task/focus/notes; repeated matching attempts reuse action identity, duration and day/timezone attribution. A failed write keeps checkout open. Sounds, celebration and break setup occur only after successful durable admission. Explicit empty final descriptions and unknown progress fields are preserved by the ordinary fallback as well.
+
+The real browser test injects failure only at the terminal-focus write. It verifies that task completion and effects roll back while separately saved final notes remain, then retries the identical capture and observes exactly one completion admission, outbox item and task event. Initial testing exposed App dropping the returned promise and observed target; the complete callback chain now forwards and awaits both.
+
+Validation: full release exit 0, 654 tests in 99 files; combined S1/S2 Chromium/WebKit journeys exit 0, 60 tests; final production build/artifact scans exit 0. Six sanitized logs and hashes are in the JSON checkpoint. Remote fetch recovered from one transient TLS error.
+
+Non-focus task completion still uses the ordinary path and requires its concurrency boundary review. Counter business effects, enrollment/scheduling, native integration, recovery and mixed-version acceptance remain incomplete. No SQL/native change or rerun, installation, live configuration or deployment. Overall S2 acceptance remains **BLOCKED** and S3 is not permitted.

@@ -1,0 +1,24 @@
+[WebServer] (node:73818) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:73830) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:73857) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 4 tests using 2 workers
+
+(node:73859) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:73860) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  2 [chromium] › tests/e2e/s2-storage-fence.spec.ts:313:1 › the rendered focus controls use causal admission after an existing account is fenced (2.1s)
+  ✓  3 [chromium] › tests/e2e/s2-storage-fence.spec.ts:336:1 › failed rendered completion keeps checkout and notes, then retries the same atomic action (2.0s)
+  ✓  1 [webkit] › tests/e2e/s2-storage-fence.spec.ts:313:1 › the rendered focus controls use causal admission after an existing account is fenced (4.5s)
+  ✓  4 [webkit] › tests/e2e/s2-storage-fence.spec.ts:336:1 › failed rendered completion keeps checkout and notes, then retries the same atomic action (2.4s)
+
+  4 passed (12.7s)
