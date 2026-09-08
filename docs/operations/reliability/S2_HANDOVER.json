@@ -770,6 +770,39 @@
         "evidence/s2-causal-api-postgres-retry.log"
       ],
       "hostedPostgREST": "NOT_MEASURED"
+    },
+    {
+      "commit": "c8c3e4c37fe59bd2bdb42e1a1ad532cf5de7547b",
+      "scope": "Saved Web causal request transport and shared exact receipt validation",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "server/causalActions.ts",
+        "services/causalProtocol.ts",
+        "services/causalTransport.ts",
+        "services/causalTransport.test.ts"
+      ],
+      "commands": [
+        {
+          "command": "npx vitest run services/causalTransport.test.ts server/causalActions.test.ts",
+          "exitCode": 0,
+          "testsPassed": 24
+        },
+        {
+          "command": "VERIFY_PORT=43974 npm run verify:release",
+          "exitCode": 0,
+          "testsPassed": 518,
+          "testFilesPassed": 83
+        }
+      ],
+      "initialFailures": [
+        "Initial full release check exited 1 because sandbox loopback listen was denied with EPERM; permitted rerun exited 0."
+      ],
+      "compatibility": "Dormant transport only. No journal acknowledgment, cursor changes, enrollment, SQL change or native activation.",
+      "evidence": [
+        "evidence/s2-causal-transport-unit.log",
+        "evidence/s2-causal-transport-release.log",
+        "evidence/s2-causal-transport-release-retry.log"
+      ]
     }
   ],
   "findings": [
@@ -895,7 +928,10 @@
     "evidence/s2-causal-api-release.log",
     "evidence/s2-causal-api-release-final.log",
     "evidence/s2-causal-api-postgres.log",
-    "evidence/s2-causal-api-postgres-retry.log"
+    "evidence/s2-causal-api-postgres-retry.log",
+    "evidence/s2-causal-transport-unit.log",
+    "evidence/s2-causal-transport-release.log",
+    "evidence/s2-causal-transport-release-retry.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"
