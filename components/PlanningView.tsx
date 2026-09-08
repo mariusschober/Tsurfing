@@ -14,6 +14,7 @@ import { getPhotoperiod, getSeasonalSleepRecommendation } from '../utils/sunUtil
 // --- Types & Interfaces ---
 
 interface PlanningViewProps {
+    modeControl?: React.ReactNode;
     todayTasks: Task[];
     upcomingTasks: Task[];
     allTasks: Task[];
@@ -673,7 +674,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
     todayTasks, upcomingTasks, allTasks, goals, setFrog, openEditModal, deleteTask, reorderTodayTasks, 
     hashtagConfigs, updateTaskPriorities, moveTaskToTopToday, onSelectHashtag, overdueTasks, markWontDo, onAddTask,
     updateTask, onRescheduleTask, circadianState, addSubtasks, completeTask, isAiEnabled = false, createTask,
-    sortTodayTasksCircadian
+    sortTodayTasksCircadian, modeControl
 }) => {
     const [isPlannerOpen, setIsPlannerOpen] = useState(false);
     const [isEstimatorOpen, setIsEstimatorOpen] = useState(false);
@@ -850,10 +851,13 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
         <div className="max-w-6xl mx-auto p-4 sm:p-8 space-y-12 pb-32">
             
             {/* Header Area */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div>
+            <div className="planning-heading">
+                <div className="planning-heading__identity">
+                  <div>
                     <h2 className="text-4xl font-heading font-bold text-gray-800 dark:text-white">Plan</h2>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">Design your flow.</p>
+                  </div>
+                  {modeControl}
                 </div>
                 {/* Circadian Score Badge */}
                 {isCircadianActive && (
@@ -863,7 +867,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                         <span className="font-bold text-indigo-600 dark:text-indigo-400">{circadianState.score}%</span>
                     </div>
                 )}
-                <div className="flex gap-3">
+                <div className="planning-heading__actions">
                     {isCircadianActive && (
                         <button 
                             onClick={() => setIsPlannerOpen(true)}

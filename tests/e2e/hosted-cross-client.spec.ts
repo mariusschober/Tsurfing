@@ -120,7 +120,7 @@ const waitForFreshDurableSync = async (page: Page) => {
     window.dispatchEvent(new Event('goalflow:sync-retry'));
   }));
   expect(state, 'A fresh synchronization cycle must end in durable success').toBe('synced');
-  await expect(page.getByRole('button', { name: 'Synced', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sync status: Synced', exact: true })).toBeVisible();
 };
 
 const captureTodayTask = async (page: Page, title: string) => {
@@ -152,8 +152,8 @@ const cardById = (page: Page, taskId: string) => page.locator(`[data-rfd-draggab
 
 const signOutLocally = async (page: Page) => {
   await dismissDecisionFatigueWarning(page);
-  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('button', { name: 'Logout', exact: true }).click();
+  await page.getByRole('button', { name: 'Open menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByLabel('Email')).toBeVisible();
 };
 

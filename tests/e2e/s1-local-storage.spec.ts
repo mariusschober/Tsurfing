@@ -523,5 +523,5 @@ test('S1.2: local recovery cannot erase an earlier unresolved cloud error', asyn
     emit({ state: 'error', localFailure: true, message: 'Temporary local commit failure.' });
     emit({ state: 'saved-locally', localRecovery: true, message: 'Local storage recovered.' });
   }, user);
-  await expect(page.getByRole('button', { name: 'Sync error', exact: true })).toHaveAttribute('title', 'Immutable cloud request needs review.');
+  await expect(page.getByRole('button', { name: 'Sync status: Sync error', exact: true })).toHaveAttribute('title', 'Immutable cloud request needs review.');
 });
