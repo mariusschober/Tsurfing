@@ -1,0 +1,314 @@
+{
+  "baselineCommit": "8eb51dd6ff9b05e47e5c0250da2550f03920bbf1",
+  "baselineMeasurements": [
+    {
+      "width": 320,
+      "document": 320,
+      "header": 320
+    },
+    {
+      "width": 390,
+      "document": 390,
+      "header": 390
+    },
+    {
+      "width": 1024,
+      "document": 1444,
+      "header": 1444
+    },
+    {
+      "width": 1440,
+      "document": 1524,
+      "header": 1524
+    },
+    {
+      "width": 1920,
+      "document": 1920,
+      "header": 1920
+    }
+  ],
+  "stats": {
+    "startTime": "2026-09-08T01:24:59.306Z",
+    "duration": 37042.329,
+    "expected": 30,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "tests": [
+    {
+      "browser": "chromium",
+      "name": "light: all 15 widths fit with labelled navigation, targets and unclipped panels",
+      "status": "expected",
+      "durationMs": 3803
+    },
+    {
+      "browser": "chromium",
+      "name": "dark: all 15 widths fit with labelled navigation, targets and unclipped panels",
+      "status": "expected",
+      "durationMs": 3120
+    },
+    {
+      "browser": "chromium",
+      "name": "keyboard containment, dismissal, Search and Settings transfer and restore focus",
+      "status": "expected",
+      "durationMs": 808
+    },
+    {
+      "browser": "chromium",
+      "name": "open panels reflow during rotation and dismiss when their header layout changes",
+      "status": "expected",
+      "durationMs": 592
+    },
+    {
+      "browser": "chromium",
+      "name": "radio playback, station and volume survive Menu, resizing and the hidden header",
+      "status": "expected",
+      "durationMs": 932
+    },
+    {
+      "browser": "chromium",
+      "name": "short landscapes, long text, enlarged text and reduced motion keep panels usable",
+      "status": "expected",
+      "durationMs": 1284
+    },
+    {
+      "browser": "chromium",
+      "name": "primary destinations, Insights/Done and overdue navigation restrictions remain intact",
+      "status": "expected",
+      "durationMs": 918
+    },
+    {
+      "browser": "chromium",
+      "name": "Plan and Current share mode; cancelling check-in and using Manual retain existing behavior",
+      "status": "expected",
+      "durationMs": 863
+    },
+    {
+      "browser": "chromium",
+      "name": "opening Menu and crossing breakpoints preserve the active task and focus session",
+      "status": "expected",
+      "durationMs": 1988
+    },
+    {
+      "browser": "webkit",
+      "name": "light: all 15 widths fit with labelled navigation, targets and unclipped panels",
+      "status": "expected",
+      "durationMs": 6714
+    },
+    {
+      "browser": "webkit",
+      "name": "dark: all 15 widths fit with labelled navigation, targets and unclipped panels",
+      "status": "expected",
+      "durationMs": 7275
+    },
+    {
+      "browser": "webkit",
+      "name": "keyboard containment, dismissal, Search and Settings transfer and restore focus",
+      "status": "expected",
+      "durationMs": 1430
+    },
+    {
+      "browser": "webkit",
+      "name": "open panels reflow during rotation and dismiss when their header layout changes",
+      "status": "expected",
+      "durationMs": 1259
+    },
+    {
+      "browser": "webkit",
+      "name": "radio playback, station and volume survive Menu, resizing and the hidden header",
+      "status": "expected",
+      "durationMs": 2973
+    },
+    {
+      "browser": "webkit",
+      "name": "short landscapes, long text, enlarged text and reduced motion keep panels usable",
+      "status": "expected",
+      "durationMs": 2497
+    },
+    {
+      "browser": "webkit",
+      "name": "primary destinations, Insights/Done and overdue navigation restrictions remain intact",
+      "status": "expected",
+      "durationMs": 1993
+    },
+    {
+      "browser": "webkit",
+      "name": "Plan and Current share mode; cancelling check-in and using Manual retain existing behavior",
+      "status": "expected",
+      "durationMs": 2083
+    },
+    {
+      "browser": "webkit",
+      "name": "opening Menu and crossing breakpoints preserve the active task and focus session",
+      "status": "expected",
+      "durationMs": 2427
+    },
+    {
+      "browser": "chromium",
+      "name": "tap navigation, inline stations, theme and account actions",
+      "status": "expected",
+      "durationMs": 1106
+    },
+    {
+      "browser": "webkit",
+      "name": "tap navigation, inline stations, theme and account actions",
+      "status": "expected",
+      "durationMs": 1525
+    },
+    {
+      "browser": "chromium",
+      "name": "natural-language capture previews and persists month planning",
+      "status": "expected",
+      "durationMs": 638
+    },
+    {
+      "browser": "webkit",
+      "name": "natural-language capture previews and persists month planning",
+      "status": "expected",
+      "durationMs": 1210
+    },
+    {
+      "browser": "chromium",
+      "name": "capture, schedule, reorder, confirm, complete, and reload persist exactly",
+      "status": "expected",
+      "durationMs": 2234
+    },
+    {
+      "browser": "chromium",
+      "name": "service worker controls the app and supported offline behavior is durable",
+      "status": "expected",
+      "durationMs": 663
+    },
+    {
+      "browser": "chromium",
+      "name": "saved tasks are isolated between browser profiles",
+      "status": "expected",
+      "durationMs": 1409
+    },
+    {
+      "browser": "chromium",
+      "name": "manifest, service worker, and required icons are served",
+      "status": "expected",
+      "durationMs": 414
+    },
+    {
+      "browser": "webkit",
+      "name": "capture, schedule, reorder, confirm, complete, and reload persist exactly",
+      "status": "expected",
+      "durationMs": 3852
+    },
+    {
+      "browser": "webkit",
+      "name": "service worker controls the app and supported offline behavior is durable",
+      "status": "expected",
+      "durationMs": 1956
+    },
+    {
+      "browser": "webkit",
+      "name": "saved tasks are isolated between browser profiles",
+      "status": "expected",
+      "durationMs": 3206
+    },
+    {
+      "browser": "webkit",
+      "name": "manifest, service worker, and required icons are served",
+      "status": "expected",
+      "durationMs": 866
+    }
+  ],
+  "activeTaskWidths": {
+    "chromium": [
+      {
+        "width": 390,
+        "document": 390
+      },
+      {
+        "width": 320,
+        "document": 320
+      },
+      {
+        "width": 1024,
+        "document": 1024
+      },
+      {
+        "width": 1536,
+        "document": 1536
+      },
+      {
+        "width": 870,
+        "document": 870
+      }
+    ],
+    "webkit": [
+      {
+        "width": 390,
+        "document": 390
+      },
+      {
+        "width": 320,
+        "document": 320
+      },
+      {
+        "width": 1024,
+        "document": 1024
+      },
+      {
+        "width": 1536,
+        "document": 1536
+      },
+      {
+        "width": 870,
+        "document": 870
+      }
+    ]
+  },
+  "sourceHashes": {
+    "App.tsx": "fcc36dc5929c469d9ab39a4f64260d65d104499015fedd5fbe3bf6135158d237",
+    "components/AppHeader.tsx": "45a0f4872377acf9ded62c83cc61a2658de72a66ec77b7cf6c6ad58a388662c5",
+    "components/ModeSelector.tsx": "9636c72a3810be01c545145bcb5771afb244634e80962377a5729c374555b2a8",
+    "components/Modal.tsx": "818e76cdcdeb10b5ae0d6896942f7ac1b033226aefb95706e804a849bf4b7a13",
+    "components/DeepWorkPlayer.tsx": "7f1a25de36afe6057a1b22175dd87c09d0efd30d76bef5c652bbfd972ba9b28a",
+    "components/SyncStatus.tsx": "aaa9dd8195a411194f020c524e1763b2f8db7b40e167fb80096695cc8bed7e28",
+    "components/Logo.tsx": "a98221de31d6001ca921a47edde0754822aa3d8d950b5be3679ca71996f9fb55",
+    "components/PlanningView.tsx": "9bba7f39d13a5174d2b97529d8ecbddcf43da0f2bdfa5ad1bf570bdd7b747293",
+    "index.css": "2c923ba08307eb9bc9e267fedc9be08e512eceb1bf767db48e8658ff99262bae"
+  },
+  "browserZoom": {
+    "browser": "Brave",
+    "input": "Native browser zoom controls; temporary viewport override",
+    "at200": {
+      "viewport": 960,
+      "document": 960,
+      "menu": {
+        "left": 564,
+        "right": 948,
+        "top": 12,
+        "bottom": 444.5
+      }
+    },
+    "at400From1280": {
+      "viewport": 320,
+      "height": 225,
+      "document": 320,
+      "devicePixelRatio": 4,
+      "menu": {
+        "left": 12,
+        "right": 308,
+        "top": 12,
+        "bottom": 213
+      },
+      "signOutAfterScroll": {
+        "left": 29,
+        "right": 291,
+        "top": 152,
+        "bottom": 196
+      }
+    },
+    "restored": {
+      "viewport": 1920,
+      "document": 1920,
+      "devicePixelRatio": 1
+    }
+  }
+}

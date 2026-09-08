@@ -1,5 +1,16 @@
 # Tsurfing beta readiness evidence
 
+## Responsive web navigation — 2026-09-08
+
+A UI-only staging candidate is based on the deployed `6f750a7` source. It fixes
+header overflow and clipped menus, adds responsive Menu navigation, and places
+Manual / Bio-Adaptive in Plan and Current. The existing storage, sync, server,
+native clients and infrastructure are unchanged. Local validation passes: 388
+existing tests, 30 Chromium/WebKit journeys, the full production build and
+existing artifact/integrity checks. [Detailed evidence and deployment-record
+pointer](ui/responsive-navigation-20260908/STAGING.md) distinguish local proof
+from the exact deployed revision. This does not change overall beta readiness.
+
 ## Overdue planner visibility fix — 2026-09-07
 
 The owner browser confirmed an overdue gate with no overdue rows in Plan.

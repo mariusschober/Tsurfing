@@ -34,6 +34,7 @@
     "restore:backup": "tsx scripts/restore-production-backup.ts",
     "verify:release": "npm run lint && npm test && npm run build && npm run verify:server && npm run verify:maintenance && npm run verify:client-secrets && npm run verify:client-artifacts",
     "test:e2e": "playwright test",
+    "test:navigation": "playwright test --config playwright.navigation.config.ts",
     "verify:web-e2e": "playwright test --reporter=list",
     "android:sync": "npm run build:client && cap sync android",
     "build:client:test": "vite build --mode test",
