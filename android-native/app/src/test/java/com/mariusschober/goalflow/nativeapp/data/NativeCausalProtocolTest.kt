@@ -23,6 +23,13 @@ class NativeCausalProtocolTest {
         for (index in 0 until cases.length()) {
             val case = cases.getJSONObject(index); val saved = case.getJSONObject("operation").toString(2)
             val receipt = case.getJSONObject("receipt")
+            if (case.getString("name") == "completion") {
+                assertEquals(receipt, NativeCausalProtocol.completionReceipt(owner, JSONObject(saved), receipt))
+                val altered = JSONObject(receipt.toString())
+                altered.getJSONArray("changes").getJSONObject(0).getJSONObject("record").getJSONObject("payload").put("notes", "Different notes")
+                assertTrue(runCatching { NativeCausalProtocol.completionReceipt(owner, JSONObject(saved), altered) }.isFailure)
+                continue
+            }
             repeat(2) {
                 val result = NativeCausalTransport.send(owner, saved) { path, method, body ->
                     assertEquals("/api/v1/sync/actions", path); assertEquals("POST", method); assertEquals(saved, body)

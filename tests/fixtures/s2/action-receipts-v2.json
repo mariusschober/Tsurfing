@@ -232,6 +232,203 @@
           }
         }
       }
+    },
+    {
+      "name": "completion",
+      "operation": {
+        "schemaVersion": 2,
+        "epoch": "33333333-3333-4333-8333-333333333333",
+        "type": "completion",
+        "command": {
+          "schemaVersion": 1,
+          "actionId": "44444444-4444-4444-8444-444444444444",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "complete",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": "00000000-0000-4000-8000-000000000001",
+          "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "capturedAt": "2026-09-07T12:10:00.000Z",
+          "durationSeconds": null
+        },
+        "changes": [
+          {
+            "mutationId": "55555555-5555-4555-8555-555555555555",
+            "deviceId": "fixture",
+            "entityType": "tasks",
+            "entityId": "task-F",
+            "baseServerVersion": null,
+            "version": 2,
+            "payload": {
+              "id": "task-F",
+              "completed": true,
+              "lifecycleStatus": "completed",
+              "notes": "Synthetic final notes retained"
+            },
+            "updatedAt": "2026-09-07T12:10:00.000Z",
+            "deletedAt": null
+          }
+        ]
+      },
+      "receipt": {
+        "schemaVersion": 2,
+        "operation": {
+          "schemaVersion": 2,
+          "epoch": "33333333-3333-4333-8333-333333333333",
+          "type": "completion",
+          "command": {
+            "schemaVersion": 1,
+            "actionId": "44444444-4444-4444-8444-444444444444",
+            "accountId": "11111111-1111-4111-8111-111111111111",
+            "actorId": "fixture-tab-a",
+            "kind": "complete",
+            "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+            "taskId": "task-F",
+            "epoch": "00000000-0000-4000-8000-000000000001",
+            "expectedRevision": "00000000-0000-4000-8000-000000000001",
+            "expectedCurrentSessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+            "capturedAt": "2026-09-07T12:10:00.000Z",
+            "durationSeconds": null
+          },
+          "changes": [
+            {
+              "mutationId": "55555555-5555-4555-8555-555555555555",
+              "deviceId": "fixture",
+              "entityType": "tasks",
+              "entityId": "task-F",
+              "baseServerVersion": null,
+              "version": 2,
+              "payload": {
+                "id": "task-F",
+                "completed": true,
+                "lifecycleStatus": "completed",
+                "notes": "Synthetic final notes retained"
+              },
+              "updatedAt": "2026-09-07T12:10:00.000Z",
+              "deletedAt": null
+            }
+          ]
+        },
+        "epoch": "33333333-3333-4333-8333-333333333333",
+        "accepted": true,
+        "projectionRevision": 1,
+        "outcome": {
+          "accepted": true,
+          "code": "APPLIED",
+          "revision": "44444444-4444-4444-8444-444444444444"
+        },
+        "record": {
+          "user_id": "11111111-1111-4111-8111-111111111111",
+          "entity_type": "tracking",
+          "entity_id": "singleton",
+          "version": 2,
+          "server_version": 5,
+          "device_id": "causal-action-v2",
+          "updated_at": "2026-09-08T00:00:00.123456+00:00",
+          "deleted_at": null,
+          "payload": {
+            "date": "2026-09-08",
+            "planViewCount": 28,
+            "dailyPostponeCount": 3,
+            "unknown": {
+              "retained": true
+            },
+            "focusSession": {
+              "schemaVersion": 1,
+              "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+              "taskId": "task-F",
+              "phase": "completed",
+              "plannedDurationSeconds": 600,
+              "startedAt": "2026-09-07T12:00:00.000Z",
+              "elapsedSeconds": 600,
+              "pausedAt": null,
+              "endedAt": "2026-09-07T12:10:00.000Z",
+              "updatedAt": "2026-09-07T12:10:00.000Z"
+            }
+          }
+        },
+        "changes": [
+          {
+            "mutationId": "55555555-5555-4555-8555-555555555555",
+            "accepted": true,
+            "serverVersion": 4,
+            "record": {
+              "user_id": "11111111-1111-4111-8111-111111111111",
+              "entity_type": "tasks",
+              "entity_id": "task-F",
+              "device_id": "fixture",
+              "version": 2,
+              "server_version": 4,
+              "payload": {
+                "id": "task-F",
+                "completed": true,
+                "lifecycleStatus": "completed",
+                "notes": "Synthetic final notes retained"
+              },
+              "updated_at": "2026-09-07T12:10:00.000Z",
+              "deleted_at": null
+            }
+          }
+        ]
+      }
     }
-  ]
+  ],
+  "cutover": {
+    "schemaVersion": 2,
+    "accountId": "11111111-1111-4111-8111-111111111111",
+    "epoch": "33333333-3333-4333-8333-333333333333",
+    "revision": 0,
+    "receipt": {
+      "schemaVersion": 2,
+      "epoch": "33333333-3333-4333-8333-333333333333",
+      "projectionRevision": 0,
+      "operation": {
+        "schemaVersion": 2,
+        "accountId": "11111111-1111-4111-8111-111111111111",
+        "cutoverId": "33333333-3333-4333-8333-333333333333",
+        "expectedTrackingServerVersion": 5,
+        "expectedTrackingPayload": {
+          "date": "2026-09-08",
+          "planViewCount": 27,
+          "dailyPostponeCount": 3,
+          "unknown": {
+            "retained": true
+          }
+        }
+      },
+      "record": {
+        "user_id": "11111111-1111-4111-8111-111111111111",
+        "entity_type": "tracking",
+        "entity_id": "singleton",
+        "version": 2,
+        "server_version": 5,
+        "device_id": "causal-action-v2",
+        "updated_at": "2026-09-08T00:00:00.123456+00:00",
+        "deleted_at": null,
+        "payload": {
+          "date": "2026-09-08",
+          "planViewCount": 27,
+          "dailyPostponeCount": 3,
+          "unknown": {
+            "retained": true
+          }
+        }
+      },
+      "baseline": {
+        "schemaVersion": 1,
+        "baselineId": "33333333-3333-4333-8333-333333333333",
+        "accountId": "11111111-1111-4111-8111-111111111111",
+        "day": "2026-09-08",
+        "counts": {
+          "planViewCount": 27,
+          "dailyPostponeCount": 3
+        },
+        "evidenceIds": [
+          "33333333-3333-4333-8333-333333333333"
+        ]
+      }
+    }
+  }
 }

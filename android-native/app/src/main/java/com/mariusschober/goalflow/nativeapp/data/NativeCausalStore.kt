@@ -162,6 +162,7 @@ object NativeCausalJournal {
                 "A pending focus command has no exact admission."
             }
         }
+        if (state.has("causalHistory")) NativeSavedCausalHistory.validate(account.accountId, state.getJSONObject("causalHistory"))
         return state
     }
 
