@@ -1,4 +1,7 @@
 import { synchronizeCausalQueues } from './causalSync';
+import { PLANNING_STORE, readDailyPlanning, savePlanningDraft, discardPlanningDraft, admitPlanningConfirmation, preparePlanningRequest, commitPlanningResponse, commitPlanningDay, retainPlanningReview, resolvePlanningReview, validatePlanningBackup } from './deliberatePlanningStorage';
+import { sendPlanningConfirmation, fetchPlanningDay, fetchPlanningReview } from './deliberatePlanningTransport';
+import type { ConfirmOrder, PlanningDraft } from '../src/domain/deliberatePlanning';
 import type { HistoryRuntime } from './causalHistory';
 import { admitLocalPlanningVisit, type PlanningVisitIntent } from './causalPlanningCoordinator';
 import { admitLocalReschedule, type RescheduleIntent } from './causalRescheduleCoordinator';
@@ -33,7 +36,7 @@ import { assertNewSyncPayload, transportablePushBatch } from './syncEnvelope';
 import { CAUSAL_STORE, TRACKING_KEY_PATH, fenceLegacyTracking, readCausalAccount } from './causalStorage';
 import { CAUSAL_BUSINESS_STORE, CAUSAL_BUSINESS_STORES, BUSINESS_KEY_PATH, causalBusinessTransactionStores,
   fenceLegacyBusinessStores, readCausalBusiness, readCausalBusinessBackup, writeCausalBusiness } from './causalBusinessStorage';
-import { encodeCausalBackup, readCausalBackup } from './causalBackup';
+import { encodeCausalBackup, decodeCausalBackup, readCausalBackup } from './causalBackup';
 import { admitLocalFocusControl, type LocalFocusControl, type FocusAccountState } from './causalFocusCoordinator';
 import { admitLocalCounterDay, type CounterDayAccountState } from './causalCounterDayCoordinator';
 import { parseCounterDayCommand } from './causalProtocol';
@@ -42,7 +45,7 @@ import { admitLocalTaskCompletion, type TaskCompletionIntent } from './causalTas
 
 const BASE_DB_NAME = 'GoalflowDB';
 const ACTIVE_DB_KEY = 'goalflow_active_database_v2';
-const BACKUP_SCHEMA_VERSION = 6;
+const BACKUP_SCHEMA_VERSION = 7;
 const WAL_PREFIX = 'goalflow_wal_v2_';
 const LOCAL_SYNC_CONTEXT = import.meta.env.VITE_LOCAL_SYNC_CONTEXT || 's1-v1-unbundled';
 
@@ -127,7 +130,7 @@ export const validateBackupCollections = (backup: unknown): Record<string, any> 
     ? envelope.collections
     : backup;
   if (!isRecord(collections)) throw new Error('The backup does not contain typed collections.');
-  if (Number(envelope.schemaVersion) >= 5 && !Object.hasOwn(collections, CAUSAL_STORE)) {
+  if ([5, 6].includes(Number(envelope.schemaVersion)) && !Object.hasOwn(collections, CAUSAL_STORE)) {
     throw new Error('The causal backup journal is missing. Nothing was restored.');
   }
   if (envelope.checksum !== undefined && !/^[a-f0-9]{64}$/i.test(String(envelope.checksum))) {
@@ -422,11 +425,11 @@ const activeDatabaseName = (): string => {
 };
 
 const openAndMigrate = async (databaseName: string, versionAttempt?: number): Promise<IDBPDatabase> => {
-  const requiredStores = Object.values(STORES);
+  const requiredStores = [...Object.values(STORES), PLANNING_STORE];
   const db = await openDB(databaseName, versionAttempt, {
     upgrade(database) {
       for (const storeName of requiredStores) {
-        if (!database.objectStoreNames.contains(storeName)) database.createObjectStore(storeName);
+        if (!database.objectStoreNames.contains(storeName)) database.createObjectStore(storeName, storeName === PLANNING_STORE ? { keyPath: 'accountKey' } : undefined);
       }
     },
     blocking(_currentVersion, _blockedVersion, event) {
@@ -510,6 +513,16 @@ const mergeRestoredSyncMeta = (currentValue: unknown, incomingValue: unknown): S
     }
     return result;
   };
+  const currentPlanning = current.localState?.planningRebase, incomingPlanning = incoming.localState?.planningRebase;
+  if (currentPlanning && incomingPlanning && currentPlanning.accountKey !== incomingPlanning.accountKey) {
+    throw new DurableStorageError('Restored planning edits belong to a different account.');
+  }
+  const planningRebase = currentPlanning || incomingPlanning ? {
+    accountKey: (currentPlanning ?? incomingPlanning)!.accountKey,
+    planningResolutions: mergeEvidence(currentPlanning?.planningResolutions, incomingPlanning?.planningResolutions),
+    planningEdits: mergeEvidence(currentPlanning?.planningEdits, incomingPlanning?.planningEdits),
+    completionAdmissions: mergeEvidence(currentPlanning?.completionAdmissions, incomingPlanning?.completionAdmissions),
+  } : undefined;
   const localState = {
     ...incoming.localState,
     ...current.localState,
@@ -522,6 +535,8 @@ const mergeRestoredSyncMeta = (currentValue: unknown, incomingValue: unknown): S
     resolvedConflicts: mergeEvidence(current.localState?.resolvedConflicts, incoming.localState?.resolvedConflicts),
     reconciliations: mergeEvidence(current.localState?.reconciliations, incoming.localState?.reconciliations),
     completionReservations: mergeEvidence(current.localState?.completionReservations, incoming.localState?.completionReservations),
+    planningReservations: mergeEvidence(current.localState?.planningReservations, incoming.localState?.planningReservations),
+    planningRebase,
     fallbackCopies: Object.fromEntries([...new Set([...Object.keys(current.localState?.fallbackCopies ?? {}), ...Object.keys(incoming.localState?.fallbackCopies ?? {})])].map(store =>
       [store, [...new Set([...(current.localState?.fallbackCopies?.[store] ?? []), ...(incoming.localState?.fallbackCopies?.[store] ?? [])])]]))
   };
@@ -816,7 +831,8 @@ const recoverFallbackState = async (userKey: string): Promise<void> => {
 type StorageTransaction = IDBPTransaction<unknown, string[], 'readwrite'>;
 type AccountReadTransaction = IDBPTransaction<unknown, string[], 'readonly' | 'readwrite'>;
 const accountTransactionStores = (db: IDBPDatabase, stores: readonly string[]): string[] =>
-  causalBusinessTransactionStores(db, [...stores, ...(db.objectStoreNames.contains(CAUSAL_STORE) ? [CAUSAL_STORE] : [])]);
+  causalBusinessTransactionStores(db, [...stores, ...(db.objectStoreNames.contains(CAUSAL_STORE) ? [CAUSAL_STORE] : []),
+    ...(db.objectStoreNames.contains(PLANNING_STORE) ? [PLANNING_STORE] : [])]);
 const readAccountValue = async (tx: AccountReadTransaction, store: string, key: string): Promise<any> => {
   if (store === STORES.TRACKING && tx.objectStoreNames.contains(CAUSAL_STORE)) {
     if (tx.objectStore(store).keyPath !== TRACKING_KEY_PATH) throw new DurableStorageError('The tracking fence requires schema recovery.');
@@ -953,6 +969,20 @@ const materializeWal = async (tx: StorageTransaction, userKey: string, input: Sy
         const current = values.has(intent.storeName) ? values.get(intent.storeName) : await readAccountValue(tx, intent.storeName, userKey);
         const conflictsBefore = stableJson(candidate.conflicts);
         const value = reconcileStagedTransactions(current, [intent], candidate);
+        if (intent.storeName === STORES.TASKS && Array.isArray(current) && Array.isArray(value)
+          && tx.objectStoreNames.contains(PLANNING_STORE)) {
+          const planning = await tx.objectStore(PLANNING_STORE).get(userKey);
+          const previousTasks = new Map(current.filter(isRecord).map(task => [task.id, task]));
+          for (const task of value.filter(isRecord)) {
+            const previous = previousTasks.get(task.id);
+            const day = task.scheduledFor ?? task.dateAssigned;
+            if (previous && day === (previous.scheduledFor ?? previous.dateAssigned) && !task.completed && !task.wontDo && !task.deletedAt
+              && planning?.planning?.days?.[day]?.revision
+              && !jsonEqual([previous.plannedOrder, previous.isFrog, previous.beforeFrog], [task.plannedOrder, task.isFrog, task.beforeFrog])) {
+              throw new DurableStorageError('Order is locked. Open Replan and confirm ordering changes.', 'PLANNING_COMMAND_REQUIRED');
+            }
+          }
+        }
         if (entry.recoverableGroup && stableJson(candidate.conflicts) !== conflictsBefore) {
           throw new DurableStorageError('A grouped action conflicts with the current projection.');
         }
@@ -1039,6 +1069,92 @@ export interface CommittedSnapshot {
 }
 
 export const storageService = {
+  async readDailyPlanning(userKey: string, localDate: string) {
+    const db = await getDB();
+    if (!db) throw new DurableStorageError('Planning storage is unavailable.');
+    return readDailyPlanning(db.name, userKey, localDate);
+  },
+
+  async savePlanningDraft(draft: PlanningDraft) {
+    const captured = structuredClone(draft), db = await getDB();
+    if (!db) throw new DurableStorageError('The draft could not be saved.');
+    const result = await savePlanningDraft(db.name, captured);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('goalflow:planning-change', { detail: { userKey: captured.accountId } }));
+    return result;
+  },
+
+  async discardPlanningDraft(userKey: string, localDate: string) {
+    const db = await getDB();
+    if (!db) throw new DurableStorageError('The draft could not be discarded.');
+    await discardPlanningDraft(db.name, userKey, localDate);
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('goalflow:planning-change', { detail: { userKey } }));
+  },
+
+  async resolvePlanningReview(userKey: string, operationId: string, choice: 'synced' | 'draft') {
+    const name = activeDatabaseName();
+    await storageService.flushPendingLocalChanges(userKey);
+    const db = await getDB();
+    if (!db || db.name !== name) throw new DurableStorageError('The planning account changed before resolution.');
+    const result = await resolvePlanningReview(name, userKey, operationId, choice);
+    publishCommit(userKey, 0, ['tasks', 'progress', 'daily_plans'], name);
+    announceLocalChange(STORES.DAILY_PLANS, userKey, undefined);
+    return result;
+  },
+
+  async confirmPlanningOrder(command: ConfirmOrder) {
+    const captured = structuredClone(command), name = activeDatabaseName();
+    await storageService.flushPendingLocalChanges(captured.accountId);
+    // Seed the pre-confirmation projection before reserving its replacements.
+    // Otherwise first synchronization could upload provisional XP as ordinary data.
+    await storageService.seedUnsynchronizedLocalData(captured.accountId);
+    const db = await getDB();
+    if (!db || db.name !== name) throw new DurableStorageError('The planning account changed before confirmation.');
+    const result = await admitPlanningConfirmation(name, captured);
+    publishCommit(captured.accountId, 0, ['tasks', 'progress', 'daily_plans'], name);
+    if (!result.replay) announceLocalChange(STORES.DAILY_PLANS, captured.accountId, undefined);
+    return result;
+  },
+
+  async synchronizeNextPlanning(userKey: string, runtime: HistoryRuntime) {
+    const name = activeDatabaseName();
+    await storageService.flushPendingLocalChanges(userKey);
+    const db = await getDB();
+    if (!db || db.name !== name) throw new DurableStorageError('The planning account changed before synchronization.');
+    if (!db.objectStoreNames.contains(PLANNING_STORE)) return null;
+    const state = await db.get(PLANNING_STORE, userKey);
+    if (!state?.planning || !Object.keys(state.planning.pending ?? {}).length) return null;
+    const work = await preparePlanningRequest(name, userKey);
+    if (!work) return null;
+    if (work.request === undefined) {
+      if (work.reviewRequest) {
+        const snapshot = await fetchPlanningReview(userKey, work.reviewRequest, runtime);
+        await retainPlanningReview(name, userKey, JSON.parse(work.reviewRequest), snapshot);
+        publishCommit(userKey, 0, ['daily_plans'], name);
+      }
+      return { blocked: work.blocked };
+    }
+    const command = JSON.parse(work.request);
+    const response = await sendPlanningConfirmation(userKey, work.request, runtime);
+    const result = await commitPlanningResponse(name, userKey, command, response);
+    publishCommit(userKey, 0, ['tasks', 'progress', 'daily_plans'], name);
+    return result;
+  },
+
+  async fetchPlanningPolicy(userKey: string, localDate: string, runtime: HistoryRuntime) {
+    const db = await getDB();
+    if (!db?.objectStoreNames.contains(PLANNING_STORE)) return null;
+    const state = await db.get(PLANNING_STORE, userKey);
+    if (!state?.planning?.days?.[localDate]) return null;
+    return fetchPlanningDay(userKey, localDate, runtime);
+  },
+
+  async commitPlanningPolicy(userKey: string, localDate: string, input: unknown) {
+    const name = activeDatabaseName();
+    const applied = await commitPlanningDay(name, userKey, localDate, input);
+    if (applied) publishCommit(userKey, 0, ['daily_plans'], name);
+    return applied;
+  },
+
   stageLocalValue(storeName: string, key: string, previousValue: unknown, nextValue: unknown, preserveSourceTime = false): string | null {
     if (!SYNCABLE_STORES.has(storeName)) return null;
     const now = new Date().toISOString();
@@ -1129,6 +1245,7 @@ export const storageService = {
     const meta = normalizeSyncMeta(await readAccountValue(tx, STORES.SYNC, userKey));
     const causal = db.objectStoreNames.contains(CAUSAL_STORE)
       ? await readCausalAccount(tx, userKey) as (CounterDayAccountState & FocusAccountState & { completionOutbox?: Record<string, unknown> }) | undefined : undefined;
+    const planning = db.objectStoreNames.contains(PLANNING_STORE) ? await tx.objectStore(PLANNING_STORE).get(userKey) : undefined;
     const committed: Record<string, unknown> = {};
     for (const storeName of DATA_STORES) committed[storeName] = await readAccountValue(tx, storeName, userKey);
     await tx.done;
@@ -1144,9 +1261,9 @@ export const storageService = {
     }
     const causalPending = causal ? [causal.focusOutbox, causal.counterOutbox, causal.counterDayOutbox, causal.completionOutbox]
       .reduce((count, outbox) => count + Object.keys(outbox ?? {}).length, 0) : 0;
-    return { userKey, generation: Math.max(meta.localState?.generation ?? 0, causal?.generation ?? 0), values, meta,
+    return { userKey, generation: Math.max(meta.localState?.generation ?? 0, causal?.generation ?? 0, planning?.generation ?? 0), values, meta,
       ...(causal ? { causal: { generation: causal.generation, daySelection: causal.counterDaySelection } } : {}),
-      pendingCount: causalPending + pending.length + Object.keys(meta.localState?.blocked ?? {}).length + [...DATA_STORES, STORES.SYNC].filter(store => { const raw = window.localStorage.getItem(fallbackKey(store, userKey)); return raw !== null && !meta.localState?.fallbackCopies?.[store]?.includes(raw); }).length, walRevision: stableJson(captured) };
+      pendingCount: causalPending + Object.keys(planning?.planning?.pending ?? {}).length + pending.length + Object.keys(meta.localState?.blocked ?? {}).length + [...DATA_STORES, STORES.SYNC].filter(store => { const raw = window.localStorage.getItem(fallbackKey(store, userKey)); return raw !== null && !meta.localState?.fallbackCopies?.[store]?.includes(raw); }).length, walRevision: stableJson(captured) };
   },
 
   async synchronizeCausalQueues(userKey: string, runtime: HistoryRuntime, drainOrdinary: () => Promise<void>) {
@@ -1309,7 +1426,7 @@ export const storageService = {
   },
 
   set<T>(storeName: string, key: string, value: T, source: 'local' | 'cloud' = 'local'): Promise<void> {
-    if ([CAUSAL_STORE, CAUSAL_BUSINESS_STORE].includes(storeName)) return Promise.reject(new DurableStorageError('Private causal evidence requires its owning coordinator.'));
+    if ([CAUSAL_STORE, CAUSAL_BUSINESS_STORE, PLANNING_STORE].includes(storeName)) return Promise.reject(new DurableStorageError('Private causal evidence requires its owning coordinator.'));
     if (storeName === STORES.SYNC) return queueMutation(() => updateSyncMeta(key, current => {
       if (normalizeSyncMeta(value).cursor > current.cursor) throw new DurableStorageError('Metadata alone cannot advance the inbound cursor.', 'CURSOR_REQUIRES_PROJECTION');
       return mergeRestoredSyncMeta(current, value);
@@ -1550,7 +1667,7 @@ export const storageService = {
   },
 
   async delete(storeName: string, key: string): Promise<void> {
-    if ([STORES.SYNC, CAUSAL_STORE, CAUSAL_BUSINESS_STORE].includes(storeName)) throw new DurableStorageError('Sync evidence cannot be deleted through a record API.');
+    if ([STORES.SYNC, CAUSAL_STORE, CAUSAL_BUSINESS_STORE, PLANNING_STORE].includes(storeName)) throw new DurableStorageError('Sync evidence cannot be deleted through a record API.');
     if (SYNCABLE_STORES.has(storeName)) return this.set(storeName, key, undefined);
     await queueMutation(async () => {
       const db = await getDB();
@@ -1562,7 +1679,7 @@ export const storageService = {
   },
 
   async clear(storeName: string): Promise<void> {
-    if ([STORES.SYNC, CAUSAL_STORE, CAUSAL_BUSINESS_STORE].includes(storeName) || SYNCABLE_STORES.has(storeName)) throw new DurableStorageError('Account data cannot be cleared without an audited account-scoped operation.');
+    if ([STORES.SYNC, CAUSAL_STORE, CAUSAL_BUSINESS_STORE, PLANNING_STORE].includes(storeName) || SYNCABLE_STORES.has(storeName)) throw new DurableStorageError('Account data cannot be cleared without an audited account-scoped operation.');
     await queueMutation(async () => {
       const db = await getDB();
       if (!db) throw new DurableStorageError('This store cannot be cleared atomically while IndexedDB is unavailable.');
@@ -1828,7 +1945,7 @@ export const storageService = {
       if (db) {
         const causal = db.objectStoreNames.contains(CAUSAL_STORE);
         const businessFenced = db.objectStoreNames.contains(CAUSAL_BUSINESS_STORE);
-        const tx = db.transaction(causalBusinessTransactionStores(db, [...DATA_STORES, STORES.SYNC, ...(causal ? [CAUSAL_STORE] : [])]), 'readonly');
+        const tx = db.transaction(accountTransactionStores(db, [...DATA_STORES, STORES.SYNC]), 'readonly');
         const authority = causal ? await readCausalAccount(tx, userKey) : undefined;
         for (const storeName of DATA_STORES) {
           const value = storeName === STORES.TRACKING
@@ -1839,6 +1956,8 @@ export const storageService = {
         const meta = await readCausalBusiness(tx, STORES.SYNC, userKey);
         const trackingMirror = causal ? await tx.objectStore(STORES.TRACKING).get(userKey) : undefined;
         const business = businessFenced ? await readCausalBusinessBackup(tx, userKey) : undefined;
+        const planning = tx.objectStoreNames.contains(PLANNING_STORE) ? await tx.objectStore(PLANNING_STORE).get(userKey) : undefined;
+        if (planning) collections[PLANNING_STORE] = { schemaVersion: 1, encoded: encodeCausalBackup(planning) };
         if (meta !== undefined) collections[STORES.SYNC] = normalizeSyncMeta(meta);
         await tx.done;
         if (causal) {
@@ -1847,6 +1966,7 @@ export const storageService = {
             ...(business ? { business } : {}) }) };
           schemaVersion = business ? 6 : 5;
         }
+        if (planning) schemaVersion = 7;
       } else {
         for (const storeName of [...DATA_STORES, STORES.SYNC]) {
           const value = readLocalCopy(storeName, userKey);
@@ -1873,10 +1993,23 @@ export const storageService = {
     if (envelope.checksum && await checksumCollections(verifiedCollections) !== envelope.checksum.toLowerCase()) {
       throw new Error('Backup checksum validation failed. The file may be incomplete or modified.');
     }
+    const planningBackup = Object.hasOwn(verifiedCollections, PLANNING_STORE)
+      ? validatePlanningBackup(userKey, decodeCausalBackup(verifiedCollections[PLANNING_STORE].encoded), verifiedCollections[STORES.SYNC]) : undefined;
+    if (planningBackup && envelope.schemaVersion !== 7) throw new DurableStorageError('Planning history requires a schema-7 backup.');
+    if (envelope.schemaVersion === 7 && !planningBackup) throw new DurableStorageError('The planning backup journal is missing.');
     if (Object.hasOwn(verifiedCollections, CAUSAL_STORE)) {
-      if (![5, 6].includes(envelope.schemaVersion!) || envelope.ownerKey !== userKey || !envelope.checksum) throw new DurableStorageError('A bound schema-5 or schema-6 causal backup is required.');
-      const evidence = readCausalBackup(userKey, verifiedCollections[CAUSAL_STORE], verifiedCollections, envelope.schemaVersion === 6);
+      if (![5, 6, 7].includes(envelope.schemaVersion!) || envelope.ownerKey !== userKey || !envelope.checksum) throw new DurableStorageError('A bound schema-5 or schema-6 causal backup is required.');
+      const evidence = readCausalBackup(userKey, verifiedCollections[CAUSAL_STORE], verifiedCollections, envelope.schemaVersion === 6 || (envelope.schemaVersion === 7 && Boolean((decodeCausalBackup(verifiedCollections[CAUSAL_STORE].encoded) as any).business)));
       await validateCompletionApplicationEvidence(userKey, evidence.authority);
+      for (const [id, resolution] of Object.entries((evidence.authority as any).planningResolutions ?? {})) {
+        const retained = planningBackup?.planning?.resolutions?.[id];
+        const { supersededBy, predecessors: _predecessors, ...original } = resolution as any;
+        if (!retained || retained.supersededBy !== supersededBy?.command.operationId || stableJson(original) !== stableJson({ command: retained.pending.command,
+          request: retained.pending.request, members: retained.pending.members, snapshot: retained.snapshot })) {
+          throw new DurableStorageError('The completion planning proof differs from the retained order resolution. Nothing was restored.');
+        }
+      }
+
       if (stableJson(verifiedCollections[STORES.TRACKING]) !== stableJson(evidence.authority.trackingPresent ? evidence.authority.trackingValue : undefined)
         || stableJson(verifiedCollections[STORES.SYNC]) !== stableJson(evidence.sync === undefined ? undefined : normalizeSyncMeta(evidence.sync))) {
         throw new DurableStorageError('The causal backup projections differ from their retained evidence. Nothing was restored.');
@@ -1905,14 +2038,14 @@ export const storageService = {
           if (Object.keys(backupLocalCaptures(userKey)).length) throw new DurableStorageError('Existing local captures require journal reconciliation before restore. They remain unchanged.');
           return false;
         };
-        const before = initial.transaction(causalBusinessTransactionStores(initial, [...DATA_STORES, STORES.SYNC, ...(initial.objectStoreNames.contains(CAUSAL_STORE) ? [CAUSAL_STORE] : [])]), 'readonly');
+        const before = initial.transaction(accountTransactionStores(initial, [...DATA_STORES, STORES.SYNC]), 'readonly');
         const duplicate = await assertEmpty(before);
         await before.done;
         if (duplicate) return;
         let db = await fenceLegacyTracking(initial.name);
         if (evidence.business) { const name = db.name; db.close(); db = await fenceLegacyBusinessStores(name); }
         try {
-          const tx = db.transaction(causalBusinessTransactionStores(db, [...DATA_STORES, STORES.SYNC, CAUSAL_STORE]), 'readwrite');
+          const tx = db.transaction(accountTransactionStores(db, [...DATA_STORES, STORES.SYNC, CAUSAL_STORE]), 'readwrite');
           void tx.done.catch(() => undefined);
           try {
             // Recheck inside the write transaction: a peer may have committed
@@ -1941,6 +2074,7 @@ export const storageService = {
               }
             } else if (evidence.sync !== undefined) await writeCausalBusiness(tx, STORES.SYNC, userKey, evidence.sync);
             await tx.objectStore(CAUSAL_STORE).add(authority);
+            if (planningBackup) await tx.objectStore(PLANNING_STORE).add(planningBackup);
             await tx.done;
           } catch (error) {
             try { tx.abort(); } catch (_) {}
@@ -1953,6 +2087,32 @@ export const storageService = {
     if ((await getDB())?.objectStoreNames.contains(CAUSAL_STORE)) {
       throw new DurableStorageError('Causal backup recovery requires journal reconciliation before restore. The backup and existing data remain unchanged.');
     }
+    if (planningBackup) return queueMutation(async () => {
+      const db = await getDB();
+      if (!db) throw new DurableStorageError('Planning restore requires IndexedDB.');
+      const tx = db.transaction(accountTransactionStores(db, [...DATA_STORES, STORES.SYNC]), 'readwrite');
+      void tx.done.catch(() => undefined);
+      try {
+        const existing = await tx.objectStore(PLANNING_STORE).get(userKey);
+        if (existing?.restoredBackupChecksum === envelope.checksum) { await tx.done; return; }
+        for (const store of [...DATA_STORES, STORES.SYNC, PLANNING_STORE]) {
+          if (await tx.objectStore(store).getKey(userKey) !== undefined) throw new DurableStorageError(
+            'Planning history needs reconciliation before restore into an existing account. Existing data is unchanged.');
+        }
+        if (Object.keys(backupLocalCaptures(userKey)).length) throw new DurableStorageError('Existing local captures require reconciliation before restore.');
+        for (const store of [...DATA_STORES, STORES.SYNC]) {
+          if (Object.hasOwn(verifiedCollections, store)) await tx.objectStore(store).add(verifiedCollections[store], userKey);
+        }
+        await tx.objectStore(PLANNING_STORE).add({ ...planningBackup, restoredBackupChecksum: envelope.checksum });
+        await tx.done;
+      } catch (error) {
+        try { tx.abort(); } catch (_) {}
+        try { await tx.done; } catch (_) {}
+        throw error;
+      }
+    });
+    const existingPlanning = await (await getDB())?.get(PLANNING_STORE, userKey);
+    if (existingPlanning?.planning) throw new DurableStorageError('This backup has no planning history. Existing planning data requires reconciliation before restore.');
     const collections = normalizeBackupCollectionsForWeb(verifiedCollections);
     await this.flushPendingLocalChanges(userKey);
     await this.createLocalSnapshot(userKey, 'before-restore');

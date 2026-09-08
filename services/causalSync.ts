@@ -35,6 +35,7 @@ export function nextCausalQueueWork(accountId: string, state: State, meta: SyncM
       if (parent && receipts[parent]?.accepted === false) continue;
       if (Object.values(completion.dependencies).some(dependency => dependency.kind === 'completion'
         ? !dependency.actionId || state.completionReceipts?.[dependency.actionId]?.accepted !== true
+        : dependency.kind === 'planning' ? !dependency.actionId || (state.planningReceipts?.[dependency.actionId]?.receipt.code !== 'APPLIED' && !state.planningResolutions?.[dependency.actionId])
         : meta.localState?.receipts[dependency.request.mutationId]?.result.accepted !== true)) continue;
       return { type: 'completion', actionId: command.actionId };
     }

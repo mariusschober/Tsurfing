@@ -13,7 +13,7 @@ import { causalHistoryHash } from './causalHistoryProtocol';
 import { appendStagedTransactions, applyRemotePage, buildStagedLocalTransaction, emptySyncMeta, readyOutbox } from './syncProtocol';
 import { STORES, storageService } from './storage';
 import type { SavedCausalHistory } from './causalHistory';
-import { validateCompletionApplicationEvidence } from './causalCompletionProjection';
+import { applyCompletionHistory, CompletionProjectionReview, validateCompletionApplicationEvidence } from './causalCompletionProjection';
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 const business = ['tasks', 'stats', 'progress', 'goals', 'habits', 'task_events', 'daily_plans'] as const;
@@ -283,4 +283,20 @@ it('retains rejected local completion notes and effects with a durable causal re
   expect(after[CAUSAL_STORE].causalHistory).toEqual(before[CAUSAL_STORE].causalHistory);
   expect(after[CAUSAL_STORE].completionOutbox[completion.capture.focus.actionId]).toBeDefined();
   await expect(validateCompletionApplicationEvidence(f.accountId, after[CAUSAL_STORE])).resolves.toBeUndefined();
+});
+
+it('requires review before remote completion overwrites a provisional planning member', async () => {
+  const f = await fixture(), source = await f.replica(), completion = await f.complete(source);
+  const snapshot = await f.read(await f.replica());
+  const member = completion.receipt.operation.changes.find((item: any) => item.entityType === 'tasks');
+  const reservation = { ...member, mutationId: crypto.randomUUID(), actionId: crypto.randomUUID(),
+    version: member.version + 1, payload: { ...snapshot.tasks[0], isFrog: false } };
+  snapshot.sync.localState ??= {};
+  snapshot.sync.localState.planningReservations = { [reservation.mutationId]: reservation };
+  snapshot.tasks[0] = reservation.payload;
+  const before = structuredClone(snapshot.tasks);
+  expect(() => applyCompletionHistory(f.accountId, snapshot[CAUSAL_STORE], snapshot.sync, snapshot,
+    completion.receipt, { epoch: f.epoch, revision: completion.receipt.projectionRevision, sha256: 'a'.repeat(64) }))
+    .toThrow(CompletionProjectionReview);
+  expect(snapshot.tasks).toEqual(before);
 });

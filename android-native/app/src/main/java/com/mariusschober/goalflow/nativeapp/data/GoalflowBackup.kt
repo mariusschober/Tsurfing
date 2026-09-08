@@ -33,7 +33,8 @@ data class GoalflowBackupPayload(
     /** Prevents a restore from mixing records from another backend/account. */
     val syncBinding: GoalflowSyncBinding? = null,
     /** Exact private journal bytes, including captured intents and receipts. */
-    val causalAccounts: List<CausalAccountEntity> = emptyList()
+    val causalAccounts: List<CausalAccountEntity> = emptyList(),
+    val planningAccounts: List<PlanningAccountEntity> = emptyList()
 )
 
 data class GoalflowSyncBinding(
@@ -78,7 +79,7 @@ enum class BackupRestoreMode { MERGE, REPLACE }
 object GoalflowBackup {
     private const val FORMAT = "goalflow-encrypted-backup"
     private const val FORMAT_VERSION = 1
-    private const val SCHEMA_VERSION = 5
+    private const val SCHEMA_VERSION = 6
     private const val ITERATIONS = 310_000
     private const val MIN_ITERATIONS = 100_000
     private const val MAX_ITERATIONS = 1_000_000
@@ -133,7 +134,7 @@ object GoalflowBackup {
             val envelopePayload = JSONObject(String(cipher.doFinal(ciphertext), StandardCharsets.UTF_8))
             val schemaVersion = envelopePayload.optInt("schemaVersion", 1)
             if (schemaVersion !in 1..SCHEMA_VERSION) throw BackupFormatException("This backup was created by a newer Tsurfing version.")
-            if (schemaVersion == 5 && envelopePayload.opt("nativeCausalFormat") != 1) {
+            if (schemaVersion >= 5 && envelopePayload.opt("nativeCausalFormat") != 1) {
                 throw BackupFormatException("This causal backup needs an explicit cross-client import.")
             }
             if (schemaVersion >= 3) {
@@ -162,7 +163,7 @@ object GoalflowBackup {
             if (ownerUserId != null && bindingOwnerUserId != null && ownerUserId != bindingOwnerUserId) {
                 throw BackupFormatException("Backup account bindings disagree.")
             }
-            val payload = parsePayload(collections, ownerUserId, syncBinding, schemaVersion >= 5)
+            val payload = parsePayload(collections, ownerUserId, syncBinding, schemaVersion >= 5, schemaVersion >= 6)
             val expectedChecksum = envelopePayload.optString("checksum", collections.optString("checksum"))
             if (schemaVersion >= 3 && !expectedChecksum.matches(Regex("^[0-9a-fA-F]{64}$"))) {
                 throw BackupFormatException("Backup checksum is invalid or missing.")
@@ -193,7 +194,8 @@ object GoalflowBackup {
         collections: JSONObject,
         ownerUserId: String? = null,
         syncBinding: GoalflowSyncBinding? = null,
-        causalExpected: Boolean = false
+        causalExpected: Boolean = false,
+        planningExpected: Boolean = false
     ): GoalflowBackupPayload {
         // The web backup stores only non-empty collections and calls daily
         // planning decisions `daily_plans`; native backups use explicit empty
@@ -226,7 +228,7 @@ object GoalflowBackup {
         }
         val metadataKeys = setOf(
             "tasks", "goals", "plans", "daily_plans", "events", "task_events", "habits", "outbox", "syncMeta", "conflicts",
-            "rawCollections", "causalAccounts", "schemaVersion", "exportedAt", "checksum", "ownerUserId", "syncBinding"
+            "rawCollections", "causalAccounts", "planningAccounts", "schemaVersion", "exportedAt", "checksum", "ownerUserId", "syncBinding"
         )
         val directKeys = collections.keys()
         while (directKeys.hasNext()) {
@@ -244,6 +246,16 @@ object GoalflowBackup {
             if (collections.has("causalAccounts")) throw BackupFormatException("The causal backup version is invalid.")
             emptyList()
         }
+        val planning = if (planningExpected) {
+            val array = collections.optJSONArray("planningAccounts") ?: throw BackupFormatException("The planning journal collection is missing.")
+            (0 until array.length()).map { index ->
+                val entry = array.getJSONObject(index)
+                PlanningAccountEntity(entry.getString("accountId"), entry.getLong("generation"), entry.getString("payload"))
+            }.also { planningAccountsPayload(it, ownerUserId) }
+        } else {
+            if (collections.has("planningAccounts")) throw BackupFormatException("The planning backup version is invalid.")
+            emptyList()
+        }
         val payload = GoalflowBackupPayload(
             tasks = tasks,
             goals = goals,
@@ -256,7 +268,8 @@ object GoalflowBackup {
             rawCollections = rawCollections,
             ownerUserId = ownerUserId,
             syncBinding = syncBinding,
-            causalAccounts = causal
+            causalAccounts = causal,
+            planningAccounts = planning
         )
         requireUnique(payload.tasks.map { it.id }, "task")
         requireUnique(
@@ -367,6 +380,117 @@ object GoalflowBackup {
         // Keep their checksum source byte-for-byte compatible with that format.
         if (schemaVersion >= 3) put("rawCollections", rawCollectionsPayload(payload.rawCollections))
         if (schemaVersion >= 5) put("causalAccounts", causalAccountsPayload(payload.causalAccounts, payload.ownerUserId))
+        if (schemaVersion >= 6) {
+            put("planningAccounts", planningAccountsPayload(payload.planningAccounts, payload.ownerUserId))
+            for (account in payload.planningAccounts) {
+                val planning = JSONObject(account.payload).getJSONObject("planning")
+                val graph = planning.optJSONObject("rebase") ?: continue
+                require(graph.opt("accountId") == account.accountId)
+                NativePlanningCompletionRebase.validateEdits(graph, payload.outbox)
+                val originals = graph.getJSONObject("completionAdmissions")
+                val causal = payload.causalAccounts.singleOrNull { it.accountId == account.accountId }?.let { JSONObject(it.payload) }
+                if (causal != null) for (field in listOf("planningResolutions", "planningEdits")) {
+                    require(ActionJson.canonical(graph.opt(field)) == ActionJson.canonical(causal.opt(field))) { "Saved edit authority differs from completion evidence." }
+                }
+                for (id in originals.keys()) require(causal != null && ActionJson.canonical(originals.get(id)) == ActionJson.canonical(causal.getJSONObject("completionAdmissions").get(id))) {
+                    "A saved edit has a different original completion."
+                }
+            }
+
+            for (account in payload.causalAccounts) {
+                val proofs = JSONObject(account.payload).optJSONObject("planningResolutions") ?: continue
+                val saved = payload.planningAccounts.singleOrNull { it.accountId == account.accountId }
+                    ?: throw BackupFormatException("Completion recovery is missing its original planning evidence.")
+                val resolutions = JSONObject(saved.payload).getJSONObject("planning").getJSONObject("resolutions")
+                for (id in proofs.keys()) {
+                    val proof = proofs.getJSONObject(id); val resolution = resolutions.getJSONObject(id); val pending = resolution.getJSONObject("pending")
+                    for (field in listOf("command", "request", "members")) require(ActionJson.canonical(proof.opt(field)) == ActionJson.canonical(pending.opt(field))) {
+                        "Completion recovery differs from the original planning attempt."
+                    }
+                    require(ActionJson.canonical(proof.opt("snapshot")) == ActionJson.canonical(resolution.opt("snapshot")))
+                }
+            }
+        }
+    }
+
+    private fun planningAccountsPayload(accounts: List<PlanningAccountEntity>, owner: String?): JSONArray {
+        val expectedOwner = owner ?: "unbound-local-workspace"
+        if (accounts.size > 1 || accounts.any { it.accountId != expectedOwner }) throw BackupFormatException("The planning backup belongs to another account.")
+        return JSONArray(accounts.map { account ->
+            val value = JSONObject(account.payload)
+            require(value.opt("schemaVersion") == 1 && value.opt("accountKey") == account.accountId
+                && ActionJson.integer(value.opt("generation")) == account.generation && account.generation >= 0) { "Invalid planning journal identity." }
+            val planning = value.getJSONObject("planning")
+            require(planning.opt("schemaVersion") == 1) { "Unsupported planning journal." }
+            for (key in listOf("days", "drafts", "pending", "receipts")) require(planning.opt(key) is JSONObject) { "Incomplete planning journal." }
+            val days = planning.getJSONObject("days")
+            for (day in days.keys()) {
+                NativePlanningProtocol.policy(account.accountId, day, days.getJSONObject(day))
+            }
+            val drafts = planning.getJSONObject("drafts")
+            for (day in drafts.keys()) {
+                val draft = JSONObject(drafts.getJSONObject(day).toString())
+                require(draft.opt("localDate") == day && draft.opt("accountId") == account.accountId) { "Invalid planning draft account or date." }
+                val updated = draft.remove("updatedAt")
+                draft.put("capturedAt", updated).put("operationId", "00000000-0000-4000-8000-000000000001")
+                DeliberatePlanning.validate(draft)
+            }
+            val sequences = mutableSetOf<Long>()
+            val pending = planning.getJSONObject("pending")
+            for (id in pending.keys()) {
+                val item = pending.getJSONObject(id); val command = item.getJSONObject("command")
+                DeliberatePlanning.validate(command)
+                require(command.opt("operationId") == id && command.opt("accountId") == account.accountId
+                    && item.opt("members") is JSONArray && item.opt("provisional") is JSONObject
+                    && item.opt("ordinaryDependencies") is JSONArray && item.opt("causalDependencies") is JSONArray) { "Invalid pending planning confirmation." }
+                val sequence = ActionJson.integer(item.opt("sequence")) ?: error("Invalid planning sequence.")
+                require(sequence in 1..account.generation && sequences.add(sequence)) { "Invalid planning sequence." }
+                val history = days.getJSONObject(command.getString("localDate")).getJSONArray("history")
+                require((0 until history.length()).any { index ->
+                    ActionJson.canonical(history.getJSONObject(index)) == ActionJson.canonical(item.getJSONObject("provisional"))
+                }) { "Missing provisional planning history." }
+                if (item.has("request")) require(ActionJson.canonical(JSONObject(item.getString("request"))) == ActionJson.canonical(command)) { "Planning request changed." }
+                item.optJSONObject("response")?.let { NativePlanningProtocol.response(account.accountId, command, it) }
+                item.optJSONArray("reviewSnapshots")?.let { snapshots ->
+                    require(item.has("review") && item.has("response") && item.has("request"))
+                    for (i in 0 until snapshots.length()) {
+                        val snapshot = NativePlanningProtocol.review(account.accountId, command, snapshots.getJSONObject(i))
+                        require(ActionJson.canonical(snapshot.getJSONObject("response")) == ActionJson.canonical(item.getJSONObject("response")))
+                    }
+                }
+            }
+            val receipts = planning.getJSONObject("receipts")
+            for (id in receipts.keys()) {
+                val receipt = receipts.getJSONObject(id); val command = receipt.getJSONObject("receipt").getJSONObject("command")
+                require(command.opt("operationId") == id && !pending.has(id))
+                NativePlanningProtocol.response(account.accountId, command, receipt)
+            }
+            planning.optJSONObject("rebase")?.let { graph ->
+                require(graph.opt("accountId") == account.accountId)
+                NativePlanningCompletionRebase.validateEdits(graph)
+                val proofs = graph.getJSONObject("planningResolutions")
+                for (id in proofs.keys()) {
+                    val proof = proofs.getJSONObject(id); val resolution = planning.getJSONObject("resolutions").getJSONObject(id)
+                    val original = resolution.getJSONObject("pending")
+                    for (field in listOf("command", "request", "members")) require(ActionJson.canonical(proof.opt(field)) == ActionJson.canonical(original.opt(field)))
+                    require(ActionJson.canonical(proof.opt("snapshot")) == ActionJson.canonical(resolution.opt("snapshot")))
+                }
+            }
+            planning.optJSONObject("resolutions")?.let { resolutions ->
+                for (id in resolutions.keys()) {
+                    val resolution = resolutions.getJSONObject(id); val item = resolution.getJSONObject("pending"); val command = item.getJSONObject("command")
+                    require(command.opt("operationId") == id && command.opt("accountId") == account.accountId && !pending.has(id)
+                        && resolution.opt("choice") in setOf("synced", "draft") && item.has("review")
+                        && item.getString("request") == command.toString() && item.opt("members") is JSONArray)
+                    val snapshot = NativePlanningProtocol.review(account.accountId, command, resolution.getJSONObject("snapshot"))
+                    require(ActionJson.canonical(snapshot.getJSONObject("response")) == ActionJson.canonical(item.getJSONObject("response"))
+                        && ActionJson.canonical(receipts.opt(id)) == ActionJson.canonical(item.getJSONObject("response")))
+                    val snapshots = item.getJSONArray("reviewSnapshots")
+                    require((0 until snapshots.length()).any { ActionJson.canonical(snapshots.get(it)) == ActionJson.canonical(snapshot) })
+                }
+            }
+            JSONObject().put("accountId", account.accountId).put("generation", account.generation).put("payload", account.payload)
+        })
     }
 
     private fun causalAccountsPayload(accounts: List<CausalAccountEntity>, owner: String?): JSONArray {
@@ -645,12 +769,38 @@ object GoalflowBackup {
     private fun validateSyncState(payload: GoalflowBackupPayload) {
         val outboxIds = payload.outbox.mapTo(linkedSetOf()) { it.mutationId }
         val dependencies = payload.outbox.associate { it.mutationId to it.dependsOnMutationId }
+        val reserved = mutableMapOf<String, JSONObject>()
+        fun retain(member: JSONObject) {
+            val id = member.getString("mutationId")
+            require(id !in reserved && id !in outboxIds) { "A pending identity is represented more than once." }
+            reserved[id] = member
+        }
+        for (account in payload.causalAccounts) {
+            val state = NativeCausalJournal.validate(account)
+            val admissions = state.optJSONObject("completionAdmissions") ?: continue
+            for (id in admissions.keys()) if (state.getJSONObject("focusOutbox").has(id)) {
+                val members = admissions.getJSONObject(id).getJSONArray("members")
+                for (i in 0 until members.length()) retain(members.getJSONObject(i))
+            }
+        }
+        for (account in payload.planningAccounts) {
+            val pending = JSONObject(account.payload).getJSONObject("planning").getJSONObject("pending")
+            for (id in pending.keys()) {
+                val members = pending.getJSONObject(id).getJSONArray("members")
+                for (i in 0 until members.length()) retain(members.getJSONObject(i))
+            }
+        }
         payload.outbox.forEach { mutation ->
             mutation.dependsOnMutationId?.let { dependency ->
                 runCatching { java.util.UUID.fromString(dependency) }
                     .getOrElse { throw BackupFormatException("Backup contains an invalid pending dependency identity.") }
                 if (dependency !in outboxIds) {
-                    throw BackupFormatException("Backup contains a pending mutation with a missing dependency.")
+                    val predecessor = reserved[dependency]
+                    if (predecessor == null || predecessor.opt("entityType") != mutation.entityType
+                        || predecessor.opt("entityId") != mutation.entityId || predecessor.getLong("version") >= mutation.version
+                        || mutation.attemptedAt != null) {
+                        throw BackupFormatException("Backup contains a pending mutation with a missing or incompatible dependency.")
+                    }
                 }
             }
             mutation.resolvesConflictId?.let { conflictId ->

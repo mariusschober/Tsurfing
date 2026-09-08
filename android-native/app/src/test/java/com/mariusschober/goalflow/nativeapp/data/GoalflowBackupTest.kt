@@ -20,6 +20,32 @@ class GoalflowBackupTest {
     )
 
     @Test
+    fun `planning journal survives encrypted backup with exact pending bytes`() {
+        val owner = "00000000-0000-4000-8000-000000000001"
+        val command = JSONObject("""{"schemaVersion":1,"operationId":"00000000-0000-4000-8000-000000000002","accountId":"$owner","localDate":"2026-09-08","baselineRevision":null,"proposedOrder":["task-1"],"ratings":[],"maximumAcceptedXp":0,"capturedAt":"2026-09-08T10:00:00.000Z"}""")
+        val reply = DeliberatePlanning.apply(DeliberatePlanning.initial(owner, "2026-09-08"), command,
+            listOf(DeliberatePlanning.Task("task-1", 2)), 0, "off")
+        val policy = reply.policy
+        val draft = JSONObject(command.toString()).also { it.remove("operationId"); it.remove("capturedAt") }
+            .put("updatedAt", "2026-09-08T10:00:00.000Z")
+        val planning = JSONObject().put("schemaVersion", 1)
+            .put("days", JSONObject().put("2026-09-08", policy))
+            .put("drafts", JSONObject().put("2026-09-08", draft))
+            .put("pending", JSONObject().put(command.getString("operationId"), JSONObject().put("command", command)
+                .put("members", org.json.JSONArray()).put("provisional", reply.receipt).put("request", command.toString())
+                .put("sequence", 7).put("ordinaryDependencies", org.json.JSONArray()).put("causalDependencies", org.json.JSONArray())))
+            .put("receipts", JSONObject())
+        val bytes = JSONObject().put("schemaVersion", 1).put("accountKey", owner).put("generation", 7).put("planning", planning).toString(2)
+        val row = PlanningAccountEntity(owner, 7, bytes)
+        val payload = GoalflowBackupPayload(listOf(task), emptyList(), emptyList(), ownerUserId = owner, planningAccounts = listOf(row))
+        val restored = GoalflowBackup.decrypt(GoalflowBackup.encrypt(payload, "a strong backup password"), "a strong backup password")
+        assertEquals(listOf(row), restored.planningAccounts)
+        assertThrows(IllegalArgumentException::class.java) {
+            GoalflowBackup.encrypt(payload.copy(ownerUserId = "00000000-0000-4000-8000-000000000003"), "a strong backup password")
+        }
+    }
+
+    @Test
     fun `encrypted backup round trips`() {
         val payload = GoalflowBackupPayload(
             tasks = listOf(task),

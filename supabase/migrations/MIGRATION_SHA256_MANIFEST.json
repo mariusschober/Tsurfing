@@ -30,5 +30,7 @@
   "20260908004753_s2_causal_capability_discovery.sql": "2e6f536194902b3f6b505f78bbcdf4f510fa28093608196c9ee9aa5f38743d88",
   "20260908011224_s2_causal_history_chunks.sql": "f440d9b5a74fc9efe9fed38f27a26d4201c035655bc1b7cbe23d8a21e2be2cc0",
   "20260908015740_s2_atomic_focus_completion.sql": "9a65d3c91a1a38f0ba14af2c10dc27cc8a75d02dcaa9fa3e87b609d514734709",
-  "20260908065315_s2_causal_account_initialization.sql": "e9003fb4e0e68508af96ef5ff4d100867c1f66e00a1fc0f20d03b8015937b621"
+  "20260908065315_s2_causal_account_initialization.sql": "e9003fb4e0e68508af96ef5ff4d100867c1f66e00a1fc0f20d03b8015937b621",
+  "20260908180500_deliberate_planning.sql": "7fde95fce952bf6d988372d126922384f9712e60dfdd90e3d3c8effdd51a4ab8",
+  "20260908193000_planning_review_snapshot.sql": "7261526b80e293733a41a07fa1d633151bbd5f695156e9ae32cbd026fd75d1ac"
 }

@@ -7,6 +7,7 @@ import { readStagedReconciliation, stageReconciliationChunk } from '../reconcili
 import { admitCausalOperation, readCausalCapability, establishCausalCutover, initializeCausalAccount } from '../causalActions';
 import { readCausalHistoryChunk } from '../causalHistory';
 import { completeCausalFocus } from '../causalCompletion';
+import { confirmOrder, readPlanningDay, readPlanningReview } from '../deliberatePlanning';
 
 const syncEntityType = z.enum([
   'tasks', 'goals', 'habits', 'stats', 'progress', 'hashtags', 'accountability',
@@ -181,6 +182,10 @@ export const applySyncMutationsSequentially = async (
 };
 
 const invalidRequest = (response: Response, error: unknown) => {
+  if (isRecord(error) && error.code === '0A000') {
+    response.status(426).json({ error: { code: 'update_required', message: 'Update this client to change a locked order through planning confirmation.' } });
+    return;
+  }
   if (error instanceof z.ZodError) {
     response.status(400).json({ error: { code: 'invalid_request', message: 'Synchronization data is invalid.', issues: error.issues } });
     return;
@@ -291,6 +296,26 @@ export const createSyncRouter = (admin?: SupabaseClient) => {
         response.status(503).json({ error: { code: 'causal_retry_required',
           message: 'Synchronization was interrupted. Retry the exact saved action.' } });
       } else invalidRequest(response, error);
+    }
+  });
+
+  router.get('/sync/planning', async (request, response) => {
+    try { response.json(await readPlanningDay(requireDatabase(admin), request.user!.id, request.query.date)); }
+    catch (error) { invalidRequest(response, error); }
+  });
+  router.post('/sync/planning-review', async (request, response) => {
+    response.setHeader('Cache-Control', 'no-store');
+    try { response.json(await readPlanningReview(requireDatabase(admin), request.user!.id, request.body)); }
+    catch (error) { invalidRequest(response, error); }
+  });
+  router.post('/sync/confirm-order', async (request, response) => {
+    try { response.json(await confirmOrder(requireDatabase(admin), request.user!.id, request.body)); }
+    catch (error) {
+      if (isRecord(error) && error.code === '22023') response.status(409).json({ error: {
+        code: 'planning_review_required', message: 'This confirmation needs review. Its original order and identity remain saved.' } });
+      else if (isRecord(error) && ['40001', '40P01'].includes(String(error.code))) response.status(503).json({ error: {
+        code: 'planning_retry_required', message: 'Retry the same saved confirmation.' } });
+      else invalidRequest(response, error);
     }
   });
 

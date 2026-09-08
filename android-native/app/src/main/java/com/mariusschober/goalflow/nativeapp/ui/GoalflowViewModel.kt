@@ -118,6 +118,56 @@ class GoalflowViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, PlanningGate.Empty)
 
+    val deliberatePlanning = today.flatMapLatest { date -> repository.planningStream(date)
+        .map { it as com.mariusschober.goalflow.nativeapp.data.NativePlanningSnapshot? }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    private val _savedPlanningDate = MutableStateFlow<String?>(null)
+    val savedPlanningDate = _savedPlanningDate.asStateFlow()
+    val savedPlanning = _savedPlanningDate.flatMapLatest { date ->
+        if (date == null) kotlinx.coroutines.flow.flowOf(null)
+        else repository.planningStream(date).map { it as com.mariusschober.goalflow.nativeapp.data.NativePlanningSnapshot? }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    fun openSavedPlanning(date: String?) { _savedPlanningDate.value = date }
+    fun savedPlanningAction(date: String, action: String, order: List<String> = emptyList(), cost: Int = 0) {
+        viewModelScope.launch {
+            runCatching {
+                require(_savedPlanningDate.value == date) { "The selected planning date changed." }
+                when (action) {
+                    "synced" -> repository.resolvePlanningReview(date, false)
+                    "draft" -> repository.resolvePlanningReview(date, true)
+                    "review" -> repository.reviewReplan(date)
+                    "discard" -> repository.discardReplan(date)
+                    "confirm" -> repository.confirmPlan(date, order, cost)
+                    else -> error("Unknown saved planning action.")
+                }
+            }.onFailure { _error.value = it.message }
+        }
+    }
+    private val _planningEditing = MutableStateFlow(false)
+    val planningEditing = _planningEditing.asStateFlow()
+    fun pausePlanning() { _planningEditing.value = false }
+    fun resumePlanning() { _planningEditing.value = true }
+    fun beginReplan() { viewModelScope.launch {
+        runCatching { repository.beginReplan(today.value) }
+            .onSuccess { _planningEditing.value = true }
+            .onFailure { _error.value = it.message }
+    } }
+    fun resolvePlanningReview(useDraft: Boolean) { viewModelScope.launch {
+        runCatching { repository.resolvePlanningReview(today.value, useDraft) }
+            .onSuccess { _planningEditing.value = useDraft }
+            .onFailure { _error.value = it.message }
+    } }
+    fun reviewReplan() { viewModelScope.launch {
+        runCatching { repository.reviewReplan(today.value) }
+            .onSuccess { _planningEditing.value = true }
+            .onFailure { _error.value = it.message }
+    } }
+    fun discardReplan() { viewModelScope.launch {
+        runCatching { repository.discardReplan(today.value) }
+            .onSuccess { _planningEditing.value = false; _reorderUndo.value = null }
+            .onFailure { _error.value = it.message }
+    } }
+
     val currentTask: StateFlow<GoalflowTask?> = planningGate.map { gate ->
         (gate as? PlanningGate.Ready)?.queue?.firstOrNull()
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
@@ -383,7 +433,10 @@ class GoalflowViewModel(
     fun promoteTaskToFrog(task: GoalflowTask) {
         viewModelScope.launch {
             clearError()
-            runCatching { repository.promoteTaskToFrog(task.id) }
+            runCatching {
+                if (task.scheduledFor == today.value) { repository.promoteDraftFrog(today.value, task.id); _planningEditing.value = true }
+                else repository.promoteTaskToFrog(task.id)
+            }
                 .onSuccess { _notice.value = "Marked as a frog" }
                 .onFailure { failure -> _error.value = failure.message ?: "The commitment could not become a frog." }
         }
@@ -416,6 +469,7 @@ class GoalflowViewModel(
                 runCatching { repository.moveToday(localDate, taskId, direction) }
                 .onSuccess { result ->
                     if (result != null) {
+                        _planningEditing.value = true
                         // A long-press drag can emit several adjacent moves.
                         // Keep the first snapshot as the undo target while
                         // updating the final order shown by the snackbar.
@@ -451,13 +505,15 @@ class GoalflowViewModel(
 
     fun clearReorderUndo() { _reorderUndo.value = null }
 
-    fun confirmPlan(localDate: String, orderedIds: List<String>) {
+    fun confirmPlan(localDate: String, orderedIds: List<String>, maximumAcceptedXp: Int = 0, onConfirmed: () -> Unit = {}) {
         viewModelScope.launch {
             clearError()
-            runCatching { repository.confirmPlan(localDate, orderedIds) }
+            runCatching { repository.confirmPlan(localDate, orderedIds, maximumAcceptedXp) }
                 .onSuccess {
                     _reorderUndo.value = null
-                    _notice.value = "Plan confirmed"
+                    _notice.value = "Order locked"
+                    _planningEditing.value = false
+                    onConfirmed()
                 }
                 .onFailure { failure -> _error.value = failure.message ?: "The plan changed. Review it again." }
         }

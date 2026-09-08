@@ -1,4 +1,3 @@
-import type { PlanningVisitIntent } from '../services/causalPlanningCoordinator';
 import type { RescheduleIntent } from '../services/causalRescheduleCoordinator';
 
 
@@ -569,7 +568,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
                       rescheduleCount: 0,
                       schedulePrecision: 'day',
                       scheduledFor: today,
-                      plannedOrder: 0,
+                      plannedOrder: Math.max(-1, ...todaysTasks.map(task => task.plannedOrder ?? 0)) + newTasks.length + 1,
                       frogFailures: 0,
                       beforeFrog: !!habit.beforeFrog,
                       source: 'habit',
@@ -699,35 +698,8 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
       return commitFocusSession(next);
   }, [commitFocusSession, getDailyTracking, submitFocusControl]);
 
-  const planningRetries = useRef(new Map<string, Omit<PlanningVisitIntent, 'actorId' | 'deviceId'>>());
-  const trackPlanVisit = (): boolean | Promise<boolean> => {
-      if (causalMode.current) {
-          const intent = [...planningRetries.current.values()].find(capture => capture.accountId === USER_KEY)
-              ?? { schemaVersion: 1 as const, actionId: crypto.randomUUID(), accountId: USER_KEY, day: getTodayYYYYMMDD(),
-                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, capturedAt: new Date().toISOString() };
-          return storageService.admitPlanningVisit(USER_KEY, intent).then(result => {
-              planningRetries.current.delete(intent.actionId);
-              const effect = result.admission.effect;
-              if (!result.duplicate && effect.status === 'APPLIED') {
-                  if (effect.warning) setPlanningWarning(true);
-                  if (effect.penaltyAmount) setGamificationEvent({ type: 'penalty', amount: effect.penaltyAmount, message: 'Stop Planning. Start Doing.' });
-              }
-              return true;
-          }).catch(error => {
-              planningRetries.current.set(intent.actionId, intent);
-              window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: { userKey: USER_KEY,
-                  state: 'error', localFailure: true, message: error instanceof Error ? error.message : 'The planning visit could not be saved. Please retry.' } }));
-              return false;
-          });
-      }
-      setDailyTracking(prev => {
-          const newCount = prev.planViewCount + 1;
-          if (newCount === 6) setPlanningWarning(true);
-          else if (newCount > 6) applyPenalty(50, "Stop Planning. Start Doing.");
-          return { ...prev, planViewCount: newCount };
-      });
-      return true;
-  };
+  // Plan is an unlimited review surface. Retained historical counters are never charged again.
+  const trackPlanVisit = () => true;
 
   const rescheduleRetries = useRef(new Map<string, Omit<RescheduleIntent, 'actorId' | 'deviceId'>>());
   const rescheduleTask = (taskId: string, newDate: string): boolean | Promise<boolean> => {
@@ -780,7 +752,8 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
           dateAssigned: newDate,
           schedulePrecision: 'day' as const,
           scheduledFor: newDate,
-          plannedOrder: 0,
+          plannedOrder: Math.max(-1, ...currentTasks.filter(existing => existing.id !== taskId
+            && (existing.scheduledFor ?? existing.dateAssigned) === newDate).map(existing => existing.plannedOrder ?? 0)) + 1,
           session: undefined,
           rescheduleCount: newRescheduleCount,
           frogFailures: newRescheduleCount,
@@ -848,7 +821,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
           schedulePrecision: finalSchedulePrecision,
           scheduledFor: finalScheduledFor,
           plannedOrder: Math.max(-1, ...prev
-            .filter(task => task.scheduledFor === finalScheduledFor)
+            .filter(task => (task.scheduledFor ?? task.dateAssigned) === finalScheduledFor)
             .map(task => task.plannedOrder ?? 0)) + 1,
           frogFailures: 0,
           beforeFrog: false,
@@ -895,7 +868,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
          rescheduleCount: 0,
          schedulePrecision,
          scheduledFor,
-         plannedOrder: (parentTask.plannedOrder || 0) + index,
+         plannedOrder: undefined,
          frogFailures: 0,
          beforeFrog: false,
          source: 'manual',
@@ -910,7 +883,9 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
              completedAt: Date.now(),
              lifecycleStatus: 'broken_down' as const
          } : t),
-         ...newTasks
+         ...newTasks.map((task, index) => ({ ...task, plannedOrder: Math.max(-1,
+           ...prev.filter(existing => (existing.scheduledFor || existing.dateAssigned) === task.scheduledFor)
+             .map(existing => existing.plannedOrder ?? -1)) + index + 1 }))
      ]);
   }, []);
 
@@ -983,9 +958,10 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
   const moveTaskToTopToday = useCallback((taskId: string) => {
     setTasks(prev => {
         const today = getTodayYYYYMMDD();
+        if (prev.find(task => task.id === taskId)?.dateAssigned === today) return prev;
         const todaysTasks = prev.filter(t => t.dateAssigned === today && !t.completed && !t.wontDo);
-        const minCreatedAt = todaysTasks.length > 0 ? Math.min(...todaysTasks.map(t => t.createdAt)) : Date.now();
-        return prev.map(t => t.id === taskId ? { ...t, dateAssigned: today, schedulePrecision: 'day' as const, scheduledFor: today, createdAt: minCreatedAt - 1000, session: undefined } : t);
+        const plannedOrder = Math.max(-1, ...todaysTasks.map(task => task.plannedOrder ?? 0)) + 1;
+        return prev.map(t => t.id === taskId ? { ...t, dateAssigned: today, schedulePrecision: 'day' as const, scheduledFor: today, plannedOrder, session: undefined } : t);
     });
   }, []);
 

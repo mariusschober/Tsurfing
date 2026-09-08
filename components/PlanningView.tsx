@@ -11,6 +11,8 @@ import { BioStateCheckIn } from './BioStateCheckIn';
 import { YellowPad } from './YellowPad';
 import { DatePicker } from './DatePicker';
 import { getPhotoperiod, getSeasonalSleepRecommendation } from '../utils/sunUtils';
+import { groupPlannedTasks, horizonTasks } from '../src/domain/plannedTasks';
+import { PlannedTaskBrowser } from './PlannedTaskBrowser';
 
 // --- Types & Interfaces ---
 
@@ -23,6 +25,7 @@ const readPlanDensity = (userKey: string): PlanDensity => {
 
 interface PlanningViewProps {
     userKey: string;
+    orderLocked?: boolean;
     planningMode: PlanningMode;
     onPlanningModeChange: (mode: PlanningMode) => void;
     onSubmitBioCheckIn: React.ComponentProps<typeof BioStateCheckIn>['onSubmit'];
@@ -699,7 +702,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
     todayTasks, upcomingTasks, allTasks, goals, setFrog, openEditModal, deleteTask, reorderTodayTasks, 
     hashtagConfigs, updateTaskPriorities, moveTaskToTopToday, onSelectHashtag, overdueTasks, markWontDo, onAddTask,
     updateTask, onRescheduleTask, circadianState, addSubtasks, completeTask, isAiEnabled = false, createTask,
-    userKey, planningMode, onPlanningModeChange, onSubmitBioCheckIn
+    userKey, planningMode, onPlanningModeChange, onSubmitBioCheckIn, orderLocked = false
 }) => {
     const [quizState, setQuizState] = useState<{ kind: 'prioritize' | 'circadian'; day: string } | null>(null);
     const openQuiz = (kind: 'prioritize' | 'circadian') => setQuizState({ kind, day: getTodayYYYYMMDD() });
@@ -737,6 +740,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
     const [isEstimatorOpen, setIsEstimatorOpen] = useState(false);
     const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
     const [noteModalTask, setNoteModalTask] = useState<Task | null>(null);
+    const [plannedBrowserOpen, setPlannedBrowserOpen] = useState(false);
     const [taskToEstimate, setTaskToEdit] = useState<Task | null>(null);
     const [rescheduleTaskDropId, setRescheduleTaskDropId] = useState<string | null>(null);
     const [isStrictEnabled, setIsStrictEnabled] = useState(false);
@@ -842,6 +846,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
 
     // ... (rest of drag handler and helpers logic remains)
     const onDragEnd = (result: DropResult) => {
+        if (orderLocked) return;
         const { source, destination, draggableId } = result;
         if (!destination) return;
         if (destination.droppableId === 'horizon-drop-zone') {
@@ -890,18 +895,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
         }
     };
 
-    const groupedUpcoming = useMemo(() => {
-        const grouped: Record<string, Task[]> = {};
-        upcomingTasks.forEach(task => {
-            const date = task.dateAssigned;
-            if (!grouped[date]) grouped[date] = [];
-            grouped[date].push(task);
-        });
-        return Object.keys(grouped).sort().map(date => ({
-            date,
-            tasks: grouped[date]
-        }));
-    }, [upcomingTasks]);
+    const groupedUpcoming = useMemo(() => groupPlannedTasks(horizonTasks(upcomingTasks, getTomorrowYYYYMMDD())), [upcomingTasks]);
 
     const totalHours = Math.floor(totalWorkMinutes / 60);
     const totalMins = totalWorkMinutes % 60;
@@ -911,15 +905,15 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
         <div className={`planning-view planning-view--${density} max-w-6xl mx-auto`}>
             <div className="planning-heading">
                 <div className="planning-heading__identity">
-                    <h2 className="text-4xl font-heading font-bold text-gray-800 dark:text-white">Plan</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">Design your flow.</p>
+                    <h2 className="text-3xl sm:text-4xl font-heading font-bold text-gray-800 dark:text-white">Plan today's flow</h2>
+                    {totalWorkMinutes > 0 && <span className="planning-duration-badge px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-bold border border-indigo-200 dark:border-indigo-800/50">{totalHours}h {totalMins}m</span>}
                 </div>
                 <div className="plan-mode">
                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Planning mode</span>
                     <div role="group" aria-label="Planning mode" className="plan-mode__options bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-600">
                         {(['manual', 'prioritize', 'circadian'] as const).map(mode => <button key={mode} type="button"
                             aria-pressed={planningMode === mode}
-                            disabled={mode === 'prioritize' && eligibleTasks.length === 0}
+                            disabled={mode === 'prioritize' && (eligibleTasks.length === 0 || orderLocked)}
                             aria-describedby={mode === 'prioritize' && eligibleTasks.length === 0 ? noTasksHintId : undefined}
                             className={`plan-mode__option ${planningMode === mode ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-slate-700'}`}
                             onClick={event => {
@@ -964,16 +958,6 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                         {/* Left Column: Today's Timeline */}
                         <div className="lg:col-span-2 space-y-6">
                             <div className="planning-flow-heading">
-                                <div className="flex items-center gap-3">
-                                    <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
-                                        Today's Flow
-                                    </h3>
-                                    {totalWorkMinutes > 0 && (
-                                        <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-bold border border-indigo-200 dark:border-indigo-800/50">
-                                            {totalHours}h {totalMins}m
-                                        </span>
-                                    )}
-                                </div>
                                 <div className="planning-flow-heading__actions">
                                     <div role="group" aria-label="Task layout" className="plan-density border border-gray-200 dark:border-slate-600">
                                         {(['compact', 'proportional'] as const).map(value => <button type="button" key={value} aria-pressed={density === value} onClick={() => changeDensity(value)} className={density === value ? 'bg-gray-100 text-gray-900 dark:bg-slate-700 dark:text-white' : 'text-gray-500 dark:text-gray-400'}>{value === 'compact' ? 'Compact' : 'Proportional'}</button>)}
@@ -1002,7 +986,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                                             className={`planning-task-list space-y-4 relative z-10 transition-colors ${snapshot.isDraggingOver ? 'bg-indigo-50/10 rounded-xl' : ''}`}
                                         >
                                             {timelineTasks.map((task, index) => (
-                                                <Draggable key={task.id} draggableId={task.id} index={index}>
+                                                <Draggable key={task.id} draggableId={task.id} index={index} isDragDisabled={orderLocked}>
                                                     {(provided, snapshot) => (
                                                         <div
                                                             ref={provided.innerRef}
@@ -1126,9 +1110,9 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                                         ) : (
                                             <div className="space-y-8 pl-4 border-l border-gray-200 dark:border-slate-800">
                                                 {groupedUpcoming.map(group => (
-                                                    <div key={group.date} className="relative">
+                                                    <div key={group.key} className="relative">
                                                         <div className="absolute -left-[21px] top-1 w-3 h-3 bg-gray-300 dark:bg-slate-600 rounded-full border-2 border-white dark:border-slate-900"></div>
-                                                        <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">{formatDisplayDate(group.date)}</h4>
+                                                        <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wider">{group.monthOnly ? `${new Date(`${group.key.slice(0, 7)}-01T12:00:00`).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })} · No day assigned` : formatDisplayDate(group.key)}</h4>
                                                         <div className="space-y-3">
                                                             {group.tasks.map(task => (
                                                                 <HorizonTaskCard 
@@ -1149,6 +1133,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                                                 ))}
                                             </div>
                                         )}
+                                        {upcomingTasks.length > 0 && <button type="button" onClick={event => { event.currentTarget.focus(); setPlannedBrowserOpen(true); }} className="mt-5 min-h-11 w-full rounded-xl border border-gray-200 dark:border-slate-700 text-sm font-semibold text-indigo-600 dark:text-indigo-300 hover:bg-gray-50 dark:hover:bg-slate-800">View planned tasks ({upcomingTasks.length})</button>}
                                     </div>
                                     {provided.placeholder}
                                 </div>
@@ -1158,6 +1143,11 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                 </DragDropContext>
             )}
 
+            <PlannedTaskBrowser isOpen={plannedBrowserOpen} onClose={() => setPlannedBrowserOpen(false)} tasks={upcomingTasks}
+                onAddTask={dateAssigned => onAddTask({ dateAssigned })}
+                renderTask={task => <HorizonTaskCard task={task} goal={goals.find(goal => goal.id === task.goalId)} setFrog={setFrog}
+                    openEditModal={openEditModal} deleteTask={deleteTask} onMoveToToday={moveTaskToTopToday}
+                    onTimeClick={handleEstimateClick} onEditNote={handleEditNote} hashtagConfigs={hashtagConfigs} />} />
             {/* Modals remain essentially same */}
             <DurationEstimatorModal 
                 isOpen={isEstimatorOpen}

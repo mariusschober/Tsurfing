@@ -128,7 +128,7 @@ class NativeCausalStoreTest {
         val action = intent("pause"); repository.admitCausalFocus(owner, action)
         val envelope = repository.exportBackup("fixture password retained")
         val document = GoalflowBackup.decryptDocument(envelope, "fixture password retained")
-        assertEquals(5, document.schemaVersion)
+        assertEquals(6, document.schemaVersion)
         assertEquals(listOf(state()), document.payload.causalAccounts)
         val damaged = JSONObject(state().payload)
         damaged.getJSONObject("focusOutbox").remove(action.actionId)

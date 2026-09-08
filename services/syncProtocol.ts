@@ -1,3 +1,4 @@
+import { assertPlanningRebaseState, effectivePlanningEdit, type PlanningRebaseState } from './planningCompletionRebase';
 import { v5 as uuidv5 } from 'uuid';
 
 export const SYNC_META_SCHEMA_VERSION = 2;
@@ -83,6 +84,8 @@ export interface SyncMeta {
      * Legacy predecessors may drain; later ordinary edits wait for the exact
      * logical action receipt before acquiring its server version. */
     completionReservations?: Record<string, { actionId: string; entityType: string; entityId: string; version: number }>;
+    planningReservations?: Record<string, SyncMutation & { actionId: string }>;
+    planningRebase?: PlanningRebaseState;
   };
 }
 
@@ -328,15 +331,52 @@ export const normalizeSyncMeta = (value: unknown): SyncMeta => {
   }
   if (value.localState !== undefined) {
     const state = value.localState as Record<string, unknown>;
-    for (const key of ['blocked', 'groups', 'fallbackCopies', 'resolvedConflicts', 'reconciliations', 'migrations', 'completionReservations']) {
+    for (const key of ['blocked', 'groups', 'fallbackCopies', 'resolvedConflicts', 'reconciliations', 'migrations', 'completionReservations', 'planningReservations', 'planningRebase']) {
       if (state[key] !== undefined && !isRecord(state[key])) throw new Error('Local synchronization evidence is damaged. It was not discarded.');
+    }
+    if (state.planningRebase) {
+      const graph = state.planningRebase as unknown as PlanningRebaseState;
+      assertPlanningRebaseState(graph);
+      for (const proof of Object.values(graph.planningEdits ?? {})) {
+        const capture = Object.values(state.journal as Record<string, StagedLocalTransaction>).find(transaction =>
+          transaction.changes.some(change => change.mutationId === proof.original.mutationId));
+        const change = capture?.changes.find(change => change.mutationId === proof.original.mutationId);
+        const { mutationId, entityType, entityId, payload, updatedAt, deletedAt } = proof.original;
+        const previous = Array.isArray(capture?.previousValue)
+          ? capture.previousValue.find(row => row?.id === entityId) : capture?.previousValue;
+        if (!capture || capture.userKey !== graph.accountKey
+          || stableJson(change) !== stableJson({ mutationId, entityType, entityId, payload, updatedAt, deletedAt })
+          || stableJson(previous) !== stableJson(proof.predecessor.payload)) {
+          throw new Error('The reviewed edit differs from its original write-ahead capture.');
+        }
+      }
+
+      for (const resolution of Object.values(graph.planningResolutions ?? {})) {
+        for (const dependency of Object.values(resolution.predecessors ?? {})) {
+          if (dependency.kind !== 'legacy') continue;
+          const source = dependency.request;
+          const capture = Object.values(state.journal as Record<string, StagedLocalTransaction>).find(transaction =>
+            transaction.changes.some(change => change.mutationId === source.mutationId));
+          const change = capture?.changes.find(change => change.mutationId === source.mutationId);
+          if (!capture || capture.userKey !== graph.accountKey || !change
+            || change.entityType !== source.entityType || change.entityId !== source.entityId
+            || stableJson(change.payload) !== stableJson(source.payload) || change.updatedAt !== source.updatedAt
+            || change.deletedAt !== source.deletedAt) throw new Error('A superseded order lost its original saved edit.');
+        }
+      }
+      for (const mutation of outbox) {
+        const proof = graph.planningEdits?.[mutation.mutationId];
+        if (proof && stableJson(mutation.payload) !== stableJson(effectivePlanningEdit(graph, proof.original).payload)) {
+          throw new Error('The saved edit projection differs from its retained planning proof.');
+        }
+      }
     }
     if (Object.values(state.blocked ?? {}).some(item => typeof item !== 'string')
       || Object.values(state.groups ?? {}).some(item => typeof item !== 'string')
       || Object.values(state.fallbackCopies ?? {}).some(item => !Array.isArray(item) || item.some(raw => typeof raw !== 'string'))) {
       throw new Error('Local synchronization evidence is damaged. It was not discarded.');
     }
-    for (const [id, reservation] of Object.entries(state.completionReservations ?? {})) {
+    for (const [id, reservation] of [...Object.entries(state.completionReservations ?? {}), ...Object.entries(state.planningReservations ?? {})]) {
       if (!id || !isRecord(reservation) || typeof reservation.actionId !== 'string' || !reservation.actionId
         || typeof reservation.entityType !== 'string' || !reservation.entityType || typeof reservation.entityId !== 'string' || !reservation.entityId
         || typeof reservation.version !== 'number' || !Number.isSafeInteger(reservation.version) || reservation.version < 1) {
@@ -481,10 +521,10 @@ export const appendStagedTransactions = (
   const knownMutations = new Map<string, string>();
   meta.outbox.forEach(item => knownMutations.set(
     item.mutationId,
-    signature(item.entityType, item.entityId, item)
+    signature(item.entityType, item.entityId, meta.localState?.planningRebase?.planningEdits?.[item.mutationId]?.original ?? item)
   ));
   meta.conflicts.forEach(conflict => conflict.localHistory.forEach(item => {
-    const nextSignature = signature(conflict.entityType, conflict.entityId, item);
+    const nextSignature = signature(conflict.entityType, conflict.entityId, meta.localState?.planningRebase?.planningEdits?.[item.mutationId]?.original ?? item);
     const existing = knownMutations.get(item.mutationId);
     if (existing !== undefined && existing !== nextSignature) {
       throw new Error('A mutation id refers to different durable local changes. Synchronization stopped.');
@@ -493,7 +533,7 @@ export const appendStagedTransactions = (
   }));
   for (const transaction of [...transactions].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))) {
     for (const change of transaction.changes) {
-      if (meta.localState?.completionReservations?.[change.mutationId]) {
+      if (meta.localState?.completionReservations?.[change.mutationId] || meta.localState?.planningReservations?.[change.mutationId]) {
         throw new Error('A reserved completion member cannot become an ordinary mutation. Its logical action remains retained.');
       }
       const changeSignature = signature(change.entityType, change.entityId, change);
@@ -512,7 +552,7 @@ export const appendStagedTransactions = (
       );
       const legacyVersion = change.entityId === 'singleton' ? meta.versions[change.entityType] : undefined;
       const currentLocal = meta.versions[key]?.local ?? legacyVersion?.local ?? 0;
-      const reservations = Object.entries(meta.localState?.completionReservations ?? {}).map(([mutationId, entry]) => ({ ...entry, mutationId }));
+      const reservations = [...Object.entries(meta.localState?.completionReservations ?? {}), ...Object.entries(meta.localState?.planningReservations ?? {})].map(([mutationId, entry]) => ({ ...entry, mutationId }));
       const latestForEntity = [...meta.outbox, ...reservations]
         .filter(item => item.entityType === change.entityType && item.entityId === change.entityId)
         .sort((a, b) => b.version - a.version)[0];
@@ -549,7 +589,7 @@ export const appendStagedTransactions = (
 };
 
 export const readyOutbox = (meta: SyncMeta, limit = 50): SyncMutation[] => {
-  const reservations = Object.entries(meta.localState?.completionReservations ?? {});
+  const reservations = [...Object.entries(meta.localState?.completionReservations ?? {}), ...Object.entries(meta.localState?.planningReservations ?? {})];
   const pendingIds = new Set([...meta.outbox.map(item => item.mutationId), ...reservations.map(([id]) => id)]);
   const selectedEntities = new Set<string>();
   const ready: SyncMutation[] = [];
@@ -567,7 +607,7 @@ export const readyOutbox = (meta: SyncMeta, limit = 50): SyncMutation[] => {
 };
 
 export const markMutationsAttempted = (input: SyncMeta, mutationIds: string[], attemptedAt: string): SyncMeta => {
-  const reservations = Object.entries(input.localState?.completionReservations ?? {});
+  const reservations = [...Object.entries(input.localState?.completionReservations ?? {}), ...Object.entries(input.localState?.planningReservations ?? {})];
   if (input.outbox.some(item => mutationIds.includes(item.mutationId) && reservations.some(([id, entry]) =>
     item.dependsOnMutationId === id || (item.entityType === entry.entityType && item.entityId === entry.entityId && item.version >= entry.version)))) {
     throw new Error('A pending completion must be acknowledged before attempting its successor.');
@@ -776,7 +816,7 @@ export const applyRemotePage = (
   ]);
   const seenServerVersions = new Set<number>();
   for (const record of records) {
-    if (Object.values(meta.localState?.completionReservations ?? {}).some(entry => entry.entityType === record.entityType
+    if ([...Object.values(meta.localState?.completionReservations ?? {}), ...Object.values(meta.localState?.planningReservations ?? {})].some(entry => entry.entityType === record.entityType
       && (entry.entityId === record.entityId || (record.entityId === 'singleton' && RECORD_LEVEL_STORES.has(record.entityType))))) {
       throw new Error('An atomic completion owns this projection. Its receipt must be reconciled before advancing the pull cursor.');
     }

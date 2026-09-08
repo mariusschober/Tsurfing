@@ -113,6 +113,7 @@ class NativeCausalCompletionProjection(private val database: GoalflowDatabase,
                 val pending = database.syncOutboxDao().getForEntity(type, entityId).isNotEmpty()
                     || database.syncOutboxDao().get(member.getString("mutationId")) != null
                     || database.syncConflictDao().getUnresolved(type, entityId) != null
+                    || planningMembers(type, entityId).isNotEmpty()
                 val decision: String
                 if (local) {
                     requireLocalProjection(state, id, member, current)
@@ -162,6 +163,21 @@ class NativeCausalCompletionProjection(private val database: GoalflowDatabase,
         if (applications.length() > 0) state.put("completionApplications", applications)
     }
 
+    private suspend fun planningMembers(type: String, entityId: String): List<JSONObject> {
+        val members = mutableListOf<JSONObject>()
+        for (account in database.planningAccountDao().getAll()) {
+            val pending = JSONObject(account.payload).getJSONObject("planning").getJSONObject("pending")
+            for (id in pending.keys()) {
+                val values = pending.getJSONObject(id).getJSONArray("members")
+                for (index in 0 until values.length()) {
+                    val member = values.getJSONObject(index)
+                    if (member.opt("entityType") == type && member.opt("entityId") == entityId) members.add(member)
+                }
+            }
+        }
+        return members
+    }
+
     private suspend fun requireLocalProjection(state: JSONObject, actionId: String, member: JSONObject, current: String?) {
         val type = member.getString("entityType"); val entityId = member.getString("entityId"); val key = "$type:$entityId"
         if (database.syncConflictDao().getUnresolved(type, entityId) != null) throw NativeCompletionReview(actionId, "COMPLETION_LOCAL_REVIEW", key)
@@ -171,6 +187,7 @@ class NativeCausalCompletionProjection(private val database: GoalflowDatabase,
             candidates.add(NativeCompletionAdmissionEvidence.member(row))
         }
         NativeCompletionAdmissionEvidence.reserved(state, type, entityId)?.second?.let { if (it.getLong("version") > member.getLong("version")) candidates.add(it) }
+        candidates.addAll(planningMembers(type, entityId).filter { it.getLong("version") > member.getLong("version") })
         require(candidates.map { it.getLong("version") }.toSet().size == candidates.size) { "Ambiguous local completion projection versions." }
         val latest = candidates.maxBy { it.getLong("version") }
         val expected = nativePayload(type, latest.getJSONObject("payload").toString())

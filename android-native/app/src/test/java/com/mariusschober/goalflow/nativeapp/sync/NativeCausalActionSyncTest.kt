@@ -263,6 +263,11 @@ class NativeCausalActionSyncTest {
                 return response(JSONObject().put("staged", true).put("manifest", chunk.getJSONObject("manifest"))
                     .put("chunkIndex", index).put("chunkSha256", if (badChunkAck) "different" else chunk.getString("chunkSha256")))
             }
+            if (path.startsWith("/api/v1/sync/planning?date=")) {
+                assertEquals("GET", method)
+                return response(JSONObject().put("schemaVersion", 1).put("accountId", owner).put("enforcementEnabled", false)
+                    .put("policy", DeliberatePlanning.initial(owner, path.substringAfter("date="))))
+            }
             require(path in setOf("/api/v1/sync/actions", "/api/v1/sync/complete-focus", "/api/v1/sync/complete-focus-staged")); assertEquals("POST", method)
             val requestBody = if (path == "/api/v1/sync/complete-focus-staged") {
                 val manifest = JSONObject(requireNotNull(body))

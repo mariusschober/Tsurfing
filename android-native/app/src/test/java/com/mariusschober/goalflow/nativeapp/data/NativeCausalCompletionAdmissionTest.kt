@@ -160,4 +160,73 @@ class NativeCausalCompletionAdmissionTest {
         assertTrue(runCatching { repository.applyRemotePage(listOf(remote), 200) }.isFailure)
         assertEquals(saved, state()); assertEquals(raw, database.rawCollectionDao().getAll()); assertEquals(meta, database.syncMetaDao().getAll())
     }
+    @Test fun `rejected planning rebases a queued completion reward without changing its admission`() = runTest { resolvedPlanningCompletion(false) }
+    @Test fun `rejected planning preserves a chain of two offline completion rewards`() = runTest { resolvedPlanningCompletion(true) }
+    @Test fun `saved edit before a completion survives planning resolution and receipt binding`() = runTest { resolvedPlanningCompletion(false, "before") }
+    @Test fun `saved edit after a completion survives planning resolution and backup`() = runTest { resolvedPlanningCompletion(false, "after") }
+    private suspend fun resolvedPlanningCompletion(second: Boolean, edit: String = "none") {
+        repository.confirmPlan(details.day, listOf(task))
+        val earlier = database.syncOutboxDao().getAll()
+        repository.planningStore.retainOrdinaryResults(earlier, earlier.mapIndexed { index, row -> NativePushResult(row.mutationId, true, index + 1L) })
+        earlier.forEach { database.syncOutboxDao().delete(it.mutationId) }
+        val planningCommand = JSONObject(repository.planningStore.prepare(owner)!!)
+        val planning = JSONObject(database.planningAccountDao().get(owner)!!.payload).getJSONObject("planning")
+        val pending = planning.getJSONObject("pending").getJSONObject(planningCommand.getString("operationId"))
+        if (edit == "before") repository.updateTask(task, "Saved title", "Original notes", SchedulePrecision.DAY, details.day)
+        val command = intent(); repository.admitCausalCompletion(owner, command, details)
+        if (edit == "after") repository.updateTask(task, "Synthetic completion", "Saved later notes", SchedulePrecision.DAY, details.day)
+        if (second) {
+            val another = repository.createTask("Second synthetic task", "Second notes", SchedulePrecision.DAY, details.day, null, false)
+            val nextSession = UUID.randomUUID().toString()
+            repository.admitCausalFocus(owner, NativeFocusIntent(UUID.randomUUID().toString(), "start", nextSession, another.id, session, 600L, capturedAt))
+            repository.admitCausalCompletion(owner, NativeFocusIntent(UUID.randomUUID().toString(), "complete", nextSession, another.id, nextSession, null, capturedAt), details)
+        }
+        val original = NativeCausalJournal.validate(state()).getJSONObject("completionAdmissions").toString()
+        val receipt = JSONObject(pending.getJSONObject("provisional").toString()).put("code", "STALE_REVISION")
+            .put("revision", JSONObject.NULL).put("order", org.json.JSONArray()).put("actualDebit", 0).put("acceptedReplans", 0)
+        val policy = DeliberatePlanning.initial(owner, details.day).put("history", org.json.JSONArray().put(receipt))
+        val response = JSONObject().put("schemaVersion", 1).put("accountId", owner).put("receipt", receipt).put("policy", policy).put("records", org.json.JSONArray())
+        assertFalse(repository.planningStore.commit(owner, planningCommand, response))
+        val records = org.json.JSONArray(); val members = pending.getJSONArray("members")
+        for (index in 0 until members.length()) {
+            val member = members.getJSONObject(index); val payload = JSONObject(member.getJSONObject("payload").toString())
+            if (member.opt("entityType") == "progress") payload.put("xp", 80)
+            if (member.opt("entityType") == "tasks") payload.put("plannedOrder", 4)
+            records.put(JSONObject().put("user_id", owner).put("entity_type", member.getString("entityType")).put("entity_id", member.getString("entityId"))
+                .put("version", 1).put("server_version", index + 10).put("device_id", "remote").put("updated_at", capturedAt).put("deleted_at", JSONObject.NULL).put("payload", payload))
+        }
+        val snapshot = JSONObject().put("schemaVersion", 1).put("accountId", owner).put("operationId", planningCommand.getString("operationId"))
+            .put("response", response).put("policy", policy).put("records", records).put("missingTaskIds", org.json.JSONArray())
+        repository.planningStore.retainReview(owner, planningCommand, snapshot)
+        repository.planningStore.resolveReview(details.day, false)
+        val after = NativeCausalJournal.validate(state())
+        assertEquals(original, after.getJSONObject("completionAdmissions").toString())
+        val savedTask = database.taskDao().get(task)!!
+        assertEquals("COMPLETED", savedTask.status); assertEquals(if (edit == "after") "Saved later notes" else details.finalDescription, savedTask.notes); assertEquals(4, savedTask.plannedOrder)
+        if (edit == "before") assertEquals("Saved title", savedTask.title)
+        val progress = JSONObject(database.rawCollectionDao().get("progress")!!.payload)
+        assertEquals(2, progress.getInt("level")); assertEquals(if (second) 130 else 55, progress.getInt("xp"))
+        if (edit == "before") {
+            val row = repository.readySyncMutations().single { it.entityType == "tasks" && it.entityId == task }
+            assertEquals(4, JSONObject(row.payload).getInt("plannedOrder"))
+            val reply = JSONObject().put("mutationId", row.mutationId).put("accepted", true).put("serverVersion", 50)
+                .put("record", JSONObject().put("user_id", owner).put("entity_type", row.entityType).put("entity_id", row.entityId)
+                    .put("device_id", row.deviceId).put("version", row.version).put("server_version", 50).put("payload", JSONObject(row.payload))
+                    .put("updated_at", row.updatedAt).put("deleted_at", JSONObject.NULL))
+            NativeLegacyReceiptEvidence.retain(owner, after, row, reply.toString())
+            val entity = state(); database.causalAccountDao().update(entity.copy(payload = after.toString()))
+            database.syncOutboxDao().delete(row.mutationId)
+        }
+        val operation = NativeCompletionRequestEvidence.resolved(owner, after, command.actionId)
+        NativeCompletionRequestEvidence.assertOperation(owner, after, command.actionId, operation)
+        assertEquals(command.actionId, operation.getJSONObject("command").getString("actionId"))
+        if (!second) {
+            val backup = GoalflowBackup.decryptDocument(repository.exportBackup("synthetic completion password"), "synthetic completion password")
+            assertEquals(listOf(state()), backup.payload.causalAccounts)
+            assertEquals(database.planningAccountDao().getAll(), backup.payload.planningAccounts)
+        }
+        val changes = operation.getJSONArray("changes")
+        val originalMembers = after.getJSONObject("completionAdmissions").getJSONObject(command.actionId).getJSONArray("members")
+        assertEquals((0 until originalMembers.length()).map { originalMembers.getJSONObject(it).getString("mutationId") }, (0 until changes.length()).map { changes.getJSONObject(it).getString("mutationId") })
+    }
 }

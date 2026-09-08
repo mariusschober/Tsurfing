@@ -217,6 +217,7 @@ final class MockSyncTransport: SyncTransport, @unchecked Sendable {
     var userId = defaultUserId
     var pushHandler: ((Data) async throws -> (Data, HTTPURLResponse))?
     var pullHandler: ((String) async throws -> (Data, HTTPURLResponse))?
+    var planningHandler: ((String, String, Data?) async throws -> (Data, HTTPURLResponse))?
     var conflictHandler: ((String, String, Data?) async throws -> (Data, HTTPURLResponse))?
     func currentUserId() async throws -> String { userId }
     func request(path: String, method: String, headers: [String: String], body: Data?) async throws -> (Data, HTTPURLResponse) {
@@ -225,6 +226,16 @@ final class MockSyncTransport: SyncTransport, @unchecked Sendable {
         }
         if path.hasPrefix("/api/v1/sync/pull") {
             if let handler = pullHandler { return try await handler(path) }
+        }
+        if path.hasPrefix("/api/v1/sync/planning") {
+            if let handler = planningHandler { return try await handler(path, method, body) }
+            guard let day = URLComponents(string: path)?.queryItems?.first(where: { $0.name == "date" })?.value else {
+                throw SyncError.validation("Mock planning date is missing.")
+            }
+            let policy = try DeliberatePlanning.initial(accountID: userId, day: day)
+            let data = try JSONSerialization.data(withJSONObject: ["schemaVersion": 1, "accountId": userId,
+                "policy": policy, "enforcementEnabled": false, "records": []])
+            return (data, HTTPURLResponse(url: URL(string: "https://example.com")!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
         if path.hasPrefix("/api/v1/sync/conflicts") {
             if let handler = conflictHandler { return try await handler(path, method, body) }

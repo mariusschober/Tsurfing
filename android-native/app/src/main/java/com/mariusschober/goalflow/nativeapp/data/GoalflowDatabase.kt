@@ -485,9 +485,10 @@ interface LocalAccountDao {
         RawCollectionEntity::class,
         TaskEventEntity::class,
         LocalAccountEntity::class,
-        CausalAccountEntity::class
+        CausalAccountEntity::class,
+        PlanningAccountEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 abstract class GoalflowDatabase : RoomDatabase() {
@@ -502,6 +503,7 @@ abstract class GoalflowDatabase : RoomDatabase() {
     abstract fun taskEventDao(): TaskEventDao
     abstract fun localAccountDao(): LocalAccountDao
     abstract fun causalAccountDao(): CausalAccountDao
+    abstract fun planningAccountDao(): PlanningAccountDao
 
     companion object {
         private val integrityCallback = object : RoomDatabase.Callback() {
@@ -624,6 +626,12 @@ abstract class GoalflowDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE TABLE IF NOT EXISTS planning_accounts (accountId TEXT NOT NULL PRIMARY KEY, generation INTEGER NOT NULL, payload TEXT NOT NULL)")
+            }
+        }
+
         fun migrations(): Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -632,7 +640,8 @@ abstract class GoalflowDatabase : RoomDatabase() {
             MIGRATION_5_6,
             MIGRATION_6_7,
             MIGRATION_7_8,
-            MIGRATION_8_9
+            MIGRATION_8_9,
+            MIGRATION_9_10
         )
         fun create(context: Context): GoalflowDatabase = Room.databaseBuilder(
             context,

@@ -28,13 +28,11 @@ async function fitsDocument(page: Page) {
 }
 
 async function fitsViewport(page: Page, element: Locator, margin = 0) {
-  const rect = await element.boundingBox();
-  expect(rect).not.toBeNull();
-  const viewport = page.viewportSize()!;
-  expect(rect!.x).toBeGreaterThanOrEqual(margin - 1);
-  expect(rect!.x + rect!.width).toBeLessThanOrEqual(viewport.width - margin + 1);
-  expect(rect!.y).toBeGreaterThanOrEqual(margin - 1);
-  expect(rect!.y + rect!.height).toBeLessThanOrEqual(viewport.height - margin + 1);
+  await expect.poll(async () => {
+    const rect = await element.boundingBox(), viewport = page.viewportSize()!;
+    return Boolean(rect && rect.x >= margin - 1 && rect.x + rect.width <= viewport.width - margin + 1
+      && rect.y >= margin - 1 && rect.y + rect.height <= viewport.height - margin + 1);
+  }, { message: 'The panel must fit after the viewport reflows.' }).toBe(true);
 }
 
 async function usableControls(scope: Locator) {
@@ -353,7 +351,7 @@ test('opening Menu and crossing breakpoints preserve the active task and focus s
   await form.locator('[aria-label="Task schedule"]').getByRole('button', { name: 'Today', exact: true }).click();
   await form.getByRole('button', { name: 'Create Task', exact: true }).click();
   await navigate(page, 'Plan');
-  await page.getByRole('button', { name: 'Start focus', exact: true }).click();
+  await page.getByRole('button', { name: 'Lock & focus', exact: true }).click();
   await page.getByTitle('Start Focus (Space)').click();
   await expect(page.getByTitle('Pause Timer (Space)')).toBeVisible();
   const focus = () => page.evaluate(async account => {
@@ -393,7 +391,7 @@ test.describe('touch input', () => {
     await page.getByRole('button', { name: 'Open menu' }).tap();
     const menu = page.getByRole('dialog', { name: 'Menu', exact: true });
     await menu.getByRole('button', { name: 'Plan', exact: true }).tap();
-    await expect(page.getByRole('heading', { name: "Today's Flow", exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: "Plan today's flow", exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Open menu' }).tap();
     await menu.getByRole('button', { name: 'Select station' }).tap();
     await expect(menu.getByRole('slider', { name: 'Music volume' })).toBeVisible();

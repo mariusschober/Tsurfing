@@ -35,6 +35,32 @@ export function validateCompletionDetails(details: CompletionDetails) {
   try { new Intl.DateTimeFormat('en', { timeZone: details.timeZone }); } catch (_) { invalid(); }
 }
 
+/** Reapply a captured completion reward to a verified balance, including the
+ * existing custom first threshold. The reward itself is not recalculated. */
+export function applyCompletionReward(progress: RecordValue, earnedXp: number) {
+  if (!object(progress) || !integer(earnedXp)) invalid();
+  let { xp, level, xpToNextLevel: next } = progress;
+  if (!integer(xp) || !integer(level) || level < 1 || !integer(next) || next < 1 || !integer(xp + earnedXp)) invalid();
+  xp += earnedXp;
+  let leveledUp = false;
+  // The existing level cost is 100 * level. Use integer arithmetic to skip
+  // arbitrarily many levels without a data-dependent, unbounded loop.
+  if (xp >= next) {
+    xp -= next; level++; leveledUp = true;
+    const remainder = BigInt(xp), currentLevel = BigInt(level);
+    let low = 0n, high = remainder / 100n + 1n;
+    while (low < high) {
+      const middle = (low + high + 1n) / 2n;
+      const cost = 50n * middle * (2n * currentLevel + middle - 1n);
+      if (cost <= remainder) low = middle; else high = middle - 1n;
+    }
+    xp = Number(remainder - 50n * low * (2n * currentLevel + low - 1n));
+    level += Number(low); next = level * 100;
+    if (!integer(level) || !integer(next)) invalid();
+  }
+  return { progress: { ...progress, xp, level, xpToNextLevel: next }, leveledUp };
+}
+
 /** Existing Web completion rewards, evaluated from one transaction's current
  * collections. Unknown fields and unrelated records are carried through. */
 export function deriveTaskCompletion(input: CompletionCollections, taskId: string, capturedAt: string,
@@ -77,25 +103,7 @@ export function deriveTaskCompletion(input: CompletionCollections, taskId: strin
     + (task.goalId || task.habitId ? 15 : 0) + (details.flowState === 'flow' ? 15 : details.flowState === 'high' ? 10 : 0);
   const dayComplete = input.tasks.every(row => row.id === taskId || row.dateAssigned !== details.day || row.completed || row.wontDo);
   if (dayComplete) earnedXp += 50;
-  let { xp, level, xpToNextLevel: next } = input.progress;
-  if (!integer(xp) || !integer(level) || level < 1 || !integer(next) || next < 1 || !integer(xp + earnedXp)) invalid();
-  xp += earnedXp;
-  let leveledUp = false;
-  // The existing level cost is 100 * level. Use integer arithmetic to skip
-  // arbitrarily many levels without a data-dependent, unbounded loop.
-  if (xp >= next) {
-    xp -= next; level++; leveledUp = true;
-    const remainder = BigInt(xp), currentLevel = BigInt(level);
-    let low = 0n, high = remainder / 100n + 1n;
-    while (low < high) {
-      const middle = (low + high + 1n) / 2n;
-      const cost = 50n * middle * (2n * currentLevel + middle - 1n);
-      if (cost <= remainder) low = middle; else high = middle - 1n;
-    }
-    xp = Number(remainder - 50n * low * (2n * currentLevel + low - 1n));
-    level += Number(low); next = level * 100;
-    if (!integer(level) || !integer(next)) invalid();
-  }
+  const { progress, leveledUp } = applyCompletionReward(input.progress, earnedXp);
   const completed = { ...task, completed: true, lifecycleStatus: 'completed', completedAt: Date.parse(capturedAt),
     ...(details.actualDuration !== undefined ? { actualDuration: details.actualDuration } : {}),
     ...(details.flowState !== undefined ? { flowState: details.flowState } : {}),
@@ -103,6 +111,6 @@ export function deriveTaskCompletion(input: CompletionCollections, taskId: strin
   const event = { id: eventId, taskId, eventType: 'completed', localDate: details.day,
     createdAt: Date.parse(capturedAt), metadata: { source: 'web', actionId, timeZone: details.timeZone, actualDuration: duration } };
   return { collections: { tasks: input.tasks.map(row => row.id === taskId ? completed : row), goals, habits,
-    stats: { ...input.stats, [details.day]: nextStats }, progress: { ...input.progress, xp, level, xpToNextLevel: next },
+    stats: { ...input.stats, [details.day]: nextStats }, progress,
     task_events: [...input.task_events, event] }, earnedXp, dayComplete, leveledUp };
 }

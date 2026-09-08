@@ -34,7 +34,7 @@ export function applyCompletionHistory(accountId: string, state: CompletionProje
   }
   const local = state.completionAdmissions?.[id], existing = state.actionIdentities?.[id];
   if (local) {
-    assertCompletionAdmissionOperation(local, operation);
+    assertCompletionAdmissionOperation(local, operation, state);
     if (!same(existing, { kind: 'completion', intent: local.intent })) throw new Error('The original completion identity differs.');
     if (!receipt.accepted) throw new CompletionProjectionReview(id, 'COMPLETION_REJECTED');
   } else if (existing && !same(existing, { kind: 'remote-completion', intent: operation })) {
@@ -61,7 +61,8 @@ export function applyCompletionHistory(accountId: string, state: CompletionProje
     const serverVersion = known?.server ?? 0;
     const pending = meta.outbox.some(item => item.entityType === member.entityType && item.entityId === member.entityId)
       || meta.conflicts.some(item => item.entityType === member.entityType && item.entityId === member.entityId)
-      || Object.values(meta.localState?.completionReservations ?? {}).some(item => item.entityType === member.entityType && item.entityId === member.entityId);
+      || Object.values(meta.localState?.completionReservations ?? {}).some(item => item.entityType === member.entityType && item.entityId === member.entityId)
+      || Object.values(meta.localState?.planningReservations ?? {}).some(item => item.entityType === member.entityType && item.entityId === member.entityId);
     if (state.actionIdentities?.[member.mutationId]) throw new Error('A completion member reuses a local action identity.');
     if (serverVersion >= result.serverVersion) {
       if (serverVersion === result.serverVersion && !pending && !same(current, member.payload)) {

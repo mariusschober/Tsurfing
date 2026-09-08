@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, useId } from 'react';
 import { useGoalflow } from './hooks/useGoalflow';
+import { SavedPlanningDay } from './components/SavedPlanningDay';
+import { useDeliberatePlanning } from './hooks/useDeliberatePlanning';
 import type { FocusSessionRecord } from './src/domain/focusSession';
 import { CurrentView } from './components/CurrentView';
 import { PlanningView, type PlanningMode } from './components/PlanningView';
@@ -60,6 +62,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
   const [isHeaderModalOpen, setIsHeaderModalOpen] = useState(false);
   
   const [openAssessmentOnGoalsMount, setOpenAssessmentOnGoalsMount] = useState(false);
+  const [savedPlanningDate, setSavedPlanningDate] = useState<string | null>(null);
   const [planningSaveError, setPlanningSaveError] = useState<string | null>(null);
   
   const {
@@ -116,9 +119,6 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
     overdueTasks,
     gamificationEvent,
     setGamificationEvent,
-    planningWarning,
-    setPlanningWarning,
-    trackPlanVisit,
     rescheduleTask,
     awardSessionXp,
     circadianState,
@@ -129,6 +129,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
     dailyPlans,
     confirmDailyPlan: persistDailyPlan
   } = useGoalflow(userKey, userEmail);
+  const planning = useDeliberatePlanning(userKey, currentLocalDay, todayTasks, userSettings.penaltyMode ?? 'off', currentView === 'planning', !isLoading);
   const todayPlanTaskIds = useMemo(() => todayTasks.map(task => task.id), [todayTasks]);
   const confirmedPlan = useMemo(
       () => dailyPlans.find(plan => plan.localDate === currentLocalDay),
@@ -202,7 +203,6 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
   const handleSetView = async (view: View) => {
       const navigation = ++viewNavigation.current;
       try {
-          if (view === 'planning' && !await trackPlanVisit()) return;
           if (navigation === viewNavigation.current) setCurrentView(view);
       } catch (error) {
           window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: { userKey,
@@ -213,7 +213,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
   const hasOverdue = overdueTasks.length > 0;
   const requiresMonthlyPlanning = overdueTasks.some(task => task.schedulePrecision === 'month');
   const dailyPlanConfirmed = !hasOverdue && (
-      todayPlanTaskIds.length === 0 || confirmedPlan?.localDate === currentLocalDay
+      todayPlanTaskIds.length === 0 || planning.policy.revision !== null || confirmedPlan?.localDate === currentLocalDay
   );
 
   const confirmDailyPlan = async () => {
@@ -222,7 +222,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
           return;
       }
       try {
-          persistDailyPlan(currentLocalDay, todayPlanTaskIds);
+          if (!await planning.confirm()) return;
           setPlanningSaveError(null);
           setCurrentView('current');
       } catch (error) {
@@ -321,7 +321,10 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
     const finalData = { ...data, session: taskToEdit ? undefined : taskDefaults.session };
 
     if (taskToEdit) {
-      updateTask(taskToEdit.id, data);
+      if (data.isFrog && !taskToEdit.isFrog && taskToEdit.dateAssigned === currentLocalDay && data.dateAssigned === currentLocalDay) {
+        updateTask(taskToEdit.id, { ...data, isFrog: taskToEdit.isFrog });
+        planning.promoteFrog(taskToEdit.id); setCurrentView('planning');
+      } else updateTask(taskToEdit.id, data);
     } else {
       // @ts-ignore 
       addTask(finalData);
@@ -401,16 +404,17 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
         <main className="container mx-auto p-4 flex-grow relative print:p-0 print:w-full">
             {currentView === 'planning' && <>
             <PlanningView
-                todayTasks={todayTasks}
+                todayTasks={planning.projectedTasks}
+                orderLocked={!planning.editing}
                 upcomingTasks={upcomingTasks}
                 allTasks={tasks}
                 goals={goals}
-                setFrog={setFrog}
+                setFrog={id => { if (todayTasks.some(task => task.id === id)) planning.promoteFrog(id); else setFrog(id); }}
                 openEditModal={openEditTaskModal}
                 deleteTask={deleteTask}
-                reorderTodayTasks={reorderTodayTasks}
+                reorderTodayTasks={(id, _session, _source, _targetSession, index) => planning.reorder(id, index)}
                 hashtagConfigs={hashtagConfigs}
-                updateTaskPriorities={updateTaskPriorities}
+                updateTaskPriorities={planning.prioritize}
                 moveTaskToTopToday={moveTaskToTopToday}
                 onSelectHashtag={setSelectedHashtag}
                 overdueTasks={overdueTasks}
@@ -430,21 +434,53 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
             />
             <div className="planning-confirmation border border-gray-200 bg-white/95 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-800/95">
                 <p className="planning-confirmation__summary text-sm text-gray-600 dark:text-gray-300">
-                    {requiresMonthlyPlanning ? 'Assign every current-month task to an exact day before starting today.' : hasOverdue ? 'Resolve every overdue task before starting today.' : `Confirm today's order, then start focus.`}
+                    {requiresMonthlyPlanning ? 'Assign every current-month task to an exact day before starting today.' : hasOverdue ? 'Resolve every overdue task before starting today.'
+                      : planning.active ? 'Changes apply when you confirm.' : !planning.policy.revision ? 'Confirm your order and lock it for today.'
+                      : planning.policy.acceptedReplans < 3 ? `Order locked · ${3 - planning.policy.acceptedReplans} free replans left` : `Next confirmed replan: ${planning.cost} XP`}
                 </p>
+                {planning.otherDates.length > 0 && <div className="my-2 flex flex-wrap items-center gap-2 text-sm"><span>Saved orders on other days:</span>{planning.otherDates.map(day => <button key={day} type="button" className="min-h-11 rounded-lg border px-3" onClick={() => setSavedPlanningDate(day)}>{day}</button>)}</div>}
+                {planning.pending && <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">Pending sync · allowance provisional.</p>}
+                {planning.draft && !planning.active && !planning.staleDraft && <div className="my-3 flex flex-wrap items-center gap-3 text-sm">
+                  <span className="font-semibold">Unconfirmed order changes</span>
+                  <button type="button" disabled={planning.busy} onClick={planning.resume} className="min-h-11 px-3 font-semibold text-indigo-600 dark:text-indigo-300">Resume</button>
+                  <button type="button" disabled={planning.busy} onClick={() => void planning.discard()} className="min-h-11 px-3">Discard</button>
+                </div>}
+                {planning.staleDraft && <div className="my-3 rounded-lg border border-amber-300 p-3 text-sm dark:border-amber-700">
+                  <p className="font-semibold">The confirmed order changed while this draft was saved.</p>
+                  <p className="mt-1">Your saved order is preserved. Review it before confirming{planning.cost ? ` · a changed order costs ${planning.cost} XP` : ' · no XP cost'}.</p>
+                  <div className="mt-2 flex flex-wrap gap-3">
+                    <button type="button" disabled={planning.busy} onClick={() => void planning.discard()} className="min-h-11 px-3">Keep current order</button>
+                    <button type="button" disabled={planning.busy} onClick={() => void planning.reviewDraft()} className="min-h-11 px-3 font-semibold text-indigo-600 dark:text-indigo-300">Review saved order</button>
+                  </div>
+                </div>}
+                {planning.review && <div className="my-3 rounded-lg border border-amber-300 p-3 text-sm dark:border-amber-700">
+                  <p className="font-semibold">Your offline order needs review.</p>
+                  <p className="mt-1">Both orders are saved. {planning.reviewCost === null ? 'Loading the synced order…' : `Reviewing your proposal costs nothing. A changed confirmation may cost ${planning.reviewCost} XP.`}</p>
+                  <div className="mt-2 flex flex-wrap gap-3">
+                    <button type="button" disabled={planning.busy || planning.reviewCost === null} onClick={() => void planning.resolveReview('synced')} className="min-h-11 px-3">Keep synced order</button>
+                    <button type="button" disabled={planning.busy || planning.reviewCost === null} onClick={() => void planning.resolveReview('draft')} className="min-h-11 px-3 font-semibold text-indigo-600 dark:text-indigo-300">Review my order</button>
+                  </div>
+                </div>}
+                {planning.error && <p role="alert" className="my-2 text-sm text-red-700 dark:text-red-300">{planning.error}</p>}
                 {planningSaveError && (
                     <p role="alert" className="mb-3 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-700 dark:bg-red-950/40 dark:text-red-200">
                         {planningSaveError}
                     </p>
                 )}
-                <button
+                {(planning.active || !planning.policy.revision) && <button
                     type="button"
                     onClick={confirmDailyPlan}
-                    disabled={hasOverdue}
+                    disabled={hasOverdue || planning.busy || !planning.loaded || planning.staleDraft || Boolean(planning.review) || Boolean(planning.draft && !planning.active)}
                     className="w-full rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300 dark:disabled:bg-slate-600"
                 >
-                    {requiresMonthlyPlanning ? 'Schedule monthly tasks first' : hasOverdue ? 'Resolve overdue tasks first' : 'Start focus'}
-                </button>
+                    {requiresMonthlyPlanning ? 'Schedule monthly tasks first' : hasOverdue ? 'Resolve overdue tasks first' : planning.busy ? 'Saving…' : planning.policy.revision
+                      ? `Save order & focus${planning.confirmationCost ? ` · ${planning.confirmationCost} XP` : ''}` : 'Lock & focus'}
+                </button>}
+                {planning.active && <button type="button" disabled={planning.busy} onClick={() => void planning.discard()} className="mt-2 min-h-11 w-full text-sm font-semibold">Cancel changes</button>}
+                {!planning.active && planning.policy.revision && <div className="mt-3 flex gap-3">
+                  <button type="button" disabled={planning.busy || !planning.loaded || Boolean(planning.review) || Boolean(planning.draft)} onClick={() => planning.begin()} className="min-h-11 flex-1 rounded-xl bg-indigo-600 px-5 py-3 font-bold text-white disabled:opacity-50">Replan</button>
+                  <button type="button" onClick={() => setCurrentView('current')} className="min-h-11 flex-1 rounded-xl border border-gray-300 px-5 py-3 font-semibold dark:border-slate-600">Back to focus</button>
+                </div>}
             </div>
             </>}
             {currentView === 'habits' && 
@@ -605,6 +641,8 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
         allTasks={tasks} 
       />
 
+      {savedPlanningDate && <SavedPlanningDay key={`${userKey}:${savedPlanningDate}`} accountId={userKey} localDate={savedPlanningDate} tasks={tasks} setting={userSettings.penaltyMode ?? 'off'} onClose={() => setSavedPlanningDate(null)} />}
+
       <LevelUpModal 
         isOpen={justLeveledUp}
         onClose={() => setJustLeveledUp(false)}
@@ -617,26 +655,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
           onBioAdaptive={() => { setIsModeSelectorOpen(false); setIsBioCheckInOpen(true); }} /></div>
       </Modal>
 
-      {/* Warning Modal for Planning Overuse */}
-      <Modal isOpen={planningWarning} onClose={() => setPlanningWarning(false)} title="Decision Fatigue Warning">
-          <div className="p-6 text-center">
-              <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <ShieldIcon className="w-10 h-10 text-orange-600 dark:text-orange-400" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Stop Planning. Start Doing.</h3>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">
-                  You have visited the planning screen 6 times today. Constant rescheduling is a form of procrastination.
-              </p>
-              <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6">
-                  <p className="text-sm font-bold text-red-600 dark:text-red-400">
-                      {(userSettings.penaltyMode ?? 'off') === 'off' ? 'XP penalties are turned off.' : 'Further visits to the Plan view will result in XP penalties.'}
-                  </p>
-              </div>
-              <button onClick={() => { setPlanningWarning(false); handleSetView('current'); }} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition">
-                  Return to Focus Mode
-              </button>
-          </div>
-      </Modal>
+
 
       {currentView !== 'gamification' && (
         <footer className="text-center py-6 text-gray-400 dark:text-gray-600 text-xs print:hidden">

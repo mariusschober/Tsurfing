@@ -31,7 +31,7 @@ object NativeCompletionAdmissionEvidence {
         val entries = state.optJSONObject("completionAdmissions") ?: return null
         val candidates = mutableListOf<Pair<String, JSONObject>>()
         for (id in entries.keys()) if (state.getJSONObject("focusOutbox").has(id)) {
-            val members = entries.getJSONObject(id).getJSONArray("members")
+            val members = NativePlanningCompletionRebase.members(state, id)
             for (index in 0 until members.length()) {
                 val member = members.getJSONObject(index)
                 if (member.opt("entityType") == type && member.opt("entityId") == entityId) candidates.add(id to member)
@@ -47,6 +47,7 @@ object NativeCompletionAdmissionEvidence {
         .put("changes", state.getJSONObject("completionAdmissions").getJSONObject(id).getJSONArray("members"))
 
     fun validate(accountId: String, state: JSONObject) {
+        NativePlanningCompletionRebase.validateEdits(state)
         val entries = state.optJSONObject("completionAdmissions") ?: JSONObject()
         val focus = state.getJSONObject("focusAdmissions")
         val identities = mutableSetOf<String>()
@@ -105,7 +106,7 @@ object NativeCompletionAdmissionEvidence {
                 }
                 if (dependencies.has(mutationId)) {
                     val dependency = dependencies.getJSONObject(mutationId); val predecessor = dependency.getJSONObject("request")
-                    require(dependency.opt("kind") in setOf("legacy", "completion")
+                    require(dependency.opt("kind") in setOf("legacy", "completion", "planning")
                         && ActionJson.identity(predecessor.opt("mutationId")) && predecessor.opt("mutationId") != mutationId
                         && predecessor.opt("entityType") == member.opt("entityType") && predecessor.opt("entityId") == member.opt("entityId")
                         && ActionJson.integer(predecessor.opt("version"))?.let { it > 0 && it < member.getLong("version") } == true
@@ -113,11 +114,13 @@ object NativeCompletionAdmissionEvidence {
                         && (!predecessor.has("resolvesConflictId") || predecessor.isNull("resolvesConflictId"))) { "Invalid completion predecessor." }
                     if (dependency.opt("kind") == "completion") {
                         val parent = entries.getJSONObject(dependency.getString("actionId")).getJSONArray("members")
-                        require((0 until parent.length()).any { same(parent.getJSONObject(it), predecessor) }) { "Completion predecessor differs from its admission." }
+                        require((0 until parent.length()).any { same(parent.getJSONObject(it), predecessor) } ||
+                            NativePlanningCompletionRebase.members(state, dependency.getString("actionId")).let { derived -> (0 until derived.length()).any { same(derived.getJSONObject(it), predecessor) } }) { "Completion predecessor differs from its admission." }
                     }
                 }
                 maximum.getJSONArray("changes").getJSONObject(index).put("baseServerVersion", ActionJson.MAX_SAFE_INTEGER)
             }
+            NativePlanningCompletionRebase.members(state, id)
             require(dependencies.keys().asSequence().all { it in memberIds } && preimages.keys().asSequence().toSet() == keys
                 && maximum.toString().toByteArray(Charsets.UTF_8).size <= MAX_BYTES) { "Incomplete or oversized completion admission." }
         }

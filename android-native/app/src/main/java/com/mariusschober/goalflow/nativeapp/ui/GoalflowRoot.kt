@@ -200,6 +200,17 @@ fun GoalflowRoot(
     val focusSession by goalflowViewModel.focusSession.collectAsStateWithLifecycle()
     val today by goalflowViewModel.today.collectAsStateWithLifecycle()
     val gate by goalflowViewModel.planningGate.collectAsStateWithLifecycle()
+    val deliberatePlanning by goalflowViewModel.deliberatePlanning.collectAsStateWithLifecycle()
+    val savedPlanningDate by goalflowViewModel.savedPlanningDate.collectAsStateWithLifecycle()
+    val savedPlanning by goalflowViewModel.savedPlanning.collectAsStateWithLifecycle()
+    savedPlanningDate?.let { date ->
+        SavedPlanningDialog(date, savedPlanning, tasks,
+            onDismiss = { goalflowViewModel.openSavedPlanning(null) },
+            onAction = { action, order, cost -> goalflowViewModel.savedPlanningAction(date, action, order, cost) })
+    }
+
+
+    val planningEditing by goalflowViewModel.planningEditing.collectAsStateWithLifecycle()
     val currentTask by goalflowViewModel.currentTask.collectAsStateWithLifecycle()
     val notice by goalflowViewModel.notice.collectAsStateWithLifecycle()
     val error by goalflowViewModel.error.collectAsStateWithLifecycle()
@@ -225,6 +236,8 @@ fun GoalflowRoot(
     }
 
     var destination by rememberSaveable { mutableStateOf(RootDestination.CURRENT) }
+    LaunchedEffect(destination) { if (destination != RootDestination.PLANNING) goalflowViewModel.pausePlanning() }
+    LaunchedEffect(today) { goalflowViewModel.pausePlanning() }
     var captureOpen by rememberSaveable { mutableStateOf(false) }
     var captureSeed by rememberSaveable { mutableStateOf("") }
     var captureFormKey by rememberSaveable { mutableStateOf(0) }
@@ -629,6 +642,15 @@ fun GoalflowRoot(
                     )
                     RootDestination.PLANNING -> PlanningScreen(
                         today = today,
+                        planning = deliberatePlanning,
+                        draftActive = planningEditing,
+                        onSavedDay = goalflowViewModel::openSavedPlanning,
+                        onReplan = goalflowViewModel::beginReplan,
+                        onResume = goalflowViewModel::resumePlanning,
+                        onReview = goalflowViewModel::reviewReplan,
+                        onResolveReview = goalflowViewModel::resolvePlanningReview,
+                        onDiscard = goalflowViewModel::discardReplan,
+                        onBackToFocus = { destination = RootDestination.CURRENT },
                         gate = gate,
                         tasks = tasks,
                         circadian = circadian,
@@ -638,9 +660,9 @@ fun GoalflowRoot(
                             localView.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             goalflowViewModel.moveTask(date, taskId, direction)
                         },
-                        onConfirm = { date, ids ->
+                        onConfirm = { date, ids, acceptedCost ->
                             localView.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                            goalflowViewModel.confirmPlan(date, ids)
+                            goalflowViewModel.confirmPlan(date, ids, acceptedCost) { destination = RootDestination.CURRENT }
                         },
                         onScheduleMonthTask = { datePickerForTask = it },
                         onReschedule = { task, date -> goalflowViewModel.rescheduleTask(task, date) },
@@ -1779,15 +1801,79 @@ private fun CurrentTaskCard(
 }
 
 @Composable
+private fun SavedPlanningDialog(
+    date: String,
+    planning: com.mariusschober.goalflow.nativeapp.data.NativePlanningSnapshot?,
+    tasks: List<GoalflowTask>,
+    onDismiss: () -> Unit,
+    onAction: (String, List<String>, Int) -> Unit
+) {
+    // A date switch must not display or apply the previous flow emission.
+    val snapshot = planning?.takeIf { it.policy.optString("localDate") == date }
+    val available = com.mariusschober.goalflow.nativeapp.domain.buildTodayQueue(tasks, date)
+    val draft = snapshot?.draft
+    val proposed = draft?.getJSONArray("proposedOrder")?.let { a -> (0 until a.length()).map(a::getString) }.orEmpty()
+    val promotions = draft?.optJSONArray("priorityChanges")?.let { a -> (0 until a.length()).map { a.getJSONObject(it).getString("taskId") }.toSet() }.orEmpty()
+    val order = com.mariusschober.goalflow.nativeapp.data.DeliberatePlanning.reconcile(proposed, available.map {
+        com.mariusschober.goalflow.nativeapp.data.DeliberatePlanning.Task(it.id,
+            if (it.beforeFrog && it.habitId != null) 0 else if (it.isFrog || it.id in promotions) 1 else 2)
+    })
+    val cost = snapshot?.confirmationCost(order) ?: 0
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Saved order · ${formatDate(date)}") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
+                Text("Changes here apply only to ${formatDate(date)}.")
+                when {
+                    snapshot == null -> Text("Loading saved order…")
+                    snapshot.review != null -> {
+                        Text("Another device changed this order. Keep the synced order or review your saved proposal before confirming its cost.")
+                        TextButton(onClick = { onAction("synced", emptyList(), 0) }) { Text("Keep synced order") }
+                        TextButton(onClick = { onAction("draft", emptyList(), 0) }) { Text("Review my proposal") }
+                    }
+                    draft != null -> {
+                        Text("Unconfirmed order changes")
+                        order.forEach { id -> available.find { it.id == id }?.let { Text(it.title) } }
+                        if (snapshot.staleDraft) {
+                            Text("The confirmed order changed. Review against its latest revision first.")
+                            TextButton(onClick = { onAction("review", emptyList(), 0) }) { Text("Review latest order") }
+                        } else {
+                            Text(if (cost > 0) "Confirming this order costs $cost XP." else "Confirming this order is free.")
+                            Button(onClick = { onAction("confirm", order, cost) }) {
+                                Text(if (cost > 0) "Save order · $cost XP" else "Save order")
+                            }
+                        }
+                        TextButton(onClick = { onAction("discard", emptyList(), 0) }) { Text("Discard changes") }
+                    }
+                    snapshot.pending > 0 -> Text("Pending sync · allowance provisional")
+                    else -> Text("No unconfirmed changes remain for this date.")
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
+    )
+}
+
+@Composable
 private fun PlanningScreen(
     today: String,
+    planning: com.mariusschober.goalflow.nativeapp.data.NativePlanningSnapshot?,
+    draftActive: Boolean,
+    onSavedDay: (String) -> Unit,
+    onReplan: () -> Unit,
+    onResume: () -> Unit,
+    onReview: () -> Unit,
+    onResolveReview: (Boolean) -> Unit,
+    onDiscard: () -> Unit,
+    onBackToFocus: () -> Unit,
     gate: PlanningGate,
     tasks: List<GoalflowTask>,
     circadian: GoalflowCircadianState,
     onCheckIn: () -> Unit,
     onCapture: () -> Unit,
     onMove: (String, String, Int) -> Unit,
-    onConfirm: (String, List<String>) -> Unit,
+    onConfirm: (String, List<String>, Int) -> Unit,
     onScheduleMonthTask: (GoalflowTask) -> Unit,
     onReschedule: (GoalflowTask, String) -> Unit,
     onComplete: (GoalflowTask) -> Unit,
@@ -1798,9 +1884,20 @@ private fun PlanningScreen(
 ) {
     val listState = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
     var insertionTargetIndex by rememberSaveable { mutableStateOf<Int?>(null) }
-    val queue = (gate as? PlanningGate.DailyPlanningRequired)?.taskIds
+    val confirmedQueue = (gate as? PlanningGate.DailyPlanningRequired)?.taskIds
         ?.mapNotNull { id -> tasks.find { it.id == id } }
         ?: (gate as? PlanningGate.Ready)?.queue.orEmpty()
+    val editing = planning != null && planning.review == null && !planning.staleDraft && (draftActive || (!planning.locked && planning.draft == null))
+    val draft = planning?.draft?.takeIf { draftActive }
+    val order = draft?.getJSONArray("proposedOrder")?.let { values -> (0 until values.length()).map(values::getString) }
+    val promotions = draft?.optJSONArray("priorityChanges")?.let { values -> (0 until values.length()).map { values.getJSONObject(it).getString("taskId") }.toSet() }.orEmpty()
+    val projected = confirmedQueue.map { if (it.id in promotions) it.copy(isFrog = true) else it }
+    val queue = if (order == null) confirmedQueue else {
+        val ids = com.mariusschober.goalflow.nativeapp.data.DeliberatePlanning.reconcile(order, projected.map {
+            com.mariusschober.goalflow.nativeapp.data.DeliberatePlanning.Task(it.id, if (it.beforeFrog && it.habitId != null) 0 else if (it.isFrog) 1 else 2)
+        })
+        ids.mapNotNull { id -> projected.find { it.id == id } }
+    }
     val monthlyTasks = (gate as? PlanningGate.MonthlyPlanningRequired)?.taskIds
         ?.mapNotNull { id -> tasks.find { it.id == id } }
         .orEmpty()
@@ -1817,12 +1914,17 @@ private fun PlanningScreen(
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Planning", style = MaterialTheme.typography.headlineLarge)
+                    Text("Plan today’s flow", style = MaterialTheme.typography.headlineLarge)
                     Text(formatDate(today), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 FloatingActionButton(onClick = onCapture, modifier = Modifier.size(52.dp)) {
                     Icon(Icons.Rounded.Add, contentDescription = "Capture commitment")
                 }
+            }
+        }
+        items(planning?.otherDates.orEmpty()) { date ->
+            OutlinedButton(onClick = { onSavedDay(date) }, modifier = Modifier.fillMaxWidth()) {
+                Text("Saved order · ${formatDate(date)}")
             }
         }
         item {
@@ -1884,7 +1986,7 @@ private fun PlanningScreen(
                     )
                 }
             }
-            if (queue.isNotEmpty()) {
+            if (queue.isNotEmpty() || (planning?.pending ?: 0) > 0 || planning?.draft != null) {
                 item {
                     PlanningHeaderCard(
                         title = if (gate is PlanningGate.Ready) "Today's order is confirmed" else "Decide the order",
@@ -1906,6 +2008,7 @@ private fun PlanningScreen(
                         timeline = timelineById[task.id],
                         isFirst = queue.firstOrNull()?.id == task.id,
                         isLast = queue.lastOrNull()?.id == task.id,
+                        orderEditing = editing,
                         onMove = { direction -> onMove(today, task.id, direction) },
                         onEdit = { onEdit(task) },
                         onPromoteFrog = { onPromoteFrog(task) },
@@ -1925,14 +2028,43 @@ private fun PlanningScreen(
                         )
                     }
                 }
-                if (gate is PlanningGate.DailyPlanningRequired) {
-                    item {
-                        Button(
-                            onClick = { onConfirm(today, queue.map { it.id }) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                        ) { Text("Confirm this order") }
+                item {
+                    val locked = planning?.locked == true
+                    val cost = planning?.cost ?: 0
+                    val confirmationCost = planning?.confirmationCost(queue.map { it.id }) ?: 0
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(if (draftActive) "Changes apply when you confirm."
+                            else if (!locked) "Confirm your order and lock it for today."
+                            else if ((planning?.remaining ?: 3) == 0) "Next confirmed replan: $cost XP"
+                            else "Order locked · ${planning?.remaining ?: 3} free replans left")
+                        if ((planning?.pending ?: 0) > 0) Text("Pending sync · allowance provisional.", style = MaterialTheme.typography.labelMedium)
+                        if (planning?.review != null) {
+                            Text("Your offline order needs review. Both orders are saved.")
+                            val snapshots = planning.review.optJSONArray("reviewSnapshots")
+                            val reviewReady = snapshots != null && snapshots.length() > 0
+                            Text(if (reviewReady) "Reviewing costs nothing. Confirm the displayed XP cost before applying a changed order." else "Waiting for the complete synced order…")
+                            OutlinedButton(onClick = { onResolveReview(false) }, enabled = reviewReady) { Text("Keep synced order") }
+                            Button(onClick = { onResolveReview(true) }, enabled = reviewReady) { Text("Review my order") }
+                        } else if (planning?.staleDraft == true) {
+                            Text("The confirmed order changed while this draft was saved.")
+                            Text(if (cost > 0) "Review your saved order before confirming · a changed order costs $cost XP." else "Review your saved order before confirming · no XP cost.")
+                            OutlinedButton(onClick = onDiscard) { Text("Keep current order") }
+                            Button(onClick = onReview) { Text("Review saved order") }
+                        } else if (planning?.draft != null && !draftActive) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = onResume) { Text("Resume") }
+                                TextButton(onClick = onDiscard) { Text("Discard") }
+                            }
+                        } else if (locked && !draftActive) {
+                            Button(onClick = onReplan, modifier = Modifier.fillMaxWidth()) { Text("Replan") }
+                            OutlinedButton(onClick = onBackToFocus, modifier = Modifier.fillMaxWidth()) { Text("Back to focus") }
+                        } else {
+                            Button(onClick = { onConfirm(today, queue.map { it.id }, confirmationCost) }, enabled = planning != null && overdueTasks.isEmpty(),
+                                modifier = Modifier.fillMaxWidth().height(56.dp)) {
+                                Text(if (!locked) "Lock & focus" else if (confirmationCost > 0) "Save order & focus · $confirmationCost XP" else "Save order & focus")
+                            }
+                            if (draftActive) TextButton(onClick = onDiscard, modifier = Modifier.fillMaxWidth()) { Text("Cancel changes") }
+                        }
                     }
                 }
             } else if (overdueTasks.isEmpty()) {
@@ -2015,6 +2147,7 @@ private fun PlannedTaskRow(
     timeline: GoalflowTimelineBlock?,
     isFirst: Boolean,
     isLast: Boolean,
+    orderEditing: Boolean,
     onMove: (Int) -> Unit,
     onEdit: () -> Unit,
     onPromoteFrog: () -> Unit,
@@ -2056,7 +2189,8 @@ private fun PlannedTaskRow(
                     }
                 )
             }
-            .pointerInput(task.id) {
+            .pointerInput(task.id, orderEditing) {
+            if (!orderEditing) return@pointerInput
             detectDragGesturesAfterLongPress(
                 onDragStart = {
                     dragging = true
@@ -2143,10 +2277,10 @@ private fun PlannedTaskRow(
                 if (task.isFrog || task.isExplicitFrogName()) Text("🐸 Frog", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
             IconButton(onClick = onEdit) { Icon(Icons.Rounded.MoreHoriz, contentDescription = "Edit ${task.title}") }
-            IconButton(onClick = { onMove(-1) }, enabled = !isFirst, modifier = Modifier.semantics { contentDescription = "Move ${task.title} up" }) {
+            IconButton(onClick = { onMove(-1) }, enabled = orderEditing && !isFirst, modifier = Modifier.semantics { contentDescription = "Move ${task.title} up" }) {
                 Icon(Icons.Rounded.ArrowUpward, contentDescription = null)
             }
-            IconButton(onClick = { onMove(1) }, enabled = !isLast, modifier = Modifier.semantics { contentDescription = "Move ${task.title} down" }) {
+            IconButton(onClick = { onMove(1) }, enabled = orderEditing && !isLast, modifier = Modifier.semantics { contentDescription = "Move ${task.title} down" }) {
                 Icon(Icons.Rounded.ArrowDownward, contentDescription = null)
             }
         }

@@ -1,0 +1,1005 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "name": "initial confirmation is free",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": null,
+        "confirmedOrder": [],
+        "acceptedReplans": 0,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000001",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": null,
+        "proposedOrder": [
+          "b",
+          "a",
+          "c"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "b",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "classic",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 0,
+        "actualDebit": 0,
+        "requiredCost": 0,
+        "order": [
+          "b",
+          "a",
+          "c"
+        ],
+        "xp": 200,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000001"
+      }
+    },
+    {
+      "name": "first changed confirmation is free",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 0,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000002",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "b",
+          "a",
+          "c"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "b",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "classic",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 1,
+        "actualDebit": 0,
+        "requiredCost": 0,
+        "order": [
+          "b",
+          "a",
+          "c"
+        ],
+        "xp": 200,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000002"
+      }
+    },
+    {
+      "name": "third changed confirmation is free",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 2,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000003",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "b",
+          "a",
+          "c"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "b",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "classic",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 3,
+        "actualDebit": 0,
+        "requiredCost": 0,
+        "order": [
+          "b",
+          "a",
+          "c"
+        ],
+        "xp": 200,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000003"
+      }
+    },
+    {
+      "name": "fourth changed confirmation costs classic 50",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 3,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000004",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "b",
+          "a",
+          "c"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "b",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "classic",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 4,
+        "actualDebit": 50,
+        "requiredCost": 50,
+        "order": [
+          "b",
+          "a",
+          "c"
+        ],
+        "xp": 150,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000004"
+      }
+    },
+    {
+      "name": "fourth changed confirmation costs gentle 25",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 3,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000005",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "b",
+          "a",
+          "c"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "b",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "gentle",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 4,
+        "actualDebit": 25,
+        "requiredCost": 25,
+        "order": [
+          "b",
+          "a",
+          "c"
+        ],
+        "xp": 175,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000005"
+      }
+    },
+    {
+      "name": "off setting still counts replans",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 3,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000006",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "b",
+          "a",
+          "c"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "b",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "off",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 4,
+        "actualDebit": 0,
+        "requiredCost": 0,
+        "order": [
+          "b",
+          "a",
+          "c"
+        ],
+        "xp": 200,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000006"
+      }
+    },
+    {
+      "name": "classic XP floor",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 3,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000007",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "b",
+          "a",
+          "c"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "b",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 13,
+      "setting": "classic",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 4,
+        "actualDebit": 13,
+        "requiredCost": 50,
+        "order": [
+          "b",
+          "a",
+          "c"
+        ],
+        "xp": 0,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000007"
+      }
+    },
+    {
+      "name": "zero balance retains nominal consent",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 3,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000008",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "b",
+          "a",
+          "c"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "b",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 0,
+      "setting": "classic",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 4,
+        "actualDebit": 0,
+        "requiredCost": 50,
+        "order": [
+          "b",
+          "a",
+          "c"
+        ],
+        "xp": 0,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000008"
+      }
+    },
+    {
+      "name": "unchanged order does not count",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 3,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000009",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "b",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "classic",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 3,
+        "actualDebit": 0,
+        "requiredCost": 0,
+        "order": [
+          "a",
+          "b",
+          "c"
+        ],
+        "xp": 200,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000009"
+      }
+    },
+    {
+      "name": "adding a task does not count",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 3,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000010",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "a",
+          "b",
+          "c",
+          "d"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "b",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        },
+        {
+          "id": "d",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "classic",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 3,
+        "actualDebit": 0,
+        "requiredCost": 0,
+        "order": [
+          "a",
+          "b",
+          "c",
+          "d"
+        ],
+        "xp": 200,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000010"
+      }
+    },
+    {
+      "name": "removing a task does not count",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 3,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000011",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "a",
+          "c"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "classic",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 3,
+        "actualDebit": 0,
+        "requiredCost": 0,
+        "order": [
+          "a",
+          "c"
+        ],
+        "xp": 200,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000011"
+      }
+    },
+    {
+      "name": "completed task stays omitted",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 0,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000012",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "c",
+          "b",
+          "a"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "classic",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 1,
+        "actualDebit": 0,
+        "requiredCost": 0,
+        "order": [
+          "c",
+          "a"
+        ],
+        "xp": 200,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000012"
+      }
+    },
+    {
+      "name": "no surviving tasks is not a replan",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 3,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000013",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "c",
+          "b",
+          "a"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [],
+      "xp": 200,
+      "setting": "classic",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 3,
+        "actualDebit": 0,
+        "requiredCost": 0,
+        "order": [],
+        "xp": 200,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000013"
+      }
+    },
+    {
+      "name": "stale draft does not debit",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 3,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000014",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "proposedOrder": [
+          "b",
+          "a",
+          "c"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "b",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "classic",
+      "expected": {
+        "code": "STALE_REVISION",
+        "acceptedReplans": 3,
+        "actualDebit": 0,
+        "requiredCost": 50,
+        "order": [
+          "a",
+          "b",
+          "c"
+        ],
+        "xp": 200,
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+      }
+    },
+    {
+      "name": "increased cost requires explicit consent",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 3,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000015",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "b",
+          "a",
+          "c"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 25,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "b",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "classic",
+      "expected": {
+        "code": "COST_CHANGED",
+        "acceptedReplans": 3,
+        "actualDebit": 0,
+        "requiredCost": 50,
+        "order": [
+          "a",
+          "b",
+          "c"
+        ],
+        "xp": 200,
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+      }
+    },
+    {
+      "name": "Frog promotion is one changed order",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 0,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000016",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z",
+        "priorityChanges": [
+          {
+            "taskId": "c",
+            "isFrog": true
+          }
+        ]
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 2
+        },
+        {
+          "id": "b",
+          "precedence": 2
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "classic",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 1,
+        "actualDebit": 0,
+        "requiredCost": 0,
+        "order": [
+          "c",
+          "a",
+          "b"
+        ],
+        "xp": 200,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000016"
+      }
+    },
+    {
+      "name": "existing precedence stays enforced",
+      "policy": {
+        "schemaVersion": 1,
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "revision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "confirmedOrder": [
+          "a",
+          "b",
+          "c"
+        ],
+        "acceptedReplans": 0,
+        "history": []
+      },
+      "command": {
+        "schemaVersion": 1,
+        "operationId": "cccccccc-cccc-4ccc-8ccc-000000000017",
+        "accountId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "localDate": "2026-09-08",
+        "baselineRevision": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "proposedOrder": [
+          "c",
+          "b",
+          "a"
+        ],
+        "ratings": [],
+        "maximumAcceptedXp": 50,
+        "capturedAt": "2026-09-08T18:00:00.000Z"
+      },
+      "available": [
+        {
+          "id": "a",
+          "precedence": 0
+        },
+        {
+          "id": "b",
+          "precedence": 1
+        },
+        {
+          "id": "c",
+          "precedence": 2
+        }
+      ],
+      "xp": 200,
+      "setting": "classic",
+      "expected": {
+        "code": "APPLIED",
+        "acceptedReplans": 0,
+        "actualDebit": 0,
+        "requiredCost": 0,
+        "order": [
+          "a",
+          "b",
+          "c"
+        ],
+        "xp": 200,
+        "revision": "cccccccc-cccc-4ccc-8ccc-000000000017"
+      }
+    }
+  ]
+}

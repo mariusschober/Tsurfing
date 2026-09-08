@@ -59,11 +59,14 @@ for migration in \
   "${repository_root}/supabase/migrations/20260908004753_s2_causal_capability_discovery.sql" \
   "${repository_root}/supabase/migrations/20260908011224_s2_causal_history_chunks.sql" \
   "${repository_root}/supabase/migrations/20260908015740_s2_atomic_focus_completion.sql" \
-  "${repository_root}/supabase/migrations/20260908065315_s2_causal_account_initialization.sql"; do
+  "${repository_root}/supabase/migrations/20260908065315_s2_causal_account_initialization.sql" \
+  "${repository_root}/supabase/migrations/20260908180500_deliberate_planning.sql" \
+  "${repository_root}/supabase/migrations/20260908193000_planning_review_snapshot.sql"; do
   psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${migration}" >/dev/null
 done
 psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${repository_root}/scripts/migration-integrity-assertions.sql" >/dev/null
 for test_database in "${empty_database}" "${upgrade_database}"; do
+  psql -v ON_ERROR_STOP=1 -d "${test_database}" -f "${repository_root}/scripts/migration-planning-assertions.sql" >/dev/null
   psql -v ON_ERROR_STOP=1 -d "${test_database}" -f "${repository_root}/scripts/migration-causal-completion-assertions.sql" >/dev/null
   psql -v ON_ERROR_STOP=1 -d "${test_database}" -f "${repository_root}/scripts/migration-causal-capability-assertions.sql" >/dev/null
   psql -v ON_ERROR_STOP=1 -d "${test_database}" -f "${repository_root}/scripts/migration-causal-history-assertions.sql" >/dev/null

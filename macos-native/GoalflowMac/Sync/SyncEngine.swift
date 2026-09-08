@@ -584,6 +584,14 @@ final class SyncEngine: @unchecked Sendable {
             }
             hasMore = hasMoreVal
         }
+        let planningDay = Self.todayString()
+        let (planningData, planningResponse) = try await requestWithRetry(
+            path: "/api/v1/sync/planning?date=\(planningDay)", method: "GET", body: nil)
+        guard (200..<300).contains(planningResponse.statusCode),
+              let planningBody = try JSONSerialization.jsonObject(with: planningData) as? [String: Any] else {
+            throw SyncError.validation("Daily planning policy could not be verified. Existing decisions remain saved.")
+        }
+        try DeliberatePlanningStore(metaStore: metaStore).commitDay(planningBody, accountID: accountUserId, day: planningDay)
         var conflictAfter: String? = nil
         repeat {
             let (conflictData, conflictResponse) = try await requestWithRetry(

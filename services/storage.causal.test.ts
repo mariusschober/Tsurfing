@@ -8,6 +8,7 @@ import { CAUSAL_BUSINESS_STORE, fenceLegacyBusinessStores, causalBusinessTransac
 import { buildStagedLocalTransaction, emptySyncMeta } from './syncProtocol';
 import { assertCompletionCapturesMaterialized } from './causalCompletionCoordinator';
 import { wireMutation } from './syncEnvelope';
+import { ensurePlanningStorage } from './deliberatePlanningStorage';
 
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 async function fixture() {
@@ -24,6 +25,7 @@ async function fixture() {
   await db.put('tasks', tasks, user); await db.put('tracking', tracking, user);
   await db.put('sync', { ...emptySyncMeta(), future: { raw: 'retained' } }, user);
   db.close(); (await fenceLegacyTracking(name)).close(); (await fenceLegacyBusinessStores(name)).close();
+  (await ensurePlanningStorage(name)).close();
   const read = async () => {
     const db = await openDB(name), tx = db.transaction(causalBusinessTransactionStores(db, ['tasks', 'tracking', 'sync', CAUSAL_STORE]));
     const tasks = await readCausalBusiness(tx, 'tasks', user), sync = await readCausalBusiness(tx, 'sync', user);

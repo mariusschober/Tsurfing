@@ -11,6 +11,7 @@ import { appendStagedTransactions, applyPushResults, applyRemotePage, buildStage
 import { storageService, STORES } from './storage';
 import { prepareCausalRequest, commitCausalReceipt } from './causalReceipts';
 import { applyDownloadedCausalHistory } from './causalProjection';
+import { admitPlanningConfirmation, preparePlanningRequest, commitPlanningResponse, retainPlanningReview, resolvePlanningReview, readDailyPlanning } from './deliberatePlanningStorage';
 import { causalHistoryHash } from './causalHistoryProtocol';
 
 const stores = ['tasks', 'stats', 'progress', 'goals', 'habits', 'task_events', 'tracking', 'sync'];
@@ -47,7 +48,14 @@ async function fixture(fenced = false) {
     }
     db.close(); return values;
   };
-  const write = async (store: string, value: unknown) => { const db = await openDB(name); await db.put(store, value, accountId); db.close(); };
+  const write = async (store: string, value: unknown) => {
+    const db = await openDB(name);
+    if (fenced && store !== 'tracking') {
+      const tx = db.transaction(causalBusinessTransactionStores(db, [store]), 'readwrite');
+      await writeCausalBusiness(tx, store, accountId, value); await tx.done;
+    } else await db.put(store, value, accountId);
+    db.close();
+  };
   const receipt = (bytes: string, trackingValue: any) => {
     const operation = JSON.parse(bytes);
     return { schemaVersion: 2, epoch, projectionRevision: 1, operation, accepted: true,
@@ -313,4 +321,117 @@ it('replays an admitted completion over earlier history without reviving active 
   for (const store of ['tasks', 'stats', 'progress', 'goals', 'habits', 'task_events', 'tracking']) expect(after[store]).toEqual(before[store]);
   expect(after[CAUSAL_STORE].completionOutbox).toEqual(before[CAUSAL_STORE].completionOutbox);
   expect(after[CAUSAL_STORE].trackingValue.focusSession.phase).toBe('completed');
+});
+
+it('keeps an offline completion behind its planning command and binds the planning server versions', async () => {
+  const { admitPlanningConfirmation, readDailyPlanning, preparePlanningRequest, commitPlanningResponse } = await import('./deliberatePlanningStorage');
+  const f = await fixture(true);
+  const command = { schemaVersion: 1 as const, accountId: f.accountId, operationId: crypto.randomUUID(),
+    localDate: '2026-09-08', baselineRevision: null, proposedOrder: ['task'], ratings: [], maximumAcceptedXp: 0,
+    capturedAt: '2026-09-08T00:01:00.000Z' };
+  await admitPlanningConfirmation(f.name, command);
+  const stored = await readDailyPlanning(f.name, f.accountId, command.localDate), pending = stored.pending[0];
+  const intent = f.intent();
+  const completion = await admitLocalCompletion(f.name, intent);
+  expect(Object.values(completion.admission.dependencies).filter(item => item.kind === 'planning')).toHaveLength(2);
+  await expect(prepareCompletionRequest(f.name, f.accountId, intent.focus.actionId)).rejects.toThrow('planning receipt');
+  await preparePlanningRequest(f.name, f.accountId);
+  const response = { schemaVersion: 1, accountId: f.accountId, receipt: pending.provisional, policy: stored.policy,
+    records: pending.members.map((member, index) => ({ user_id: f.accountId, entity_type: member.entityType,
+      entity_id: member.entityId, payload: JSON.parse(JSON.stringify(member.payload)), version: member.version,
+      server_version: 200 + index, device_id: 'server-planning', updated_at: command.capturedAt, deleted_at: null })) };
+  expect(await commitPlanningResponse(f.name, f.accountId, command, response)).toMatchObject({ applied: true });
+  const values = await f.read();
+  expect(values.tasks[0].completed).toBe(true);
+  expect(values.progress).toEqual({ level: 2, xp: 18, xpToNextLevel: 200, future: true });
+  const bytes = await prepareCompletionRequest(f.name, f.accountId, intent.focus.actionId);
+  const operation = JSON.parse(bytes!);
+  expect(operation.changes.find((member: any) => member.entityType === 'tasks').baseServerVersion).toBe(200);
+  expect(operation.changes.find((member: any) => member.entityType === 'progress').baseServerVersion).toBe(201);
+});
+
+it.each([{ chained: false, edit: 'none' }, { chained: true, edit: 'none' }, { chained: false, edit: 'before' }, { chained: false, edit: 'after' }, { chained: false, edit: 'before', continuation: true }, { chained: false, edit: 'after', continuation: true }])('resolves rejected planning with completion and saved edits (%j)', async ({ chained, edit, continuation }) => {
+  const f = await fixture(true), localDate = '2026-09-08';
+  const command = { schemaVersion: 1 as const, operationId: crypto.randomUUID(), accountId: f.accountId, localDate,
+    baselineRevision: null, proposedOrder: ['task'], ratings: [], maximumAcceptedXp: 0, capturedAt: '2026-09-08T00:01:00.000Z' };
+  const initialPolicy = (await readDailyPlanning(f.name, f.accountId, localDate)).policy;
+  await admitPlanningConfirmation(f.name, command);
+  await preparePlanningRequest(f.name, f.accountId);
+  const pending = (await readDailyPlanning(f.name, f.accountId, localDate)).pending[0];
+  async function saveEdit(after: boolean) {
+    const values = await f.read(), tasks = structuredClone(values.tasks);
+    if (after) tasks[0].description = 'saved after completion'; else tasks[0].title = 'saved before completion';
+    const transaction = buildStagedLocalTransaction('tasks', f.accountId, values.tasks, tasks, 1, command.capturedAt, () => crypto.randomUUID())!;
+    const meta = appendStagedTransactions(values.sync, [transaction], 'fixture');
+    meta.localState!.journal[transaction.id] = transaction;
+    await f.write('tasks', tasks); await f.write('sync', meta);
+  }
+  if (edit === 'before') await saveEdit(false);
+  if (continuation) {
+    const next = { ...command, operationId: crypto.randomUUID(), baselineRevision: command.operationId };
+    await admitPlanningConfirmation(f.name, next);
+  }
+
+  const intent = f.intent(), admitted = await admitLocalCompletion(f.name, intent);
+  const original = structuredClone(admitted.admission), firstTracking = (await f.read())[CAUSAL_STORE].trackingValue;
+  if (edit === 'after') await saveEdit(true);
+  let second: CompletionIntent | undefined, start: Awaited<ReturnType<typeof admitLocalFocus>> | undefined;
+  if (chained) {
+    const startId = crypto.randomUUID(), sessionId = crypto.randomUUID();
+    start = await admitLocalFocus(f.name, { ...intent.focus, actionId: startId, sessionId, taskId: 'other', epoch: startId, kind: 'start', durationSeconds: 600 });
+    second = f.intent(); second.focus = { ...second.focus, sessionId, taskId: 'other', epoch: startId, expectedCurrentSessionId: sessionId };
+    await admitLocalCompletion(f.name, second);
+  }
+  const receipt = { ...pending.provisional, code: 'STALE_REVISION', revision: null, order: [], acceptedReplans: 0, actualDebit: 0 };
+  const policy = { ...initialPolicy, history: [receipt] };
+  const response = { schemaVersion: 1, accountId: f.accountId, receipt, policy, records: [] };
+  await commitPlanningResponse(f.name, f.accountId, command, response);
+  const snapshot = { schemaVersion: 1, accountId: f.accountId, operationId: command.operationId, response, policy, missingTaskIds: [],
+    records: pending.members.map((member, index) => ({ user_id: f.accountId, entity_type: member.entityType, entity_id: member.entityId,
+      version: 1, server_version: index + 10, device_id: 'other-device', updated_at: command.capturedAt, deleted_at: null,
+      payload: member.entityType === 'progress' ? { ...(member.payload as any), xp: 80 }
+        : member.entityType === 'tasks' ? { ...(member.payload as any), plannedOrder: 4, description: 'remote note' } : member.payload })) };
+  await retainPlanningReview(f.name, f.accountId, command, snapshot);
+  await resolvePlanningReview(f.name, f.accountId, command.operationId, 'synced');
+  const values = await f.read(), state = values[CAUSAL_STORE];
+  expect(state.completionAdmissions[intent.focus.actionId]).toEqual(original);
+  expect(state.completionOutbox[intent.focus.actionId]).toEqual(original);
+  expect(values.tasks[0]).toMatchObject({ completed: true, plannedOrder: 4, description: edit === 'after' ? 'saved after completion' : intent.details.finalDescription });
+  if (edit === 'before') expect(values.tasks[0].title).toBe('saved before completion');
+  expect(values.progress).toMatchObject({ level: 2, xp: chained ? 173 : 98, xpToNextLevel: 200 });
+  expect(() => validateCompletionEvidence(f.accountId, state, values.sync, values)).not.toThrow();
+  if (edit === 'before') {
+    const batch = readyOutbox(values.sync);
+    expect(batch).toHaveLength(1);
+    const mutation = batch[0];
+    const result = { mutationId: mutation.mutationId, accepted: true, serverVersion: 50,
+      record: { user_id: f.accountId, entity_type: mutation.entityType, entity_id: mutation.entityId, device_id: mutation.deviceId,
+        version: mutation.version, server_version: 50, payload: mutation.payload, updated_at: mutation.updatedAt, deleted_at: mutation.deletedAt } };
+    const meta = applyPushResults(values.sync, batch, [result], command.capturedAt);
+    meta.localState!.receipts[mutation.mutationId] = { request: mutation, result };
+    await f.write('sync', meta);
+  }
+  const bytes = await prepareCompletionRequest(f.name, f.accountId, intent.focus.actionId), operation = JSON.parse(bytes);
+  expect(operation.command).toEqual(original.command);
+  expect(operation.changes.map((member: any) => member.mutationId)).toEqual(original.members.map(member => member.mutationId));
+  expect(operation.changes.find((member: any) => member.entityType === 'progress').payload.xp).toBe(98);
+  expect(await prepareCompletionRequest(f.name, f.accountId, intent.focus.actionId)).toBe(bytes);
+  await commitCompletionReceipt(f.name, f.accountId, intent.focus.actionId, f.receipt(bytes, firstTracking));
+  if (second && start) {
+    const startOperation = { schemaVersion: 2, epoch: f.epoch, type: 'focus', command: start.command };
+    await prepareCausalRequest(f.name, f.accountId, startOperation);
+    await commitCausalReceipt(f.name, f.accountId, start.command.actionId, { schemaVersion: 2, epoch: f.epoch, projectionRevision: 2, operation: startOperation,
+      accepted: true, outcome: start.outcome, record: { user_id: f.accountId, entity_type: 'tracking', entity_id: 'singleton', payload: start.tracking,
+        version: 3, server_version: 101, device_id: 'fixture', updated_at: start.command.capturedAt, deleted_at: null } });
+    const secondBytes = await prepareCompletionRequest(f.name, f.accountId, second.focus.actionId);
+    expect(JSON.parse(secondBytes).changes.find((member: any) => member.entityType === 'progress').payload.xp).toBe(173);
+    const secondReceipt = f.receipt(secondBytes, state.trackingValue);
+    secondReceipt.projectionRevision = 3; secondReceipt.record.server_version = 200;
+    for (const result of secondReceipt.changes) { result.serverVersion += 100; result.record.server_version += 100; }
+    await commitCompletionReceipt(f.name, f.accountId, second.focus.actionId, secondReceipt);
+  }
+  const after = await f.read();
+  expect(after.progress.xp).toBe(chained ? 173 : 98);
+  expect(after[CAUSAL_STORE].completionOutbox[intent.focus.actionId]).toBeUndefined();
+  expect(() => validateCompletionEvidence(f.accountId, after[CAUSAL_STORE], after.sync, after)).not.toThrow();
 });

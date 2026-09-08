@@ -348,6 +348,7 @@ final class SyncMetaStore: @unchecked Sendable {
     }
 
     private static let allowedLocalWalKeys: Set<String> = [
+        "goalflow.deliberate_planning.v1",
         "goalflow.demo.tasks.v1",
         "goalflow.daily_plans.v1",
         "goalflow.goals.v1",

@@ -7,19 +7,29 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  variant?: 'default' | 'navigation' | 'compact' | 'popover';
+  variant?: 'default' | 'navigation' | 'compact' | 'popover' | 'planned';
+  headerControls?: React.ReactNode;
   id?: string;
   anchorRef?: React.RefObject<HTMLElement>;
   returnFocusRef?: React.RefObject<HTMLElement>;
   fallbackFocusRef?: React.RefObject<HTMLElement>;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, variant = 'default', id, anchorRef, returnFocusRef, fallbackFocusRef }) => {
+const modalStack: HTMLDivElement[] = [];
+
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, variant = 'default', id, anchorRef, returnFocusRef, fallbackFocusRef, headerControls }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const [position, setPosition] = useState<React.CSSProperties>({});
+  const [layer, setLayer] = useState(10000);
   const titleId = useId();
+  const openingFocusRef = useRef<HTMLElement | null>(null);
+  const renderedOpenRef = useRef(false);
+  // Capture before child autofocus runs during the DOM commit. This matters
+  // when a task form opens above another dialog.
+  if (isOpen && !renderedOpenRef.current) openingFocusRef.current = document.activeElement as HTMLElement | null;
+  renderedOpenRef.current = isOpen;
   useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useLayoutEffect(() => {
@@ -65,9 +75,10 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
     };
   }, [isOpen, variant, anchorRef]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const keyTarget = variant === 'default' ? window : document;
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (modalStack.at(-1) !== dialogRef.current) return;
       // The navigation dialog handles keys after its controls, before background view shortcuts on window.
       if (variant !== 'default') e.stopPropagation();
       if (e.key === 'Escape') {
@@ -86,10 +97,13 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
     };
 
     if (isOpen) {
-      const previousFocus = document.activeElement as HTMLElement | null;
+      const panel = dialogRef.current!;
+      modalStack.push(panel);
+      setLayer(10000 + modalStack.length);
+      const previousFocus = openingFocusRef.current;
       const previousOverflow = document.body.style.overflow;
       // New navigation surfaces are modal, including for pointer and assistive technology users.
-      const background = variant === 'default' ? [] : Array.from(document.body.children)
+      const background = Array.from(document.body.children)
         .filter((element): element is HTMLElement => element instanceof HTMLElement && element !== overlayRef.current)
         .map(element => ({ element, inert: element.inert }));
       background.forEach(({ element }) => { element.inert = true; });
@@ -100,6 +114,8 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
         (initial || dialogRef.current)?.focus();
       }, 0);
       return () => {
+        const index = modalStack.indexOf(panel);
+        if (index >= 0) modalStack.splice(index, 1);
         window.clearTimeout(focusTimer);
         keyTarget.removeEventListener('keydown', handleKeyDown);
         background.forEach(({ element, inert }) => { element.inert = inert; });
@@ -117,6 +133,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
   return ReactDOM.createPortal(
     <div 
       ref={overlayRef}
+      style={{ zIndex: layer }}
       className={variant === 'default' ? 'fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-[9999] flex justify-center items-center p-4 sm:p-6 animate-fadeIn' : `navigation-overlay navigation-overlay--${variant}`}
       onClick={event => { if (event.target === event.currentTarget) onClose(); }}
     >
@@ -133,6 +150,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
       >
         <div className={variant === 'default' ? 'flex justify-between items-center p-6 pb-4 border-b border-gray-100 dark:border-slate-700 shrink-0 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm z-10' : 'navigation-panel__heading border-b border-gray-100 dark:border-slate-700'}>
           <h3 id={titleId} className="text-2xl font-heading font-bold text-gray-900 dark:text-white tracking-wide">{title}</h3>
+          {headerControls}
           <button type="button" onClick={onClose} aria-label={variant === 'default' ? 'Close dialog' : `Close ${title}`}
             className={variant === 'default' ? 'text-gray-400 hover:text-gray-800 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700' : 'min-h-11 min-w-11 shrink-0 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 flex items-center justify-center'}>
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

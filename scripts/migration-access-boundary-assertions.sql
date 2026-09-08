@@ -97,12 +97,21 @@ begin
     raise exception 'A client role can access backup storage objects directly';
   end if;
 
-  if has_function_privilege(
+  -- Planning's invoker transaction needs these projections. The service-only
+  -- grants are deliberate; signed-in clients still cannot call them directly.
+  if not has_function_privilege(
     'service_role',
     'public.project_goalflow_task_sync(uuid,text,jsonb,bigint,timestamptz,timestamptz)',
     'EXECUTE'
   ) then
-    raise exception 'Internal task projection remains callable by the service API role';
+    raise exception 'Planning task projection is unavailable to its service transaction';
+  end if;
+  if not has_function_privilege('service_role','public.project_goalflow_daily_plan_sync(uuid,text,jsonb,bigint,timestamptz,timestamptz)','EXECUTE')
+    or has_function_privilege('anon','public.project_goalflow_task_sync(uuid,text,jsonb,bigint,timestamptz,timestamptz)','EXECUTE')
+    or has_function_privilege('authenticated','public.project_goalflow_task_sync(uuid,text,jsonb,bigint,timestamptz,timestamptz)','EXECUTE')
+    or has_function_privilege('anon','public.project_goalflow_daily_plan_sync(uuid,text,jsonb,bigint,timestamptz,timestamptz)','EXECUTE')
+    or has_function_privilege('authenticated','public.project_goalflow_daily_plan_sync(uuid,text,jsonb,bigint,timestamptz,timestamptz)','EXECUTE') then
+    raise exception 'Planning projection grants are not restricted to the service transaction';
   end if;
   if not has_function_privilege(
     'service_role',

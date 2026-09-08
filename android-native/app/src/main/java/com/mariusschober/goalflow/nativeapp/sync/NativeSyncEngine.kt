@@ -300,6 +300,20 @@ class NativeSyncEngine(
                 .synchronize(accountId, drainOrdinary = ::drainOrdinary)
         var causalResult = causalPass()
         drainOrdinary()
+        while (true) {
+            repository.planningStore.reviewRequest(accountId)?.let { bytes ->
+                val response = requestForSession(session, "/api/v1/sync/planning-review", "POST", bytes)
+                ensureSuccessful(response, "The saved order review could not be loaded.")
+                repository.planningStore.retainReview(accountId, JSONObject(bytes), parseObject(response.body, "Invalid order review."))
+            }
+            val bytes = repository.planningStore.prepare(accountId) ?: break
+            val response = requestForSession(session, "/api/v1/sync/confirm-order", "POST", bytes)
+            ensureSuccessful(response, "Order confirmation remains pending.")
+            if (!repository.planningStore.commit(accountId, JSONObject(bytes), parseObject(response.body, "Invalid order receipt."))) {
+                continue
+            }
+            drainOrdinary(); causalResult = causalPass()
+        }
         var projectionRetries = 0
 
         var cursor = repository.syncMetadata(SYNC_CURSOR_KEY)?.cursor ?: 0L
@@ -375,6 +389,11 @@ class NativeSyncEngine(
             projectionRetries = 0
             cursor = nextCursor
         } while (hasMore)
+
+        val planningDay = repository.planningStore.currentDay()
+        val planningResponse = requestForSession(session, "/api/v1/sync/planning?date=$planningDay", "GET", null)
+        ensureSuccessful(planningResponse, "Today's order allowance could not be verified.")
+        repository.planningStore.commitDay(accountId, planningDay, parseObject(planningResponse.body, "Invalid daily order policy."))
 
         var conflictAfter: String? = null
         do {

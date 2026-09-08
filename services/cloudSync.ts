@@ -277,6 +277,23 @@ export const synchronizeCloudOnce = async (
   let causal = await synchronizeCausal();
   if (causal && !causal.ready) throw new SyncProtocolError(`Causal synchronization requires ${causal.reason === 'ENROLLMENT_REQUIRED' ? 'account enrollment' : 'projection recovery'}. Saved actions remain retained.`);
 
+  for (;;) {
+    const planning = await storageService.synchronizeNextPlanning(userKey, {
+      authenticatedFetch: dependencies.fetch, signal: dependencies.signal, timeoutMs: dependencies.requestTimeoutMs
+    });
+    if (!planning) break;
+    if ('blocked' in planning || !planning.applied) throw new SyncProtocolError(
+      'blocked' in planning ? planning.blocked : planning.review ?? 'Planning needs review. Both versions remain saved.');
+    await drainOrdinary();
+    causal = await synchronizeCausal();
+    if (causal && !causal.ready) throw new SyncProtocolError('Focus synchronization needs review. Saved actions remain retained.');
+  }
+
+  const planningNow = dependencies.now();
+  const planningDate = `${planningNow.getFullYear()}-${String(planningNow.getMonth() + 1).padStart(2, '0')}-${String(planningNow.getDate()).padStart(2, '0')}`;
+  const planningPolicy = await storageService.fetchPlanningPolicy(userKey, planningDate, {
+    authenticatedFetch: dependencies.fetch, signal: dependencies.signal, timeoutMs: dependencies.requestTimeoutMs
+  });
   let projectionRetries = 0;
   let hasMore = true;
   while (hasMore) {
@@ -320,6 +337,7 @@ export const synchronizeCloudOnce = async (
     hasMore = body.hasMore;
   }
 
+  if (planningPolicy) await storageService.commitPlanningPolicy(userKey, planningDate, planningPolicy);
   let conflictAfter: string | null = null;
   do {
     const path = '/api/v1/sync/conflicts/page' + (conflictAfter ? `?after=${conflictAfter}` : '');

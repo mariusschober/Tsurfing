@@ -12,10 +12,12 @@ import { assertNewSyncPayload, SYNC_STAGED_BODY_BYTES } from './syncEnvelope';
 import { applyPushResults, emptySyncMeta, normalizeSyncMeta, stableJson, syncEntityKey, type SyncMeta } from './syncProtocol';
 import { sendCausalCompletion } from './causalCompletionTransport';
 import { parseCausalOperation, assertCausalReceipt } from './causalProtocol';
+import { assertPlanningCompletionResolution, effectiveCompletionMembers, effectivePlanningEdit, planningPredecessor, planningDependencyRecord, type PlanningCompletionResolution } from './planningCompletionRebase';
+import { assertPlanningResponse, type PlanningResponse } from './deliberatePlanningProtocol';
 
 const stores = ['tasks', 'stats', 'progress', 'goals', 'habits', 'task_events'] as const;
 type Member = CausalCompletionOperation['changes'][number];
-type Dependency = { kind: 'legacy' | 'completion'; actionId?: string; request: Member };
+type Dependency = { kind: 'legacy' | 'completion' | 'planning'; actionId?: string; request: Member };
 export interface CompletionIntent {
   focus: LocalFocusIntent;
   details: CompletionDetails;
@@ -45,6 +47,9 @@ export interface CompletionAccountState extends FocusAccountState, CausalEnrollm
   completionRequests?: Record<string, string>;
   completionReceipts?: Record<string, Record<string, any>>;
   causalReceipts?: Record<string, Record<string, any>>;
+  planningReceipts?: Record<string, PlanningResponse>;
+  planningResolutions?: Record<string, PlanningCompletionResolution>;
+  planningEdits?: import('./planningCompletionRebase').PlanningRebaseState['planningEdits'];
 }
 const object = (value: unknown): value is Record<string, any> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const same = (a: unknown, b: unknown) => stableJson(a) === stableJson(b);
@@ -188,12 +193,16 @@ async function admitCompletion(name: string, captured: CompletionIntent | Comple
         const older = meta.outbox.filter(item => item.entityType === store && item.entityId === entityId);
         const reserved = Object.entries(reservations).filter(([, entry]) => entry.entityType === store && entry.entityId === entityId);
         const predecessors = [...older.map(request => ({ kind: 'legacy' as const, request })), ...reserved.map(([memberId, entry]) => {
-          const previous = state.completionAdmissions?.[entry.actionId]?.members.find(item => item.mutationId === memberId);
+          const predecessor = state.completionAdmissions?.[entry.actionId];
+          const previous = predecessor && effectiveCompletionMembers(state, predecessor).find(item => item.mutationId === memberId);
           if (!previous || !same({ actionId: entry.actionId, entityType: previous.entityType, entityId: previous.entityId, version: previous.version }, entry)) {
             throw new Error('Completion reservation is missing its original admission.');
           }
           return { kind: 'completion' as const, actionId: entry.actionId, request: previous };
-        })].sort((a, b) => b.request.version - a.request.version);
+        }), ...Object.values(meta.localState.planningReservations ?? {})
+          .filter(entry => entry.entityType === store && entry.entityId === entityId)
+          .map(({ actionId, ...request }) => ({ kind: 'planning' as const, actionId, request }))
+        ].sort((a, b) => b.request.version - a.request.version);
         if (new Set(predecessors.map(item => item.request.version)).size !== predecessors.length) throw new Error('Ambiguous predecessor versions require recovery before completion.');
         const latest = predecessors[0];
         const versionEntry = meta.versions[key] ?? (entityId === 'singleton' ? meta.versions[store] : undefined);
@@ -236,9 +245,10 @@ function assertAdmission(state: CompletionAccountState, id: string) {
   return admission;
 }
 
-export function assertCompletionAdmissionOperation(admission: CompletionAdmission, operation: CausalCompletionOperation) {
+export function assertCompletionAdmissionOperation(admission: CompletionAdmission, operation: CausalCompletionOperation, state?: CompletionAccountState) {
+  const expected = state ? effectiveCompletionMembers(state, admission) : admission.members;
   if (operation.epoch !== admission.epoch || !same(operation.command, admission.command)
-    || !same(operation.changes.map(memberMeaning), admission.members.map(memberMeaning))) throw new Error('The saved completion differs from its durable admission.');
+    || !same(operation.changes.map(memberMeaning), expected.map(memberMeaning))) throw new Error('The saved completion differs from its durable admission.');
   for (const member of operation.changes) {
     const original = admission.members.find(item => item.mutationId === member.mutationId)!;
     if (!admission.dependencies[member.mutationId] && member.baseServerVersion !== original.baseServerVersion) throw new Error('The saved completion rewrites its original base version.');
@@ -247,22 +257,47 @@ export function assertCompletionAdmissionOperation(admission: CompletionAdmissio
 
 
 function resolvedMembers(accountId: string, state: CompletionAccountState, meta: SyncMeta, admission: CompletionAdmission): Member[] {
-  return admission.members.map(member => {
-      const dependency = admission.dependencies[member.mutationId];
+  return effectiveCompletionMembers(state, admission).map(member => {
+      let dependency = admission.dependencies[member.mutationId];
       if (!dependency) return member;
-      let request: Member, result: any;
-      if (dependency.kind === 'completion') {
+      if (dependency.kind === 'planning' && state.planningResolutions?.[dependency.actionId!]) {
+        const inherited = planningPredecessor(state, state.planningResolutions[dependency.actionId!], dependency.request);
+        if (inherited.record) return { ...member, baseServerVersion: inherited.record.server_version };
+        if (!inherited.dependency) throw new Error('The reviewed planning predecessor is incomplete.');
+        dependency = inherited.dependency;
+      }
+      let request: Member, result: any, expectedPredecessor = dependency.request;
+      if (dependency.kind === 'planning') {
+        const resolution = state.planningResolutions?.[dependency.actionId!];
+        if (resolution) {
+          const record = planningDependencyRecord(accountId, resolution, dependency.request);
+          return { ...member, baseServerVersion: record.server_version };
+        }
+        const receipt = state.planningReceipts?.[dependency.actionId!];
+        if (!receipt) throw new Error('Completion awaits its preceding planning receipt.');
+        assertPlanningResponse(accountId, receipt.receipt.command as any, receipt);
+        const record = receipt.records.find(row => row.entity_type === dependency.request.entityType && row.entity_id === dependency.request.entityId);
+        if (receipt.receipt.code !== 'APPLIED' || !record || !same(record.payload, dependency.request.payload)) {
+          throw new Error('A preceding planning change requires recovery before completion.');
+        }
+        request = dependency.request;
+        result = { serverVersion: record.server_version };
+      } else if (dependency.kind === 'completion') {
         const bytes = state.completionRequests?.[dependency.actionId!], receipt = state.completionReceipts?.[dependency.actionId!];
         if (!bytes || !receipt) throw new Error('Completion awaits its preceding logical action receipt.');
         const operation = parseCausalCompletion(accountId, JSON.parse(bytes));
         assertCausalCompletionReceipt(accountId, operation, receipt);
         if (!receipt.accepted) throw new Error('A preceding completion requires recovery.');
+        const original = state.completionAdmissions?.[dependency.actionId!];
+        if (original) expectedPredecessor = effectiveCompletionMembers(state, original).find(item => item.mutationId === dependency.request.mutationId)!;
         request = operation.changes.find(item => item.mutationId === dependency.request.mutationId)!;
         result = receipt.changes.find((item: any) => item.mutationId === dependency.request.mutationId);
       } else {
         const evidence = meta.localState?.receipts[dependency.request.mutationId];
         if (!evidence) throw new Error('Completion awaits its preceding entity receipt.');
-        request = { ...dependency.request, baseServerVersion: evidence.request.baseServerVersion };
+        const originalEdit = state.planningEdits?.[dependency.request.mutationId]?.original;
+        if (originalEdit) expectedPredecessor = { ...dependency.request, payload: effectivePlanningEdit(state, originalEdit).payload as Member['payload'] };
+        request = { ...expectedPredecessor, baseServerVersion: evidence.request.baseServerVersion };
         if (!same(memberMeaning(request), memberMeaning({ mutationId: evidence.request.mutationId, entityType: evidence.request.entityType as Member['entityType'],
           entityId: evidence.request.entityId, deviceId: evidence.request.deviceId, baseServerVersion: evidence.request.baseServerVersion,
           version: evidence.request.version, payload: evidence.request.payload as Record<string, any>, updatedAt: evidence.request.updatedAt, deletedAt: evidence.request.deletedAt as null }))) {
@@ -272,7 +307,7 @@ function resolvedMembers(accountId: string, state: CompletionAccountState, meta:
         result = evidence.result;
         if (!result.accepted || (result.record?.user_id ?? result.record?.userId) !== accountId) throw new Error('The preceding entity receipt needs recovery.');
       }
-      if (!request || !result || !same(memberMeaning(request), memberMeaning(dependency.request))) throw new Error('Completion predecessor evidence differs.');
+      if (!request || !result || !same(memberMeaning(request), memberMeaning(expectedPredecessor))) throw new Error('Completion predecessor evidence differs.');
       return { ...member, baseServerVersion: result.serverVersion };
     });
 }
@@ -287,7 +322,7 @@ export async function prepareCompletionRequest(name: string, accountId: string, 
     const prior = state.completionRequests?.[id];
     if (prior !== undefined) {
       const operation = parseCausalCompletion(accountId, JSON.parse(prior));
-      assertCompletionAdmissionOperation(admission, operation);
+      assertCompletionAdmissionOperation(admission, operation, state);
       if (!same(operation.changes, resolvedMembers(accountId, state, meta, admission))) throw new Error('The attempted completion has different dependency evidence.');
       return prior;
     }
@@ -323,7 +358,7 @@ export function retainCompletionReceipt(accountId: string, state: CompletionAcco
   const admission = assertAdmission(state, id), bytes = state.completionRequests?.[id];
   if (!bytes) throw new Error('The original completion request is missing.');
   const operation = parseCausalCompletion(accountId, JSON.parse(bytes));
-  assertCompletionAdmissionOperation(admission, operation);
+  assertCompletionAdmissionOperation(admission, operation, state);
   if (!same(operation.changes, resolvedMembers(accountId, state, meta, admission))) throw new Error('The attempted completion has different dependency evidence.');
   const verified = assertCausalCompletionReceipt(accountId, operation, receipt);
   const prior = state.completionReceipts?.[id];
@@ -369,7 +404,19 @@ export function validateCompletionEvidence(accountId: string, state: CompletionA
   for (const value of [state.completionAdmissions, state.completionOutbox, state.completionRequests, state.completionReceipts]) {
     if (value !== undefined && !object(value)) throw new Error('The completion evidence ledger is invalid.');
   }
+  for (const [id, resolution] of Object.entries(state.planningResolutions ?? {})) {
+    if (resolution.command.operationId !== id) throw new Error('Planning resolution identity differs.');
+    assertPlanningCompletionResolution(accountId, resolution);
+  }
   const meta = normalizeSyncMeta(sync);
+  const graph = meta.localState?.planningRebase;
+  if (graph) {
+    if (graph.accountKey !== accountId || !same(graph.planningEdits ?? {}, state.planningEdits ?? {})
+      || !same(graph.planningResolutions ?? {}, state.planningResolutions ?? {})) throw new Error('Planning edit authority differs from retained completion evidence.');
+    for (const [id, admission] of Object.entries(graph.completionAdmissions ?? {})) {
+      if (!same(admission, state.completionAdmissions?.[id])) throw new Error('Planning edit has a different original completion.');
+    }
+  }
   const capability = assertCausalCapability(accountId, state.causalCapability);
   if (!capability.enrolled) throw new Error('Completion evidence has no established account epoch.');
   const expectedReservations: NonNullable<NonNullable<SyncMeta['localState']>['completionReservations']> = {};
@@ -391,10 +438,11 @@ export function validateCompletionEvidence(accountId: string, state: CompletionA
       throw new Error('A rejected local completion has member effects.');
     }
     for (const [memberId, dependency] of Object.entries(admission.dependencies)) {
-      if (!object(dependency) || !['legacy', 'completion'].includes(dependency.kind) || !object(dependency.request)
+      if (!object(dependency) || !['legacy', 'completion', 'planning'].includes(dependency.kind) || !object(dependency.request)
         || !admission.members.some(member => member.mutationId === memberId && member.entityType === dependency.request.entityType
           && member.entityId === dependency.request.entityId && member.version > dependency.request.version)) throw new Error('Completion dependency evidence is invalid.');
     }
+    effectiveCompletionMembers(state, admission);
     if (state.completionOutbox?.[id]) for (const member of admission.members) {
       if (expectedReservations[member.mutationId]) throw new Error('Completion members repeat a reserved identity.');
       expectedReservations[member.mutationId] = { actionId: id, entityType: member.entityType, entityId: member.entityId, version: member.version };
@@ -405,14 +453,14 @@ export function validateCompletionEvidence(accountId: string, state: CompletionA
   for (const [id, bytes] of Object.entries(state.completionRequests ?? {})) {
     if (typeof bytes !== 'string') throw new Error('The completion request evidence is invalid.');
     const admission = assertAdmission(state, id), operation = parseCausalCompletion(accountId, JSON.parse(bytes));
-    assertCompletionAdmissionOperation(admission, operation);
+    assertCompletionAdmissionOperation(admission, operation, state);
     if (!same(operation.changes, resolvedMembers(accountId, state, meta, admission))) throw new Error('The attempted completion has different dependency evidence.');
     if (state.completionReceipts?.[id]) assertCausalCompletionReceipt(accountId, operation, state.completionReceipts[id]);
   }
   if (Object.keys(state.completionReceipts ?? {}).some(id => !state.completionRequests?.[id])) throw new Error('A completion receipt has no original request.');
   if (collections) {
     const latest = new Map<string, Member>();
-    for (const admission of Object.values(state.completionOutbox ?? {})) for (const member of admission.members) {
+    for (const admission of Object.values(state.completionOutbox ?? {})) for (const member of effectiveCompletionMembers(state, admission)) {
       const key = syncEntityKey(member.entityType, member.entityId);
       if ((latest.get(key)?.version ?? 0) < member.version) latest.set(key, member);
     }

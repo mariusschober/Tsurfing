@@ -39,7 +39,7 @@ enum PlanningGate: Equatable, Sendable {
     case empty
 }
 
-func getPlanningGate(tasks: [GoalflowTask], today: String, dailyPlan: DailyPlan?) -> PlanningGate {
+func getPlanningGate(tasks: [GoalflowTask], today: String, dailyPlan: DailyPlan?, confirmedOrderExists: Bool = false) -> PlanningGate {
     let currentMonth = monthOf(today)
     let monthTasks = tasks.filter { $0.isOpen && $0.schedulePrecision == .month && $0.scheduledFor <= currentMonth }
     if !monthTasks.isEmpty {
@@ -48,7 +48,7 @@ func getPlanningGate(tasks: [GoalflowTask], today: String, dailyPlan: DailyPlan?
     let overdue = tasks.filter { $0.isOpen && $0.schedulePrecision == .day && $0.scheduledFor < today }
     let queue = buildTodayQueue(tasks: tasks, today: today)
     let plannedIds = queue.map(\.id)
-    let planMatches = dailyPlan?.localDate == today
+    let planMatches = dailyPlan?.localDate == today || confirmedOrderExists
     if !overdue.isEmpty || (queue.count > 0 && !planMatches) {
         return .dailyPlanningRequired(localDate: today, overdueTaskIds: overdue.map(\.id), taskIds: plannedIds)
     }

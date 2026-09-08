@@ -21,6 +21,7 @@ object NativeCompletionRequestEvidence {
 
     fun resolved(accountId: String, state: JSONObject, id: String): JSONObject {
         val operation = JSONObject(NativeCompletionAdmissionEvidence.operation(state, id).toString())
+            .put("changes", NativePlanningCompletionRebase.members(state, id))
         val command = operation.getJSONObject("command")
         val parent = command.opt("expectedRevision") as? String
         if (parent != null && state.getJSONObject("focusAdmissions").has(parent)) {
@@ -39,7 +40,26 @@ object NativeCompletionRequestEvidence {
             val member = members.getJSONObject(index); val dependency = dependencies.optJSONObject(member.getString("mutationId")) ?: continue
             val captured = dependency.getJSONObject("request")
             val base = when (dependency.getString("kind")) {
-                "legacy" -> NativeLegacyReceiptEvidence.resolvedBase(accountId, state, queued(captured)) ?: throw NativeCompletionDependencyPending()
+                "planning" -> {
+                    val proof = state.optJSONObject("planningResolutions")?.optJSONObject(dependency.getString("actionId"))
+                    if (proof != null) {
+                        require(proof.getJSONObject("command").opt("operationId") == dependency.opt("actionId"))
+                        NativePlanningCompletionRebase.record(accountId, proof, captured).getLong("server_version")
+                    } else {
+                    val receipt = state.optJSONObject("planningReceipts")?.optJSONObject(dependency.getString("actionId")) ?: throw NativeCompletionDependencyPending()
+                    NativePlanningProtocol.response(accountId, receipt.getJSONObject("receipt").getJSONObject("command"), receipt)
+                    require(receipt.getJSONObject("receipt").getString("code") == "APPLIED")
+                    val records = receipt.getJSONArray("records")
+                    val record = (0 until records.length()).map(records::getJSONObject).single {
+                        it.opt("entity_type") == captured.opt("entityType") && it.opt("entity_id") == captured.opt("entityId")
+                    }
+                    require(same(NativePlanningProtocol.payload(captured.getString("entityType"), record.getJSONObject("payload")), captured.getJSONObject("payload"))) {
+                        "Planning predecessor changed. Review the retained completion."
+                    }
+                    record.getLong("server_version")
+                    }
+                }
+                "legacy" -> NativeLegacyReceiptEvidence.resolvedBase(accountId, state, NativePlanningCompletionRebase.edit(state, queued(captured))) ?: throw NativeCompletionDependencyPending()
                 "completion" -> {
                     val action = dependency.getString("actionId")
                     val bytes = state.optJSONObject("causalRequests")?.optString(action)?.takeIf { it.isNotEmpty() } ?: throw NativeCompletionDependencyPending()
@@ -48,7 +68,9 @@ object NativeCompletionRequestEvidence {
                     require(receipt.getBoolean("accepted")) { "A preceding completion requires recovery." }
                     val changes = previous.getJSONArray("changes")
                     val position = (0 until changes.length()).single { changes.getJSONObject(it).opt("mutationId") == captured.opt("mutationId") }
-                    require(same(meaning(changes.getJSONObject(position)), meaning(captured))) { "Completion predecessor request differs." }
+                    val effective = NativePlanningCompletionRebase.members(state, action)
+                    val predecessor = (0 until effective.length()).map(effective::getJSONObject).single { it.opt("mutationId") == captured.opt("mutationId") }
+                    require(same(meaning(changes.getJSONObject(position)), meaning(predecessor))) { "Completion predecessor request differs." }
                     receipt.getJSONArray("changes").getJSONObject(position).getLong("serverVersion")
                 }
                 else -> error("Invalid completion dependency kind.")

@@ -42,8 +42,22 @@ final class LocalTaskStore: TaskStore, @unchecked Sendable {
         return loaded.sorted(by: goalflowTaskComparator)
     }
     func saveAll(_ tasks: [GoalflowTask]) throws {
+        try syncMetaStore.withLocalStateTransaction { try saveAllLocked(tasks) }
+    }
+    private func saveAllLocked(_ tasks: [GoalflowTask]) throws {
         let sorted = tasks.sorted(by: goalflowTaskComparator)
         let previous = try loadAll()
+        let plans = DailyPlanStore(fileURL: fileURL.deletingLastPathComponent().appendingPathComponent("dailyPlans.json"),
+            defaults: defaults, syncMetaStore: syncMetaStore, deviceIdStore: deviceIdStore)
+        for day in Set(previous.filter { $0.isOpen && $0.schedulePrecision == .day }.map(\.scheduledFor)) {
+            if try plans.isOrderLocked(for: day) {
+                let before = buildTodayQueue(tasks: previous, today: day).map(\.id)
+                let after = buildTodayQueue(tasks: sorted, today: day).map(\.id)
+                if DeliberatePlanning.changed(before, after) {
+                    throw SyncError.validation("Order is locked. Open Replan in today's plan to confirm a new order.")
+                }
+            }
+        }
         let previousValue: Any? = try previous.map { try $0.toSyncDictionary() }
         let nextValue: Any? = try sorted.map { try $0.toSyncDictionary() }
         let transaction = try buildStagedLocalTransaction(

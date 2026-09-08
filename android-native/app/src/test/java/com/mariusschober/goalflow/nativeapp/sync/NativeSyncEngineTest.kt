@@ -735,6 +735,9 @@ class NativeSyncEngineTest {
                     200,
                     JSONObject().put("conflicts", JSONArray()).put("hasMore", false).put("nextAfter", JSONObject.NULL).toString()
                 )
+                "/api/v1/sync/planning?date=${repository.planningStore.currentDay()}" -> NativeHttpResponse(200,
+                    JSONObject().put("schemaVersion", 1).put("accountId", serverUserId).put("enforcementEnabled", false)
+                        .put("policy", com.mariusschober.goalflow.nativeapp.data.DeliberatePlanning.initial(serverUserId, repository.planningStore.currentDay())).toString())
                 else -> transport.request(path, token, method, body)
             }
         },

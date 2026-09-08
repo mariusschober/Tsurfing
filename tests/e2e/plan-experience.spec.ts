@@ -100,9 +100,12 @@ test('Prioritize works without check-in, cancels safely, applies once and yields
   await expect(mode(page,'Prioritize')).toBeFocused();
   await expect(page.locator('.planning-task__title').first()).toHaveText('Planning example 2');
   const ranked=await savedTasks(page);
+  expect(ranked).toEqual(initial); // Ranking remains private until confirmation.
   await navigate(page,'Habits'); await navigate(page,'Plan');
   await expect(mode(page,'Prioritize')).toHaveAttribute('aria-pressed','true');
   expect(await savedTasks(page)).toEqual(ranked);
+  await page.getByRole('button',{name:'Resume',exact:true}).click();
+  await expect(page.locator('.planning-task__title').first()).toHaveText('Planning example 2');
   await mode(page,'Prioritize').click(); await page.keyboard.press('Escape');
   const draggable=page.locator('[data-rfd-draggable-id]').first();
   await draggable.focus(); await page.keyboard.press('Space'); await page.keyboard.press('ArrowDown'); await page.keyboard.press('Space');

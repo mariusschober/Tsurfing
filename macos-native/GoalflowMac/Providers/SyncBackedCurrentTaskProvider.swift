@@ -25,7 +25,7 @@ final class SyncBackedCurrentTaskProvider: CurrentTaskProvider, @unchecked Senda
         let today = todayString()
         let tasks = try taskStore.loadAll()
         let plan = try dailyPlanStore.load(for: today)
-        return getPlanningGate(tasks: tasks, today: today, dailyPlan: plan)
+        return try getPlanningGate(tasks: tasks, today: today, dailyPlan: plan, confirmedOrderExists: dailyPlanStore.isOrderLocked(for: today))
     }
 
     func fetchCurrent() throws -> GoalflowTask? {

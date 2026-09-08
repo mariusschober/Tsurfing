@@ -511,12 +511,14 @@ class GoalflowRepositorySyncTest {
     }
 
     @Test
-    fun `room-backed move uses the latest order and invalidates a confirmed plan`() = runTest {
+    fun `room-backed draft move uses the latest draft order and preserves the confirmed plan`() = runTest {
         val today = LocalDate.now().toString()
         val first = repository.createTask("First", "", SchedulePrecision.DAY, today, null, false)
         val second = repository.createTask("Second", "", SchedulePrecision.DAY, today, null, false)
         repository.confirmPlan(today, listOf(first.id, second.id))
 
+        assertTrue(runCatching { repository.moveToday(today, second.id, -1) }.isFailure)
+        repository.beginReplan(today)
         val moved = repository.moveToday(today, second.id, -1)
         val movedAgain = repository.moveToday(today, second.id, 1)
 
@@ -530,13 +532,13 @@ class GoalflowRepositorySyncTest {
             listOf(second.id, first.id),
             moved?.orderedIds
         )
-        assertTrue("first move hadConfirmedPlan=${moved?.hadConfirmedPlan}", moved?.hadConfirmedPlan == true)
+        assertTrue("first move hadConfirmedPlan=${moved?.hadConfirmedPlan}", moved?.hadConfirmedPlan == false)
         assertEquals(
             "second move previousIds=${movedAgain?.previousIds}",
             listOf(second.id, first.id),
             movedAgain?.previousIds
         )
-        assertEquals("daily plan after move=${database.dailyPlanDao().get(today)}", null, database.dailyPlanDao().get(today))
+        assertEquals(listOf(first.id, second.id).joinToString(","), database.dailyPlanDao().get(today)?.taskIds)
         assertEquals(listOf(first.id, second.id), database.taskDao().getAll()
             .filter { it.scheduledFor == today }
             .sortedBy { it.plannedOrder }
@@ -1163,7 +1165,9 @@ class GoalflowRepositorySyncTest {
             planFingerprint = snapshot.planFingerprint
         )
 
+        repository.beginReplan(today)
         repository.moveToday(today, second.id, -1)
+        repository.confirmPlan(today, listOf(second.id, first.id))
 
         try {
             repository.executeWidgetAction(NativeWidgetAction.COMPLETE, target)

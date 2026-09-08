@@ -130,6 +130,39 @@ class GoalflowRepository(
     private val rawCollections = database.rawCollectionDao()
     private val accounts = database.localAccountDao()
     private val causalAccounts = database.causalAccountDao()
+    internal val planningStore = NativePlanningCoordinator(database, timeProvider,
+        account = { accounts.get()?.userId ?: syncBindingProvider().accountSubject ?: "unbound-local-workspace" },
+        queue = { day -> buildTodayQueue(tasks.getAll().map(::toDomain), day) },
+        applyProjection = { command, result -> applyPlanningProjection(command, result) },
+        readBusiness = { type, id -> if (type == "daily_plans") plans.get(id)?.let { GoalflowJson.planPayload(toDomain(it)) }
+            else causalBusinessPayload(type, id)?.let(::JSONObject) },
+        applyBusiness = { record, proof -> require(!applyRemoteRecordInTransaction(record, proof)) { "Planning projection needs identity recovery." } })
+
+    private suspend fun applyPlanningProjection(command: JSONObject, result: DeliberatePlanning.Reply): List<SyncOutboxEntity> {
+        val before = outbox.getAll().map { it.mutationId }.toSet()
+        val order = result.receipt.getJSONArray("order")
+        val ratings = (0 until result.ratings.length()).associate { i -> result.ratings.getJSONObject(i).let { it.getString("taskId") to it } }
+        val priorities = command.optJSONArray("priorityChanges") ?: JSONArray()
+        val promoted = (0 until priorities.length()).map { priorities.getJSONObject(it).getString("taskId") }.toSet()
+        for (index in 0 until order.length()) {
+            val task = tasks.get(order.getString(index)) ?: error("A planned task disappeared.")
+            val extra = JSONObject(task.extraJson); extra.remove("session")
+            ratings[task.id]?.let { extra.put("excitement", it.getInt("excitement")).put("roi", it.getInt("roi")) }
+            val next = task.copy(plannedOrder = index, isFrog = task.isFrog || task.id in promoted, extraJson = extra.toString())
+            tasks.update(next); enqueueRecordInTransaction("tasks", task.id, GoalflowJson.taskPayload(toDomain(next)).toString())
+        }
+        val previous = rawCollections.get("progress") ?: error("Planning balance is missing.")
+        val progress = JSONObject(previous.payload).put("xp", result.xp)
+        rawCollections.insert(previous.copy(payload = progress.toString()))
+        enqueueRecordInTransaction("progress", "singleton", progress.toString())
+        val plan = DailyPlan(command.getString("localDate"), Instant.parse(command.getString("capturedAt")).toEpochMilli(),
+            (0 until order.length()).map { order.getString(it) })
+        plans.insert(toEntity(plan)); enqueueRecordInTransaction("daily_plans", plan.localDate, GoalflowJson.planPayload(plan).toString())
+        val members = outbox.getAll().filter { it.mutationId !in before }
+        members.forEach { outbox.delete(it.mutationId) }
+        return members
+    }
+
     private val causalStore = NativeCausalStore(database, deviceId)
     internal val causalEnrollmentStore = NativeCausalEnrollmentStore(database)
     internal val causalHistoryStore = NativeCausalHistoryStore(database)
@@ -229,10 +262,12 @@ class GoalflowRepository(
             val members = JSONArray(); val dependencies = JSONObject()
             for (row in generated) {
                 val previous = before.values.filter { it.entityType == row.entityType && it.entityId == row.entityId }.maxByOrNull { it.version }
-                val reserved = NativeCompletionAdmissionEvidence.reserved(state, row.entityType, row.entityId)
+                val completionReservation = NativeCompletionAdmissionEvidence.reserved(state, row.entityType, row.entityId)
+                val planningReservation = planningStore.reservation(row.entityType, row.entityId)
+                val reserved = listOfNotNull(completionReservation, planningReservation).maxByOrNull { it.second.getLong("version") }
                 require(previous == null || reserved == null || previous.version != reserved.second.getLong("version")) { "Ambiguous completion predecessor." }
                 val dependency = if (reserved != null && (previous == null || reserved.second.getLong("version") > previous.version))
-                    JSONObject().put("kind", "completion").put("actionId", reserved.first).put("request", JSONObject(reserved.second.toString()))
+                    JSONObject().put("kind", if (reserved === planningReservation) "planning" else "completion").put("actionId", reserved.first).put("request", JSONObject(reserved.second.toString()))
                 else previous?.let { JSONObject().put("kind", "legacy").put("request", NativeLegacyReceiptEvidence.queued(it)) }
                 val member = NativeCompletionAdmissionEvidence.member(row.copy(updatedAt = command.getString("capturedAt"),
                     baseServerVersion = if (dependency != null) null else row.baseServerVersion))
@@ -1147,83 +1182,42 @@ class GoalflowRepository(
         onMutation()
     }
 
+    fun planningStream(localDate: String) = planningStore.observe(localDate)
+    suspend fun beginReplan(localDate: String) { planningStore.begin(localDate) }
+    suspend fun resolvePlanningReview(localDate: String, useDraft: Boolean) { planningStore.resolveReview(localDate, useDraft) }
+    suspend fun reviewReplan(localDate: String) { planningStore.reviewDraft(localDate) }
+    suspend fun discardReplan(localDate: String) { planningStore.discard(localDate) }
+    suspend fun promoteDraftFrog(localDate: String, taskId: String) { planningStore.promote(localDate, taskId) }
+
     suspend fun reorderToday(localDate: String, orderedIds: List<String>) {
-        database.withTransaction {
-            val queue = buildTodayQueue(tasks.getAll().map(::toDomain), localDate)
-            val expected = queue.map { it.id }
-            if (expected.toSet() != orderedIds.toSet() || expected.size != orderedIds.size) {
-                throw SchedulingException("The queue changed. Review the current order again.")
-            }
-            val byId = tasks.getAll().associateBy { it.id }
-            val now = timeProvider.now().toEpochMilli()
-            val updated = orderedIds.mapIndexed { index, id ->
-                byId.getValue(id).copy(plannedOrder = index, updatedAt = now)
-            }
-            tasks.updateAll(updated)
-            updated.forEach { task ->
-                enqueueRecordInTransaction("tasks", task.id, GoalflowJson.taskPayload(toDomain(task)).toString())
-            }
-            val previousPlan = plans.get(localDate)
-            plans.delete(localDate)
-            if (previousPlan != null) {
-                enqueueRecordInTransaction(
-                    "daily_plans",
-                    localDate,
-                    GoalflowJson.planPayload(toDomain(previousPlan)).toString(),
-                    timeProvider.now().toString()
-                )
-            }
-        }
-        onMutation()
+        planningStore.setOrder(localDate, orderedIds)
     }
 
-    /** Moves one item using the latest Room state, avoiding stale UI reorder races. */
-    suspend fun moveToday(localDate: String, taskId: String, direction: Int): NativeReorderResult? {
-        require(direction == -1 || direction == 1) { "A task can move only one position at a time." }
-        val result = database.withTransaction {
-            val queue = buildTodayQueue(tasks.getAll().map(::toDomain), localDate)
-            val currentIndex = queue.indexOfFirst { it.id == taskId }
-            val targetIndex = currentIndex + direction
-            if (currentIndex < 0 || targetIndex !in queue.indices) return@withTransaction null
-            val previousIds = queue.map { it.id }
-            val orderedIds = previousIds.toMutableList().apply {
-                val moved = removeAt(currentIndex)
-                add(targetIndex, moved)
-            }
-            val byId = tasks.getAll().associateBy { it.id }
-            val now = timeProvider.now().toEpochMilli()
-            val updated = orderedIds.mapIndexed { index, id ->
-                byId.getValue(id).copy(plannedOrder = index, updatedAt = now)
-            }
-            tasks.updateAll(updated)
-            updated.forEach { task ->
-                enqueueRecordInTransaction("tasks", task.id, GoalflowJson.taskPayload(toDomain(task)).toString())
-            }
-            val previousPlan = plans.get(localDate)
-            plans.delete(localDate)
-            if (previousPlan != null) {
-                enqueueRecordInTransaction(
-                    "daily_plans",
-                    localDate,
-                    GoalflowJson.planPayload(toDomain(previousPlan)).toString(),
-                    timeProvider.now().toString()
-                )
-            }
-            NativeReorderResult(localDate, previousIds, orderedIds, previousPlan != null)
-        }
-        if (result != null) onMutation()
-        return result
+    suspend fun moveToday(localDate: String, taskId: String, direction: Int): NativeReorderResult? = database.withTransaction {
+        require(direction == -1 || direction == 1)
+        val snapshot = planningStore.read(localDate)
+        require(!snapshot.locked || snapshot.draft != null) { "Order is locked. Open Replan to change it." }
+        val queue = buildTodayQueue(tasks.getAll().map(::toDomain), localDate)
+        val draft = snapshot.draft?.getJSONArray("proposedOrder")
+        val original = draft?.let { (0 until it.length()).map(it::getString) } ?: queue.map { it.id }
+        val ids = DeliberatePlanning.reconcile(original, queue.map { DeliberatePlanning.Task(it.id,
+            if (it.beforeFrog && it.habitId != null) 0 else if (it.isFrog) 1 else 2) })
+        val index = ids.indexOf(taskId); val next = index + direction
+        if (index < 0 || next !in ids.indices) return@withTransaction null
+        val changed = ids.toMutableList().apply { add(next, removeAt(index)) }
+        planningStore.setOrder(localDate, changed)
+        NativeReorderResult(localDate, ids, changed, false)
     }
 
-    suspend fun confirmPlan(localDate: String, orderedIds: List<String>) {
+    suspend fun confirmPlan(localDate: String, orderedIds: List<String>, maximumAcceptedXp: Int = 0) {
         database.withTransaction {
-            val queue = buildTodayQueue(tasks.getAll().map(::toDomain), localDate)
-            if (queue.map { it.id } != orderedIds) {
-                throw SchedulingException("The queue changed. Review the current order again.")
+            if (rawCollections.get("progress") == null) {
+                val baseline = "{\"xp\":0,\"level\":1,\"xpToNextLevel\":100}"
+                rawCollections.insert(RawCollectionEntity("progress", baseline, timeProvider.now().toString(), null))
+                enqueueRecordInTransaction("progress", "singleton", baseline)
             }
-            val plan = DailyPlan(localDate, timeProvider.now().toEpochMilli(), orderedIds)
-            plans.insert(toEntity(plan))
-            enqueueRecordInTransaction("daily_plans", localDate, GoalflowJson.planPayload(plan).toString())
+            val result = planningStore.confirm(localDate, orderedIds, maximumAcceptedXp)
+            require(result.receipt.getString("code") == "APPLIED") { "The order or cost changed. Your draft remains saved." }
         }
         onMutation()
     }
@@ -1841,7 +1835,8 @@ class GoalflowRepository(
             rawCollections = rawCollections.getAll().associate { it.entityType to it.payload },
             ownerUserId = storedOwnerUserId ?: bindingOwnerUserId,
             syncBinding = binding,
-            causalAccounts = causalAccounts.getAll()
+            causalAccounts = causalAccounts.getAll(),
+            planningAccounts = database.planningAccountDao().getAll()
         )
         val envelope = GoalflowBackup.encrypt(
             payload,
@@ -1932,9 +1927,12 @@ class GoalflowRepository(
             accounts.insert(LocalAccountEntity(userId = incomingOwnerUserId))
         }
         val syncStatePresent = payload.syncBinding != null || payload.outbox.isNotEmpty() ||
-            payload.syncMeta.isNotEmpty() || payload.conflicts.isNotEmpty() || payload.causalAccounts.isNotEmpty()
+            payload.syncMeta.isNotEmpty() || payload.conflicts.isNotEmpty() || payload.causalAccounts.isNotEmpty() || payload.planningAccounts.isNotEmpty()
         val syncCompatible = !syncStatePresent || payload.syncBinding != null && payload.syncBinding == currentBinding
         if (payload.causalAccounts.isNotEmpty() && !syncCompatible) throw BackupFormatException("Causal backup synchronization bindings differ. Explicit recovery is required.")
+        if (payload.planningAccounts.isNotEmpty() && !syncCompatible) throw BackupFormatException("Planning backup synchronization bindings differ. Explicit recovery is required.")
+        val originalPlanning = database.planningAccountDao().getAll()
+        val preservedPlanning = mergeExactById(originalPlanning, payload.planningAccounts, PlanningAccountEntity::accountId, "planning account")
         val originalCausal = causalAccounts.getAll()
         val preservedCausal = mergeExactById(originalCausal, payload.causalAccounts, CausalAccountEntity::accountId, "causal account")
         val preservedOutbox = if (syncCompatible) {
@@ -2053,6 +2051,7 @@ class GoalflowRepository(
         conflicts.insertAll(preservedConflicts)
         rawCollections.deleteAll()
         rawCollections.insertAll(rawByType.values.toList())
+        preservedPlanning.filter { incoming -> originalPlanning.none { it.accountId == incoming.accountId } }.forEach { database.planningAccountDao().put(it) }
         preservedCausal.filter { incoming -> originalCausal.none { it.accountId == incoming.accountId } }.forEach { causalAccounts.insert(it) }
 
         if (mode == BackupRestoreMode.REPLACE) {
@@ -2111,7 +2110,8 @@ class GoalflowRepository(
             rawCollections = rawCollections.getAll().associate { it.entityType to it.payload },
             ownerUserId = accounts.get()?.userId ?: normalizedAccountSubject(binding.accountSubject),
             syncBinding = binding,
-            causalAccounts = causalAccounts.getAll()
+            causalAccounts = causalAccounts.getAll(),
+            planningAccounts = database.planningAccountDao().getAll()
         )
     }
 
@@ -2218,8 +2218,9 @@ class GoalflowRepository(
     /** Only causally-ready mutations are sent. Later edits remain durable behind their predecessor. */
     suspend fun readySyncMutations(limit: Int = 50): List<SyncOutboxEntity> = database.withTransaction {
         migrateLegacyOutboxInTransaction()
-        outbox.getAll()
-            .asSequence()
+        val rows = outbox.getAll()
+        planningStore.validateSavedEdits(rows)
+        rows.asSequence()
             .filter { it.dependsOnMutationId == null }
             .distinctBy { it.entityType to it.entityId }
             .take(limit)
@@ -2229,7 +2230,10 @@ class GoalflowRepository(
     suspend fun pendingSyncMutations(): List<SyncOutboxEntity> = outbox.getAll()
 
     suspend fun markSyncAttempted(mutationIds: List<String>, attemptedAt: String = timeProvider.now().toString()) {
-        if (mutationIds.isNotEmpty()) outbox.markAttempted(mutationIds, attemptedAt)
+        database.withTransaction {
+            planningStore.validateSavedEdits(outbox.getAll())
+            if (mutationIds.isNotEmpty()) outbox.markAttempted(mutationIds, attemptedAt)
+        }
     }
 
     /**
@@ -2352,6 +2356,7 @@ class GoalflowRepository(
                     conflictCount += 1
                 }
             }
+            planningStore.retainOrdinaryResults(batch, results)
             if (causalState != null) {
                 val updated = requireNotNull(causalAccount).copy(payload = causalState.toString()); NativeCausalJournal.validate(updated)
                 check(causalAccounts.update(updated) == 1)
@@ -2370,6 +2375,9 @@ class GoalflowRepository(
         require(nextCursor >= 0L) { "The sync cursor is invalid." }
         records.forEach(::validateRemoteRecord)
         return database.withTransaction {
+            require(database.planningAccountDao().getAll().none {
+                JSONObject(it.payload).getJSONObject("planning").getJSONObject("pending").length() > 0
+            }) { "Pending order confirmations must sync or be reviewed before remote records are applied." }
             val cursorMeta = syncMeta.get(SYNC_CURSOR_KEY)
             val currentCursor = cursorMeta?.cursor ?: 0L
             require(nextCursor >= currentCursor) { "The sync cursor moved backwards." }
@@ -2961,9 +2969,11 @@ class GoalflowRepository(
         val metaKey = syncMetaKey(entityType, entityId)
         val current = syncMeta.get(metaKey)
         val existing = outbox.getForEntity(entityType, entityId)
-        val reserved = causalAccounts.getAll().singleOrNull()?.let {
+        val completionReservation = causalAccounts.getAll().singleOrNull()?.let {
             NativeCompletionAdmissionEvidence.reserved(NativeCausalJournal.validate(it), entityType, entityId)
         }?.second
+        val reserved = listOfNotNull(completionReservation, planningStore.reservation(entityType, entityId)?.second)
+            .maxByOrNull { it.getLong("version") }
         val nextVersion = maxOf(current?.localVersion ?: 0L, existing.maxOfOrNull { it.version } ?: 0L) + 1L
         val mutationId = UUID.randomUUID().toString()
         requireMutationIdAvailableInTransaction(mutationId)
@@ -3039,11 +3049,25 @@ class GoalflowRepository(
     }
 
     /** Returns true when a remote record was represented as a durable conflict. */
-    private suspend fun applyRemoteRecordInTransaction(record: NativeRemoteRecord): Boolean {
+    private suspend fun applyRemoteRecordInTransaction(record: NativeRemoteRecord, planningProof: JSONObject? = null): Boolean {
         for (account in causalAccounts.getAll()) {
             val state = NativeCausalJournal.validate(account)
-            require(NativeCompletionAdmissionEvidence.reserved(state, record.entityType, record.entityId) == null) {
-                "The entity has a pending atomic completion. Apply its exact action receipt before replacing local effects."
+            if (NativeCompletionAdmissionEvidence.reserved(state, record.entityType, record.entityId) != null) {
+                require(planningProof != null && planningProof.opt("accountId") == state.opt("accountId")
+                    && planningProof.optJSONObject("planningResolutions")?.length()?.let { it > 0 } == true
+                    && ActionJson.canonical(planningProof.opt("completionAdmissions")) == ActionJson.canonical(state.opt("completionAdmissions"))) {
+                    "The entity has a pending atomic completion. Apply its exact action receipt before replacing local effects."
+                }
+                NativeCompletionAdmissionEvidence.validate(account.accountId, planningProof)
+                val completion = NativeCompletionAdmissionEvidence.reserved(planningProof, record.entityType, record.entityId)?.second
+                val later = outbox.getForEntity(record.entityType, record.entityId).filter { it.version > (completion?.getLong("version") ?: 0) }.maxByOrNull { it.version }
+                val represented = if (later != null) {
+                    require(planningProof.optJSONObject("planningEdits")?.has(later.mutationId) == true)
+                    NativeCompletionAdmissionEvidence.member(NativePlanningCompletionRebase.edit(planningProof, later))
+                } else completion
+                require(record.deletedAt == null && represented != null && ActionJson.canonical(represented.getJSONObject("payload")) == ActionJson.canonical(JSONObject(record.payload))) {
+                    "The planning resolution does not prove the retained completion projection."
+                }
             }
         }
         val trimmed = record.payload.trimStart()
