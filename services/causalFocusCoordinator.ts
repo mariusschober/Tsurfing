@@ -31,6 +31,15 @@ export interface LocalFocusResult {
   tracking: unknown;
   command: FocusCommand;
 }
+/** A visible control captures its target once. Add time means extend and make
+ * active; the transaction chooses plain extend or extend-and-resume from the
+ * actual target phase, so rapid clicks do not reuse a stale paused snapshot. */
+export interface LocalFocusControl {
+  schemaVersion: 1; actionId: string; accountId: string; actorId: string;
+  kind: 'start' | 'pause' | 'resume' | 'stop' | 'addTime';
+  sessionId: string; taskId: string; expectedCurrentSessionId: string | null;
+  capturedAt: string; durationSeconds: number | null;
+}
 const record = (value: unknown): value is Record<string, any> => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 function retainLegacyWal(state: FocusAccountState, account: string): void {
@@ -58,15 +67,40 @@ export async function admitLocalFocus(databaseName: string, captured: LocalFocus
   try { return await admitInDatabase(db, intent); } finally { db.close(); }
 }
 
-async function admitInDatabase(db: IDBPDatabase, intent: LocalFocusIntent): Promise<LocalFocusResult> {
+export async function admitLocalFocusControl(databaseName: string, captured: LocalFocusControl): Promise<LocalFocusResult> {
+  const control = structuredClone(captured);
+  if (!['start', 'pause', 'resume', 'stop', 'addTime'].includes(control.kind)) throw new Error('Unsupported focus control.');
+  validateFocusCommand({ ...control, kind: control.kind === 'addTime' ? 'extend' : control.kind,
+    epoch: control.actionId, expectedRevision: null });
+  const db = await fenceLegacyTracking(databaseName);
+  try { return await admitInDatabase(db, control, true); } finally { db.close(); }
+}
+
+async function admitInDatabase(db: IDBPDatabase, captured: LocalFocusIntent | LocalFocusControl, fromControl = false): Promise<LocalFocusResult> {
   const tx = db.transaction(causalBusinessTransactionStores(db, [CAUSAL_STORE, 'tracking', 'tasks']), 'readwrite');
   // Observe abort immediately; callers receive the original validation/storage error.
   void tx.done.catch(() => undefined);
   try {
-    const state = await readCausalAccount(tx, intent.accountId) as FocusAccountState | undefined;
+    const state = await readCausalAccount(tx, captured.accountId) as FocusAccountState | undefined;
     if (!state || !state.trackingPresent || !record(state.trackingValue)) {
       throw new Error('A valid existing tracking baseline is required. Its original value was not replaced.');
     }
+    const journal = state.focus ?? initialFocusJournal(captured.accountId, state.trackingValue.focusSession);
+    let intent: LocalFocusIntent;
+    if (fromControl) {
+      const control = captured as LocalFocusControl;
+      const prior = state.focusAdmissions?.[control.actionId];
+      if (prior) {
+        if (stableJson(prior.intent.uiControl) !== stableJson(control)) throw new Error('The captured control ID has different intent.');
+        intent = prior.intent;
+      } else {
+        const target = journal.sessions[control.sessionId];
+        intent = { ...control, kind: control.kind === 'addTime'
+          ? target?.projection.phase === 'paused' ? 'extendAndResume' : 'extend' : control.kind,
+          epoch: control.kind === 'start' ? control.actionId : target?.epoch ?? control.sessionId,
+          uiControl: control };
+      }
+    } else intent = captured as LocalFocusIntent;
     const identity = state.actionIdentities?.[intent.actionId];
     if (identity && (identity.kind !== 'focus' || stableJson(identity.intent) !== stableJson(intent))) {
       throw new Error('The captured action ID has different intent. Nothing was admitted.');
@@ -77,7 +111,6 @@ async function admitInDatabase(db: IDBPDatabase, intent: LocalFocusIntent): Prom
       await tx.done;
       return { outcome: prior.outcome, command: prior.command, duplicate: true, generation: state.generation, tracking: state.trackingValue };
     }
-    const journal = state.focus ?? initialFocusJournal(intent.accountId, state.trackingValue.focusSession);
     const current = journal.currentSessionId ? journal.sessions[journal.currentSessionId] : undefined;
     const command: FocusCommand = { ...intent, expectedRevision: current?.revision ?? null };
     const tasks = await readCausalBusiness(tx, 'tasks', intent.accountId);

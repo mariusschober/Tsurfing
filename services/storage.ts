@@ -30,6 +30,8 @@ import { CAUSAL_STORE, TRACKING_KEY_PATH, fenceLegacyTracking, readCausalAccount
 import { CAUSAL_BUSINESS_STORE, CAUSAL_BUSINESS_STORES, BUSINESS_KEY_PATH, causalBusinessTransactionStores,
   fenceLegacyBusinessStores, readCausalBusiness, readCausalBusinessBackup, writeCausalBusiness } from './causalBusinessStorage';
 import { encodeCausalBackup, readCausalBackup } from './causalBackup';
+import { admitLocalFocusControl, type LocalFocusControl, type FocusAccountState } from './causalFocusCoordinator';
+import { admitLocalCounterDay, type CounterDayAccountState } from './causalCounterDayCoordinator';
 
 const BASE_DB_NAME = 'GoalflowDB';
 const ACTIVE_DB_KEY = 'goalflow_active_database_v2';
@@ -990,9 +992,9 @@ const retireMaterializedWal = (userKey: string, meta: SyncMeta): void => {
   }
 };
 
-const publishCommit = (userKey: string, meta: SyncMeta, stores: string[]): void => {
+const publishCommit = (userKey: string, meta: SyncMeta | number, stores: string[], database = activeDatabaseName()): void => {
   if (!hasWindow()) return;
-  const detail = { userKey, generation: meta.localState?.generation ?? 0, stores, database: activeDatabaseName(), context: LOCAL_SYNC_CONTEXT };
+  const detail = { userKey, generation: typeof meta === 'number' ? meta : meta.localState?.generation ?? 0, stores, database, context: LOCAL_SYNC_CONTEXT };
   window.dispatchEvent(new CustomEvent('goalflow:committed', { detail }));
   try { window.localStorage.setItem(`goalflow_commit_v1_${encodeURIComponent(userKey)}`, JSON.stringify(detail)); } catch (_) {}
 };
@@ -1026,6 +1028,7 @@ export interface CommittedSnapshot {
   meta: SyncMeta;
   pendingCount: number;
   walRevision: string;
+  causal?: { generation: number; daySelection?: CounterDayAccountState['counterDaySelection'] };
 }
 
 export const storageService = {
@@ -1117,6 +1120,8 @@ export const storageService = {
     if (!db) throw new DurableStorageError('Committed local state cannot be verified while IndexedDB is unavailable.');
     const tx = db.transaction(accountTransactionStores(db, [...DATA_STORES, STORES.SYNC]), 'readonly');
     const meta = normalizeSyncMeta(await readAccountValue(tx, STORES.SYNC, userKey));
+    const causal = db.objectStoreNames.contains(CAUSAL_STORE)
+      ? await readCausalAccount(tx, userKey) as (CounterDayAccountState & FocusAccountState & { completionOutbox?: Record<string, unknown> }) | undefined : undefined;
     const committed: Record<string, unknown> = {};
     for (const storeName of DATA_STORES) committed[storeName] = await readAccountValue(tx, storeName, userKey);
     await tx.done;
@@ -1130,7 +1135,24 @@ export const storageService = {
         throw new DurableStorageError(`The committed ${storeName} projection cannot be rendered safely. Its data and history remain preserved.`);
       }
     }
-    return { userKey, generation: meta.localState?.generation ?? 0, values, meta, pendingCount: pending.length + Object.keys(meta.localState?.blocked ?? {}).length + [...DATA_STORES, STORES.SYNC].filter(store => { const raw = window.localStorage.getItem(fallbackKey(store, userKey)); return raw !== null && !meta.localState?.fallbackCopies?.[store]?.includes(raw); }).length, walRevision: stableJson(captured) };
+    const causalPending = causal ? [causal.focusOutbox, causal.counterOutbox, causal.counterDayOutbox, causal.completionOutbox]
+      .reduce((count, outbox) => count + Object.keys(outbox ?? {}).length, 0) : 0;
+    return { userKey, generation: Math.max(meta.localState?.generation ?? 0, causal?.generation ?? 0), values, meta,
+      ...(causal ? { causal: { generation: causal.generation, daySelection: causal.counterDaySelection } } : {}),
+      pendingCount: causalPending + pending.length + Object.keys(meta.localState?.blocked ?? {}).length + [...DATA_STORES, STORES.SYNC].filter(store => { const raw = window.localStorage.getItem(fallbackKey(store, userKey)); return raw !== null && !meta.localState?.fallbackCopies?.[store]?.includes(raw); }).length, walRevision: stableJson(captured) };
+  },
+
+  async admitFocusControl(userKey: string, input: Omit<LocalFocusControl, 'actorId'>) {
+    const control: LocalFocusControl = { ...structuredClone(input), actorId: readDeviceId() };
+    const name = activeDatabaseName();
+    if (control.accountId !== userKey) throw new DurableStorageError('The focus control belongs to another account.');
+    await storageService.flushPendingLocalChanges(userKey);
+    const db = await getDB();
+    if (!db || db.name !== name || !db.objectStoreNames.contains(CAUSAL_STORE)
+      || !await db.get(CAUSAL_STORE, userKey)) throw new DurableStorageError('The focus control requires the prepared causal account.');
+    const result = await admitLocalFocusControl(name, control);
+    publishCommit(userKey, result.generation, [STORES.TRACKING], name);
+    return result;
   },
 
   subscribeCommitted(userKey: string, receive: (snapshot: CommittedSnapshot) => void): () => void {
@@ -1482,6 +1504,18 @@ export const storageService = {
     return queueMutation(async () => {
       const db = await getDB();
       if (!db) throw new DurableStorageError('The day boundary awaits atomic storage.');
+      if (db.objectStoreNames.contains(CAUSAL_STORE)) {
+        const state = await db.get(CAUSAL_STORE, userKey) as CounterDayAccountState | undefined;
+        if (!state?.trackingPresent || !isRecord(state.trackingValue)) throw new DurableStorageError('The causal day requires account initialization.');
+        if (state.trackingValue.date !== today && state.counterDaySelection?.requestedDay !== today) {
+          await admitLocalCounterDay(db.name, { schemaVersion: 1, actionId: randomUuid(), accountId: userKey,
+            actorId: readDeviceId(), kind: 'select', day: today, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            capturedAt: new Date().toISOString() });
+        }
+        const snapshot = await storageService.readCommittedSnapshot(userKey);
+        publishCommit(userKey, snapshot.meta, [STORES.TRACKING]);
+        return snapshot.values[STORES.TRACKING];
+      }
       const tx = db.transaction(accountTransactionStores(db, [...DATA_STORES, STORES.SYNC]), 'readwrite');
       let meta: SyncMeta;
       let next: unknown;

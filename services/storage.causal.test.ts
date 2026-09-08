@@ -141,3 +141,30 @@ it('does not reset authority after a mirror deletion, initialize a tombstone, or
   await storageService.seedUnsynchronizedLocalData(f.user);
   expect((await f.read()).sync.outbox.every((request: any) => request.entityType !== 'tracking')).toBe(true);
 });
+
+it('routes an explicit rendered focus control through the private transaction and reports pending causal work', async () => {
+  const f = await fixture();
+  const before = await storageService.readCommittedSnapshot(f.user);
+  const control = { schemaVersion: 1 as const, actionId: crypto.randomUUID(), accountId: f.user, kind: 'pause' as const,
+    sessionId: f.tracking.focusSession.sessionId, taskId: 'task', expectedCurrentSessionId: f.tracking.focusSession.sessionId,
+    capturedAt: '2026-09-08T00:00:30.000Z', durationSeconds: null };
+  const result = await storageService.admitFocusControl(f.user, control);
+  expect(result.outcome.accepted).toBe(true);
+  const snapshot = await storageService.readCommittedSnapshot(f.user);
+  expect(snapshot.causal).toBeTruthy(); expect(snapshot.generation).toBeGreaterThan(before.generation);
+  expect(snapshot.pendingCount).toBe(1); expect(snapshot.meta.outbox).toEqual([]);
+  expect(snapshot.values.tracking).toEqual({ ...f.tracking, focusSession: (result.tracking as any).focusSession });
+  expect((snapshot.values.tracking as any).focusSession.phase).toBe('paused');
+  expect((await storageService.admitFocusControl(f.user, control)).duplicate).toBe(true);
+  expect(await storageService.readCommittedSnapshot(f.user)).toEqual(snapshot);
+});
+it('hydrates a causal new day as a retained request instead of resetting counters or duplicating it on reload', async () => {
+  const f = await fixture();
+  expect(await storageService.rolloverTrackingDay(f.user, '2026-09-09')).toEqual(f.tracking);
+  const snapshot = await storageService.readCommittedSnapshot(f.user);
+  expect(snapshot.causal?.daySelection?.requestedDay).toBe('2026-09-09');
+  expect(snapshot.causal?.daySelection?.status).toBe('WAITING_BASELINE');
+  expect(snapshot.pendingCount).toBe(1);
+  await storageService.rolloverTrackingDay(f.user, '2026-09-09');
+  expect(await storageService.readCommittedSnapshot(f.user)).toEqual(snapshot);
+});

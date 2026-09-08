@@ -26,11 +26,11 @@ interface CurrentViewProps {
   trackBreakTime: (minutes: number) => void;
   onAwardXp: (amount: number, message: string, type?: 'reward' | 'milestone') => void;
   focusSession?: FocusSessionRecord | null;
-  onStartFocusSession?: (taskId: string, plannedDurationSeconds: number) => void;
-  onPauseFocusSession?: () => void;
-  onResumeFocusSession?: () => void;
-  onStopFocusSession?: () => void;
-  onExtendFocusSession?: (deltaSeconds: number) => void;
+  onStartFocusSession?: (taskId: string, plannedDurationSeconds: number, observed: FocusSessionRecord | null) => void;
+  onPauseFocusSession?: (observed: FocusSessionRecord | null) => void;
+  onResumeFocusSession?: (observed: FocusSessionRecord | null) => void;
+  onStopFocusSession?: (observed: FocusSessionRecord | null) => void;
+  onExtendFocusSession?: (deltaSeconds: number, observed: FocusSessionRecord | null) => void;
   isAiEnabled?: boolean;
   circadianState?: CircadianState;
   isCircadianActive?: boolean;
@@ -121,7 +121,7 @@ const CircularTimer = React.memo<{
     return (
         <div className="relative flex justify-center items-center my-8 group z-10 w-full max-w-[280px] sm:max-w-[340px] md:max-w-[380px] aspect-square flex-shrink-0">
             
-            <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full transform -rotate-90 relative z-10 overflow-visible">
+            <svg aria-hidden="true" viewBox={`0 0 ${size} ${size}`} className="w-full h-full transform -rotate-90 relative z-10 overflow-visible pointer-events-none">
                 <defs>
                     <filter id="glow-shadow" x="-50%" y="-50%" width="200%" height="200%">
                         <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={activeColor} floodOpacity="0.5" />

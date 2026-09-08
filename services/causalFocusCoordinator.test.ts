@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { openDB } from 'idb';
 import { IDBObjectStore } from 'fake-indexeddb';
 import { describe, expect, it, vi } from 'vitest';
-import { admitLocalFocus, type LocalFocusIntent } from './causalFocusCoordinator';
+import { admitLocalFocus, admitLocalFocusControl, type LocalFocusIntent, type LocalFocusControl } from './causalFocusCoordinator';
 import { CAUSAL_STORE } from './causalStorage';
 
 async function fixture() {
@@ -23,6 +23,38 @@ async function fixture() {
 }
 
 describe('transactional local focus admission', () => {
+  it('resolves rapid add-time controls from the actual phase and retains the original control on retry', async () => {
+    const f = await fixture(); await admitLocalFocus(f.name, f.intent('pause'));
+    const control = (durationSeconds: number): LocalFocusControl => ({ schemaVersion: 1, accountId: f.accountId,
+      actionId: crypto.randomUUID(), actorId: 'tab', kind: 'addTime', sessionId: f.sessionId, taskId: 'task',
+      expectedCurrentSessionId: f.sessionId, capturedAt: '2026-09-07T10:01:00.000Z', durationSeconds });
+    const a = control(300), b = control(120);
+    const results = await Promise.all([admitLocalFocusControl(f.name, a), admitLocalFocusControl(f.name, b)]);
+    expect(results.every(result => result.outcome.accepted)).toBe(true);
+    expect(results.map(result => result.command.kind).sort()).toEqual(['extend', 'extendAndResume']);
+    const before = await f.read();
+    expect(before.trackingValue.focusSession.plannedDurationSeconds).toBe(1020);
+    expect(before.trackingValue.focusSession.elapsedSeconds).toBe(30);
+    expect(before.trackingValue.focusSession.phase).toBe('active');
+    expect(before.focusAdmissions[a.actionId].intent.uiControl).toEqual(a);
+    expect((await admitLocalFocusControl(f.name, a)).command).toEqual(results[0].command);
+    expect(await f.read()).toEqual(before);
+    await expect(admitLocalFocusControl(f.name, { ...a, durationSeconds: 60 })).rejects.toThrow('different intent');
+  });
+  it('retains a stale control target after a different focus session starts', async () => {
+    const f = await fixture(); const old = f.intent('pause');
+    const control: LocalFocusControl = { schemaVersion: 1, actionId: old.actionId, accountId: f.accountId, actorId: 'tab',
+      kind: 'pause', sessionId: f.sessionId, taskId: 'task', expectedCurrentSessionId: f.sessionId,
+      capturedAt: old.capturedAt, durationSeconds: null };
+    await admitLocalFocus(f.name, f.intent('stop'));
+    const start = { ...f.intent('start', 600), sessionId: crypto.randomUUID() }; start.epoch = start.actionId;
+    await admitLocalFocus(f.name, start);
+    const result = await admitLocalFocusControl(f.name, control);
+    expect(result.outcome.code).toBe('STALE_TARGET');
+    expect(result.command.sessionId).toBe(f.sessionId);
+    expect((await f.read()).trackingValue.focusSession.sessionId).toBe(start.sessionId);
+    expect((await f.read()).focusAdmissions[control.actionId].intent.uiControl).toEqual(control);
+  });
   it('concurrent local serial actions acquire their actual parent; both extensions persist once', async () => {
     const f = await fixture();
     const a = f.intent('extend', 300); const b = f.intent('extend', 120);

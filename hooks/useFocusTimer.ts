@@ -14,11 +14,11 @@ interface TimerSettings {
   /** Breaks retain their short-lived local timer until the break flow lands in the shared session model. */
   sharedSession?: boolean;
   focusSession?: FocusSessionRecord | null;
-  onStart?: (taskId: string, plannedDurationSeconds: number) => void;
-  onPause?: () => void;
-  onResume?: () => void;
-  onStop?: () => void;
-  onExtend?: (deltaSeconds: number) => void;
+  onStart?: (taskId: string, plannedDurationSeconds: number, observed: FocusSessionRecord | null) => void;
+  onPause?: (observed: FocusSessionRecord | null) => void;
+  onResume?: (observed: FocusSessionRecord | null) => void;
+  onStop?: (observed: FocusSessionRecord | null) => void;
+  onExtend?: (deltaSeconds: number, observed: FocusSessionRecord | null) => void;
 }
 
 interface LocalTimerState {
@@ -126,11 +126,11 @@ export const useFocusTimer = (settings: TimerSettings) => {
       if (activeSession && activeSession.taskId !== taskId
         && (activeSession.phase === 'active' || activeSession.phase === 'paused')) return;
       if (!matchingSession || matchingSession.phase === 'stopped' || matchingSession.phase === 'completed') {
-        onStart?.(taskId, plannedDurationSeconds);
+        onStart?.(taskId, plannedDurationSeconds, activeSession);
       } else if (matchingSession.phase === 'active') {
-        onPause?.();
+        onPause?.(matchingSession);
       } else if (matchingSession.phase === 'paused') {
-        onResume?.();
+        onResume?.(matchingSession);
       }
       return;
     }
@@ -149,7 +149,7 @@ export const useFocusTimer = (settings: TimerSettings) => {
   }, [sharedSession, taskId, activeSession, matchingSession, plannedDurationSeconds, onStart, onPause, onResume]);
 
   const pause = useCallback(() => {
-    if (sharedSession) onPause?.();
+    if (sharedSession) onPause?.(matchingSession);
     else setLocalState(previous => {
       if (!previous.isActive || previous.pausedAt) return previous;
       const now = Date.now();
@@ -160,26 +160,26 @@ export const useFocusTimer = (settings: TimerSettings) => {
         elapsedBeforePause: previous.elapsedBeforePause + Math.max(0, Math.floor((now - previous.startTime) / 1_000))
       };
     });
-  }, [sharedSession, onPause]);
+  }, [sharedSession, onPause, matchingSession]);
 
   const resume = useCallback(() => {
-    if (sharedSession) onResume?.();
+    if (sharedSession) onResume?.(matchingSession);
     else toggleTimer();
-  }, [sharedSession, onResume, toggleTimer]);
+  }, [sharedSession, onResume, toggleTimer, matchingSession]);
 
   const resetTimer = useCallback(() => {
     if (sharedSession) {
-      onStop?.();
+      onStop?.(matchingSession);
       return;
     }
     setLocalState(initialLocalState(taskId));
-  }, [sharedSession, onStop, taskId]);
+  }, [sharedSession, onStop, taskId, matchingSession]);
 
   const addTime = useCallback((minutes: number) => {
     const deltaSeconds = Math.round(minutes * 60);
     if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return;
     if (sharedSession) {
-      onExtend?.(deltaSeconds);
+      onExtend?.(deltaSeconds, matchingSession);
       return;
     }
     setLocalState(previous => ({
@@ -190,7 +190,7 @@ export const useFocusTimer = (settings: TimerSettings) => {
       pausedAt: null,
       startTime: Date.now()
     }));
-  }, [sharedSession, onExtend]);
+  }, [sharedSession, onExtend, matchingSession]);
 
   return {
     displaySeconds,

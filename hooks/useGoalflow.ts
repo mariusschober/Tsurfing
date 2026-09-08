@@ -5,6 +5,7 @@ import { Task, Stats, Session, Goal, UserProgress, FlowState, HashtagConfig, Hab
 import { getTodayYYYYMMDD } from '../utils/dateUtils';
 import { parseTitleForExtras } from '../utils/timeAndTagParser';
 import { storageService, STORES, type LocalValueChange } from '../services/storage';
+import type { LocalFocusControl } from '../services/causalFocusCoordinator';
 import { assertSchedule, compareQueueCandidates } from '../src/domain/scheduling';
 import {
   completeFocusSession,
@@ -239,6 +240,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
   const [gamificationEvent, setGamificationEvent] = useState<GamificationEvent | null>(null);
   const [planningWarning, setPlanningWarning] = useState(false);
   const completedTaskIds = useRef(new Set<string>());
+  const causalMode = useRef(false);
 
   // --- Initialization (Hydration) ---
   useEffect(() => {
@@ -331,6 +333,9 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
         const currentTracking = await storageService.rolloverTrackingDay(USER_KEY, today) as DailyTracking;
         if (stopped) return;
         setDailyTrackingFromStorage(currentTracking);
+        const localSnapshot = await storageService.readCommittedSnapshot(USER_KEY);
+        if (stopped) return;
+        causalMode.current = Boolean(localSnapshot.causal);
 
         setAccountabilityConfigFromStorage(lAccountability);
         setCircadianStateFromStorage(lCircadian);
@@ -431,6 +436,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
       return storageService.subscribeCommitted(USER_KEY, snapshot => {
           if (snapshot.userKey !== USER_KEY || snapshot.generation < generation) return;
           generation = snapshot.generation;
+          causalMode.current = Boolean(snapshot.causal);
           for (const [storeName, value] of Object.entries(snapshot.values)) {
               if (value !== undefined || [STORES.TASKS, STORES.GOALS, STORES.HABITS, STORES.TRUE_NORTH, STORES.DAILY_PLANS].includes(storeName as any)) applyCloudChange(new CustomEvent('goalflow:cloud-change', { detail: { userKey: USER_KEY, storeName, value } }));
           }
@@ -617,6 +623,24 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
 
   const focusSession = normalizeFocusSession(dailyTracking.focusSession);
 
+  const submitFocusControl = useCallback(async (kind: LocalFocusControl['kind'], current: FocusSessionRecord | null,
+      taskId: string, durationSeconds: number | null): Promise<FocusSessionRecord | null> => {
+      const control: Omit<LocalFocusControl, 'actorId'> = { schemaVersion: 1, actionId: crypto.randomUUID(),
+          accountId: USER_KEY, kind, sessionId: kind === 'start' ? crypto.randomUUID() : current!.sessionId,
+          taskId, expectedCurrentSessionId: current?.sessionId ?? null, capturedAt: new Date().toISOString(), durationSeconds };
+      try {
+          const result = await storageService.admitFocusControl(USER_KEY, control);
+          if (!result.outcome.accepted) throw new Error('The focus session changed before this action could be applied. Review the current session and try again.');
+          // Committed subscription owns rendering. A delayed handler must not
+          // replace a newer projection with its historical admission result.
+          return normalizeFocusSession((result.tracking as DailyTracking).focusSession);
+      } catch (error) {
+          window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: { userKey: USER_KEY,
+              state: 'error', localFailure: true, message: error instanceof Error ? error.message : 'The focus action could not be saved. Please retry.' } }));
+          return null;
+      }
+  }, [USER_KEY]);
+
   const commitFocusSession = useCallback((nextSession: FocusSessionRecord): FocusSessionRecord => {
       const previousTracking = getDailyTracking();
       const nextTracking: DailyTracking = { ...previousTracking, focusSession: nextSession };
@@ -625,45 +649,50 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
       return nextSession;
   }, [USER_KEY, getDailyTracking, setDailyTrackingFromStorage]);
 
-  const startFocusSessionForTask = useCallback((taskId: string, plannedDurationSeconds: number): FocusSessionRecord | null => {
+  const startFocusSessionForTask = useCallback((taskId: string, plannedDurationSeconds: number, observed?: FocusSessionRecord | null) => {
       const task = getTasks().find(candidate => candidate.id === taskId);
       if (!task || task.completed || task.wontDo || task.deletedAt) return null;
-      const previousSession = normalizeFocusSession(getDailyTracking().focusSession);
+      const previousSession = !causalMode.current || observed === undefined ? normalizeFocusSession(getDailyTracking().focusSession) : observed;
       if (previousSession && previousSession.taskId === taskId
           && (previousSession.phase === 'active' || previousSession.phase === 'paused')) {
           return previousSession;
       }
+      if (causalMode.current) return submitFocusControl('start', previousSession, taskId, plannedDurationSeconds);
       return commitFocusSession(startFocusSession(taskId, plannedDurationSeconds));
-  }, [commitFocusSession, getDailyTracking, getTasks]);
+  }, [commitFocusSession, getDailyTracking, getTasks, submitFocusControl]);
 
-  const pauseFocusSessionForCurrentTask = useCallback((): FocusSessionRecord | null => {
-      const current = normalizeFocusSession(getDailyTracking().focusSession);
+  const pauseFocusSessionForCurrentTask = useCallback((observed?: FocusSessionRecord | null) => {
+      const current = !causalMode.current || observed === undefined ? normalizeFocusSession(getDailyTracking().focusSession) : observed;
       if (!current || current.phase !== 'active') return current;
+      if (causalMode.current) return submitFocusControl('pause', current, current.taskId, null);
       return commitFocusSession(pauseFocusSession(current));
-  }, [commitFocusSession, getDailyTracking]);
+  }, [commitFocusSession, getDailyTracking, submitFocusControl]);
 
-  const resumeFocusSessionForCurrentTask = useCallback((): FocusSessionRecord | null => {
-      const current = normalizeFocusSession(getDailyTracking().focusSession);
+  const resumeFocusSessionForCurrentTask = useCallback((observed?: FocusSessionRecord | null) => {
+      const current = !causalMode.current || observed === undefined ? normalizeFocusSession(getDailyTracking().focusSession) : observed;
       if (!current || current.phase !== 'paused') return current;
       const task = getTasks().find(candidate => candidate.id === current.taskId);
       if (!task || task.completed || task.wontDo || task.deletedAt) return current;
+      if (causalMode.current) return submitFocusControl('resume', current, current.taskId, null);
       return commitFocusSession(resumeFocusSession(current));
-  }, [commitFocusSession, getDailyTracking, getTasks]);
+  }, [commitFocusSession, getDailyTracking, getTasks, submitFocusControl]);
 
-  const stopFocusSessionForCurrentTask = useCallback((): FocusSessionRecord | null => {
-      const current = normalizeFocusSession(getDailyTracking().focusSession);
+  const stopFocusSessionForCurrentTask = useCallback((observed?: FocusSessionRecord | null) => {
+      const current = !causalMode.current || observed === undefined ? normalizeFocusSession(getDailyTracking().focusSession) : observed;
       if (!current || current.phase === 'stopped' || current.phase === 'completed') return current;
+      if (causalMode.current) return submitFocusControl('stop', current, current.taskId, null);
       return commitFocusSession(stopFocusSession(current));
-  }, [commitFocusSession, getDailyTracking]);
+  }, [commitFocusSession, getDailyTracking, submitFocusControl]);
 
-  const extendFocusSessionForCurrentTask = useCallback((deltaSeconds: number): FocusSessionRecord | null => {
-      const current = normalizeFocusSession(getDailyTracking().focusSession);
+  const extendFocusSessionForCurrentTask = useCallback((deltaSeconds: number, observed?: FocusSessionRecord | null) => {
+      const current = !causalMode.current || observed === undefined ? normalizeFocusSession(getDailyTracking().focusSession) : observed;
       if (!current) return null;
+      if (causalMode.current) return submitFocusControl('addTime', current, current.taskId, deltaSeconds);
       const next = current.phase === 'paused'
           ? extendAndResumeFocusSession(current, deltaSeconds)
           : extendFocusSession(current, deltaSeconds);
       return commitFocusSession(next);
-  }, [commitFocusSession, getDailyTracking]);
+  }, [commitFocusSession, getDailyTracking, submitFocusControl]);
 
   const trackPlanVisit = () => {
       setDailyTracking(prev => {
