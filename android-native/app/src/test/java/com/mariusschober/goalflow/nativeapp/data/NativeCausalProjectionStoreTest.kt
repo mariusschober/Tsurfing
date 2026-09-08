@@ -51,6 +51,66 @@ class NativeCausalProjectionStoreTest {
         repository.prepareCausalAccount(owner)
     }
     @After fun teardown() { database.close() }
+    private fun trackingRecord(revision: Int): NativeRemoteRecord {
+        val record = JSONObject(history.getJSONObject("entries").getJSONObject(revision.toString()).getString("body")).getJSONObject("receipt").getJSONObject("record")
+        return NativeRemoteRecord("tracking", "singleton", record.getLong("version"), record.getLong("server_version"),
+            record.getString("device_id"), record.getJSONObject("payload").toString(), record.getString("updated_at"), null)
+    }
+
+    @Test fun `ordinary tracking history observations preserve pending counter overlays and exact receipt evidence`() = runTest {
+        download(); repository.applyCausalHistory(owner)
+        repository.admitCausalCounter(owner, counter())
+        val before = state(); val row = trackingRecord(0)
+        assertEquals(0, repository.applyRemotePage(listOf(row), row.serverVersion))
+        val journal = NativeCausalJournal.validate(state())
+        assertEquals(28, journal.getJSONObject("tracking").getInt("planViewCount"))
+        assertEquals(3, journal.getJSONObject("tracking").getInt("dailyPostponeCount"))
+        assertEquals(ActionJson.canonical(JSONObject(before.payload).getJSONObject("counterOutbox")), ActionJson.canonical(journal.getJSONObject("counterOutbox")))
+        val observation = journal.getJSONObject("trackingPullObservations").getJSONObject(row.serverVersion.toString())
+        assertEquals("history", observation.getString("decision")); assertEquals(row.payload, observation.getJSONObject("record").getString("payload"))
+        assertEquals(row.serverVersion, database.syncMetaDao().get("_cursor")!!.cursor)
+        val damaged = JSONObject(state().payload)
+        damaged.getJSONObject("trackingPullObservations").getJSONObject(row.serverVersion.toString()).getJSONObject("record").put("deviceId", "different")
+        assertTrue(runCatching { NativeCausalJournal.validate(state().copy(payload = damaged.toString())) }.isFailure)
+    }
+
+    @Test fun `new ordinary unknown fields coexist with pending causal focus and counters`() = runTest {
+        history = prefix(2); download(); repository.applyCausalHistory(owner)
+        repository.admitCausalCounter(owner, counter()); repository.admitCausalFocus(owner, focus("extend", 120))
+        val before = NativeCausalJournal.validate(state()).getJSONObject("tracking")
+        val known = trackingRecord(2)
+        val row = known.copy(version = known.version + 1, serverVersion = known.serverVersion + 1,
+            payload = JSONObject(known.payload).put("peerUnknown", "retained").toString())
+        repository.applyRemotePage(listOf(row, known), row.serverVersion)
+        val journal = NativeCausalJournal.validate(state())
+        assertEquals(ActionJson.canonical(NativeCausalJournal.protectedTracking(before)), ActionJson.canonical(NativeCausalJournal.protectedTracking(journal.getJSONObject("tracking"))))
+        assertEquals("retained", journal.getJSONObject("tracking").getString("peerUnknown"))
+        assertEquals("unchanged_protected", journal.getJSONObject("trackingPullObservations").getJSONObject(row.serverVersion.toString()).getString("decision"))
+    }
+
+    @Test fun `unverified protected snapshot rolls back the complete ordinary page and cursor`() = runTest {
+        download(); repository.applyCausalHistory(owner)
+        val before = state(); val raw = database.rawCollectionDao().getAll(); val meta = database.syncMetaDao().getAll()
+        val known = trackingRecord(0)
+        val future = known.copy(version = 2, serverVersion = 40, payload = JSONObject(known.payload).put("planViewCount", 99).toString())
+        val error = runCatching { repository.applyRemotePage(listOf(NativeRemoteRecord("stats", "singleton", 1, 30, "fixture", "{}", time, null), future), 40) }.exceptionOrNull()
+        assertTrue(error is NativeCausalHistoryRequired)
+        assertEquals(before, state()); assertEquals(raw, database.rawCollectionDao().getAll()); assertEquals(meta, database.syncMetaDao().getAll())
+        assertTrue(runCatching { repository.applyRemotePage(listOf(known.copy(deviceId = "different")), known.serverVersion) }.isFailure)
+        assertEquals(before, state())
+    }
+
+    @Test fun `superseded legacy tracking is retained for review rather than interpreted as a counter delta`() = runTest {
+        download(); repository.applyCausalHistory(owner)
+        val row = trackingRecord(0).copy(serverVersion = 4, payload = "{\"date\":\"2026-09-08\",\"planViewCount\":28,\"dailyPostponeCount\":3,\"legacyUnknown\":true}")
+        repository.applyRemotePage(listOf(row), 4)
+        val journal = NativeCausalJournal.validate(state())
+        assertEquals(27, journal.getJSONObject("tracking").getInt("planViewCount"))
+        val observation = journal.getJSONObject("trackingPullObservations").getJSONObject("4")
+        assertEquals("superseded_legacy_review", observation.getString("decision")); assertEquals(row.payload, observation.getJSONObject("record").getString("payload"))
+        val backup = GoalflowBackup.decryptDocument(repository.exportBackup("synthetic tracking password"), "synthetic tracking password")
+        assertEquals(listOf(state()), backup.payload.causalAccounts)
+    }
     private suspend fun state() = database.causalAccountDao().get(owner)!!
     private fun counter(day: String = "2026-09-08", kind: String = "planViewCount") =
         NativeCounterIntent(UUID.randomUUID().toString(), day, "UTC", kind, time)

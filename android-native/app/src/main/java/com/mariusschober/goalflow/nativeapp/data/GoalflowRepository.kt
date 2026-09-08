@@ -163,6 +163,13 @@ class GoalflowRepository(
     suspend fun prepareCausalAccount(userId: String): CausalAccountEntity =
         causalStore.enable(userId, timeProvider.today().toString())
 
+    internal suspend fun causalPendingCount(userId: String): Int? = database.withTransaction {
+        require(accounts.get()?.userId == userId) { "Causal synchronization account changed." }
+        val entity = causalAccounts.get(userId) ?: return@withTransaction null
+        val state = NativeCausalJournal.validate(entity)
+        listOf("focusOutbox", "counterOutbox", "counterDayOutbox").sumOf { state.optJSONObject(it)?.length() ?: 0 }
+    }
+
     suspend fun admitCausalFocus(userId: String, intent: NativeFocusIntent): NativeCausalAdmission {
         val result = causalStore.admitFocus(userId, intent)
         onMutation()
@@ -2339,6 +2346,7 @@ class GoalflowRepository(
             }
             var conflictCount = 0
             records.forEach recordLoop@ { record ->
+                if (retainCausalTrackingPullInTransaction(record)) return@recordLoop
                 val legacyItems = legacySnapshotItems(record)
                 if (legacyItems != null) {
                     legacyItems.forEach itemLoop@ { (entityId, payload) ->
@@ -2455,6 +2463,30 @@ class GoalflowRepository(
             )
             conflictCount
         }
+    }
+
+    private suspend fun retainCausalTrackingPullInTransaction(record: NativeRemoteRecord): Boolean {
+        if (record.entityType != "tracking" || record.entityId != "singleton") return false
+        val accountId = accounts.get()?.userId ?: return false
+        val entity = causalAccounts.get(accountId) ?: return false
+        val state = NativeCausalJournal.validate(entity)
+        if (NativeCausalRequestJournal.appliedRevision(state) < 0) return false
+        // Ordinary captured edits still follow their existing exact conflict
+        // and receipt path. An observation never retires those mutations.
+        if (outbox.getForEntity("tracking", "singleton").isNotEmpty()
+            || conflicts.getUnresolved("tracking", "singleton") != null) return false
+        val mirror = rawCollections.get("tracking") ?: error("Causal tracking is missing.")
+        require(mirror.deletedAt == null && ActionJson.canonical(JSONObject(mirror.payload)) == ActionJson.canonical(state.getJSONObject("tracking"))) {
+            "Tracking changed outside its causal journal."
+        }
+        NativeTrackingPullEvidence.retain(accountId, state, record)
+        val updated = entity.copy(payload = state.toString()); NativeCausalJournal.validate(updated)
+        check(causalAccounts.update(updated) == 1)
+        rawCollections.insert(mirror.copy(payload = state.getJSONObject("tracking").toString()))
+        val key = syncMetaKey("tracking", "singleton"); val meta = syncMeta.get(key)
+        syncMeta.insert(SyncMetaEntity(key, meta?.cursor ?: 0L, maxOf(meta?.localVersion ?: 0L, record.version),
+            maxOf(meta?.serverVersion ?: 0L, record.serverVersion), meta?.lastSuccessfulSync))
+        return true
     }
 
     suspend fun markSyncSuccessful(at: String = timeProvider.now().toString()) {

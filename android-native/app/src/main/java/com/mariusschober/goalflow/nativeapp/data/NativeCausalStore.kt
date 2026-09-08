@@ -103,6 +103,7 @@ object NativeCausalJournal {
         NativeCompletionApplicationEvidence.validate(state)
         NativeCompletionAdmissionEvidence.validate(account.accountId, state)
         NativeLegacyReceiptEvidence.validate(account.accountId, state)
+        NativeTrackingPullEvidence.validate(account.accountId, state)
         return state
     }
 

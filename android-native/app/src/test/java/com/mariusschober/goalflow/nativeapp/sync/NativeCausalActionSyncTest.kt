@@ -69,6 +69,36 @@ class NativeCausalActionSyncTest {
             recordUpdatedAt = row.updatedAt, receiptJson = receipt.toString())))
     }
 
+    @Test fun `ordinary synchronization drains completion predecessors and later edits then verifies tracking pull`() = runTest {
+        val backend = Backend(history(2)); val engine = engine(backend); engine.synchronizeCausalActions()
+        repository.updateTask("task-F", "Before completion", "Before notes", SchedulePrecision.DAY, "2026-09-08")
+        val command = complete("Final notes")
+        repository.updateTask("task-F", "After completion", "Later notes", SchedulePrecision.DAY, "2026-09-08")
+        assertTrue(engine.synchronize() is SyncResult.Synced)
+        assertTrue(database.syncOutboxDao().getAll().isEmpty())
+        assertFalse(state().getJSONObject("focusOutbox").has(command.actionId))
+        assertEquals("Later notes", database.taskDao().get("task-F")!!.notes)
+        assertTrue(state().getJSONObject("trackingPullObservations").length() > 0)
+        assertTrue(engine.synchronize() is SyncResult.Synced)
+        assertEquals("Later notes", database.taskDao().get("task-F")!!.notes)
+    }
+
+    @Test fun `ordinary pull racing a peer command refreshes history and retries the unchanged cursor`() = runTest {
+        val backend = Backend(history(2)); val engine = engine(backend)
+        backend.onPull = { backend.onPull = null; backend.peerCounter() }
+        assertTrue(engine.synchronize() is SyncResult.Synced)
+        assertEquals(listOf(0L, 0L), backend.pullCursors)
+        assertEquals(29, state().getJSONObject("tracking").getInt("planViewCount"))
+    }
+
+    @Test fun `repeated peer races are bounded and never advance the ordinary cursor without evidence`() = runTest {
+        val backend = Backend(history(2)); val engine = engine(backend)
+        backend.onPull = { backend.peerCounter() }
+        assertTrue(runCatching { engine.synchronize() }.exceptionOrNull() is NativeCausalHistoryRequired)
+        assertEquals(listOf(0L, 0L, 0L, 0L), backend.pullCursors)
+        assertNull(database.syncMetaDao().get("_cursor"))
+    }
+
     @Test fun `completion sends staged exact bytes and retires after history without replaying local effects`() = runTest {
         val backend = Backend(history(2)); val engine = engine(backend); engine.synchronizeCausalActions()
         val command = complete("界".repeat(100_000))
@@ -165,6 +195,21 @@ class NativeCausalActionSyncTest {
      * is the production engine, transport, durable stores and Room transaction. */
     private inner class Backend(val saved: JSONObject = history()) : NativeSyncTransport {
         val attempts = mutableListOf<String>()
+        val pullCursors = mutableListOf<Long>()
+        val ordinaryRecords = mutableMapOf<String, JSONObject>()
+        private val ordinaryReceipts = mutableMapOf<String, JSONObject>()
+        private var serverClock = saved.getJSONObject("entries").keys().asSequence().maxOf {
+            JSONObject(saved.getJSONObject("entries").getJSONObject(it).getString("body")).getJSONObject("receipt").getJSONObject("record").getLong("server_version")
+        }
+        var onPull: (() -> Unit)? = null
+        private fun wire(record: JSONObject) = JSONObject().put("entityType", record.getString("entity_type")).put("entityId", record.getString("entity_id"))
+            .put("deviceId", record.getString("device_id")).put("version", record.getLong("version")).put("serverVersion", record.getLong("server_version"))
+            .put("payload", record.getJSONObject("payload")).put("updatedAt", record.getString("updated_at")).put("deletedAt", record.get("deleted_at"))
+        fun peerCounter() {
+            val operation = JSONObject().put("schemaVersion", 2).put("type", "counter").put("epoch", saved.getString("epoch"))
+                .put("command", counter().json(owner, "peer"))
+            request("/api/v1/sync/actions", session.accessToken, "POST", operation.toString())
+        }
         val chunks = mutableMapOf<Int, ByteArray>()
         var badChunkAck = false
         var failBeforeCommit = false
@@ -175,6 +220,30 @@ class NativeCausalActionSyncTest {
             fun response(value: JSONObject) = NativeHttpResponse(200, value.toString())
             val epoch = saved.getString("epoch"); val revision = saved.getLong("downloadedRevision")
             if (path == "/api/v1/sync/status") return response(JSONObject().put("userId", owner))
+            if (path == "/api/v1/sync/push") {
+                val changes = JSONObject(requireNotNull(body)).getJSONArray("mutations"); val results = JSONArray()
+                for (index in 0 until changes.length()) {
+                    val change = changes.getJSONObject(index); val id = change.getString("mutationId")
+                    val result = ordinaryReceipts[id] ?: run {
+                        val record = JSONObject().put("user_id", owner).put("entity_type", change.getString("entityType"))
+                            .put("entity_id", change.getString("entityId")).put("device_id", change.getString("deviceId"))
+                            .put("version", change.getLong("version")).put("server_version", ++serverClock)
+                            .put("payload", change.getJSONObject("payload")).put("updated_at", change.getString("updatedAt")).put("deleted_at", change.get("deletedAt"))
+                        ordinaryRecords[record.getString("entity_type") + ":" + record.getString("entity_id")] = wire(record)
+                        JSONObject().put("mutationId", id).put("accepted", true).put("serverVersion", serverClock).put("record", record).also { ordinaryReceipts[id] = it }
+                    }
+                    results.put(result)
+                }
+                return response(JSONObject().put("results", results))
+            }
+            if (path.startsWith("/api/v1/sync/pull?")) {
+                val cursor = path.substringAfter("cursor=").substringBefore('&').toLong(); pullCursors.add(cursor); onPull?.invoke()
+                val tracking = JSONObject(saved.getJSONObject("entries").getJSONObject(saved.getLong("downloadedRevision").toString()).getString("body"))
+                    .getJSONObject("receipt").getJSONObject("record")
+                val records = (ordinaryRecords.values + wire(tracking)).filter { it.getLong("serverVersion") > cursor }.sortedBy { it.getLong("serverVersion") }
+                return response(JSONObject().put("records", JSONArray(records)).put("nextCursor", records.maxOfOrNull { it.getLong("serverVersion") } ?: cursor).put("hasMore", false))
+            }
+            if (path == "/api/v1/sync/conflicts/page") return response(JSONObject().put("conflicts", JSONArray()).put("nextAfter", JSONObject.NULL).put("hasMore", false))
             if (path == "/api/v1/sync/causal-capability") return response(JSONObject().put("schemaVersion", 2).put("accountId", owner)
                 .put("rolloutReady", false).put("enrolled", true).put("epoch", epoch).put("projectionRevision", revision))
             if (path.startsWith("/api/v1/sync/causal-history?")) {
@@ -210,6 +279,7 @@ class NativeCausalActionSyncTest {
             val payload = JSONObject(canonical.tracking.toString())
             val receipt = JSONObject().put("schemaVersion", 2).put("epoch", epoch).put("operation", operation)
                 .put("accepted", true).put("projectionRevision", revision + 1)
+            val publicationBase = maxOf(serverClock, (revision + 2) * 100)
             when (operation.getString("type")) {
                 "counter" -> {
                     canonical.events.put(command.getString("actionId"), command)
@@ -237,19 +307,24 @@ class NativeCausalActionSyncTest {
             if (operation.opt("type") == "completion") {
                 val changes = operation.getJSONArray("changes"); val results = JSONArray()
                 if (receipt.getBoolean("accepted")) for (index in 0 until changes.length()) {
-                    val member = changes.getJSONObject(index); val serverVersion = (revision + 2) * 100 + index + 1
+                    val member = changes.getJSONObject(index); val serverVersion = publicationBase + index + 1
                     results.put(JSONObject().put("mutationId", member.getString("mutationId")).put("accepted", true).put("serverVersion", serverVersion)
                         .put("record", JSONObject().put("user_id", owner).put("entity_type", member.getString("entityType"))
                             .put("entity_id", member.getString("entityId")).put("device_id", member.getString("deviceId"))
                             .put("version", member.getLong("version")).put("server_version", serverVersion).put("payload", member.getJSONObject("payload"))
                             .put("updated_at", member.getString("updatedAt")).put("deleted_at", JSONObject.NULL)))
                 }
+                for (index in 0 until results.length()) {
+                    val record = results.getJSONObject(index).getJSONObject("record")
+                    ordinaryRecords[record.getString("entity_type") + ":" + record.getString("entity_id")] = wire(record)
+                }
                 receipt.put("changes", results)
             }
             receipt.put("record", JSONObject().put("user_id", owner).put("entity_type", "tracking").put("entity_id", "singleton")
-                .put("device_id", "causal-action-v2").put("version", revision + 3).put("server_version", (revision + 2) * 100 + 10)
+                .put("device_id", "causal-action-v2").put("version", revision + 3).put("server_version", publicationBase + 10)
                 .put("updated_at", time).put("deleted_at", JSONObject.NULL).put("payload", payload))
             NativeCausalRequestJournal.receipt(owner, operation, receipt)
+            serverClock = publicationBase + 10
             val entry = JSONObject().put("schemaVersion", 2).put("accountId", owner).put("epoch", epoch).put("revision", revision + 1).put("receipt", receipt).toString()
             saved.getJSONObject("entries").put((revision + 1).toString(), JSONObject().put("body", entry).put("sha256", NativeCausalHistoryProtocol.hash(entry.toByteArray(Charsets.UTF_8))))
             saved.put("throughRevision", revision + 1).put("downloadedRevision", revision + 1)

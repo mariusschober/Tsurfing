@@ -189,106 +189,118 @@ class NativeSyncEngine(
         if (session.expiresAtMillis <= System.currentTimeMillis() + 60_000L) {
             return@withContext SyncResult.Skipped
         }
-        repository.bindSyncAccount(verifiedUserId(session))
+        val accountId = verifiedUserId(session)
+        repository.bindSyncAccount(accountId)
+        val causal = repository.causalPendingCount(accountId) != null
 
         var conflicts = 0
-        while (true) {
-            val (batch, requestBody) = boundedPush(repository.readySyncMutations(50), allowStaged = true)
-            if (batch.isEmpty()) break
-            repository.markSyncAttempted(batch.map { it.mutationId })
-            val upload = ReconciliationUpload.prepareBody(requestBody)
-            for (chunk in upload.chunks) {
-                val staged = requestForSession(session, "/api/v1/sync/conflicts/stage", "POST", chunk.toString())
-                ensureSuccessful(staged, "Upload will resume. Your original change remains saved.")
-                ReconciliationUpload.verifyAck(chunk, staged.body)
-            }
-            val response = requestForSession(
-                session,
-                if (upload.manifest == null) "/api/v1/sync/push" else "/api/v1/sync/push-staged",
-                "POST",
-                upload.manifest?.toString() ?: requestBody
-            )
-            ensureSuccessful(response, "Sync push failed. Local changes remain pending.")
-            val body = parseObject(response.body, "Sync push response is not valid JSON.")
-            val array = body.optJSONArray("results")
-                ?: throw NativeSyncProtocolException("Sync push response has no result set.")
-            if (array.length() != batch.size) {
-                throw NativeSyncProtocolException("Sync push response has an incomplete acknowledgement set.")
-            }
-            val results = buildList(array.length()) {
-                for (index in 0 until array.length()) {
-                    val result = array.optJSONObject(index)
-                        ?: throw NativeSyncProtocolException("Sync push response contains an invalid result.")
-                    val acceptedValue = result.opt("accepted")
-                    val mutationIdValue = result.opt("mutationId")
-                    val serverVersionValue = result.opt("serverVersion")
-                    if (acceptedValue !is Boolean || mutationIdValue !is String || mutationIdValue.isBlank()
-                        || serverVersionValue !is Number
-                        || (result.has("replayMismatch") && result.opt("replayMismatch") !is Boolean)
-                        || (result.has("serverMissing") && result.opt("serverMissing") !is Boolean)
-                    ) {
-                        throw NativeSyncProtocolException("Sync push response contains an ambiguous result.")
-                    }
-                    val record = result.optJSONObject("record")
-                    val recordEntityType = record?.optString("entityType")?.takeIf(String::isNotBlank)
-                        ?: record?.optString("entity_type")?.takeIf(String::isNotBlank)
-                    val recordEntityId = record?.optString("entityId")?.takeIf(String::isNotBlank)
-                        ?: record?.optString("entity_id")?.takeIf(String::isNotBlank)
-                    val recordDeviceIdValue = record?.let {
-                        when {
-                            it.has("deviceId") -> it.opt("deviceId")
-                            it.has("device_id") -> it.opt("device_id")
-                            else -> null
-                        }
-                    }
-                    val recordDeviceId = when (recordDeviceIdValue) {
-                        null, JSONObject.NULL -> null
-                        is String -> recordDeviceIdValue.takeIf(String::isNotBlank)
-                            ?: throw NativeSyncProtocolException("Sync push response contains an invalid record device identity.")
-                        else -> throw NativeSyncProtocolException("Sync push response contains an invalid record device identity.")
-                    }
-                    val recordVersion = record?.let {
-                        if (!it.has("version")) null else safeLong(it.opt("version"), "accepted record version")
-                    }
-                    val recordServerVersion = record?.let {
-                        val value = if (it.has("serverVersion")) it.opt("serverVersion") else it.opt("server_version")
-                        if (value == null || value == JSONObject.NULL) null
-                        else safeLong(value, "accepted record server version", allowZero = false)
-                    }
-                    val recordPayload = record?.opt("payload")?.let(::jsonValueText)
-                    val recordUpdatedAt = record?.nullableString("updatedAt")
-                        ?: record?.nullableString("updated_at")
-                    val recordDeletedAt = record?.nullableString("deletedAt")
-                        ?: record?.nullableString("deleted_at")
-                    add(
-                        NativePushResult(
-                            mutationId = mutationIdValue,
-                            accepted = acceptedValue,
-                            serverVersion = safeLong(serverVersionValue, "acknowledgement server version", allowZero = !acceptedValue),
-                            conflictId = result.nullableString("conflictId"),
-                            replayMismatch = result.optBoolean("replayMismatch", false),
-                            serverMissing = result.optBoolean("serverMissing", false),
-                            serverPayload = record?.opt("payload")?.let(::jsonValueText).orEmpty(),
-                            serverDeletedAt = recordDeletedAt,
-                            recordEntityType = recordEntityType,
-                            recordEntityId = recordEntityId,
-                            recordDeviceId = recordDeviceId,
-                            recordVersion = recordVersion,
-                            recordServerVersion = recordServerVersion,
-                            recordPayload = recordPayload,
-                            recordUpdatedAt = recordUpdatedAt,
-                            recordDeletedAt = recordDeletedAt,
-                            receiptJson = result.toString()
-                        )
-                    )
+        suspend fun drainOrdinary() {
+            while (true) {
+                val (batch, requestBody) = boundedPush(repository.readySyncMutations(50), allowStaged = true)
+                if (batch.isEmpty()) break
+                repository.markSyncAttempted(batch.map { it.mutationId })
+                val upload = ReconciliationUpload.prepareBody(requestBody)
+                for (chunk in upload.chunks) {
+                    val staged = requestForSession(session, "/api/v1/sync/conflicts/stage", "POST", chunk.toString())
+                    ensureSuccessful(staged, "Upload will resume. Your original change remains saved.")
+                    ReconciliationUpload.verifyAck(chunk, staged.body)
                 }
+                val response = requestForSession(
+                    session,
+                    if (upload.manifest == null) "/api/v1/sync/push" else "/api/v1/sync/push-staged",
+                    "POST",
+                    upload.manifest?.toString() ?: requestBody
+                )
+                ensureSuccessful(response, "Sync push failed. Local changes remain pending.")
+                val body = parseObject(response.body, "Sync push response is not valid JSON.")
+                val array = body.optJSONArray("results")
+                    ?: throw NativeSyncProtocolException("Sync push response has no result set.")
+                if (array.length() != batch.size) {
+                    throw NativeSyncProtocolException("Sync push response has an incomplete acknowledgement set.")
+                }
+                val results = buildList(array.length()) {
+                    for (index in 0 until array.length()) {
+                        val result = array.optJSONObject(index)
+                            ?: throw NativeSyncProtocolException("Sync push response contains an invalid result.")
+                        val acceptedValue = result.opt("accepted")
+                        val mutationIdValue = result.opt("mutationId")
+                        val serverVersionValue = result.opt("serverVersion")
+                        if (acceptedValue !is Boolean || mutationIdValue !is String || mutationIdValue.isBlank()
+                            || serverVersionValue !is Number
+                            || (result.has("replayMismatch") && result.opt("replayMismatch") !is Boolean)
+                            || (result.has("serverMissing") && result.opt("serverMissing") !is Boolean)
+                        ) {
+                            throw NativeSyncProtocolException("Sync push response contains an ambiguous result.")
+                        }
+                        val record = result.optJSONObject("record")
+                        val recordEntityType = record?.optString("entityType")?.takeIf(String::isNotBlank)
+                            ?: record?.optString("entity_type")?.takeIf(String::isNotBlank)
+                        val recordEntityId = record?.optString("entityId")?.takeIf(String::isNotBlank)
+                            ?: record?.optString("entity_id")?.takeIf(String::isNotBlank)
+                        val recordDeviceIdValue = record?.let {
+                            when {
+                                it.has("deviceId") -> it.opt("deviceId")
+                                it.has("device_id") -> it.opt("device_id")
+                                else -> null
+                            }
+                        }
+                        val recordDeviceId = when (recordDeviceIdValue) {
+                            null, JSONObject.NULL -> null
+                            is String -> recordDeviceIdValue.takeIf(String::isNotBlank)
+                                ?: throw NativeSyncProtocolException("Sync push response contains an invalid record device identity.")
+                            else -> throw NativeSyncProtocolException("Sync push response contains an invalid record device identity.")
+                        }
+                        val recordVersion = record?.let {
+                            if (!it.has("version")) null else safeLong(it.opt("version"), "accepted record version")
+                        }
+                        val recordServerVersion = record?.let {
+                            val value = if (it.has("serverVersion")) it.opt("serverVersion") else it.opt("server_version")
+                            if (value == null || value == JSONObject.NULL) null
+                            else safeLong(value, "accepted record server version", allowZero = false)
+                        }
+                        val recordPayload = record?.opt("payload")?.let(::jsonValueText)
+                        val recordUpdatedAt = record?.nullableString("updatedAt")
+                            ?: record?.nullableString("updated_at")
+                        val recordDeletedAt = record?.nullableString("deletedAt")
+                            ?: record?.nullableString("deleted_at")
+                        add(
+                            NativePushResult(
+                                mutationId = mutationIdValue,
+                                accepted = acceptedValue,
+                                serverVersion = safeLong(serverVersionValue, "acknowledgement server version", allowZero = !acceptedValue),
+                                conflictId = result.nullableString("conflictId"),
+                                replayMismatch = result.optBoolean("replayMismatch", false),
+                                serverMissing = result.optBoolean("serverMissing", false),
+                                serverPayload = record?.opt("payload")?.let(::jsonValueText).orEmpty(),
+                                serverDeletedAt = recordDeletedAt,
+                                recordEntityType = recordEntityType,
+                                recordEntityId = recordEntityId,
+                                recordDeviceId = recordDeviceId,
+                                recordVersion = recordVersion,
+                                recordServerVersion = recordServerVersion,
+                                recordPayload = recordPayload,
+                                recordUpdatedAt = recordUpdatedAt,
+                                recordDeletedAt = recordDeletedAt,
+                                receiptJson = result.toString()
+                            )
+                        )
+                    }
+                }
+                val expectedIds = batch.map { it.mutationId }.toSet()
+                if (results.map { it.mutationId }.toSet() != expectedIds || results.map { it.mutationId }.distinct().size != results.size) {
+                    throw NativeSyncProtocolException("Sync push response acknowledged the wrong mutation ids.")
+                }
+                conflicts += repository.commitPushResults(batch, results)
             }
-            val expectedIds = batch.map { it.mutationId }.toSet()
-            if (results.map { it.mutationId }.toSet() != expectedIds || results.map { it.mutationId }.distinct().size != results.size) {
-                throw NativeSyncProtocolException("Sync push response acknowledged the wrong mutation ids.")
-            }
-            conflicts += repository.commitPushResults(batch, results)
+
         }
+        drainOrdinary()
+        suspend fun causalPass(): NativeCausalActionSyncResult? = if (!causal) null else
+            NativeCausalActionSync(repository) { path, method, body -> requestForSession(session, path, method, body) }
+                .synchronize(accountId, drainOrdinary = ::drainOrdinary)
+        var causalResult = causalPass()
+        drainOrdinary()
+        var projectionRetries = 0
 
         var cursor = repository.syncMetadata(SYNC_CURSOR_KEY)?.cursor ?: 0L
         var hasMore: Boolean
@@ -353,7 +365,14 @@ class NativeSyncEngine(
             if (nextCursor != highestReturned) {
                 throw NativeSyncProtocolException("Sync pull cursor would skip or discard remote information.")
             }
-            conflicts += repository.applyRemotePage(records, nextCursor)
+            try { conflicts += repository.applyRemotePage(records, nextCursor) }
+            catch (error: com.mariusschober.goalflow.nativeapp.data.NativeCausalHistoryRequired) {
+                if (!causal || ++projectionRetries > 3) throw error
+                causalResult = causalPass()
+                hasMore = true
+                continue
+            }
+            projectionRetries = 0
             cursor = nextCursor
         } while (hasMore)
 
@@ -469,6 +488,8 @@ class NativeSyncEngine(
             ensureSuccessful(response, "Automatic sync will retry. Your changes remain saved.")
             repository.commitAutomaticSync(conflict, request, response.body)
         }
+        if (causalResult?.moreReady == true) throw NativeSyncTransientException("The bounded causal pass has more saved work. Continue synchronization.")
+        if ((repository.causalPendingCount(accountId) ?: 0) > 0) throw NativeSyncProtocolException("Saved causal actions require dependency or conflict review before synchronization is complete.")
         repository.markSyncSuccessful()
         SyncResult.Synced(repository.automaticSyncCandidates().size)
     }
