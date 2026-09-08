@@ -1,0 +1,35 @@
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+ ❯ services/storage.test.ts (35 tests | 1 failed | 34 skipped) 20ms
+     × binds unknown own __proto__ fields into the backup checksum 19ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  services/storage.test.ts > durable storage failure boundaries > binds unknown own __proto__ fields into the backup checksum
+AssertionError: promise resolved "undefined" instead of rejecting
+
+- Expected:
+Error {
+  "message": "rejected promise",
+}
+
++ Received:
+undefined
+
+ ❯ services/storage.test.ts:561:72
+    559|     const corrupted = structuredClone(backup);
+    560|     (corrupted.collections[STORES.TRACKING] as any).__proto__.audit = …
+    561|     await expect(storageService.importBackup(key, corrupted, 'replace'…
+       |                                                                        ^
+    562|     expect(await storageService.get(STORES.TRACKING, key)).toEqual(ori…
+    563|     const unchanged = JSON.parse(JSON.stringify(backup));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 34 skipped (35)
+   Start at  01:24:27
+   Duration  626ms (transform 149ms, setup 0ms, import 190ms, tests 20ms, environment 0ms)
+
