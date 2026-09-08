@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useGoalflow } from './hooks/useGoalflow';
 import type { FocusSessionRecord } from './src/domain/focusSession';
 import { CurrentView } from './components/CurrentView';
@@ -196,11 +196,16 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
     setTheme(prev => prev === 'light' ? 'dark' : 'light');
   };
 
-  const handleSetView = (view: View) => {
-      if (view === 'planning') {
-          trackPlanVisit();
+  const viewNavigation = useRef(0);
+  const handleSetView = async (view: View) => {
+      const navigation = ++viewNavigation.current;
+      try {
+          if (view === 'planning' && !await trackPlanVisit()) return;
+          if (navigation === viewNavigation.current) setCurrentView(view);
+      } catch (error) {
+          window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: { userKey,
+              state: 'error', localFailure: true, message: error instanceof Error ? error.message : 'The planning visit could not be saved.' } }));
       }
-      setCurrentView(view);
   };
 
   const hasOverdue = overdueTasks.length > 0;
@@ -729,11 +734,11 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
               </div>
               <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Stop Planning. Start Doing.</h3>
               <p className="text-gray-600 dark:text-gray-300 mb-6">
-                  You have visited the planning screen 5 times today. Constant rescheduling is a form of procrastination.
+                  You have visited the planning screen 6 times today. Constant rescheduling is a form of procrastination.
               </p>
               <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6">
                   <p className="text-sm font-bold text-red-600 dark:text-red-400">
-                      Further visits to the Plan view will result in XP penalties.
+                      {(userSettings.penaltyMode ?? 'off') === 'off' ? 'XP penalties are turned off.' : 'Further visits to the Plan view will result in XP penalties.'}
                   </p>
               </div>
               <button onClick={() => { setPlanningWarning(false); handleSetView('current'); }} className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition">

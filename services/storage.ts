@@ -1,3 +1,4 @@
+import { admitLocalPlanningVisit, type PlanningVisitIntent } from './causalPlanningCoordinator';
 import { admitLocalReschedule, type RescheduleIntent } from './causalRescheduleCoordinator';
 import { openDB, IDBPDatabase, type IDBPTransaction } from 'idb';
 import { validateCompletionApplicationEvidence } from './causalCompletionProjection';
@@ -1154,6 +1155,19 @@ export const storageService = {
       || !await db.get(CAUSAL_STORE, userKey)) throw new DurableStorageError('The focus control requires the prepared causal account.');
     const result = await admitLocalFocusControl(name, control);
     publishCommit(userKey, result.generation, [STORES.TRACKING], name);
+    return result;
+  },
+
+  async admitPlanningVisit(userKey: string, input: Omit<PlanningVisitIntent, 'actorId' | 'deviceId'>) {
+    const deviceId = readDeviceId(), name = activeDatabaseName();
+    const intent: PlanningVisitIntent = { ...structuredClone(input), actorId: deviceId, deviceId };
+    if (intent.accountId !== userKey) throw new DurableStorageError('The planning visit belongs to another account.');
+    await storageService.flushPendingLocalChanges(userKey);
+    const db = await getDB();
+    if (!db || db.name !== name || !db.objectStoreNames.contains(CAUSAL_STORE)
+      || !await db.get(CAUSAL_STORE, userKey)) throw new DurableStorageError('Planning requires the prepared causal account.');
+    const result = await admitLocalPlanningVisit(name, intent);
+    publishCommit(userKey, result.generation, [STORES.TRACKING, STORES.PROGRESS], name);
     return result;
   },
 

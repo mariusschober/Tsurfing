@@ -1,3 +1,4 @@
+import { settlePlanningVisits, validatePlanningEvidence, type PlanningAccountState } from './causalPlanningCoordinator';
 import { causalBusinessTransactionStores, readCausalBusiness, writeCausalBusiness } from './causalBusinessStorage';
 import { openDB, type IDBPDatabase } from 'idb';
 import { applyFocusCommand, initialFocusJournal, type FocusCommand } from '../src/domain/causalFocus';
@@ -83,7 +84,7 @@ export function replayCausalHistory(accountId: string, history: SavedCausalHisto
   return { tracking, focus, baselines, events, receipts };
 }
 
-type State = CausalEnrollmentState & CausalReceiptState & FocusAccountState & CounterAccountState & CounterDayAccountState & CompletionProjectionState & {
+type State = CausalEnrollmentState & CausalReceiptState & FocusAccountState & CounterAccountState & CounterDayAccountState & CompletionProjectionState & PlanningAccountState & {
   causalHistory?: SavedCausalHistory;
   causalProjection?: { schemaVersion: 1; epoch: string; revision: number };
   causalProjectionPreimage?: { tracking: unknown; focus: unknown };
@@ -180,8 +181,10 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
         || (state.causalProjection && (state.causalProjection.epoch !== history.epoch || state.causalProjection.revision > history.downloadedRevision))) throw new Error('The causal projection epoch or revision cannot be rewound.');
       const before = stableJson(state);
       validateCounterDayEvidence(accountId, state);
+      validatePlanningEvidence(accountId, state);
       const completions = Object.entries(canonical.receipts).filter(([, receipt]) => receipt.operation?.type === 'completion');
       const needsCompletion = completions.length > 0 || Object.keys(state.completionAdmissions ?? {}).length > 0;
+      const needsPlanning = Object.values(state.planningAdmissions ?? {}).some(admission => admission.effect.status === 'WAITING_BASELINE');
       const values: Record<string, unknown> = {};
       let meta: SyncMeta | undefined, rawMeta: unknown, beforeMeta: string | undefined;
       const changedStores = new Set<string>();
@@ -198,6 +201,14 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
           if (receipt.projectionRevision > history.downloadedRevision) throw new Error('Download history through the newest retained completion receipt before applying it.');
           if (!same(canonical.receipts[id], receipt)) throw new Error('Downloaded history differs from a retained completion receipt.');
         }
+      }
+      if (needsPlanning) {
+        if (!db.objectStoreNames.contains('progress') || !db.objectStoreNames.contains('sync')) throw new Error('Planning effects require existing progress and sync stores.');
+        if (!needsCompletion) {
+          values.progress = await readCausalBusiness(tx, 'progress', accountId);
+          rawMeta = await readCausalBusiness(tx, 'sync', accountId); meta = normalizeSyncMeta(rawMeta); beforeMeta = stableJson(meta);
+        }
+        assertCompletionCapturesMaterialized(accountId, meta!);
       }
       const cutover = JSON.parse(history.entries['0'].body).receipt.record.payload;
       if (!state.cutover.trackingPresent || !record(state.cutover.trackingValue)
@@ -285,6 +296,12 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
         if (baseline.day !== day) throw new Error('A counter baseline has a different day identity.');
         projectCounters(baseline, events);
       }
+      if (needsPlanning) {
+        const settled = settlePlanningVisits(state, meta!, values.progress);
+        meta = settled.meta;
+        if (settled.progressChanged) { values.progress = settled.progress; changedStores.add('progress'); }
+      }
+      validatePlanningEvidence(accountId, state);
       const dayProjection = projectPendingCounterDays(state, canonical.tracking.date, new Set(Object.keys(canonical.receipts)));
       const selected = state.counterBaselines[dayProjection.day];
       if (!selected) throw new Error('The selected counter day has no baseline.');

@@ -1,3 +1,4 @@
+import type { PlanningVisitIntent } from '../services/causalPlanningCoordinator';
 import type { RescheduleIntent } from '../services/causalRescheduleCoordinator';
 
 
@@ -697,13 +698,34 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
       return commitFocusSession(next);
   }, [commitFocusSession, getDailyTracking, submitFocusControl]);
 
-  const trackPlanVisit = () => {
+  const planningRetries = useRef(new Map<string, Omit<PlanningVisitIntent, 'actorId' | 'deviceId'>>());
+  const trackPlanVisit = (): boolean | Promise<boolean> => {
+      if (causalMode.current) {
+          const intent = [...planningRetries.current.values()].find(capture => capture.accountId === USER_KEY)
+              ?? { schemaVersion: 1 as const, actionId: crypto.randomUUID(), accountId: USER_KEY, day: getTodayYYYYMMDD(),
+                  timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, capturedAt: new Date().toISOString() };
+          return storageService.admitPlanningVisit(USER_KEY, intent).then(result => {
+              planningRetries.current.delete(intent.actionId);
+              const effect = result.admission.effect;
+              if (!result.duplicate && effect.status === 'APPLIED') {
+                  if (effect.warning) setPlanningWarning(true);
+                  if (effect.penaltyAmount) setGamificationEvent({ type: 'penalty', amount: effect.penaltyAmount, message: 'Stop Planning. Start Doing.' });
+              }
+              return true;
+          }).catch(error => {
+              planningRetries.current.set(intent.actionId, intent);
+              window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: { userKey: USER_KEY,
+                  state: 'error', localFailure: true, message: error instanceof Error ? error.message : 'The planning visit could not be saved. Please retry.' } }));
+              return false;
+          });
+      }
       setDailyTracking(prev => {
           const newCount = prev.planViewCount + 1;
           if (newCount === 6) setPlanningWarning(true);
           else if (newCount > 6) applyPenalty(50, "Stop Planning. Start Doing.");
           return { ...prev, planViewCount: newCount };
       });
+      return true;
   };
 
   const rescheduleRetries = useRef(new Map<string, Omit<RescheduleIntent, 'actorId' | 'deviceId'>>());

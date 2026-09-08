@@ -441,3 +441,55 @@ test('rendered rescheduling retains a failed choice and retries one task-counter
   expect(Object.keys(result.state.rescheduleAdmissions)).toHaveLength(1);
   expect(Object.keys(result.state.counterOutbox)).toHaveLength(1);
 });
+
+test('rendered planning visits warn on six and retry a failed seventh penalty exactly once', async ({ page }) => {
+  const { account, before } = await fencedFocusApp(page);
+  await page.evaluate(async account => {
+    const api = window as any, name = localStorage.getItem('goalflow_active_database_v2') || 'GoalflowDB';
+    const db = await api.__s1Fence(name), state = await db.get('causal_actions', account), t = state.trackingValue;
+    state.counterBaselines = { [t.date]: { schemaVersion: 1, baselineId: crypto.randomUUID(), accountId: account,
+      day: t.date, counts: { planViewCount: t.planViewCount, dailyPostponeCount: t.dailyPostponeCount }, evidenceIds: [] } };
+    await db.put('causal_actions', state); db.close();
+    await api.__s1Storage.set('settings', account, { enableAi: false, penaltyMode: 'gentle' }, 'cloud');
+    await api.__s1Storage.set('progress', account, { level: 1, xp: 80, xpToNextLevel: 100, unknown: 'retained' }, 'cloud');
+  }, account);
+  for (let count = before.tracking.planViewCount + 1; count <= 6; count++) {
+    await page.getByRole('button', { name: 'Plan', exact: true }).click();
+    if (count < 6) {
+      await expect(page.getByRole('button', { name: 'Start focus', exact: true })).toBeVisible();
+      await page.getByRole('button', { name: 'Current', exact: true }).click();
+    }
+  }
+  const warning = page.getByRole('dialog', { name: 'Decision Fatigue Warning', exact: true });
+  await expect(warning).toContainText('6 times today');
+  await warning.getByRole('button', { name: 'Return to Focus Mode', exact: true }).click();
+  await page.evaluate(() => {
+    const api = window as any, original = api.__s1Storage.admitPlanningVisit;
+    api.__planningCalls = [];
+    api.__s1Storage.admitPlanningVisit = function (...args: any[]) { api.__planningCalls.push(structuredClone(args[1])); return original.apply(this, args); };
+    const put = IDBObjectStore.prototype.put;
+    api.__restorePlanningWrites = () => { IDBObjectStore.prototype.put = put; };
+    IDBObjectStore.prototype.put = function (...args: any[]) {
+      if (this.name === 'tracking' && args[0]?.payload?.planViewCount === 7) throw new Error('Synthetic planning admission failure');
+      return put.apply(this, args as [any]);
+    };
+  });
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await expect(page.getByTitle('Pause Timer (Space)')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => (window as any).__planningCalls.length)).toBe(1);
+  // The error banner proves the async admission returned before inspecting rollback.
+  await expect(page.getByTitle('Synthetic planning admission failure')).toBeVisible();
+  const failed = await page.evaluate(async account => {
+    const api = window as any; api.__restorePlanningWrites(); return api.__s1Storage.readCommittedSnapshot(account);
+  }, account);
+  expect(failed.values.tracking.planViewCount).toBe(6); expect(failed.values.progress.xp).toBe(80);
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Start focus', exact: true })).toBeVisible();
+  const saved = await page.evaluate(async account => {
+    const api = window as any; return { snapshot: await api.__s1Storage.readCommittedSnapshot(account), calls: api.__planningCalls };
+  }, account);
+  expect(saved.calls).toHaveLength(2); expect(saved.calls[1]).toEqual(saved.calls[0]);
+  expect(saved.snapshot.values.tracking.planViewCount).toBe(7);
+  expect(saved.snapshot.values.progress.xp).toBe(55); expect(saved.snapshot.values.progress.unknown).toBe('retained');
+  expect(saved.snapshot.values.tracking.focusSession).toEqual(before.tracking.focusSession);
+});
