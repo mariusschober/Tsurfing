@@ -386,3 +386,58 @@ test('failed rendered completion keeps checkout and notes, then retries the same
   expect(saved.snapshot.values.task_events).toHaveLength(1);
   expect(Object.values(saved.snapshot.values.stats).map((s: any) => s.tasksCompleted)).toEqual([1]);
 });
+
+test('rendered rescheduling retains a failed choice and retries one task-counter admission', async ({ page }) => {
+  await load(page);
+  const account = crypto.randomUUID();
+  await page.evaluate(account => (window as any).__s1RenderAccount(account), account);
+  await page.getByTitle('Add new task (a)').click();
+  const form = page.getByRole('dialog', { name: 'New Task' });
+  await form.getByPlaceholder('What is the next action?').fill('Synthetic causal reschedule');
+  await form.locator('[aria-label="Task schedule"]').getByRole('button', { name: 'Today', exact: true }).click();
+  await form.getByRole('button', { name: 'Create Task', exact: true }).click();
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  const drag = page.locator('[data-rfd-draggable-id]').first();
+  await drag.focus(); await drag.press('Space'); await drag.press('ArrowRight'); await drag.press('Space');
+  await expect(page.getByRole('dialog', { name: 'Reschedule Task', exact: true })).toBeVisible();
+  await page.evaluate(async account => {
+    const api = window as any; await api.__s1Storage.flushPendingLocalChanges(account);
+    const name = localStorage.getItem('goalflow_active_database_v2') || 'GoalflowDB';
+    (await api.__s1Fence(name)).close(); const db = await api.__s2FenceBusiness(name);
+    const state = await db.get('causal_actions', account), t = state.trackingValue;
+    state.counterBaselines = { [t.date]: { schemaVersion: 1, baselineId: crypto.randomUUID(), accountId: account,
+      day: t.date, counts: { planViewCount: t.planViewCount, dailyPostponeCount: t.dailyPostponeCount }, evidenceIds: [] } };
+    await db.put('causal_actions', state); db.close();
+    const original = api.__s1Storage.admitReschedule; api.__rescheduleCalls = [];
+    api.__s1Storage.admitReschedule = function (...args: any[]) { api.__rescheduleCalls.push(structuredClone(args[1])); return original.apply(this, args); };
+    const put = IDBObjectStore.prototype.put;
+    api.__restoreRescheduleWrites = () => { IDBObjectStore.prototype.put = put; };
+    IDBObjectStore.prototype.put = function (...args: any[]) {
+      if (this.name === 'causal_actions' && Object.keys(args[0]?.rescheduleAdmissions ?? {}).length) throw new Error('Synthetic reschedule write failure');
+      return put.apply(this, args as [any]);
+    };
+    window.dispatchEvent(new CustomEvent('goalflow:peer-hint', { detail: { userKey: account } }));
+  }, account);
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const dialog = page.getByRole('dialog', { name: 'Reschedule Task', exact: true });
+  await dialog.getByRole('button', { name: 'Tomorrow', exact: true }).click();
+  await expect(dialog.getByRole('alert')).toBeVisible();
+  const failed = await page.evaluate(async account => {
+    const api = window as any; api.__restoreRescheduleWrites(); return api.__s1Storage.readCommittedSnapshot(account);
+  }, account);
+  expect(failed.values.tasks[0].rescheduleCount ?? 0).toBe(0);
+  expect(failed.values.tracking.dailyPostponeCount).toBe(0);
+  await dialog.getByRole('button', { name: 'Tomorrow', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  const result = await page.evaluate(async account => {
+    const api = window as any; const snapshot = await api.__s1Storage.readCommittedSnapshot(account);
+    const name = localStorage.getItem('goalflow_active_database_v2') || 'GoalflowDB';
+    const db = await api.__s1Fence(name); const state = await db.get('causal_actions', account); db.close();
+    return { snapshot, state, calls: api.__rescheduleCalls };
+  }, account);
+  expect(result.calls).toHaveLength(2); expect(result.calls[0]).toEqual(result.calls[1]);
+  expect(result.snapshot.values.tasks[0].rescheduleCount).toBe(1);
+  expect(result.snapshot.values.tracking.dailyPostponeCount).toBe(1);
+  expect(Object.keys(result.state.rescheduleAdmissions)).toHaveLength(1);
+  expect(Object.keys(result.state.counterOutbox)).toHaveLength(1);
+});

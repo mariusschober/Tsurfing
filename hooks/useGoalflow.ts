@@ -1,3 +1,4 @@
+import type { RescheduleIntent } from '../services/causalRescheduleCoordinator';
 
 
 import { useState, useEffect, useCallback, useRef, useMemo, type Dispatch, type SetStateAction } from 'react';
@@ -705,7 +706,29 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
       });
   };
 
-  const rescheduleTask = (taskId: string, newDate: string): boolean => {
+  const rescheduleRetries = useRef(new Map<string, Omit<RescheduleIntent, 'actorId' | 'deviceId'>>());
+  const rescheduleTask = (taskId: string, newDate: string): boolean | Promise<boolean> => {
+      if (causalMode.current) {
+          const fingerprint = JSON.stringify([USER_KEY, taskId, newDate]);
+          let intent = rescheduleRetries.current.get(fingerprint);
+          if (!intent) {
+              intent = { schemaVersion: 1, actionId: crypto.randomUUID(), accountId: USER_KEY, taskId, newDate,
+                  day: getTodayYYYYMMDD(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, capturedAt: new Date().toISOString() };
+              rescheduleRetries.current.set(fingerprint, intent);
+          }
+          return storageService.admitReschedule(USER_KEY, intent).then(result => {
+              // A durable rejection is resolved intent; a later user choice is new.
+              rescheduleRetries.current.delete(fingerprint);
+              if (result.admission.outcome !== 'applied') throw new Error(result.admission.outcome === 'frog'
+                  ? 'This task is now a Frog and cannot be rescheduled.' : 'This task is no longer available for rescheduling.');
+              if (!result.duplicate && result.admission.becameFrog) setGamificationEvent({ type: 'penalty', amount: 0, message: 'Task hardened into a Frog.' });
+              return true;
+          }).catch(error => {
+              window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: { userKey: USER_KEY,
+                  state: 'error', localFailure: true, message: error instanceof Error ? error.message : 'Rescheduling could not be saved. Please retry.' } }));
+              return false;
+          });
+      }
       const currentTasks = getTasks();
       const task = currentTasks.find(t => t.id === taskId);
       if (!task) return false;

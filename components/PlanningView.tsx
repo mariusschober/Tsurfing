@@ -30,7 +30,7 @@ interface PlanningViewProps {
     markWontDo: (id: string) => void;
     onAddTask: (overrides?: { session?: Session, dateAssigned?: string, isBreak?: boolean }) => void;
     updateTask: (id: string, updates: Partial<Task>) => void;
-    onRescheduleTask: (id: string, date: string) => boolean;
+    onRescheduleTask: (id: string, date: string) => boolean | Promise<boolean>;
     circadianState: CircadianState;
     addSubtasks: (subtasks: {title: string, duration: number}[], parent: Task) => void;
     completeTask: (id: string, duration?: number, flowState?: FlowState, finalDescription?: string) => void;
@@ -250,20 +250,32 @@ const RescheduleDropModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
     task: Task | null;
-    onReschedule: (id: string, date: string) => void;
+    onReschedule: (id: string, date: string) => boolean | Promise<boolean>;
 }> = ({ isOpen, onClose, task, onReschedule }) => {
-    
+
+    const busyRef = useRef(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    useEffect(() => { if (!isOpen) setError(''); }, [isOpen]);
     if (!isOpen || !task) return null;
 
+    const saveDate = async (date: string) => {
+        if (busyRef.current) return;
+        busyRef.current = true; setSaving(true); setError('');
+        try {
+            if (await onReschedule(task.id, date)) onClose();
+            else setError('The task could not be rescheduled. Review its current state or retry.');
+        } catch (_) { setError('The task could not be saved. Please retry.'); }
+        finally { busyRef.current = false; setSaving(false); }
+    };
     const handleQuickSelect = (daysOffset: number) => {
         const d = new Date();
         d.setDate(d.getDate() + daysOffset);
-        onReschedule(task.id, toYYYYMMDD(d));
-        onClose();
+        void saveDate(toYYYYMMDD(d));
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="Reschedule Task">
+        <Modal isOpen={isOpen} onClose={() => { if (!busyRef.current) onClose(); }} title="Reschedule Task">
             <div className="p-6">
                 <div className="text-center mb-6">
                     <div className="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -273,7 +285,8 @@ const RescheduleDropModal: React.FC<{
                     <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">When do you want to move this task to?</p>
                 </div>
 
-                <div className="space-y-3">
+                {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
+                <fieldset disabled={saving} className="space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                         <button 
                             onClick={() => handleQuickSelect(1)}
@@ -306,7 +319,7 @@ const RescheduleDropModal: React.FC<{
 
                     <DatePicker 
                         date=""
-                        onChange={(date) => { onReschedule(task.id, date); onClose(); }}
+                        onChange={(date) => { void saveDate(date); }}
                         customTrigger={(onClick, isOpen) => (
                             <button
                                 onClick={onClick}
@@ -317,7 +330,7 @@ const RescheduleDropModal: React.FC<{
                             </button>
                         )}
                     />
-                </div>
+                </fieldset>
             </div>
         </Modal>
     );

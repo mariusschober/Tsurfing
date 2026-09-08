@@ -1,3 +1,4 @@
+import { admitLocalReschedule, type RescheduleIntent } from './causalRescheduleCoordinator';
 import { openDB, IDBPDatabase, type IDBPTransaction } from 'idb';
 import { validateCompletionApplicationEvidence } from './causalCompletionProjection';
 import {
@@ -1153,6 +1154,19 @@ export const storageService = {
       || !await db.get(CAUSAL_STORE, userKey)) throw new DurableStorageError('The focus control requires the prepared causal account.');
     const result = await admitLocalFocusControl(name, control);
     publishCommit(userKey, result.generation, [STORES.TRACKING], name);
+    return result;
+  },
+
+  async admitReschedule(userKey: string, input: Omit<RescheduleIntent, 'actorId' | 'deviceId'>) {
+    const deviceId = readDeviceId(), name = activeDatabaseName();
+    const intent: RescheduleIntent = { ...structuredClone(input), actorId: deviceId, deviceId };
+    if (intent.accountId !== userKey) throw new DurableStorageError('The reschedule belongs to another account.');
+    await storageService.flushPendingLocalChanges(userKey);
+    const db = await getDB();
+    if (!db || db.name !== name || !db.objectStoreNames.contains(CAUSAL_STORE)
+      || !await db.get(CAUSAL_STORE, userKey)) throw new DurableStorageError('Rescheduling requires the prepared causal account.');
+    const result = await admitLocalReschedule(name, intent);
+    publishCommit(userKey, result.generation, [STORES.TASKS, STORES.TRACKING], name);
     return result;
   },
 
