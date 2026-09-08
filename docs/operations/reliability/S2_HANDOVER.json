@@ -4304,6 +4304,59 @@
         "Nonempty-restore reconciliation",
         "Cross-client acceptance"
       ]
+    },
+    {
+      "id": "macos-causal-transport",
+      "sourceCommit": "2fb28d3605ddf60cf266aa4dc8783aaf80628c10",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "macos-native/GoalflowMac/Sync/CausalJournal.swift",
+        "macos-native/GoalflowMac/Sync/CausalTransport.swift",
+        "macos-native/GoalflowMacTests/CausalJournalTests.swift",
+        "macos-native/GoalflowMac.xcodeproj/project.pbxproj"
+      ],
+      "verification": [
+        {
+          "command": "xcodebuild test -project macos-native/GoalflowMac.xcodeproj -scheme GoalflowMac -configuration Debug -destination platform=macOS CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0,
+          "tests": 245,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "bash macos-native/scripts/verify-project-sources.sh",
+          "exitCode": 0
+        },
+        {
+          "command": "VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "passed": 732,
+          "files": 108
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0,
+          "checked": 24
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-macos-transport-tests.log",
+          "sha256": "edadcc6cfcc6b7b031adf4987068148e658bfc68b3eb16745cb95789ac05c4fa"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-macos-transport-release.log",
+          "sha256": "d03e9219a1aa8582cdcf9cb7ba2de37744d1f3bf6440a49880a73115a1c1e365"
+        }
+      ],
+      "compatibility": "Additive transport file + journal maps. No schema, migration, identifier, wire or receipt-contract change. Legacy macOS sync paths untouched. Epoch binding arrives with enrollment.",
+      "remaining": [
+        "macOS history download, projection, enrollment",
+        "macOS completion and UI activation",
+        "Divergent legacy ambiguity import",
+        "Nonempty-restore reconciliation",
+        "Cross-client acceptance"
+      ]
     }
   ],
   "findings": [
