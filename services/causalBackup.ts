@@ -1,5 +1,6 @@
 import type { CausalAccountState } from './causalStorage';
 import { assertCausalReceipt, parseCausalOperation } from './causalProtocol';
+import { validateCompletionEvidence } from './causalCompletionCoordinator';
 
 /** Tagged JSON preserves absent/undefined fields in retained cutover preimages.
  * Unsupported structured-clone values fail export explicitly rather than being
@@ -54,7 +55,7 @@ export interface CausalBackupEvidence {
 
 /** Validate the restore binding, without interpreting legacy captures or
  * treating a checksum as server acceptance. Original evidence is retained. */
-export function readCausalBackup(accountKey: string, value: unknown): CausalBackupEvidence {
+export function readCausalBackup(accountKey: string, value: unknown, collections?: Record<string, unknown>): CausalBackupEvidence {
   const record = (item: unknown): item is Record<string, any> => item !== null && typeof item === 'object' && !Array.isArray(item);
   if (!record(value) || value.schemaVersion !== 1) throw new Error('The causal backup schema is unsupported.');
   const decoded = decodeCausalBackup(value.encoded);
@@ -79,5 +80,6 @@ export function readCausalBackup(accountKey: string, value: unknown): CausalBack
     if (Object.hasOwn(receipts, id)) assertCausalReceipt(accountKey, operation, receipts[id]);
   }
   if (Object.keys(receipts).some(id => !Object.hasOwn(requests, id))) throw new Error('A retained receipt has no exact request.');
+  validateCompletionEvidence(accountKey, state as any, decoded.sync, collections);
   return decoded as CausalBackupEvidence;
 }

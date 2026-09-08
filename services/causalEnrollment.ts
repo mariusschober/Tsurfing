@@ -2,10 +2,12 @@ import { openDB } from 'idb';
 import { CAUSAL_STORE, readCausalAccount, type CausalAccountState } from './causalStorage';
 import { assertCausalCapability, fetchCausalCapability, type CausalCapability } from './causalCapability';
 import { parseCausalOperation } from './causalProtocol';
+import { parseCausalCompletion } from './causalCompletionProtocol';
 
 export interface CausalEnrollmentState extends CausalAccountState {
   causalCapability?: CausalCapability;
   causalRequests?: Record<string, string>;
+  completionRequests?: Record<string, string>;
 }
 
 /** Persists discovery after the explicit local fence. This never performs
@@ -31,6 +33,10 @@ export async function bindCausalCapability(name: string, accountId: string, inpu
         try { parsed = JSON.parse(bytes); } catch (_) { throw new Error('The retained request requires recovery review.'); }
         const operation = parseCausalOperation(accountId, parsed);
         if (operation.epoch !== capability.epoch) throw new Error('The discovered epoch differs from an immutable attempted request.');
+      }
+      for (const bytes of Object.values(state.completionRequests ?? {})) {
+        const operation = parseCausalCompletion(accountId, JSON.parse(bytes));
+        if (operation.epoch !== capability.epoch) throw new Error('The discovered epoch differs from an immutable completion request.');
       }
       state.causalCapability = capability;
       await tx.objectStore(CAUSAL_STORE).put(state);

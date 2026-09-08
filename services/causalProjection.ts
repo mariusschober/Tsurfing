@@ -97,6 +97,9 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
     try {
       const state = await readCausalAccount(tx, accountId) as State | undefined;
       if (!state || !state.trackingPresent || !record(state.trackingValue) || !same(state.causalHistory, history)) throw new Error('Causal state changed; resume from retained history.');
+      if (Object.keys((state as State & { completionOutbox?: Record<string, unknown> }).completionOutbox ?? {}).length) {
+        throw new Error('Pending atomic completion requires the task/effect application coordinator. All projections remain retained.');
+      }
       const capability = assertCausalCapability(accountId, state.causalCapability);
       if (!capability.enrolled || capability.epoch !== history.epoch || capability.projectionRevision < history.downloadedRevision
         || (state.causalProjection && (state.causalProjection.epoch !== history.epoch || state.causalProjection.revision > history.downloadedRevision))) throw new Error('The causal projection epoch or revision cannot be rewound.');

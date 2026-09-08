@@ -79,6 +79,10 @@ export interface SyncMeta {
     resolvedConflicts?: Record<string, LocalConflict>;
     reconciliations?: Record<string, { candidate: ReconciliationCandidate; reply: unknown }>;
     migrations?: Record<string, string | null>;
+    /** Causal completion members travel only through their atomic endpoint.
+     * Legacy predecessors may drain; later ordinary edits wait for the exact
+     * logical action receipt before acquiring its server version. */
+    completionReservations?: Record<string, { actionId: string; entityType: string; entityId: string; version: number }>;
   };
 }
 
@@ -321,13 +325,20 @@ export const normalizeSyncMeta = (value: unknown): SyncMeta => {
   }
   if (value.localState !== undefined) {
     const state = value.localState as Record<string, unknown>;
-    for (const key of ['blocked', 'groups', 'fallbackCopies', 'resolvedConflicts', 'reconciliations', 'migrations']) {
+    for (const key of ['blocked', 'groups', 'fallbackCopies', 'resolvedConflicts', 'reconciliations', 'migrations', 'completionReservations']) {
       if (state[key] !== undefined && !isRecord(state[key])) throw new Error('Local synchronization evidence is damaged. It was not discarded.');
     }
     if (Object.values(state.blocked ?? {}).some(item => typeof item !== 'string')
       || Object.values(state.groups ?? {}).some(item => typeof item !== 'string')
       || Object.values(state.fallbackCopies ?? {}).some(item => !Array.isArray(item) || item.some(raw => typeof raw !== 'string'))) {
       throw new Error('Local synchronization evidence is damaged. It was not discarded.');
+    }
+    for (const [id, reservation] of Object.entries(state.completionReservations ?? {})) {
+      if (!id || !isRecord(reservation) || typeof reservation.actionId !== 'string' || !reservation.actionId
+        || typeof reservation.entityType !== 'string' || !reservation.entityType || typeof reservation.entityId !== 'string' || !reservation.entityId
+        || typeof reservation.version !== 'number' || !Number.isSafeInteger(reservation.version) || reservation.version < 1) {
+        throw new Error('The completion reservation ledger is damaged. Nothing was discarded.');
+      }
     }
   }
   return {
@@ -479,6 +490,9 @@ export const appendStagedTransactions = (
   }));
   for (const transaction of [...transactions].sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))) {
     for (const change of transaction.changes) {
+      if (meta.localState?.completionReservations?.[change.mutationId]) {
+        throw new Error('A reserved completion member cannot become an ordinary mutation. Its logical action remains retained.');
+      }
       const changeSignature = signature(change.entityType, change.entityId, change);
       const existingSignature = knownMutations.get(change.mutationId);
       if (existingSignature !== undefined) {
@@ -495,7 +509,8 @@ export const appendStagedTransactions = (
       );
       const legacyVersion = change.entityId === 'singleton' ? meta.versions[change.entityType] : undefined;
       const currentLocal = meta.versions[key]?.local ?? legacyVersion?.local ?? 0;
-      const latestForEntity = meta.outbox
+      const reservations = Object.entries(meta.localState?.completionReservations ?? {}).map(([mutationId, entry]) => ({ ...entry, mutationId }));
+      const latestForEntity = [...meta.outbox, ...reservations]
         .filter(item => item.entityType === change.entityType && item.entityId === change.entityId)
         .sort((a, b) => b.version - a.version)[0];
       const version = Math.max(currentLocal, latestForEntity?.version ?? 0) + 1;
@@ -531,12 +546,15 @@ export const appendStagedTransactions = (
 };
 
 export const readyOutbox = (meta: SyncMeta, limit = 50): SyncMutation[] => {
-  const pendingIds = new Set(meta.outbox.map(item => item.mutationId));
+  const reservations = Object.entries(meta.localState?.completionReservations ?? {});
+  const pendingIds = new Set([...meta.outbox.map(item => item.mutationId), ...reservations.map(([id]) => id)]);
   const selectedEntities = new Set<string>();
   const ready: SyncMutation[] = [];
   for (const mutation of [...meta.outbox].sort((a, b) => a.version - b.version || a.mutationId.localeCompare(b.mutationId))) {
     if (mutation.dependsOnMutationId && pendingIds.has(mutation.dependsOnMutationId)) continue;
     const key = syncEntityKey(mutation.entityType, mutation.entityId);
+    if (reservations.some(([, entry]) => entry.entityType === mutation.entityType && entry.entityId === mutation.entityId
+      && mutation.version >= entry.version)) continue;
     if (selectedEntities.has(key)) continue;
     selectedEntities.add(key);
     ready.push(mutation);
@@ -546,6 +564,11 @@ export const readyOutbox = (meta: SyncMeta, limit = 50): SyncMutation[] => {
 };
 
 export const markMutationsAttempted = (input: SyncMeta, mutationIds: string[], attemptedAt: string): SyncMeta => {
+  const reservations = Object.entries(input.localState?.completionReservations ?? {});
+  if (input.outbox.some(item => mutationIds.includes(item.mutationId) && reservations.some(([id, entry]) =>
+    item.dependsOnMutationId === id || (item.entityType === entry.entityType && item.entityId === entry.entityId && item.version >= entry.version)))) {
+    throw new Error('A pending completion must be acknowledged before attempting its successor.');
+  }
   const ids = new Set(mutationIds);
   const meta = cloneMeta(input);
   meta.outbox = meta.outbox.map(item => ids.has(item.mutationId) ? { ...item, attemptedAt } : item);
@@ -750,6 +773,10 @@ export const applyRemotePage = (
   ]);
   const seenServerVersions = new Set<number>();
   for (const record of records) {
+    if (Object.values(meta.localState?.completionReservations ?? {}).some(entry => entry.entityType === record.entityType
+      && (entry.entityId === record.entityId || (record.entityId === 'singleton' && RECORD_LEVEL_STORES.has(record.entityType))))) {
+      throw new Error('An atomic completion owns this projection. Its receipt must be reconciled before advancing the pull cursor.');
+    }
     if (!isRecord(record) || typeof record.entityType !== 'string' || !supportedStores.has(record.entityType)
       || typeof record.entityId !== 'string' || !record.entityId
       || !Number.isSafeInteger(record.version) || record.version < 0
