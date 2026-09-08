@@ -2772,6 +2772,54 @@
         "No device installation or hosted validation."
       ],
       "permittedNextStage": "Continue S2; S3 blocked"
+    },
+    {
+      "commit": "cf04ba5dd107b2154d43b44ab5b44bbe9c40d4b6",
+      "scope": "Android counter/day transaction admission with immutable identities and unknown-baseline retention",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowRepository.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalStore.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalStoreTest.kt"
+      ],
+      "findingIds": [
+        "S2-NATIVE-COUNTER-DAY"
+      ],
+      "commands": [
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": {
+            "passed": 158,
+            "failed": 0,
+            "skipped": 1
+          },
+          "skipped": "hostedBrowserRecordConvergesThroughProductionTransport"
+        },
+        {
+          "command": "npm run verify:room-hashes",
+          "exitCode": 0,
+          "checked": 9
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0,
+          "checked": 24
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Additive private journal fields; previous focus-only journals remain readable. No runtime activation.",
+      "evidence": {
+        "path": "docs/operations/reliability/evidence/s2-native-counter-day.log",
+        "sha256": "96b237a327a32f8dfdfaa070af97307a8a7c16fb18e77a13fdc470a1bc159e78"
+      },
+      "failedApproach": "Initial day fixture asserted nonexistent focus id field. Corrected to compare entire preserved focus payload; nine focused cases pass in final full suite.",
+      "blockers": [
+        "Native server enrollment/history/receipt integration remains incomplete.",
+        "Native atomic causal completion and production UI wiring remain incomplete.",
+        "Unknown-day counts wait for verified server baselines; not zeroed."
+      ],
+      "permittedNextStage": "Continue S2; S3 blocked"
     }
   ],
   "findings": [

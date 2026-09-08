@@ -2,7 +2,7 @@
 
 Stage acceptance: **BLOCKED — implementation continues. S3 is not permitted.**
 
-Latest tested source: `9b0022fc2eef7f4f3cb46a56d02b4866332ddb11`. Android transactional focus admission and encrypted journal preservation: **PASS_LOCAL** (155 passed, one hosted test skipped; lint and debug build passed). This is an explicit-preparation foundation; native transport, counter/day/completion coordination and UI integration remain incomplete. Earlier Web and server checkpoints are recorded below. S3 remains blocked.
+Latest tested source: `cf04ba5dd107b2154d43b44ab5b44bbe9c40d4b6`. Android counter/day admission: **PASS_LOCAL** (158 passed, one hosted test skipped; lint and debug build passed). Native transport, causal business completion and production UI integration remain incomplete. S3 remains blocked.
 
 S1's tested commit `09245261b6174ec878f0296ca61682c603f54304` is integrated.
 S1.2 correction `262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d` is integrated;
@@ -622,3 +622,10 @@ Hosted PostgREST is **NOT MEASURED**. Divergent legacy reconciliation, native in
 Room 9 adds a private account journal. Focus admission reads its actual parent and atomically persists intent, command, outcome, projection and pending command. Ordinary tracking changes and conflict deletion are fenced after explicit preparation. Legacy outbox bytes remain captured and retained. Backup schema 5 carries exact journal bytes; incompatible or divergent journals require recovery. Existing backup schemas remain readable.
 
 Six focused Room tests cover serial extensions, exact retries, failed commits, snapshot fences, account/mirror mismatch, encrypted fresh-database restore and missing-command corruption. Full native gate: 155 passed, zero failed, one hosted-transport test skipped; lint and debug APK build passed. Command: `env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true` (exit 0). Room hashes: 9 checked; durable identifiers: 24 checked. Evidence: `evidence/s2-native-causal-store.log`. No native installation, hosted test or production activation occurred. Native network integration, counters/day handling and atomic business completion are still required.
+
+
+## Android counter/day checkpoint `cf04ba5dd107b2154d43b44ab5b44bbe9c40d4b6`
+
+Stable account/actor/action IDs, day, timezone and millisecond timestamps are persisted with each counter event. Distinct equal-time actions count independently; retrying the same event changes nothing. Focus, day and counter IDs share an exclusion check. The complete admission sequence detects missing evidence even for a pending event that has no visible projection yet.
+
+Day commands retain requested date/zone. Unknown days preserve the previous proven tracking projection and focus, while explicitly admitted day events wait for a verified baseline. No zero baseline is inferred. Nine focused Room cases are included in the full 158-pass suite; one hosted test is skipped. Lint and debug build passed; Room 9 hashes and 24 durable identifiers passed. Command: `env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true`, exit 0. Evidence: `evidence/s2-native-counter-day.log`. Native server history and receipt integration, causal completion and UI activation remain unimplemented; no deployment or installation occurred.
