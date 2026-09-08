@@ -132,6 +132,10 @@ class GoalflowRepository(
     private val causalStore = NativeCausalStore(database, deviceId)
     internal val causalEnrollmentStore = NativeCausalEnrollmentStore(database)
     internal val causalHistoryStore = NativeCausalHistoryStore(database)
+    internal val causalRequestStore = NativeCausalRequestStore(database)
+    private val causalProjectionStore = NativeCausalProjectionStore(database)
+
+    suspend fun applyCausalHistory(userId: String): NativeCausalProjectionResult = causalProjectionStore.apply(userId)
 
     suspend fun prepareCausalAccount(userId: String): CausalAccountEntity =
         causalStore.enable(userId, timeProvider.today().toString())
