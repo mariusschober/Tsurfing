@@ -5,13 +5,15 @@ import { stableJson } from './syncProtocol';
 import type { FocusAccountState } from './causalFocusCoordinator';
 import type { CounterAccountState } from './causalCounterCoordinator';
 import { sendCausalAction } from './causalTransport';
+import type { CausalEnrollmentState } from './causalEnrollment';
+import { assertCausalCapability } from './causalCapability';
 
 export interface CausalReceiptState extends CausalAccountState {
   /** Never rewrite an attempted operation, including its account cutover epoch. */
   causalRequests?: Record<string, string>;
   causalReceipts?: Record<string, Record<string, any>>;
 }
-type State = CausalReceiptState & FocusAccountState & CounterAccountState;
+type State = CausalReceiptState & FocusAccountState & CounterAccountState & CausalEnrollmentState;
 
 async function transaction<T>(name: string, accountId: string, work: (state: State) => T): Promise<T> {
   // Receipt handling must never trigger cutover on an unprepared database.
@@ -54,6 +56,10 @@ export async function prepareCausalRequest(name: string, accountId: string, inpu
   const bytes = JSON.stringify(operation);
   if (new TextEncoder().encode(bytes).byteLength > 256 * 1024) throw new Error('The saved action exceeds the causal request limit. Its admission remains retained.');
   return transaction(name, accountId, state => {
+    const capability = state.causalCapability && assertCausalCapability(accountId, state.causalCapability);
+    if (!capability?.enrolled || capability.epoch !== operation.epoch) {
+      throw new Error('The action requires the discovered account epoch. Its durable admission remains unchanged.');
+    }
     const { id, pending } = admitted(state, operation);
     const prior = state.causalRequests?.[id];
     if (prior !== undefined) {

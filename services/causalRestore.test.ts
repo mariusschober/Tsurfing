@@ -7,6 +7,7 @@ import { CAUSAL_STORE } from './causalStorage';
 import { admitLocalCounter } from './causalCounterCoordinator';
 import { prepareCausalRequest, commitCausalReceipt, syncCausalAction } from './causalReceipts';
 import { decodeCausalBackup } from './causalBackup';
+import { bindCausalCapability } from './causalEnrollment';
 import type { CounterBaseline, CounterDelta } from '../src/domain/counterLedger';
 
 function install() {
@@ -27,6 +28,7 @@ async function fixture() {
   const event: CounterDelta = { schemaVersion: 1, actionId: crypto.randomUUID(), accountId, actorId: 'tab', day: baseline.day, timeZone: 'Atlantic/Canary', counter: 'planViewCount', delta: 1, capturedAt: '2026-09-07T10:00:00.000Z', businessActionId: null, correctionOf: null };
   await admitLocalCounter(source.name, event, baseline);
   const operation = { schemaVersion: 2, epoch: crypto.randomUUID(), type: 'counter', command: event };
+  await bindCausalCapability(source.name, accountId, { schemaVersion: 2, accountId, enrolled: true, epoch: operation.epoch, projectionRevision: 0, rolloutReady: false });
   const bytes = await prepareCausalRequest(source.name, accountId, operation);
   const receipt = { schemaVersion: 2, operation, epoch: operation.epoch, accepted: true, projectionRevision: 1,
     outcome: { accepted: true, code: 'APPLIED', day: event.day, counts: { planViewCount: 28, dailyPostponeCount: 3 } },

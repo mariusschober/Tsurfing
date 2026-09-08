@@ -7,6 +7,7 @@ import { CAUSAL_STORE } from './causalStorage';
 import { type CounterBaseline, type CounterDelta } from '../src/domain/counterLedger';
 import { admitLocalFocus } from './causalFocusCoordinator';
 import { prepareCausalRequest, commitCausalReceipt, syncCausalAction } from './causalReceipts';
+import { bindCausalCapability } from './causalEnrollment';
 async function fixture() {
   const name = 's2-counters-' + crypto.randomUUID();
   const accountId = crypto.randomUUID();
@@ -23,6 +24,7 @@ async function prepared() {
   const f = await fixture(); const event = f.event('planViewCount');
   await admitLocalCounter(f.name, event, f.baseline);
   const operation = { schemaVersion: 2, epoch: crypto.randomUUID(), type: 'counter', command: event };
+  await bindCausalCapability(f.name, event.accountId, { schemaVersion: 2, accountId: event.accountId, enrolled: true, epoch: operation.epoch, projectionRevision: 0, rolloutReady: false });
   const bytes = await prepareCausalRequest(f.name, event.accountId, operation);
   const receipt = { schemaVersion: 2, operation, epoch: operation.epoch, accepted: true, projectionRevision: 1,
     outcome: { accepted: true, code: 'APPLIED', day: event.day, counts: { planViewCount: 28, dailyPostponeCount: 3 } },
@@ -50,7 +52,7 @@ it('archives exact receipts while preserving newer local counters, focus and all
 it('keeps attempted epoch immutable across restarts and rejects unadmitted commands', async () => {
   const f = await prepared();
   expect(await prepareCausalRequest(f.name, f.event.accountId, f.operation)).toBe(f.bytes);
-  await expect(prepareCausalRequest(f.name, f.event.accountId, { ...f.operation, epoch: crypto.randomUUID() })).rejects.toThrow('immutable');
+  await expect(prepareCausalRequest(f.name, f.event.accountId, { ...f.operation, epoch: crypto.randomUUID() })).rejects.toThrow('epoch');
   await expect(prepareCausalRequest(f.name, f.event.accountId, { ...f.operation, command: { ...f.event, delta: 2 } })).rejects.toThrow();
   expect((await f.read()).causalRequests[f.event.actionId]).toBe(f.bytes);
 });
@@ -86,6 +88,7 @@ it('archives a rejected focus receipt without retiring or replaying away its loc
   intent.epoch = intent.actionId;
   const local = await admitLocalFocus(name, intent);
   const operation = { schemaVersion: 2, epoch: crypto.randomUUID(), type: 'focus', command: local.command };
+  await bindCausalCapability(name, accountId, { schemaVersion: 2, accountId, enrolled: true, epoch: operation.epoch, projectionRevision: 0, rolloutReady: false });
   await prepareCausalRequest(name, accountId, operation);
   const receipt = { schemaVersion: 2, operation, epoch: operation.epoch, accepted: false, projectionRevision: 2,
     outcome: { accepted: false, code: 'STALE_TARGET', revision: null },

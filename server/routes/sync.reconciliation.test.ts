@@ -16,6 +16,22 @@ async function endpoint(rpc:any) {
   return `http://127.0.0.1:${(server.address() as any).port}/sync/conflicts/reconcile`;
 }
 describe('automatic sync API boundary',()=>{
+  it('discovers only the authenticated account epoch and never caches or enrolls it', async () => {
+    const result = { schemaVersion: 2, accountId: owner, enrolled: true, epoch: '33333333-3333-4333-8333-333333333333', projectionRevision: 3, rolloutReady: false };
+    const rpc = vi.fn().mockResolvedValue({ data: result, error: null });
+    const url = (await endpoint(rpc)).replace('/conflicts/reconcile', '/causal-capability');
+    const response = await fetch(url + '?accountId=other');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(await response.json()).toEqual(result);
+    expect(rpc).toHaveBeenCalledWith('goalflow_causal_capability_v2', { target_user_id: owner });
+    result.accountId = '22222222-2222-4222-8222-222222222222';
+    expect((await fetch(url)).status).toBe(503);
+    rpc.mockResolvedValue({ data: null, error: { message: 'private synthetic diagnostic' } });
+    const unavailable = await fetch(url);
+    expect(unavailable.status).toBe(503);
+    expect(await unavailable.text()).not.toContain('private synthetic');
+  });
   it('routes causal actions by authenticated owner and rejects mismatched receipts', async () => {
     const actionId = '22222222-2222-4222-8222-222222222222';
     const epoch = '33333333-3333-4333-8333-333333333333';

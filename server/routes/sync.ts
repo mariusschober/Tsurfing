@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { reconcileLegacyTasks } from '../taskReconciliation';
 import { readConflictPage } from '../conflictPages';
 import { readStagedReconciliation, stageReconciliationChunk } from '../reconciliationStaging';
-import { admitCausalOperation } from '../causalActions';
+import { admitCausalOperation, readCausalCapability } from '../causalActions';
 
 const syncEntityType = z.enum([
   'tasks', 'goals', 'habits', 'stats', 'progress', 'hashtags', 'accountability',
@@ -215,6 +215,12 @@ export const reconcileCandidate = async (database: SupabaseClient, userId: strin
 export const createSyncRouter = (admin?: SupabaseClient) => {
   const router = Router();
   const requireHardenedProtocol = admin ? createSyncProtocolGuard(admin) : undefined;
+
+  router.get('/sync/causal-capability', async (request, response) => {
+    response.setHeader('Cache-Control', 'no-store');
+    try { response.json(await readCausalCapability(requireDatabase(admin), request.user!.id)); }
+    catch (_) { response.status(503).json({ error: { code: 'causal_capability_unavailable', message: 'Causal account discovery is unavailable. Keep local changes pending.' } }); }
+  });
 
   // Does not enroll accounts or advertise rollout readiness. The database
   // requires an existing exact cutover epoch for every submitted operation.
