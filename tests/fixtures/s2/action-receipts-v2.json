@@ -1,0 +1,237 @@
+{
+  "accountId": "11111111-1111-4111-8111-111111111111",
+  "cases": [
+    {
+      "name": "counter",
+      "operation": {
+        "schemaVersion": 2,
+        "epoch": "33333333-3333-4333-8333-333333333333",
+        "type": "counter",
+        "command": {
+          "schemaVersion": 1,
+          "actionId": "22222222-2222-4222-8222-222222222222",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture",
+          "day": "2026-09-08",
+          "timeZone": "UTC",
+          "counter": "planViewCount",
+          "delta": 1,
+          "capturedAt": "2026-09-08T00:00:00.000Z",
+          "businessActionId": null,
+          "correctionOf": null,
+          "unknown": {
+            "retained": "界"
+          }
+        }
+      },
+      "receipt": {
+        "schemaVersion": 2,
+        "operation": {
+          "schemaVersion": 2,
+          "epoch": "33333333-3333-4333-8333-333333333333",
+          "type": "counter",
+          "command": {
+            "schemaVersion": 1,
+            "actionId": "22222222-2222-4222-8222-222222222222",
+            "accountId": "11111111-1111-4111-8111-111111111111",
+            "actorId": "fixture",
+            "day": "2026-09-08",
+            "timeZone": "UTC",
+            "counter": "planViewCount",
+            "delta": 1,
+            "capturedAt": "2026-09-08T00:00:00.000Z",
+            "businessActionId": null,
+            "correctionOf": null,
+            "unknown": {
+              "retained": "界"
+            }
+          }
+        },
+        "epoch": "33333333-3333-4333-8333-333333333333",
+        "accepted": true,
+        "projectionRevision": 1,
+        "outcome": {
+          "accepted": true,
+          "code": "APPLIED",
+          "day": "2026-09-08",
+          "counts": {
+            "planViewCount": 28,
+            "dailyPostponeCount": 3
+          }
+        },
+        "record": {
+          "user_id": "11111111-1111-4111-8111-111111111111",
+          "entity_type": "tracking",
+          "entity_id": "singleton",
+          "version": 2,
+          "server_version": 5,
+          "device_id": "causal-action-v2",
+          "updated_at": "2026-09-08T00:00:00.123456+00:00",
+          "deleted_at": null,
+          "payload": {
+            "date": "2026-09-08",
+            "planViewCount": 28,
+            "dailyPostponeCount": 3,
+            "unknown": {
+              "retained": true
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "day",
+      "operation": {
+        "schemaVersion": 2,
+        "epoch": "33333333-3333-4333-8333-333333333333",
+        "type": "counterDay",
+        "command": {
+          "schemaVersion": 1,
+          "actionId": "22222222-2222-4222-8222-222222222222",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture",
+          "kind": "select",
+          "day": "2026-09-08",
+          "timeZone": "UTC",
+          "capturedAt": "2026-09-08T00:00:00.000Z"
+        }
+      },
+      "receipt": {
+        "schemaVersion": 2,
+        "operation": {
+          "schemaVersion": 2,
+          "epoch": "33333333-3333-4333-8333-333333333333",
+          "type": "counterDay",
+          "command": {
+            "schemaVersion": 1,
+            "actionId": "22222222-2222-4222-8222-222222222222",
+            "accountId": "11111111-1111-4111-8111-111111111111",
+            "actorId": "fixture",
+            "kind": "select",
+            "day": "2026-09-08",
+            "timeZone": "UTC",
+            "capturedAt": "2026-09-08T00:00:00.000Z"
+          }
+        },
+        "epoch": "33333333-3333-4333-8333-333333333333",
+        "accepted": true,
+        "projectionRevision": 1,
+        "record": {
+          "user_id": "11111111-1111-4111-8111-111111111111",
+          "entity_type": "tracking",
+          "entity_id": "singleton",
+          "version": 2,
+          "server_version": 5,
+          "device_id": "causal-action-v2",
+          "updated_at": "2026-09-08T00:00:00.123456+00:00",
+          "deleted_at": null,
+          "payload": {
+            "date": "2026-09-08",
+            "planViewCount": 28,
+            "dailyPostponeCount": 3,
+            "unknown": {
+              "retained": true
+            }
+          }
+        },
+        "counts": {
+          "planViewCount": 28,
+          "dailyPostponeCount": 3
+        },
+        "baseline": {
+          "schemaVersion": 1,
+          "baselineId": "33333333-3333-4333-8333-333333333333",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "day": "2026-09-08",
+          "counts": {
+            "planViewCount": 27,
+            "dailyPostponeCount": 3
+          },
+          "evidenceIds": []
+        }
+      }
+    },
+    {
+      "name": "focus",
+      "operation": {
+        "schemaVersion": 2,
+        "epoch": "33333333-3333-4333-8333-333333333333",
+        "type": "focus",
+        "command": {
+          "schemaVersion": 1,
+          "actionId": "00000000-0000-4000-8000-000000000001",
+          "accountId": "11111111-1111-4111-8111-111111111111",
+          "actorId": "fixture-tab-a",
+          "kind": "start",
+          "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "taskId": "task-F",
+          "epoch": "00000000-0000-4000-8000-000000000001",
+          "expectedRevision": null,
+          "expectedCurrentSessionId": null,
+          "capturedAt": "2026-09-07T12:00:00.000Z",
+          "durationSeconds": 600
+        }
+      },
+      "receipt": {
+        "schemaVersion": 2,
+        "operation": {
+          "schemaVersion": 2,
+          "epoch": "33333333-3333-4333-8333-333333333333",
+          "type": "focus",
+          "command": {
+            "schemaVersion": 1,
+            "actionId": "00000000-0000-4000-8000-000000000001",
+            "accountId": "11111111-1111-4111-8111-111111111111",
+            "actorId": "fixture-tab-a",
+            "kind": "start",
+            "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+            "taskId": "task-F",
+            "epoch": "00000000-0000-4000-8000-000000000001",
+            "expectedRevision": null,
+            "expectedCurrentSessionId": null,
+            "capturedAt": "2026-09-07T12:00:00.000Z",
+            "durationSeconds": 600
+          }
+        },
+        "epoch": "33333333-3333-4333-8333-333333333333",
+        "accepted": true,
+        "projectionRevision": 1,
+        "outcome": {
+          "accepted": true,
+          "code": "APPLIED",
+          "revision": "00000000-0000-4000-8000-000000000001"
+        },
+        "record": {
+          "user_id": "11111111-1111-4111-8111-111111111111",
+          "entity_type": "tracking",
+          "entity_id": "singleton",
+          "version": 2,
+          "server_version": 5,
+          "device_id": "causal-action-v2",
+          "updated_at": "2026-09-08T00:00:00.123456+00:00",
+          "deleted_at": null,
+          "payload": {
+            "date": "2026-09-08",
+            "planViewCount": 28,
+            "dailyPostponeCount": 3,
+            "unknown": {
+              "retained": true
+            },
+            "focusSession": {
+              "schemaVersion": 1,
+              "sessionId": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+              "taskId": "task-F",
+              "phase": "active",
+              "plannedDurationSeconds": 600,
+              "startedAt": "2026-09-07T12:00:00.000Z",
+              "elapsedSeconds": 0,
+              "pausedAt": null,
+              "endedAt": null,
+              "updatedAt": "2026-09-07T12:00:00.000Z"
+            }
+          }
+        }
+      }
+    }
+  ]
+}
