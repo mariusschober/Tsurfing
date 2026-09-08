@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Server atomic completion and Web transport/history are verified locally; client completion admission/application, native causal journals, recovery and active rollout remain incomplete.",
+  "acceptanceReason": "Implementation continues. Web atomic completion admission and exact receipt/dependency handling are verified locally; downloaded completion application, native causal journals, recovery and active rollout remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -1395,6 +1395,129 @@
       ],
       "blockers": [
         "Client completion coordinator and native causal journals remain incomplete"
+      ],
+      "permittedNextStage": null
+    },
+    {
+      "commit": "0b87bcddd5f465f106669a8214ef609804988988",
+      "scope": "Web atomic focus completion admission, dependency reservations, receipt retirement and schema-5 restore",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "scripts/test-s2-completion-api-postgres.ts",
+        "services/causalBackup.ts",
+        "services/causalCompletionCoordinator.test.ts",
+        "services/causalCompletionCoordinator.ts",
+        "services/causalEnrollment.ts",
+        "services/causalProjection.ts",
+        "services/storage.ts",
+        "services/syncProtocol.ts",
+        "src/domain/taskCompletion.test.ts",
+        "src/domain/taskCompletion.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-WEB-COMPLETION-ADMISSION",
+          "disposition": "Implemented dormant transaction; notes and all effects commit atomically"
+        },
+        {
+          "id": "S2-COMPLETION-DEPENDENCY-ORDER",
+          "disposition": "Exact predecessor receipts freeze base versions; successors held by reservations"
+        },
+        {
+          "id": "S2-COMPLETION-RESTORE",
+          "disposition": "Actual schema-5 fresh restore preserves request and effects; damaged evidence rejected"
+        },
+        {
+          "id": "S2-COMPLETION-HISTORY-APPLICATION",
+          "disposition": "Still incomplete; earlier applier blocks rather than applying terminal focus alone"
+        }
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "testsPassed": 581,
+          "testFilesPassed": 94,
+          "log": "docs/operations/reliability/evidence/s2-web-completion-release-final.log"
+        },
+        {
+          "command": "PATH=/opt/homebrew/opt/postgresql@17/bin:$PATH PGHOST=127.0.0.1 PGPORT=55437 PGUSER=schober npm run test:migrations:postgres",
+          "exitCode": 0,
+          "paths": [
+            "empty",
+            "upgrade"
+          ],
+          "webCompletion": "Six actual effects, response loss after server commit, exact retry, no double award",
+          "hostedPostgREST": "NOT_MEASURED",
+          "log": "docs/operations/reliability/evidence/s2-web-completion-postgres-final.log"
+        },
+        {
+          "command": "npx vitest run services/causalCompletionCoordinator.test.ts src/domain/taskCompletion.test.ts services/causalBackup.test.ts services/causalRestore.test.ts services/causalProjection.test.ts services/syncProtocol.property.test.ts",
+          "exitCode": 0,
+          "testsPassed": 55,
+          "note": "Intermediate integration run before final added regressions"
+        },
+        {
+          "command": "npx vitest run services/causalCompletionCoordinator.test.ts src/domain/taskCompletion.test.ts",
+          "exitCode": 0,
+          "testsPassed": 14,
+          "note": "Additional ambiguity regression subsequently included in final full release"
+        }
+      ],
+      "failedAttempts": [
+        {
+          "command": "npm run lint",
+          "exitCode": 2,
+          "reason": "Three TypeScript narrowing errors; fixed before passing final release"
+        }
+      ],
+      "migrations": [],
+      "nativeChecks": "NOT_RERUN_NO_NATIVE_SOURCE_CHANGE",
+      "compatibility": "Dormant private journal and current-code dependency reservations; old business-store write fence and completion history application remain required before activation.",
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-web-completion-integration.log",
+          "sha256": "a5cc0663aeb41b737cf9bc1806a5d6816c84e0ea1df6097d311f958377987062"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-web-completion-lint-final.log",
+          "sha256": "e90ee48ea12d3a4c3b7a3b27a3894b3cf36c40b2d5d29e5bd6efc2dafbd309e5"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-web-completion-lint.log",
+          "sha256": "a44e71ad62a5297e8653c992d0a7b7f016686eb48ea71ea0ed58076d0aa0a1b5"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-web-completion-postgres-final.log",
+          "sha256": "06d9527e512f5d307f56a3b455571beaf377047caf08900aad6ff5bd2865a50e"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-web-completion-postgres.log",
+          "sha256": "06d9527e512f5d307f56a3b455571beaf377047caf08900aad6ff5bd2865a50e"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-web-completion-release-final.log",
+          "sha256": "4763ce37f8677408ccebb372ec7a9cac3d2672ba38c6e3315b0c75cfb28e870b"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-web-completion-release.log",
+          "sha256": "a85e8198961c682f34be12e84e057684673aca9ac575873dcd2b44ac366d9557"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-web-completion-unit-final.log",
+          "sha256": "fb5b79c09fb22a72ed1a1662441932126efadea28a90c6d5862b1b6f0542e6bb"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-web-completion-unit.log",
+          "sha256": "f088db807ebadec2f47f84d8a081cc9fbc0ced592961fb28a33c0d2cbe660bb4"
+        }
+      ],
+      "blockers": [
+        "Downloaded completion application and reconciliation",
+        "Active Web application coordination",
+        "Native causal journals and completion integration",
+        "Legacy and nonempty-restore recovery",
+        "Mixed-version activation"
       ],
       "permittedNextStage": null
     }

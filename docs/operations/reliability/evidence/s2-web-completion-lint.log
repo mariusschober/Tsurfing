@@ -1,0 +1,7 @@
+
+> tsurfing@0.4.0-beta.1 lint
+> tsc --noEmit
+
+services/causalCompletionCoordinator.ts(118,87): error TS2339: Property 'focusSession' does not exist on type 'unknown'.
+services/causalCompletionCoordinator.ts(179,31): error TS2698: Spread types may only be created from object types.
+services/syncProtocol.ts(339,58): error TS2365: Operator '<' cannot be applied to types 'unknown' and 'number'.
