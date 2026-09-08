@@ -39,6 +39,61 @@ class NativeCausalStoreTest {
     private fun intent(kind: String, duration: Long? = null) = NativeFocusIntent(UUID.randomUUID().toString(), kind,
         session, task, session, duration, "2026-09-08T00:00:10.000Z")
     private suspend fun state() = database.causalAccountDao().get(owner)!!
+    private fun counter(kind: String) = NativeCounterIntent(UUID.randomUUID().toString(), "2026-09-08",
+        "Atlantic/Canary", kind, "2026-09-08T00:00:10.000Z")
+
+    @Test fun `distinct counter actions conserve both counts independently of focus and retries`() = runTest {
+        val plans = counter("planViewCount"); val postpones = counter("dailyPostponeCount")
+        repository.admitCausalCounter(owner, plans); repository.admitCausalCounter(owner, postpones)
+        var tracking = NativeCausalJournal.validate(state()).getJSONObject("tracking")
+        assertEquals(28, tracking.getInt("planViewCount")); assertEquals(4, tracking.getInt("dailyPostponeCount"))
+        repository.admitCausalFocus(owner, intent("extend", 300))
+        repository.admitCausalCounter(owner, counter("planViewCount"))
+        repository.admitCausalCounter(owner, counter("dailyPostponeCount"))
+        val before = state()
+        assertTrue(repository.admitCausalCounter(owner, plans).duplicate)
+        assertTrue(repository.admitCausalCounter(owner, postpones).duplicate)
+        assertEquals(before, state())
+        tracking = NativeCausalJournal.validate(state()).getJSONObject("tracking")
+        assertEquals(29, tracking.getInt("planViewCount")); assertEquals(5, tracking.getInt("dailyPostponeCount"))
+        assertEquals(900, tracking.getJSONObject("focusSession").getInt("plannedDurationSeconds"))
+        assertEquals("retained", tracking.getString("unknown"))
+        assertTrue(runCatching { repository.admitCausalCounter(owner, plans.copy(counter = "dailyPostponeCount")) }.isFailure)
+        assertTrue(runCatching { repository.admitCausalFocus(owner, intent("pause").copy(actionId = plans.actionId)) }.isFailure)
+        assertEquals(before, state())
+    }
+
+    @Test fun `counter transaction rollback and unknown day preserve original evidence`() = runTest {
+        val before = state(); val mirror = database.rawCollectionDao().get("tracking")
+        assertTrue(runCatching { repository.admitCausalCounter(owner, counter("planViewCount").copy(day = "2026-09-07")) }.isFailure)
+        database.openHelper.writableDatabase.execSQL("CREATE TRIGGER fail_counter_mirror BEFORE INSERT ON raw_collections WHEN NEW.entityType='tracking' BEGIN SELECT RAISE(ABORT,'synthetic counter failure'); END")
+        assertTrue(runCatching { repository.admitCausalCounter(owner, counter("planViewCount")) }.isFailure)
+        assertEquals(before, state()); assertEquals(mirror, database.rawCollectionDao().get("tracking"))
+    }
+
+    @Test fun `unknown day retains captured increments without relabeling previous counts or focus`() = runTest {
+        val mirror = database.rawCollectionDao().get("tracking")
+        val selection = NativeCounterDayIntent(UUID.randomUUID().toString(), "select", "2026-09-09",
+            "Europe/Berlin", "2026-09-08T23:00:00.000Z")
+        assertTrue(JSONObject(repository.admitCausalCounterDay(owner, selection).outcome).getBoolean("baselinePending"))
+        val event = counter("planViewCount").copy(day = "2026-09-09")
+        assertTrue(JSONObject(repository.admitCausalCounter(owner, event).outcome).getBoolean("baselinePending"))
+        val retained = state()
+        val damaged = JSONObject(retained.payload)
+        damaged.getJSONObject("counterAdmissions").remove(event.actionId)
+        damaged.getJSONObject("counterOutbox").remove(event.actionId)
+        assertTrue(runCatching { NativeCausalJournal.validate(retained.copy(payload = damaged.toString())) }.isFailure)
+        assertEquals(JSONObject(mirror!!.payload).toString(), NativeCausalJournal.validate(retained).getJSONObject("tracking").toString())
+        assertTrue(repository.admitCausalCounterDay(owner, selection).duplicate)
+        assertTrue(repository.admitCausalCounter(owner, event).duplicate)
+        assertEquals(retained, state())
+        repository.admitCausalCounter(owner, counter("dailyPostponeCount"))
+        val tracking = NativeCausalJournal.validate(state()).getJSONObject("tracking")
+        assertEquals("2026-09-08", tracking.getString("date"))
+        assertEquals(27, tracking.getInt("planViewCount")); assertEquals(4, tracking.getInt("dailyPostponeCount"))
+        assertEquals(ActionJson.canonical(JSONObject(mirror.payload).getJSONObject("focusSession")),
+            ActionJson.canonical(tracking.getJSONObject("focusSession")))
+    }
 
     @Test fun `serial extensions use actual parents and retries reuse admission`() = runTest {
         val first = intent("extend", 300); val second = intent("extend", 120)
@@ -95,6 +150,8 @@ class NativeCausalStoreTest {
     @Test fun `encrypted restore to a fresh bound database retains exact admissions and retry identity`() = runTest {
         val action = intent("extend", 300)
         repository.admitCausalFocus(owner, action)
+        val increment = counter("planViewCount")
+        repository.admitCausalCounter(owner, increment)
         val original = state()
         val envelope = repository.exportBackup("fixture password retained")
         val fresh = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext<Context>(), GoalflowDatabase::class.java)
@@ -105,6 +162,7 @@ class NativeCausalStoreTest {
             restored.restoreBackup(envelope, "fixture password retained", BackupRestoreMode.REPLACE)
             assertEquals(original, fresh.causalAccountDao().get(owner))
             assertTrue(restored.admitCausalFocus(owner, action).duplicate)
+            assertTrue(restored.admitCausalCounter(owner, increment).duplicate)
             assertEquals(original, fresh.causalAccountDao().get(owner))
         } finally { fresh.close() }
     }

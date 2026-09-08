@@ -24,6 +24,23 @@ data class NativeFocusIntent(
 
 data class NativeCausalAdmission(val tracking: String, val outcome: String, val duplicate: Boolean, val generation: Long)
 
+data class NativeCounterIntent(val actionId: String, val day: String, val timeZone: String,
+    val counter: String, val capturedAt: String) {
+    fun json(accountId: String, actorId: String): JSONObject = JSONObject()
+        .put("schemaVersion", 1).put("accountId", accountId).put("actorId", actorId)
+        .put("actionId", actionId).put("day", day).put("timeZone", timeZone)
+        .put("counter", counter).put("delta", 1).put("capturedAt", capturedAt)
+        .put("businessActionId", JSONObject.NULL).put("correctionOf", JSONObject.NULL)
+}
+
+data class NativeCounterDayIntent(val actionId: String, val kind: String, val day: String,
+    val timeZone: String, val capturedAt: String) {
+    fun json(accountId: String, actorId: String): JSONObject = JSONObject()
+        .put("schemaVersion", 1).put("actionId", actionId).put("accountId", accountId)
+        .put("actorId", actorId).put("kind", kind).put("day", day)
+        .put("timeZone", timeZone).put("capturedAt", capturedAt)
+}
+
 /** A replayable private journal. Unknown fields and original serialized legacy
  * payloads survive; wall-clock timestamps never choose the causal parent. */
 object NativeCausalJournal {
@@ -53,9 +70,10 @@ object NativeCausalJournal {
         }
         val counts = JSONObject().put("planViewCount", original.get("planViewCount"))
             .put("dailyPostponeCount", original.get("dailyPostponeCount"))
-        CounterLedger.project(JSONObject().put("schemaVersion", 1).put("baselineId", account.accountId)
+        val baseline = JSONObject().put("schemaVersion", 1).put("baselineId", account.accountId)
             .put("accountId", account.accountId).put("day", original.get("date"))
-            .put("counts", counts).put("evidenceIds", JSONArray()), JSONArray())
+            .put("counts", counts).put("evidenceIds", JSONArray())
+        CounterLedger.project(baseline, JSONArray())
         val baselineFocus = if (!original.has("focusSession") || original.isNull("focusSession")) null
             else original.getJSONObject("focusSession")
         var focus = CausalFocus.initial(account.accountId, baselineFocus)
@@ -75,6 +93,57 @@ object NativeCausalJournal {
         }
         require(ActionJson.canonical(focus) == ActionJson.canonical(state.getJSONObject("focus"))) { "The focus projection differs from its journal." }
         val expectedTracking = JSONObject(original.toString())
+        val days = state.optJSONObject("counterDayAdmissions") ?: JSONObject()
+        if (state.has("counterDayAdmissions") || state.has("counterDayOutbox")) {
+            val pendingDays = state.getJSONObject("counterDayOutbox")
+            state.getJSONObject("counterDayAdmissions")
+            var latestSelection: JSONObject? = null
+            for (id in days.keys().asSequence().toList().sortedBy { days.getJSONObject(it).getLong("sequence") }) {
+                val admission = days.getJSONObject(id)
+                val command = admission.getJSONObject("command")
+                val sequence = ActionJson.integer(admission.opt("sequence"))
+                validateDay(command, account.accountId)
+                require(sequence != null && sequence > 0 && sequence <= generation && sequences.add(sequence)
+                    && command.opt("actionId") == id && !admissions.has(id)
+                    && ActionJson.canonical(command) == ActionJson.canonical(pendingDays.getJSONObject(id))) {
+                    "The day admission has no exact pending command or sequence."
+                }
+                if (command.getString("kind") == "select") latestSelection = JSONObject()
+                    .put("actionId", id).put("requestedDay", command.getString("day"))
+                    .put("status", if (command.getString("day") == original.getString("date")) "PROJECTED" else "WAITING_BASELINE")
+            }
+            require(days.length() == pendingDays.length()
+                && ActionJson.canonical(latestSelection) == ActionJson.canonical(state.opt("counterDaySelection"))) {
+                "The selected day differs from its original intent."
+            }
+        } else require(!state.has("counterDaySelection")) { "The selected day has no admission." }
+        if (state.has("counterAdmissions") || state.has("counterOutbox")) {
+            val counterAdmissions = state.getJSONObject("counterAdmissions")
+            val counterOutbox = state.getJSONObject("counterOutbox")
+            val events = JSONArray()
+            for (id in counterAdmissions.keys()) {
+                val admission = counterAdmissions.getJSONObject(id)
+                val event = admission.getJSONObject("event")
+                val sequence = ActionJson.integer(admission.opt("sequence"))
+                require(sequence != null && sequence > 0 && sequence <= generation && sequences.add(sequence)
+                    && event.opt("actionId") == id && !admissions.has(id) && !days.has(id)
+                    && (event.opt("day") == baseline.getString("day") || days.keys().asSequence().any {
+                        days.getJSONObject(it).getLong("sequence") < sequence
+                            && days.getJSONObject(it).getJSONObject("command").opt("day") == event.opt("day") })
+                    && event.isNull("correctionOf") && event.isNull("businessActionId")) {
+                    "The counter admission identity or scope is damaged."
+                }
+                require(ActionJson.canonical(event) == ActionJson.canonical(counterOutbox.getJSONObject(id))) {
+                    "A counter admission is missing its exact pending event."
+                }
+                events.put(event)
+            }
+            require(counterOutbox.length() == counterAdmissions.length()) { "A pending counter event has no admission." }
+            val projected = CounterLedger.project(baseline, events)
+            expectedTracking.put("planViewCount", projected.get("planViewCount"))
+                .put("dailyPostponeCount", projected.get("dailyPostponeCount"))
+        }
+        require(sequences.size.toLong() == generation) { "The causal admission sequence is incomplete." }
         if (!focus.isNull("currentSessionId")) expectedTracking.put("focusSession",
             focus.getJSONObject("sessions").getJSONObject(focus.getString("currentSessionId")).getJSONObject("projection"))
         require(ActionJson.canonical(protectedTracking(expectedTracking)) == ActionJson.canonical(protectedTracking(state.getJSONObject("tracking")))) {
@@ -94,6 +163,17 @@ object NativeCausalJournal {
             }
         }
         return state
+    }
+
+    fun validateDay(command: JSONObject, accountId: String) {
+        val actor = command.opt("actorId")
+        val zone = command.opt("timeZone")
+        require(ActionJson.integer(command.opt("schemaVersion")) == 1L
+            && ActionJson.identity(command.opt("actionId")) && command.opt("accountId") == accountId
+            && actor is String && actor.length in 1..240 && actor.isNotBlank()
+            && command.opt("kind") in setOf("establish", "select") && ActionJson.day(command.opt("day"))
+            && zone is String && Regex("^[A-Za-z0-9_+./-]{1,128}$").matches(zone)
+            && ActionJson.instant(command.opt("capturedAt"))) { "Invalid counter day command." }
     }
 }
 
@@ -158,6 +238,8 @@ class NativeCausalStore(private val database: GoalflowDatabase, private val acto
                 "Tracking changed outside its causal journal. Original evidence is retained."
             }
             val admissions = state.getJSONObject("focusAdmissions")
+            require(state.optJSONObject("counterAdmissions")?.has(captured.actionId) != true) { "The action identity is already a counter event." }
+            require(state.optJSONObject("counterDayAdmissions")?.has(captured.actionId) != true) { "The action identity is already a day command." }
             admissions.optJSONObject(captured.actionId)?.let { prior ->
                 require(ActionJson.canonical(prior.getJSONObject("intent")) == ActionJson.canonical(intent)) { "The focus action identity has different intent." }
                 return@withTransaction NativeCausalAdmission(state.getJSONObject("tracking").toString(), prior.getJSONObject("outcome").toString(), true, state.getLong("generation"))
@@ -195,6 +277,89 @@ class NativeCausalStore(private val database: GoalflowDatabase, private val acto
             check(accounts.update(updated) == 1) { "The causal account disappeared." }
             database.rawCollectionDao().insert(RawCollectionEntity("tracking", tracking.toString(), captured.capturedAt, null))
             NativeCausalAdmission(tracking.toString(), result.outcome.toString(), false, generation)
+        }
+    }
+
+    suspend fun admitCounter(accountId: String, captured: NativeCounterIntent): NativeCausalAdmission {
+        val event = captured.json(accountId, actorId)
+        return database.withTransaction {
+            bound(accountId)
+            val entity = accounts.get(accountId) ?: error("Causal account preparation is required.")
+            val state = NativeCausalJournal.validate(entity)
+            val tracking = state.getJSONObject("tracking")
+            val mirror = database.rawCollectionDao().get("tracking")
+            require(mirror != null && mirror.deletedAt == null
+                && ActionJson.canonical(JSONObject(mirror.payload)) == ActionJson.canonical(tracking)) {
+                "Tracking changed outside its causal journal. Original evidence is retained."
+            }
+            require(!state.getJSONObject("focusAdmissions").has(captured.actionId)) { "The action identity is already a focus command." }
+            require(state.optJSONObject("counterDayAdmissions")?.has(captured.actionId) != true) { "The action identity is already a day command." }
+            val admissions = state.optJSONObject("counterAdmissions") ?: JSONObject().also { state.put("counterAdmissions", it) }
+            val pending = state.optJSONObject("counterOutbox") ?: JSONObject().also { state.put("counterOutbox", it) }
+            val outcome = JSONObject().put("accepted", true).put("baselinePending", captured.day != tracking.getString("date"))
+            admissions.optJSONObject(captured.actionId)?.let { previous ->
+                require(ActionJson.canonical(previous.getJSONObject("event")) == ActionJson.canonical(event)) {
+                    "The counter action identity has different intent."
+                }
+                return@withTransaction NativeCausalAdmission(tracking.toString(), outcome.toString(), true, state.getLong("generation"))
+            }
+            val days = state.optJSONObject("counterDayAdmissions") ?: JSONObject()
+            require(captured.day == tracking.getString("date") || days.keys().asSequence().any {
+                days.getJSONObject(it).getJSONObject("command").getString("day") == captured.day
+            }) { "This counter day requires a durable day admission before waiting for its baseline." }
+            val baseline = JSONObject().put("schemaVersion", 1).put("baselineId", accountId)
+                .put("accountId", accountId).put("day", tracking.getString("date")).put("evidenceIds", JSONArray())
+                .put("counts", JSONObject().put("planViewCount", tracking.get("planViewCount"))
+                    .put("dailyPostponeCount", tracking.get("dailyPostponeCount")))
+            val projection = CounterLedger.project(baseline, JSONArray().put(event))
+            val generation = state.getLong("generation") + 1
+            require(generation <= ActionJson.MAX_SAFE_INTEGER) { "Local causal generation exhausted." }
+            admissions.put(captured.actionId, JSONObject().put("event", event).put("sequence", generation))
+            pending.put(captured.actionId, event)
+            state.put("generation", generation)
+            tracking.put("planViewCount", projection.get("planViewCount"))
+                .put("dailyPostponeCount", projection.get("dailyPostponeCount"))
+            val updated = CausalAccountEntity(accountId, state.toString())
+            NativeCausalJournal.validate(updated)
+            check(accounts.update(updated) == 1) { "The causal account disappeared." }
+            database.rawCollectionDao().insert(RawCollectionEntity("tracking", tracking.toString(), captured.capturedAt, null))
+            NativeCausalAdmission(tracking.toString(), outcome.toString(), false, generation)
+        }
+    }
+
+    suspend fun admitCounterDay(accountId: String, captured: NativeCounterDayIntent): NativeCausalAdmission {
+        val command = captured.json(accountId, actorId)
+        NativeCausalJournal.validateDay(command, accountId)
+        return database.withTransaction {
+            bound(accountId)
+            val entity = accounts.get(accountId) ?: error("Causal account preparation is required.")
+            val state = NativeCausalJournal.validate(entity)
+            val tracking = state.getJSONObject("tracking")
+            val mirror = database.rawCollectionDao().get("tracking")
+            require(mirror != null && mirror.deletedAt == null
+                && ActionJson.canonical(JSONObject(mirror.payload)) == ActionJson.canonical(tracking)) {
+                "Tracking changed outside its causal journal. Original evidence is retained."
+            }
+            require(!state.getJSONObject("focusAdmissions").has(captured.actionId)
+                && state.optJSONObject("counterAdmissions")?.has(captured.actionId) != true) { "The action identity is already in use." }
+            val admissions = state.optJSONObject("counterDayAdmissions") ?: JSONObject().also { state.put("counterDayAdmissions", it) }
+            val pending = state.optJSONObject("counterDayOutbox") ?: JSONObject().also { state.put("counterDayOutbox", it) }
+            val outcome = JSONObject().put("accepted", true).put("baselinePending", captured.day != tracking.getString("date"))
+            admissions.optJSONObject(captured.actionId)?.let { prior ->
+                require(ActionJson.canonical(prior.getJSONObject("command")) == ActionJson.canonical(command)) { "The day action identity has different intent." }
+                return@withTransaction NativeCausalAdmission(tracking.toString(), outcome.toString(), true, state.getLong("generation"))
+            }
+            val generation = state.getLong("generation") + 1
+            require(generation <= ActionJson.MAX_SAFE_INTEGER) { "Local causal generation exhausted." }
+            admissions.put(captured.actionId, JSONObject().put("command", command).put("sequence", generation))
+            pending.put(captured.actionId, command)
+            state.put("generation", generation)
+            if (captured.kind == "select") state.put("counterDaySelection", JSONObject().put("actionId", captured.actionId)
+                .put("requestedDay", captured.day).put("status", if (outcome.getBoolean("baselinePending")) "WAITING_BASELINE" else "PROJECTED"))
+            val updated = CausalAccountEntity(accountId, state.toString())
+            NativeCausalJournal.validate(updated)
+            check(accounts.update(updated) == 1) { "The causal account disappeared." }
+            NativeCausalAdmission(tracking.toString(), outcome.toString(), false, generation)
         }
     }
 }

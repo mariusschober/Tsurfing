@@ -140,6 +140,18 @@ class GoalflowRepository(
         return result
     }
 
+    suspend fun admitCausalCounter(userId: String, intent: NativeCounterIntent): NativeCausalAdmission {
+        val result = causalStore.admitCounter(userId, intent)
+        onMutation()
+        return result
+    }
+
+    suspend fun admitCausalCounterDay(userId: String, intent: NativeCounterDayIntent): NativeCausalAdmission {
+        val result = causalStore.admitCounterDay(userId, intent)
+        onMutation()
+        return result
+    }
+
     val taskStream: Flow<List<GoalflowTask>> = tasks.observeAll().map { rows -> rows.map(::toDomain) }
     val goalStream: Flow<List<GoalflowGoal>> = goals.observeAll().map { rows -> rows.map(::toDomain) }
     val habitStream: Flow<List<GoalflowHabit>> = habits.observeAll().map { rows -> rows.map(::toDomain) }
