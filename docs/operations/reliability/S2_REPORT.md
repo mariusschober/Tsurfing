@@ -564,3 +564,14 @@ The legacy email lookup now permits hydration only when there is no source evide
 Validation: full release exit 0, 673 tests in 101 files; combined S1/S2 Chromium/WebKit journeys exit 0, 66 tests; final production build/artifact checks exit 0. Four sanitized logs and hashes are in the JSON checkpoint.
 
 Server enrollment must still reconcile preserved local absence with verified history. Causal scheduling, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete. No SQL/native changes or reruns, installation, live configuration or deployment. Overall S2 remains **BLOCKED**, with no S3 handoff.
+
+
+## Enrolled Web cloud-queue checkpoint
+
+`78212f107d26dbf0ac10fea3174f54f177c565a2`: **PASS_LOCAL**. The cloud loop now discovers the existing epoch, verifies bounded history, drains ordinary predecessors and sends saved day/focus/counter/completion operations. Focus follows actual parents; attempted request bytes and exact receipt validation remain intact. Durable UI admissions wake synchronization, and pending causal actions prevent a synced status.
+
+An ordinary tracking pull racing a local or peer action retains its cursor and retries after verified history refresh. Three refresh attempts bound the loop; continued mismatch remains retryable without installing unverified protected fields. Five synthetic HTTP tests cover serial +300/+120 focus extensions, counter receipt loss/recovery, peer and local pull races, and an unverified tracking projection. These exercise real IndexedDB coordinators and serializers, not a hosted database.
+
+Validation: full release exit 0, 678 tests in 102 files; existing S1/S2 Chromium/WebKit journeys exit 0, 66 tests; final production build/artifact checks exit 0. Three sanitized logs and hashes are recorded in the JSON checkpoint. Corrected fixture/type/path failures and the initial sandbox loopback failure are recorded separately.
+
+Enrollment, new-account history reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete. No SQL/native changes or reruns, installation, live configuration or deployment. Overall S2 remains **BLOCKED**, with no S3 handoff.

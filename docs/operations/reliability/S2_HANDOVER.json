@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. New local UUID accounts can hydrate behind an existing causal fence while preserving prior tracking absence and waiting for a verified baseline. Server enrollment/history reconciliation, causal scheduling, non-focus completion concurrency, native integration and recovery remain incomplete.",
+  "acceptanceReason": "Implementation continues. Enrolled Web accounts now drain causal queues and recover tracking pull races through verified history. Enrollment, new-account history reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -2417,6 +2417,79 @@
         "Local initialization is not server enrollment; preserved initial absence still needs verified server-history reconciliation.",
         "Cloud scheduling, native integration, non-focus completion concurrency and full recovery/mixed-version acceptance remain open.",
         "No SQL/native change, PostgreSQL/native rerun, installation, live configuration or deployment."
+      ]
+    },
+    {
+      "commit": "78212f107d26dbf0ac10fea3174f54f177c565a2",
+      "scope": "Enrolled Web causal queue scheduling and concurrent ordinary pull recovery",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "services/causalProjection.ts",
+        "services/causalSync.ts",
+        "services/cloudSync.causal.test.ts",
+        "services/cloudSync.ts",
+        "services/storage.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-WEB-CAUSAL-CLOUD-QUEUE",
+          "disposition": "Connected saved action queues to the cloud loop with verified history and ordinary predecessor receipts."
+        },
+        {
+          "id": "S2-CAUSAL-PULL-RACE",
+          "disposition": "Bounded history refresh and exact cursor retention recover peer/local action races without installing unverified tracking fields."
+        }
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 678,
+          "testFiles": 102
+        },
+        {
+          "command": "S1_INCLUDE_EXISTING=1 npx playwright test --config playwright.s1.config.ts s1-local-storage.spec.ts s2-storage-fence.spec.ts",
+          "exitCode": 0,
+          "tests": 66,
+          "platforms": [
+            "Chromium",
+            "WebKit"
+          ]
+        },
+        {
+          "command": "npm run build",
+          "exitCode": 0
+        },
+        {
+          "command": "git diff --check",
+          "exitCode": 0
+        }
+      ],
+      "evidence": [
+        {
+          "path": "evidence/s2-cloud-queue-release.log",
+          "sha256": "41fabd8d4c8db01791710841d9f5c6c9385a9529a9820eb79fd0a050cf2c7698"
+        },
+        {
+          "path": "evidence/s2-cloud-queue-browser.log",
+          "sha256": "5e4ec5afbda7abfb05ff61a552068601116124bee9567c4d39855163b97143e3"
+        },
+        {
+          "path": "evidence/s2-cloud-queue-production-build.log",
+          "sha256": "227fc999d43c90f39deeaf8ccc88c5e189de61c281b8c07912a5f310e7849a64"
+        }
+      ],
+      "failedAttempts": [
+        "Initial synthetic conflict page omitted hasMore; corrected fixture without relaxing validation.",
+        "Sandbox npm test failed because loopback listeners were denied; full release passed with local test-server access.",
+        "First release attempt found an unknown-typed test assertion; narrowed through normalizeSyncMeta.",
+        "Initial browser command matched nonexistent tests/ paths and found no tests; corrected filename filter."
+      ],
+      "limitations": [
+        "Five causal cloud-loop tests use real IndexedDB coordinators and transport serializers with synthetic HTTP/history responses; they do not prove hosted PostgreSQL convergence.",
+        "The existing browser regressions prove local storage/UI behavior, not hosted causal network acceptance.",
+        "Server enrollment, new-account baseline reconciliation, native queues, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain open.",
+        "No SQL/native changes or reruns, installation, live configuration or deployment."
       ]
     }
   ],
