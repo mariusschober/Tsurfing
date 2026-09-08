@@ -47,6 +47,7 @@ const identity = (intent: CompletionIntent, entity: string) => uuidv5(`completio
 const memberMeaning = ({ baseServerVersion: _base, ...member }: Member) => member;
 
 export function assertCompletionCapturesMaterialized(accountId: string, meta: SyncMeta) {
+  if (Object.keys(meta.localState?.blocked ?? {}).length) throw new Error('Retained local capture reviews must be resolved before completion. Final notes remain available to retry.');
   if (typeof window === 'undefined') return;
   for (const store of [...stores, 'tracking', 'sync']) {
     const raw = window.localStorage.getItem(`goalflow_fallback_${store}_${accountId}`);

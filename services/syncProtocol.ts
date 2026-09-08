@@ -107,6 +107,9 @@ export interface StagedLocalTransaction {
   order: number;
   createdAt: string;
   admission?: { kind: 'focus-transition'; sessionId: string | null; taskId: string | null };
+  /** Set only on new captures by clients that understand the causal boundary.
+   * Never added while replaying an older capture. Not a security credential. */
+  captureProtocol?: 'causal-compatible-v1';
 }
 
 export interface PushResult {

@@ -7,6 +7,9 @@ import { synchronizeCloudOnce } from '../../services/cloudSync';
 import { admitLocalCounter } from '../../services/causalCounterCoordinator';
 import { admitLocalFocus } from '../../services/causalFocusCoordinator';
 import { fenceLegacyTracking } from '../../services/causalStorage';
+import { fenceLegacyBusinessStores } from '../../services/causalBusinessStorage';
+import { bindCausalCapability } from '../../services/causalEnrollment';
+import { admitLocalCompletion, prepareCompletionRequest, commitCompletionReceipt } from '../../services/causalCompletionCoordinator';
 import { reconciliationCandidate } from '../../services/syncProtocol';
 
 export const installS1Harness = (root: Root) => {
@@ -14,6 +17,11 @@ export const installS1Harness = (root: Root) => {
   Object.assign(window, {
     __s1Storage: storageService,
     __s1Fence: fenceLegacyTracking,
+    __s2FenceBusiness: fenceLegacyBusinessStores,
+    __s2BindCapability: bindCausalCapability,
+    __s2AdmitCompletion: admitLocalCompletion,
+    __s2PrepareCompletion: prepareCompletionRequest,
+    __s2CommitCompletion: commitCompletionReceipt,
     __s1AdmitFocus: admitLocalFocus,
     __s1AdmitCounter: admitLocalCounter,
     __s1Sync: synchronizeCloudOnce,

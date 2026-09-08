@@ -180,7 +180,7 @@ for (const phase of ['paused', 'completed']) test(`A: empty production pull afte
       fetch: async (input: any) => {
         paths.push(String(input));
         if (String(input).includes('/pull')) return Response.json({ records: [], nextCursor: 100, hasMore: false });
-        if (String(input).endsWith('/conflicts')) return Response.json({ conflicts: [] });
+        if (String(input).endsWith('/conflicts/page')) return Response.json({ conflicts: [], hasMore: false, nextAfter: null });
         throw new Error('Unexpected synthetic request');
       }
     }, { seedLocalData: false });
