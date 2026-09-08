@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { assertCausalHistoryEntry } from './causalHistoryProtocol';
 import { stableJson } from './syncProtocol';
+import { validateCounterBaseline } from '../src/domain/counterLedger';
+import { initialFocusJournal } from '../src/domain/causalFocus';
 
 const cutover = z.object({
   schemaVersion: z.literal(2),
@@ -14,11 +16,21 @@ const cutover = z.object({
 export type CausalCutoverOperation = z.infer<typeof cutover>;
 
 /** A compare-and-establish request, never a replacement tracking snapshot.
- * Preserve the payload verbatim; the database validates its baseline and focus. */
+ * Validate baseline shape without changing the payload; the database proves
+ * that this is still the canonical tracking record at the supplied version. */
 export function parseCausalCutover(accountId: string, input: unknown): CausalCutoverOperation {
   const operation = cutover.parse(input);
   if (operation.accountId !== accountId) {
     throw new z.ZodError([{ code: 'custom', path: ['accountId'], message: 'Invalid cutover account.' }]);
+  }
+  try {
+    const payload = operation.expectedTrackingPayload;
+    validateCounterBaseline({ schemaVersion: 1, baselineId: operation.cutoverId, accountId,
+      day: payload.date, counts: { planViewCount: payload.planViewCount, dailyPostponeCount: payload.dailyPostponeCount },
+      evidenceIds: [operation.cutoverId] });
+    initialFocusJournal(accountId, payload.focusSession);
+  } catch (_) {
+    throw new z.ZodError([{ code: 'custom', path: ['expectedTrackingPayload'], message: 'Invalid cutover baseline.' }]);
   }
   return operation;
 }

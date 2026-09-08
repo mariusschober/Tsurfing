@@ -48,4 +48,9 @@ it('refuses absent tracking, fabricated creation versions, unknown envelope fiel
     { accountId: cutoverId }, { force: true }]) {
     expect(() => parseCausalCutover(accountId, { ...operation, ...change })).toThrow();
   }
+  for (const field of [{ planViewCount: -1 }, { dailyPostponeCount: '3' }, { date: '2026-02-30' },
+    { focusSession: { phase: 'active' } }]) {
+    expect(() => parseCausalCutover(accountId, { ...operation,
+      expectedTrackingPayload: { ...operation.expectedTrackingPayload, ...field } })).toThrow('Invalid cutover baseline');
+  }
 });

@@ -17,6 +17,36 @@ async function endpoint(rpc:any) {
   return `http://127.0.0.1:${(server.address() as any).port}/sync/conflicts/reconcile`;
 }
 describe('automatic sync API boundary',()=>{
+  it('binds direct and staged enrollment to the owner and preserves changed-baseline review', async () => {
+    const epoch = '33333333-3333-4333-8333-333333333333';
+    const payload = { date: '2026-09-08', planViewCount: 27, dailyPostponeCount: 3 };
+    const operation = { schemaVersion: 2, accountId: owner, cutoverId: epoch,
+      expectedTrackingServerVersion: 7, expectedTrackingPayload: payload };
+    const receipt = { schemaVersion: 2, operation, epoch, projectionRevision: 0,
+      baseline: { schemaVersion: 1, baselineId: epoch, accountId: owner, day: payload.date,
+        counts: { planViewCount: 27, dailyPostponeCount: 3 }, evidenceIds: [epoch] },
+      record: { user_id: owner, entity_type: 'tracking', entity_id: 'singleton', version: 1, server_version: 7,
+        device_id: 'test', updated_at: '2026-09-08T10:00:00.000Z', deleted_at: null, payload } };
+    const rpc = vi.fn(async (name: string) => ({ data: name === 'goalflow_read_staged_reconciliation_v1' ? operation : receipt, error: null as any }));
+    const url = (await endpoint(rpc)).replace('/conflicts/reconcile', '/causal-cutover');
+    const send = (body: unknown, staged = false) => fetch(url + (staged ? '-staged' : ''), {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const direct = await send(operation);
+    expect(direct.status).toBe(200); expect(direct.headers.get('cache-control')).toBe('no-store');
+    expect(await direct.json()).toEqual(receipt);
+    const upload = await prepareStagedBody(JSON.stringify(operation), true);
+    expect((await send(upload.manifest, true)).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('goalflow_causal_cutover_v2', { target_user_id: owner, operation });
+    rpc.mockClear();
+    expect((await send({ ...operation, accountId: epoch })).status).toBe(400);
+    expect(rpc).not.toHaveBeenCalled();
+    for (const code of ['22023', '40001', '40P01']) {
+      rpc.mockResolvedValue({ data: null as any, error: { code, message: 'private synthetic diagnostic' } });
+      const response = await send(operation);
+      expect(response.status).toBe(code === '40P01' ? 503 : 409);
+      expect(await response.text()).not.toContain('private synthetic');
+    }
+  });
   it('binds staged completion to the authenticated owner and validates every member receipt', async () => {
     const epoch = '33333333-3333-4333-8333-333333333333', sessionId = '44444444-4444-4444-8444-444444444444';
     const actionId = '55555555-5555-4555-8555-555555555555';
