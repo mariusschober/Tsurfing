@@ -3953,6 +3953,86 @@
         "macOS causal integration",
         "Cross-client acceptance"
       ]
+    },
+    {
+      "id": "native-task-completion",
+      "sourceCommit": "2bf78ded9ec209da925d880d47564abe81da55c0",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowRepository.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/ui/GoalflowViewModel.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/GoalflowRepositoryCausalUiTest.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/ui/GoalflowViewModelCausalTest.kt"
+      ],
+      "verification": [
+        {
+          "command": "android-native gradle testProductionDebugUnitTest lintProductionDebug assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": 231,
+          "passed": 230,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "passed": 731,
+          "files": 108
+        },
+        {
+          "command": "npm run test:migrations:postgres (empty + upgrade)",
+          "exitCode": 0
+        },
+        {
+          "command": "xcodebuild test GoalflowMac Debug platform=macOS CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0,
+          "tests": 226,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0,
+          "checked": 24
+        },
+        {
+          "command": "npm run verify:migration-hashes",
+          "exitCode": 0,
+          "migrations": 32
+        },
+        {
+          "command": "npm run verify:room-hashes",
+          "exitCode": 0,
+          "schemas": 9
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-task-completion-android.log",
+          "sha256": "a68405649c9be1b30f55c43cfafcad25f035b7589d7ad35648b4b76d5eb0b136"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-task-completion-release.log",
+          "sha256": "4fcb0786babbdd81e32dbe4a3e4e3a8746bf842e48cea439d03d5bacc6d35b2a"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-task-completion-postgres.log",
+          "sha256": "bea25f67a75a60ff2081b165e758e5272c4057cee9ab35c80cdaf2fea695837c"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-task-completion-macos.log",
+          "sha256": "7c5cc16827c0ef7169718f83e0bacc6a6b09de933722f5677143fe1624723e7d"
+        }
+      ],
+      "compatibility": "No schema, migration, identifier, wire or receipt-contract change. Legacy unfenced task completion unchanged. Task-only members use ordinary transport; v2 completion path untouched.",
+      "remaining": [
+        "Rejected/conflicting native completion recovery",
+        "Divergent legacy ambiguity import",
+        "Nonempty-restore reconciliation",
+        "macOS causal integration",
+        "Cross-client acceptance"
+      ]
     }
   ],
   "findings": [
