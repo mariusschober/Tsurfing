@@ -1,0 +1,6 @@
+
+> tsurfing@0.4.0-beta.1 test:migrations:postgres
+> bash scripts/test-postgres-migrations.sh
+
+createdb: error: connection to server at "127.0.0.1", port 55437 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?

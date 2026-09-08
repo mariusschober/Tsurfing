@@ -1322,6 +1322,81 @@
         "Hosted PostgREST and cross-client live completion NOT_MEASURED"
       ],
       "permittedNextStage": null
+    },
+    {
+      "commit": "72dd0a88b9b94e1c30c8a1522a4ca06f8319df0e",
+      "scope": "Completion receipt operation scope and publication order",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "services/causalCompletionProtocol.ts",
+        "services/causalCompletionProtocol.test.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-COMPLETION-RECEIPT-ORDER",
+          "disposition": "Fixed and regression tested"
+        }
+      ],
+      "commands": [
+        {
+          "command": "npx vitest run services/causalCompletionProtocol.test.ts",
+          "exitCode": 0,
+          "testsPassed": 8
+        },
+        {
+          "command": "npm run verify:release",
+          "environment": "permitted local loopback",
+          "exitCode": 0,
+          "testsPassed": 566,
+          "testFilesPassed": 92
+        },
+        {
+          "command": "PATH=/opt/homebrew/opt/postgresql@17/bin:$PATH PGHOST=127.0.0.1 PGPORT=55437 PGUSER=schober npm run test:migrations:postgres",
+          "exitCode": 0,
+          "paths": [
+            "empty",
+            "upgrade"
+          ]
+        }
+      ],
+      "failedAttempts": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 1,
+          "reason": "Sandbox denied local listeners",
+          "testsFailed": 59,
+          "testsPassed": 507
+        },
+        {
+          "command": "npm run test:migrations:postgres",
+          "exitCode": 1,
+          "reason": "Sandbox denied loopback database connection"
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Existing SQL receipt publication order; no legacy receipt changes. Rollout remains dormant.",
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-completion-receipt-order-release.log",
+          "sha256": "7dd253b24ec81e3e9ad43872bda045a52696ca34c046515570495aa08c51d69a"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-completion-receipt-order-release-permitted.log",
+          "sha256": "b4aa5e89ef48d5cb0837f80c6cdb00eaedb60f0e9e9408da9e2854b4840dc213"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-completion-receipt-order-postgres.log",
+          "sha256": "818ea36db5c8e2b6ffe93a38190318d079a1c9287272f43b9ca853a4a88d4d94"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-completion-receipt-order-postgres-permitted.log",
+          "sha256": "56fda6a03c044cd7b6a643d87c7c71a7da658266280607f411817f4dbd5a8ace"
+        }
+      ],
+      "blockers": [
+        "Client completion coordinator and native causal journals remain incomplete"
+      ],
+      "permittedNextStage": null
     }
   ],
   "findings": [
