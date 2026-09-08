@@ -4258,6 +4258,52 @@
         "Nonempty-restore reconciliation",
         "Cross-client acceptance"
       ]
+    },
+    {
+      "id": "macos-counter-admission",
+      "sourceCommit": "ab3989f74d6d2913684f623c1dc0452d81873172",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "macos-native/GoalflowMac/Sync/CausalJournal.swift",
+        "macos-native/GoalflowMacTests/CausalJournalTests.swift"
+      ],
+      "verification": [
+        {
+          "command": "xcodebuild test -project macos-native/GoalflowMac.xcodeproj -scheme GoalflowMac -configuration Debug -destination platform=macOS CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0,
+          "tests": 240,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "bash macos-native/scripts/verify-project-sources.sh",
+          "exitCode": 0
+        },
+        {
+          "command": "VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "passed": 732,
+          "files": 108
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-macos-counter-tests.log",
+          "sha256": "6cc00b97e500ad6870f34013bc0c39f010f102e213f605dc087a8b7151939065"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-macos-counter-release.log",
+          "sha256": "88f1603632e8ea9fe99bdf9d94fa990c4b3e4b0a8ef62c454e3839bf77b7cf7c"
+        }
+      ],
+      "compatibility": "Additive journal methods + tests. No schema, migration, identifier, wire or receipt-contract change. Legacy macOS sync paths untouched.",
+      "remaining": [
+        "macOS causal transport, receipts, history, projection, enrollment",
+        "macOS completion and UI activation",
+        "Divergent legacy ambiguity import",
+        "Nonempty-restore reconciliation",
+        "Cross-client acceptance"
+      ]
     }
   ],
   "findings": [
