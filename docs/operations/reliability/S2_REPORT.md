@@ -2,7 +2,7 @@
 
 Stage acceptance: **BLOCKED — implementation continues. S3 is not permitted.**
 
-Latest tested source: `c8465c4012b9120a777457d03665014c1234c659`. Native predecessor receipt retention: **PASS_LOCAL** (198 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release verification passed). Local causal completion admission/send, UI/scheduler activation, macOS and legacy recovery remain incomplete. S3 remains blocked.
+Latest tested source: `d9be0ac007d4107c543fb3cf18ef692eaa9c924f`. Native local causal completion admission: **PASS_LOCAL** (206 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release verification passed). Completion request/send/retirement integration, UI/scheduler activation, macOS and legacy recovery remain incomplete. S3 remains blocked.
 
 S1's tested commit `09245261b6174ec878f0296ca61682c603f54304` is integrated.
 S1.2 correction `262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d` is integrated;
@@ -707,3 +707,13 @@ Native local causal completion admission/member reservation/send remains unfinis
 `c8465c4012b9120a777457d03665014c1234c659` — **PASS_LOCAL**. Ordinary acknowledgments now retain the original queued payload and full parsed receipt JSON in the account journal before retiring the outbox row, within the same Room transaction. Account, mutation, device, entity, versions, payload and timestamps must match. A changed in-flight queue row, mismatched parsed/full server version, or missing receipt fails closed. Duplicate acknowledgments preserve the first proof; encrypted backups retain it. Four regression tests cover these conditions and rollback of retirement/rebasing when receipt persistence fails.
 
 The explicit Homebrew Java 21 run passed 198 tests with one hosted skip, lint and debug assembly; the initial system Java selection failed before compilation. Web release verification passed 719 tests. Room hashes (9), identifiers (24) and diff checks passed. No migration, installation, live write or deployment. Exact commands, hashes and artifacts are in the handover. This supplies predecessor evidence for future native completion reservations; it does not implement local causal completion admission.
+
+## Native atomic completion admission checkpoint
+
+`d9be0ac007d4107c543fb3cf18ef692eaa9c924f`: **PASS_LOCAL** for local Android completion admission. One Room transaction derives the actual focus parent, preserves exact final notes (including explicit empty notes), applies task/statistics/progress/event and linked goal/habit effects, and reserves their original mutation identities. It retains affected preimages and explicit day/timezone attribution. A failed commit rolls back every effect, outbox change and metadata update. Duplicate intent IDs reuse the admission; a later terminal tap does not award again.
+
+Existing attempted predecessors remain unchanged. Subsequent edits depend on the completion member, and sequential offline completions retain their shared-statistics dependency. Exact ordinary receipt evidence resolves a predecessor base; attempted request fingerprints cannot be rebased. Ordinary remote snapshots cannot replace a reserved completion effect. The journal rejects missing required effects and final-note mismatches. Seven new Room tests prove these boundaries; the additional receipt resolver test covers rebasing and evidence mismatches.
+
+Verification: 207 native tests, 206 passed and one hosted test skipped; native lint and debug APK passed. Release verification passed with 719 tests in 105 files. Nine Room hashes and 24 identifiers passed. Initial focused test compilation failed on an incorrect test-only updateTask signature, then passed after correction. Sanitized logs and APK SHA-256 are in the JSON checkpoint. No schema migration, installed-app replacement, live write, deployment or CI acceptance is claimed.
+
+Remaining: wire completion request preparation, staged send and exact receipt/history retirement into the native action pass. Completion is deliberately excluded from the ordinary focus endpoint while that integration remains unfinished. This is local admission evidence, not end-to-end native completion acceptance.

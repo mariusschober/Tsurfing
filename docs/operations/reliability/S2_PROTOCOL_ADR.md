@@ -312,3 +312,9 @@ Exact history bodies remain the receipt authority. Existing native codecs define
 ### Native ordinary predecessor evidence
 
 Causal-enabled Android accounts retain each exact queued predecessor request and complete parsed accepted receipt in `legacyPushReceipts` atomically with ordinary outbox retirement. Validation binds immutable account and request identity, payload, device, versions and timestamps; the first retained proof is immutable. Completion reservation code can later resolve dependencies from this evidence rather than infer acceptance from the current entity version or cursor. This checkpoint does not yet activate native completion admission.
+
+### Native atomic completion admission and reservation
+
+The existing Room task completion transaction now has an explicit causal admission entrypoint. Immutable intent details include local day, timezone, duration, flow state and exact final notes. The focus parent is read inside the same transaction that derives all required business effects. Generated unattempted member mutations are reserved in `completionAdmissions` rather than sent as separate snapshots; original affected preimages and predecessor requests remain retained. Ordinary previously attempted rows are never rewritten. Missing or malformed required effects reject the entire transaction.
+
+Later ordinary edits wait on the reserved member ID. Another completion can depend on the earlier completion’s member. The predecessor receipt resolver permits base assignment only for a captured unattempted dependency, and validates exact retained request meaning and account. An already fixed or attempted transport dependency is immutable. Completion request preparation and the staged send/receipt retirement integration still need implementation; ordinary focus sending explicitly excludes these admissions. The normal UI remains on its existing path until native rollout integration is complete.

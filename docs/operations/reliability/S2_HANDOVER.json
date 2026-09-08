@@ -3,7 +3,7 @@
   "status": "BLOCKED",
   "acceptanceReason": "Implementation continues. Web automatic enrollment and fresh-account server initialization are locally verified. Divergent legacy reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
-  "finalCommit": "c8465c4012b9120a777457d03665014c1234c659",
+  "finalCommit": "d9be0ac007d4107c543fb3cf18ef692eaa9c924f",
   "prerequisites": [
     {
       "stageId": "S1",
@@ -3444,6 +3444,86 @@
         "macOS integration, divergent legacy recovery and comprehensive cross-client acceptance remain incomplete."
       ],
       "permittedNextStage": "Continue S2; S3 blocked"
+    },
+    {
+      "commit": "d9be0ac007d4107c543fb3cf18ef692eaa9c924f",
+      "baselineCommit": "b4a8c99f4d9ad6cb8fe4c0046e066a927ccf1966",
+      "scope": "Atomic local Android causal completion admission, effect reservations and exact predecessor resolution",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowRepository.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalRequestStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCompletionAdmissionEvidence.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeLegacyReceiptEvidence.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalCompletionAdmissionTest.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeLegacyReceiptEvidenceTest.kt"
+      ],
+      "findingIds": [
+        "S2-NATIVE-COMPLETION-ADMISSION"
+      ],
+      "commands": [
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": {
+            "passed": 206,
+            "failed": 0,
+            "skipped": 1
+          },
+          "skipped": "hostedBrowserRecordConvergesThroughProductionTransport"
+        },
+        {
+          "command": "env VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "tests": {
+            "passed": 719,
+            "failed": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "command": "npm run verify:room-hashes; npm run verify:identifiers; git diff --check",
+          "exitCode": 0,
+          "checked": [
+            9,
+            24
+          ]
+        },
+        {
+          "command": "git fetch --all --tags",
+          "exitCode": 0
+        },
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest --tests '*NativeCausalCompletionAdmissionTest' --offline -PgoalflowSkipSigning=true",
+          "exitCode": 1,
+          "reason": "Initial test compilation used the wrong updateTask signature; corrected to SchedulePrecision.DAY and captured day before final native gates."
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Additive completionAdmissions inside the existing private causal account JSON. No Room or SQL schema change. Existing completeTask/completeFocus remain unchanged by default. Completion is excluded from ordinary focus sending until completion request/receipt transport is integrated. Only newly generated unattempted effects move from the ordinary outbox into the same transaction\u2019s durable admission.",
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-completion-admission-android.log",
+          "sha256": "eac15e2a2eebe001a87208c76b05f0d4803f1595417e2721211d6740396767d2"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-completion-admission-release.log",
+          "sha256": "b6f92c9a266aee012dda0cf7241b64dbe1e47ca8aa6830afc94468930cce5c5a"
+        }
+      ],
+      "testIdentity": "207 native Robolectric/Room tests: 206 passed, one hosted test skipped. Seven new completion admission tests cover exact and empty notes, attempted predecessors, atomic rollback, duplicate taps/retries, backup, six effects, missing-proof rejection, serial offline completions and remote cursor rollback. One additional predecessor-resolution test brings that fixture to five cases.",
+      "buildArtifact": {
+        "path": "android-native/app/build/outputs/apk/production/debug/app-production-debug.apk",
+        "sha256": "29c03f768ba8ec20895ec3a2bb2be260c8e9130a6b38515eb2a55ec6413b7802",
+        "kind": "unsigned production-debug APK; not installed"
+      },
+      "blockers": [
+        "Completion request preparation, staged send, accepted local-member retirement and receipt/history application integration remain incomplete.",
+        "Normal scheduler and UI activation remain incomplete.",
+        "macOS integration, divergent legacy recovery and comprehensive cross-client acceptance remain incomplete."
+      ],
+      "permittedNextStage": "Continue S2; S3 blocked"
     }
   ],
   "findings": [
@@ -3478,6 +3558,10 @@
     {
       "id": "S2-NATIVE-COMPLETION-PROJECTION",
       "disposition": "Replaced the blanket native completion-history guard with atomic member application and version/pending-edit checks. Recovery reviews retain exact history references, while failed business or tracking writes roll back all members and metadata."
+    },
+    {
+      "id": "S2-NATIVE-COMPLETION-ADMISSION",
+      "disposition": "PASS_LOCAL: actual focus parent, exact final notes, task/reward/event effects, original preimages and stable member reservations share one Room commit. Old attempted predecessors remain unchanged. Later edits wait behind the reserved member. Transport integration remains incomplete."
     }
   ],
   "migrations": [
@@ -3682,7 +3766,9 @@
     "evidence/s2-account-storage-migrations.log",
     "evidence/s2-account-storage-migration-hashes.log",
     "evidence/s2-account-storage-room-hashes.log",
-    "evidence/s2-account-storage-identifiers.log"
+    "evidence/s2-account-storage-identifiers.log",
+    "docs/operations/reliability/evidence/s2-native-completion-admission-android.log",
+    "docs/operations/reliability/evidence/s2-native-completion-admission-release.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"
