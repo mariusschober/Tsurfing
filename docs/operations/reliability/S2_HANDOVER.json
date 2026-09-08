@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Fenced Web planning visits and reschedules now admit counter/business effects atomically; unknown-baseline planning effects settle with verified history. Causal scheduling/enrollment, non-focus completion concurrency, native integration and recovery remain incomplete.",
+  "acceptanceReason": "Implementation continues. New local UUID accounts can hydrate behind an existing causal fence while preserving prior tracking absence and waiting for a verified baseline. Server enrollment/history reconciliation, causal scheduling, non-focus completion concurrency, native integration and recovery remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -2341,6 +2341,82 @@
         "Observed-count penalty semantics are retained; this is not a new policy ordered by later server receipt arrival.",
         "Causal scheduling/enrollment, non-focus completion concurrency, native integration and full recovery/mixed-version acceptance remain unfinished.",
         "No SQL/native source change, PostgreSQL/native rerun, installation, live configuration or deployment."
+      ]
+    },
+    {
+      "commit": "9564d6147c5f7e3b3a6657bffd89dc6594ffc612",
+      "scope": "New local account hydration behind the database-wide causal fence",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "docs/operations/reliability/S2_PROTOCOL_ADR.md",
+        "services/causalStorage.ts",
+        "services/storage.causal.test.ts",
+        "services/storage.ts",
+        "tests/browser/s1Harness.ts",
+        "tests/e2e/s2-storage-fence.spec.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-FENCED-NEW-ACCOUNT",
+          "disposition": "Fixed locally: atomic tracking/default/day admission preserves original absence and does not invent a server baseline."
+        },
+        {
+          "id": "S2-EMPTY-LEGACY-LOOKUP",
+          "disposition": "Fixed locally: an empty legacy email lookup is a verified no-op; retained account data and legacy imports still require explicit recovery."
+        }
+      ],
+      "commands": [
+        {
+          "command": "npx vitest run services/storage.causal.test.ts",
+          "exitCode": 0,
+          "tests": 15,
+          "testFiles": 1
+        },
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 673,
+          "testFiles": 101
+        },
+        {
+          "command": "S1_INCLUDE_EXISTING=1 npx playwright test --config playwright.s1.config.ts tests/e2e/s1-local-storage.spec.ts tests/e2e/s2-storage-fence.spec.ts",
+          "exitCode": 0,
+          "tests": 66,
+          "platforms": [
+            "Chromium",
+            "WebKit"
+          ]
+        },
+        {
+          "command": "npm run build",
+          "exitCode": 0
+        }
+      ],
+      "evidence": [
+        {
+          "path": "evidence/s2-new-account-focused-final.log",
+          "sha256": "ee29aece186a858fb66b26097727172f2fe5703f3563d616419113f3a43e096b"
+        },
+        {
+          "path": "evidence/s2-new-account-release.log",
+          "sha256": "04b89c26db6e4b78a3d26cb47b2be77c2277b8b1024afe9af872fb4508e6e132"
+        },
+        {
+          "path": "evidence/s2-new-account-browser-combined.log",
+          "sha256": "01cdae331620ce4bb88c37467027a95b43bc05bc4908f810320d4bc244273f70"
+        },
+        {
+          "path": "evidence/s2-new-account-production-build.log",
+          "sha256": "9786bb9eb4b05e11d5ed124293b046d60d1331e2e802e3c4f1d5aacb1b406547"
+        }
+      ],
+      "failedAttempts": [
+        "Initial npm run lint exited 2 on generic default-value narrowing; corrected with an unknown-typed local before successful lint and release checks."
+      ],
+      "limitations": [
+        "Local initialization is not server enrollment; preserved initial absence still needs verified server-history reconciliation.",
+        "Cloud scheduling, native integration, non-focus completion concurrency and full recovery/mixed-version acceptance remain open.",
+        "No SQL/native change, PostgreSQL/native rerun, installation, live configuration or deployment."
       ]
     }
   ],

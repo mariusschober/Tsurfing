@@ -553,3 +553,14 @@ The sixth observed visit warns, later visits preserve off/gentle/classic penalti
 Validation: full release exit 0, 668 tests in 101 files; combined S1/S2 real Chromium/WebKit journeys exit 0, 64 tests; final production build/artifact checks exit 0. Four sanitized logs/hashes and iterative failures are recorded in the JSON handover.
 
 Causal scheduling/enrollment, non-focus completion concurrency, native integration and comprehensive recovery/mixed-version acceptance remain open. No SQL/native changes or reruns, installation, live configuration or deployment. S2 remains **BLOCKED** and S3 is not permitted.
+
+
+## Fenced new-account initialization checkpoint
+
+`9564d6147c5f7e3b3a6657bffd89dc6594ffc612`: **PASS_LOCAL**. A new local UUID account can initialize behind an existing database-wide fence. Tracking authority, mirror and one day-selection intent commit atomically; original tracking absence is retained, and the account waits for a verified baseline. Recorded absence, orphan mirrors, retained copies, nonzero defaults and legacy imports are never replaced by defaults.
+
+The legacy email lookup now permits hydration only when there is no source evidence to migrate. Actual rebinding remains blocked. A real-browser journey creates a second UUID account with a distinct synthetic email, adds a task and captures planning/focus offline; the first account's tasks and metadata remain unchanged. Unit tests also cover concurrent initializers, mirror-write rollback and retained-source guards.
+
+Validation: full release exit 0, 673 tests in 101 files; combined S1/S2 Chromium/WebKit journeys exit 0, 66 tests; final production build/artifact checks exit 0. Four sanitized logs and hashes are in the JSON checkpoint.
+
+Server enrollment must still reconcile preserved local absence with verified history. Causal scheduling, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete. No SQL/native changes or reruns, installation, live configuration or deployment. Overall S2 remains **BLOCKED**, with no S3 handoff.
