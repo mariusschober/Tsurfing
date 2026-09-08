@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Enrolled Web accounts now drain causal queues and recover tracking pull races through verified history. Enrollment, new-account history reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
+  "acceptanceReason": "Implementation continues. Known-version Web baselines now enroll automatically with preserved audit bindings. Absent/divergent baseline reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -2546,6 +2546,47 @@
         "Native integration, non-focus completion concurrency and comprehensive legacy recovery/mixed-version acceptance remain incomplete.",
         "No SQL changes, native or browser reruns, installation, live configuration or deployment."
       ]
+    },
+    {
+      "commit": "915631c423720703a237a70c8b3dc41569c690d0",
+      "scope": "Known-version automatic enrollment and receipt-backed baseline binding",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "services/causalBaselineBinding.ts",
+        "services/causalCounterCoordinator.ts",
+        "services/causalCounterDayCoordinator.ts",
+        "services/causalEnrollment.ts",
+        "services/causalProjection.ts",
+        "services/causalStorage.ts",
+        "services/causalSync.ts",
+        "services/cloudSync.causal.test.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-AUTOMATIC-BASELINE-BINDING",
+          "disposition": "Preserve exact original baseline and canonical receipt separately; reject historical evidence as new deltas; recover lost enrollment responses from verified revision-zero history."
+        }
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 700,
+          "testFiles": 103,
+          "evidence": "evidence/s2-baseline-binding-release.log",
+          "sha256": "ee60094c46ac517870042d03f3e14910a74247fc043b4fc7b2fefb4c72717312"
+        }
+      ],
+      "failedAttempts": [
+        "Initial focused enrollment cases failed on baseline identity mismatch; resolved with explicit audit binding.",
+        "Sandbox npm test: exit 1, 640 passed/60 failed, 9 errors; loopback listen EPERM. Full release rerun with loopback permission passed."
+      ],
+      "limitations": [
+        "HTTP responses are synthetic; hosted enrollment is not proven.",
+        "Absent or divergent baseline reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
+        "No SQL changes, native/browser reruns, installation, live configuration or deployment."
+      ],
+      "permittedNextStage": null
     }
   ],
   "findings": [

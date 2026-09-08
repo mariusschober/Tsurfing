@@ -586,3 +586,12 @@ Direct and staged authenticated HTTP paths call the existing compare-and-establi
 Validation: full release exit 0, 697 tests in 103 files, including production build and artifact checks. The JSON handover records the sanitized log and checksum. HTTP database responses are synthetic; hosted enrollment is not proven.
 
 Automatic enrollment selection, absent/divergent local baseline reconciliation, native integration, non-focus completion concurrency and comprehensive legacy recovery/mixed-version acceptance remain incomplete. No SQL changes, native/browser reruns, installation or deployment. S2 remains **BLOCKED**, and S3 is not permitted.
+
+
+## Automatic known-baseline enrollment checkpoint
+
+`915631c423720703a237a70c8b3dc41569c690d0`: **PASS_LOCAL**. Known-version preserved tracking now establishes its exact enrollment before pending commands are sent. Lost enrollment responses recover from verified revision-zero history. A receipt-backed binding retains the complete original local baseline, including unknown audit fields and historical identities, separately from the exact canonical baseline. Historical identities cannot become new deltas. Missing or divergent evidence still requires recovery.
+
+Validation: full release exit 0, 700 tests in 103 files, including production build and artifact checks. The initial sandbox run failed on loopback `listen EPERM`; the permitted rerun passed. The JSON handover records the sanitized log and checksum. HTTP responses remain synthetic.
+
+Absent/divergent account baseline reconciliation, native integration, non-focus completion concurrency and comprehensive legacy recovery/mixed-version acceptance remain incomplete. No SQL changes, native/browser reruns, installation, live configuration or deployment. Overall S2 remains **BLOCKED**; S3 is not permitted.
