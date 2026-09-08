@@ -64,6 +64,18 @@ class NativeCausalHistoryProtocolTest {
             val damaged = JSONObject(complete.payload)
             damaged.getJSONObject("causalHistory").getJSONObject("entries").remove("0")
             assertTrue(runCatching { NativeCausalJournal.validate(complete.copy(payload = damaged.toString())) }.isFailure)
+            resumed.begin(owner, position.epoch, 1)
+            val beforeForgery = database.causalAccountDao().get(owner)
+            val receipt = fixture.getJSONArray("cases").getJSONObject(0).getJSONObject("receipt")
+            receipt.getJSONObject("outcome").getJSONObject("counts").put("planViewCount", 29)
+            receipt.getJSONObject("record").getJSONObject("payload").put("planViewCount", 29)
+            val forged = JSONObject().put("schemaVersion", 2).put("accountId", owner).put("epoch", position.epoch)
+                .put("revision", 1).put("receipt", receipt)
+            val nextPosition = resumed.next(owner)!!
+            val forgedChunk = chunks(owner, nextPosition, forged.toString()).single()
+            assertTrue(runCatching { resumed.accept(owner, nextPosition, forgedChunk) }.isFailure)
+            assertEquals(beforeForgery, database.causalAccountDao().get(owner))
+            assertEquals(nextPosition, resumed.next(owner))
         } finally { database.close() }
     }
     private fun chunks(owner: String, position: NativeCausalHistoryPosition, body: String): List<JSONObject> {

@@ -83,6 +83,7 @@ class NativeCausalHistoryStore(private val database: GoalflowDatabase) {
                 history.put("downloadedRevision", position.revision).remove("partial")
             } else history.put("partial", partial)
             NativeSavedCausalHistory.validate(accountId, history)
+            if (history.getLong("downloadedRevision") >= 0) NativeCausalReplay.replay(accountId, history)
             check(database.causalAccountDao().update(entity.copy(payload = state.toString())) == 1)
         }
     }

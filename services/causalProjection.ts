@@ -70,7 +70,10 @@ export function replayCausalHistory(accountId: string, history: SavedCausalHisto
       validateCounterBaseline(baseline);
       const prior = baselines[baseline.day];
       if (prior && !same(prior, baseline)) throw new Error('Causal history rewrites a counter baseline.');
-      if (!prior && (receipts[baseline.baselineId] || baseline.baselineId === id)) throw new Error('Causal history reuses an action as baseline evidence.');
+      if (!prior && (receipts[baseline.baselineId] || baseline.baselineId === id || memberIds.has(baseline.baselineId)
+        || baseline.baselineId === history.epoch || Object.values(baselines).some(b => b.baselineId === baseline.baselineId))) {
+        throw new Error('Causal history reuses an immutable identity as baseline evidence.');
+      }
       baselines[baseline.day] = baseline;
       const counts = projectCounters(baseline, Object.values(events));
       if (!same(counts, receipt.counts)) throw new Error('Causal history violates counter day conservation.');
