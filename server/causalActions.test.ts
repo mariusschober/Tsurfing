@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { admitCausalOperation, assertCausalReceipt, parseCausalOperation } from './causalActions';
+import { admitCausalOperation, assertCausalReceipt, parseCausalOperation, establishCausalCutover } from './causalActions';
 
 const owner = '11111111-1111-4111-8111-111111111111';
 const action = '22222222-2222-4222-8222-222222222222';
@@ -17,6 +17,28 @@ const receipt = (op = operation()) => ({ schemaVersion: 2, operation: op, epoch,
 });
 
 describe('causal API receipt boundary', () => {
+  it('enrolls only the authenticated account with an exact compare-and-establish receipt', async () => {
+    const payload = { date: '2026-09-08', planViewCount: 27, dailyPostponeCount: 3, future: { retained: true } };
+    const op = { schemaVersion: 2, accountId: owner, cutoverId: epoch,
+      expectedTrackingServerVersion: 5, expectedTrackingPayload: payload };
+    const result = { schemaVersion: 2, operation: op, epoch, projectionRevision: 0,
+      record: { ...receipt().record, payload }, baseline: { schemaVersion: 1, baselineId: epoch,
+        accountId: owner, day: payload.date, counts: { planViewCount: 27, dailyPostponeCount: 3 }, evidenceIds: [epoch] } };
+    const rpc = vi.fn().mockResolvedValue({ data: result, error: null });
+    const database = { rpc } as unknown as SupabaseClient;
+    for (let n = 0; n < 2; n++) expect(await establishCausalCutover(database, owner, op)).toBe(result);
+    expect(rpc).toHaveBeenLastCalledWith('goalflow_causal_cutover_v2', { target_user_id: owner, operation: op });
+    rpc.mockClear();
+    await expect(establishCausalCutover(database, action, op)).rejects.toThrow();
+    expect(rpc).not.toHaveBeenCalled();
+    const interrupted = { code: '40001' };
+    rpc.mockResolvedValue({ data: null, error: interrupted });
+    await expect(establishCausalCutover(database, owner, op)).rejects.toBe(interrupted);
+    expect(rpc).toHaveBeenCalledTimes(1);
+    rpc.mockResolvedValue({ data: { ...result, projectionRevision: 1 }, error: null });
+    await expect(establishCausalCutover(database, owner, op)).rejects.toThrow();
+  });
+
   it('preserves exact unknown evidence and replays the same operation without a new ID', async () => {
     const op = operation();
     // define an own key; Object.assign's legacy setter is deliberately avoided.
