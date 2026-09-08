@@ -2889,6 +2889,79 @@
         "Native atomic causal completion, UI wiring and macOS integration remain incomplete."
       ],
       "permittedNextStage": "Continue S2; S3 blocked"
+    },
+    {
+      "commit": "c8f8c7a93c7d4c4109a714319e7a6fb3d2d9916e",
+      "scope": "Native bounded causal history validation and resumable Room evidence download, including atomic completion receipts",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalHistoryProtocol.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalHistoryStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalProtocol.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeCausalTransport.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalHistoryProtocolTest.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalProtocolTest.kt",
+        "services/causalReceiptFixtures.test.ts",
+        "tests/fixtures/s2/action-receipts-v2.json"
+      ],
+      "findingIds": [
+        "S2-NATIVE-HISTORY"
+      ],
+      "commands": [
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": {
+            "passed": 163,
+            "failed": 0,
+            "skipped": 1
+          },
+          "skipped": "hostedBrowserRecordConvergesThroughProductionTransport"
+        },
+        {
+          "command": "npm run verify:release (loopback permitted)",
+          "exitCode": 0,
+          "tests": {
+            "passed": 716,
+            "failed": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "command": "npx vitest run services/causalReceiptFixtures.test.ts services/causalHistoryProtocol.test.ts",
+          "exitCode": 0,
+          "tests": {
+            "passed": 9
+          }
+        },
+        {
+          "command": "npm run verify:room-hashes && npm run verify:identifiers",
+          "exitCode": 0,
+          "checked": [
+            9,
+            24
+          ]
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Additive private causalHistory journal property; no ordinary cursor, tracking projection or outbox retirement. No runtime activation.",
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-history-android.log",
+          "sha256": "74bfc29f21e7bfd3f863ff404895ce001faf73a6c9191dd7b337da0d9467c3bf"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-history-release.log",
+          "sha256": "113fcc02fbfc44b7b503022bc627ab17ac4b280ab09851ae46faf313a638eb7a"
+        }
+      ],
+      "blockers": [
+        "Native capability/enrollment and automatic download orchestration remain incomplete.",
+        "Native history replay, atomic acknowledgment, causal completion admission and UI integration remain incomplete.",
+        "macOS end-to-end causal integration and comprehensive recovery acceptance remain incomplete."
+      ],
+      "permittedNextStage": "Continue S2; S3 blocked"
     }
   ],
   "findings": [

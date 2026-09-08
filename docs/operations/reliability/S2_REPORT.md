@@ -2,7 +2,7 @@
 
 Stage acceptance: **BLOCKED — implementation continues. S3 is not permitted.**
 
-Latest tested source: `9757d7c230af7f0a2a05998a705a66793babc4d7`. Android causal receipt validation: **PASS_LOCAL** (161 native tests passed, one hosted test skipped; lint/debug build passed; 714 Web/server tests and release gate passed). Native history/receipt persistence, completion and UI integration remain incomplete. S3 remains blocked.
+Latest tested source: `c8f8c7a93c7d4c4109a714319e7a6fb3d2d9916e`. Native resumable causal history: **PASS_LOCAL** (163 native tests passed, one hosted test skipped; lint/debug build passed; 716 Web/server tests and release gate passed). History projection replay, atomic acknowledgment, native completion/UI and macOS integration remain incomplete. S3 remains blocked.
 
 S1's tested commit `09245261b6174ec878f0296ca61682c603f54304` is integrated.
 S1.2 correction `262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d` is integrated;
@@ -636,3 +636,12 @@ Day commands retain requested date/zone. Unknown days preserve the previous prov
 The native version-two action boundary validates exact operation identity, account/epoch, record identity/revisions, and focus/counter/day outcome constraints. It returns original JSON evidence without timestamp rewriting. One-attempt transport sends the saved request string verbatim, enforces the 256 KiB UTF-8 body limit and 8 MiB accepted response limit, and classifies retryable HTTP failures without exposing server diagnostics. The caller remains responsible for authentication binding, durable attempted bytes and atomic receipt/history persistence.
 
 Shared TypeScript/Kotlin fixtures cover focus, counter and day receipts, altered operation/account/revision and missing tombstone proof. Native tests cover identical request retries, microsecond receipt timestamps, multibyte oversize rejection and HTTP failures. Full native command `env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true` exited 0: 161 passed, one hosted test skipped; lint/debug build passed. `npm run verify:release` passed 714 tests after permitting loopback. The first sandbox run failed with reproduced `listen EPERM 127.0.0.1`; no validator was weakened. Logs: `evidence/s2-native-receipts-android.log` and `evidence/s2-native-receipts-release.log`. No deployment, live sync or installation is claimed.
+
+
+## Native history checkpoint `c8f8c7a93c7d4c4109a714319e7a6fb3d2d9916e`
+
+Android validates 49152-byte chunks with fixed account/epoch/revision/frontier/offset, canonical base64, per-chunk and whole-entry SHA-256, a 16 MiB per-entry limit and strict UTF-8. Complete entries validate cutover, ordinary actions and atomic completion receipts. Completion validation preserves exact member payloads and legacy millisecond timestamp equality, including final notes, ordered committed versions and tracking publication after its members.
+
+Room stores partial chunks and exact complete entry bodies. It revalidates saved evidence on read/import, requires consecutive revisions, and cannot replace a pinned partial manifest. A failed commit leaves download position unchanged. Download never changes tracking, ordinary cursors or pending commands. Tests exercise actual Room resume, failed commit, encrypted backup retention and missing-entry corruption, plus shared cutover/focus/counter/day/completion fixtures and multibyte chunk assembly.
+
+Full native command `env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true` exited 0: 163 passed, one hosted test skipped; lint/debug build passed. `npm run verify:release` exited 0 with 716 passed tests. Room hashes 9 and identifiers 24 passed. Evidence: `evidence/s2-native-history-android.log`, `evidence/s2-native-history-release.log`. Automatic enrollment/download integration, authoritative replay and exact receipt retirement remain required; no hosted or installed-app acceptance is claimed.
