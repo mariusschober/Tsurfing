@@ -301,3 +301,10 @@ Ordinary counter events are unioned by exact action identity over verified day b
 ## Native bounded authenticated action pass
 
 The native action pass uses the production session-bound request method and existing mutex. Eligible commands follow local admission sequence; counters require an applied day baseline, and task reviews or retained rejected receipts are not sent repeatedly. The pass never mints a replacement action. Each response is retained before another verified history application authorizes retirement. Lost accepted responses can be recovered from exact history without retransmission. The 50-action pass bound limits one invocation, not retained history or queue size; `moreReady` refers only to eligible unsent work and must not be presented as proof that review queues are empty. Normal activation still awaits native completion integration.
+
+
+## Native completion member application
+
+Accepted completion history is no longer categorically blocked on Android. Member payloads, their per-entity metadata, protected tracking and the observed causal basis commit in one Room transaction. A member with newer server evidence is retained as represented; equal-version replicas without pending edits must match the native typed projection. Older replicas require no pending edit/conflict and a known server baseline, except absent records or explicit empty defaults. Application never treats a member server version as an ordinary pull cursor.
+
+Exact history bodies remain the receipt authority. Existing native codecs define typed replica comparison; this does not rewrite the receipt. Applications preserve member preimages and decisions, tied to the local projection sequence and history hash. A member needing review rolls back every prior member write, then retains only a history-bound recovery reference. Local causal completion admission and its member reservation/transport protocol still require implementation.

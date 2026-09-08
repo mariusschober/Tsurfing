@@ -2,7 +2,7 @@
 
 Stage acceptance: **BLOCKED — implementation continues. S3 is not permitted.**
 
-Latest tested source: `c2199ea05874ea2dae5b88b373fe34d9f639b0b0`. Authenticated native action passes: **PASS_LOCAL** (190 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release verification passed). Native atomic completion and normal UI/scheduler activation, macOS and legacy recovery remain incomplete. S3 remains blocked.
+Latest tested source: `6e18026c197f1e61331c4f2c0771af646cdd56c9`. Native atomic remote completion application: **PASS_LOCAL** (194 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release verification passed). Local causal completion admission/send, UI/scheduler activation, macOS and legacy recovery remain incomplete. S3 remains blocked.
 
 S1's tested commit `09245261b6174ec878f0296ca61682c603f54304` is integrated.
 S1.2 correction `262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d` is integrated;
@@ -690,3 +690,14 @@ The explicit `synchronizeCausalActions` entrypoint uses the existing synchroniza
 Six production-engine/Room tests with a synthetic backend prove bounded resumption, both counter equations, exact pre-commit retry bytes, history recovery after lost responses, day establishment before increments, serial +300/+120 focus extension parents, in-flight session rejection and non-looping rejected actions alongside independent counters. Full native command in the JSON handover exited 0: 190 passed, one hosted test skipped; lint/debug build passed. `env VERIFY_PORT=54173 npm run verify:release` exited 0 with 719 passed tests. Room hashes 9, identifiers 24 and diff checks passed. Evidence: `evidence/s2-native-action-loop-android.log`, `evidence/s2-native-action-loop-release.log`; build checksum in JSON.
 
 This entrypoint is not connected to normal UI/scheduler activation. Native atomic completion member application/admission, macOS integration, divergent recovery and complete acceptance remain unfinished. No deployment, installation or live test writes occurred.
+
+
+## Native completion application checkpoint `6e18026c197f1e61331c4f2c0771af646cdd56c9`
+
+Verified remote completion can now apply tasks, stats, progress, goals, habits and task events in the same Room transaction as terminal focus, the causal projection basis and per-entity version metadata. Ordinary cursors do not move. Pending local member edits and missing baseline versions block application without partial effects; a separate transaction retains the exact history reference and recovery code. Existing ordinary mutation IDs, attempted bytes and queues remain intact.
+
+Application evidence binds each completion to its original history checksum, revision, local projection sequence and member decisions/preimages. Equal-version replicas are checked through the existing native codec while original receipt payloads remain untouched in history. Later local edits with pending evidence are preserved on replay. Tests cover all six members, final notes and unknown fields, backup proof validation, rollback after business writes, rollback when a later member needs review, and replay after a real repository notes edit.
+
+Full native verification exited 0: 194 passed, one hosted test skipped; lint and production-debug build passed. Full repository release verification exited 0: 719 passed. Room hashes 9, identifiers 24 and diff checks passed. Logs: `evidence/s2-native-completion-projection-android.log`, `evidence/s2-native-completion-projection-release.log`; APK checksum in JSON. No deployment, native installation or live writes occurred.
+
+Native local causal completion admission/member reservation/send remains unfinished. This checkpoint implements remote completion application, not complete S2 or normal client rollout.

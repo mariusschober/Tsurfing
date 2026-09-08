@@ -3,7 +3,7 @@
   "status": "BLOCKED",
   "acceptanceReason": "Implementation continues. Web automatic enrollment and fresh-account server initialization are locally verified. Divergent legacy reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
-  "finalCommit": "c2199ea05874ea2dae5b88b373fe34d9f639b0b0",
+  "finalCommit": "6e18026c197f1e61331c4f2c0771af646cdd56c9",
   "prerequisites": [
     {
       "stageId": "S1",
@@ -3296,6 +3296,76 @@
         "sha256": "1b258497dfc741847089e127162d138a750006a07072553f71fa21416007bc23",
         "kind": "unsigned production-debug APK; not installed"
       }
+    },
+    {
+      "commit": "6e18026c197f1e61331c4f2c0771af646cdd56c9",
+      "baselineCommit": "1b2c6ffe467822a890f4dcf9bdf11c310b669225",
+      "scope": "Native remote completion members and causal tracking commit atomically with durable application/review evidence",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowRepository.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalCompletionProjection.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalProjectionStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalTimeline.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalProjectionStoreTest.kt"
+      ],
+      "findingIds": [
+        "S2-NATIVE-COMPLETION-PROJECTION"
+      ],
+      "commands": [
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": {
+            "passed": 194,
+            "failed": 0,
+            "skipped": 1
+          },
+          "skipped": "hostedBrowserRecordConvergesThroughProductionTransport"
+        },
+        {
+          "command": "env VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "tests": {
+            "passed": 719,
+            "failed": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "command": "npm run verify:room-hashes && npm run verify:identifiers && git diff --check",
+          "exitCode": 0,
+          "checked": [
+            9,
+            24
+          ]
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Additive private completionApplications and completionApplicationReviews. All six business member kinds use existing native codecs. Exact server receipts stay in retained history, typed projection comparison never rewrites them. Ordinary pending mutations and cursor positions are preserved.",
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-completion-projection-android.log",
+          "sha256": "c2f9fa88a824088074e34a356989ec8687b863a058a4daf1d5f6f9d86e7eccf1"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-completion-projection-release.log",
+          "sha256": "2c224489360c14e3d0353e5bc93fb9b4401c06614a5e1d6722cbbf5ad4447914"
+        }
+      ],
+      "testIdentity": "Native Robolectric/Room, shared completion history extended with valid native payloads for all six member kinds; not hosted or installed-app acceptance.",
+      "buildArtifact": {
+        "path": "android-native/app/build/outputs/apk/production/debug/app-production-debug.apk",
+        "sha256": "3f2b18d462f8c50df8eb90be073c30953ad223a0ff77455d96e1b9c6e6cf0b8c",
+        "kind": "unsigned production-debug APK; not installed"
+      },
+      "blockers": [
+        "Native local causal completion admission, member reservations and completion send path remain incomplete.",
+        "Normal scheduler and UI activation remain incomplete.",
+        "macOS integration, divergent legacy recovery and comprehensive cross-client acceptance remain incomplete."
+      ],
+      "permittedNextStage": "Continue S2; S3 blocked"
     }
   ],
   "findings": [
@@ -3326,6 +3396,10 @@
     {
       "id": "S2-NATIVE-ACTION-LOOP",
       "disposition": "Authenticated production engine now orchestrates evidence download/application, durable request capture, send, receipt capture and verified application in bounded passes. Rejected receipts remain pending and are not resent; independent eligible actions proceed."
+    },
+    {
+      "id": "S2-NATIVE-COMPLETION-PROJECTION",
+      "disposition": "Replaced the blanket native completion-history guard with atomic member application and version/pending-edit checks. Recovery reviews retain exact history references, while failed business or tracking writes roll back all members and metadata."
     }
   ],
   "migrations": [
