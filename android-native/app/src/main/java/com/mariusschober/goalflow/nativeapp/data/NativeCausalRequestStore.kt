@@ -8,6 +8,10 @@ import org.json.JSONObject
  * applied history entry remain in this same durable account journal. */
 object NativeCausalRequestJournal {
     private fun same(a: Any?, b: Any?) = ActionJson.canonical(a) == ActionJson.canonical(b)
+    fun operation(accountId: String, value: JSONObject): JSONObject =
+        if (value.opt("type") == "completion") NativeCausalProtocol.completion(accountId, value) else NativeCausalProtocol.operation(accountId, value)
+    fun receipt(accountId: String, operation: JSONObject, value: JSONObject): JSONObject =
+        if (operation.opt("type") == "completion") NativeCausalProtocol.completionReceipt(accountId, operation, value) else NativeCausalProtocol.receipt(accountId, operation, value)
     fun appliedRevision(state: JSONObject): Long = state.optJSONObject("projectionAdmissions")?.let { entries ->
         entries.keys().asSequence().map { entries.getJSONObject(it) }.maxByOrNull { it.getLong("sequence") }?.getLong("revision")
     } ?: -1L
@@ -18,11 +22,11 @@ object NativeCausalRequestJournal {
         require(candidates.size == 1) { "The action requires one exact local admission." }
         val (type, key, field) = candidates.single(); val admission = state.getJSONObject(key).getJSONObject(id)
         require(type != "focus" || admission.getJSONObject("outcome").getBoolean("accepted")) { "A locally rejected command cannot be sent." }
-        return type to admission.getJSONObject(field)
+        return (if (type == "focus" && admission.getJSONObject(field).opt("kind") == "complete") "completion" else type) to admission.getJSONObject(field)
     }
 
     fun outbox(type: String) = when (type) {
-        "focus" -> "focusOutbox"
+        "focus", "completion" -> "focusOutbox"
         "counter" -> "counterOutbox"
         "counterDay" -> "counterDayOutbox"
         else -> error("Invalid causal request type.")
@@ -31,8 +35,8 @@ object NativeCausalRequestJournal {
     fun canRetire(accountId: String, state: JSONObject, id: String): Boolean {
         val receipt = state.optJSONObject("causalReceipts")?.optJSONObject(id) ?: return false
         val bytes = state.optJSONObject("causalRequests")?.getString(id) ?: return false
-        val operation = NativeCausalProtocol.operation(accountId, JSONObject(bytes))
-        NativeCausalProtocol.receipt(accountId, operation, receipt)
+        val operation = NativeCausalRequestJournal.operation(accountId, JSONObject(bytes))
+        NativeCausalRequestJournal.receipt(accountId, operation, receipt)
         if (!receipt.getBoolean("accepted") || receipt.getLong("projectionRevision") > appliedRevision(state)) return false
         val history = state.getJSONObject("causalHistory")
         val saved = history.getJSONObject("entries").getJSONObject(receipt.getLong("projectionRevision").toString())
@@ -52,22 +56,23 @@ object NativeCausalRequestJournal {
         val canonical = NativeCausalReplay.replayAt(accountId, state.getJSONObject("causalHistory"), revision)
         for (id in requests.keys()) {
             val bytes = requests.getString(id)
-            require(bytes.toByteArray(Charsets.UTF_8).size <= 256 * 1024) { "The retained request exceeds its transport envelope." }
-            val operation = NativeCausalProtocol.operation(accountId, JSONObject(bytes)); val (type, command) = admitted(state, id)
+            require(bytes.toByteArray(Charsets.UTF_8).size <= if (JSONObject(bytes).opt("type") == "completion") NativeCompletionAdmissionEvidence.MAX_BYTES else 256 * 1024) { "The retained request exceeds its transport envelope." }
+            val operation = NativeCausalRequestJournal.operation(accountId, JSONObject(bytes)); val (type, command) = admitted(state, id)
             require(operation.opt("epoch") == capability.opt("epoch") && operation.opt("type") == type
                 && operation.getJSONObject("command").opt("actionId") == id && same(command, operation.opt("command"))) {
                 "The retained request differs from its original admission or account epoch."
             }
             require(type != "counter" || canonical.baselines.has(command.getString("day"))) { "A counter request has no applied day baseline." }
+            if (type == "completion") NativeCompletionRequestEvidence.assertOperation(accountId, state, id, operation)
             val pending = state.optJSONObject(outbox(type))?.optJSONObject(id)
             require(if (pending == null) canRetire(accountId, state, id) else same(pending, command)) {
                 "The request has neither exact pending intent nor applied receipt proof."
             }
         }
         for (id in receipts.keys()) {
-            val operation = NativeCausalProtocol.operation(accountId, JSONObject(requests.getString(id)))
+            val operation = NativeCausalRequestJournal.operation(accountId, JSONObject(requests.getString(id)))
             require(operation.getJSONObject("command").opt("actionId") == id) { "The retained receipt action differs." }
-            NativeCausalProtocol.receipt(accountId, operation, receipts.getJSONObject(id))
+            NativeCausalRequestJournal.receipt(accountId, operation, receipts.getJSONObject(id))
         }
     }
 
@@ -83,8 +88,8 @@ object NativeCausalRequestJournal {
         }
         for (id in requests.keys()) {
             val receipt = canonical.receipts.optJSONObject(id) ?: continue
-            val operation = NativeCausalProtocol.operation(accountId, JSONObject(requests.getString(id)))
-            NativeCausalProtocol.receipt(accountId, operation, receipt)
+            val operation = NativeCausalRequestJournal.operation(accountId, JSONObject(requests.getString(id)))
+            NativeCausalRequestJournal.receipt(accountId, operation, receipt)
             require(!receipts.has(id) || same(receipts.getJSONObject(id), receipt)) { "The retained receipt is immutable." }
             receipts.put(id, receipt)
             if (receipt.getBoolean("accepted")) state.getJSONObject(outbox(operation.getString("type"))).remove(id)
@@ -116,9 +121,10 @@ class NativeCausalRequestStore(private val database: GoalflowDatabase) {
             for (id in pending.keys()) {
                 if (state.optJSONObject("causalReceipts")?.has(id) == true) continue
                 val command = pending.getJSONObject(id)
-                // Completion uses its member reservations and staged action
-                // transport; it must never enter the ordinary focus endpoint.
-                if (command.opt("kind") == "complete") continue
+                if (command.opt("kind") == "complete") {
+                    try { NativeCompletionRequestEvidence.resolved(accountId, state, id) }
+                    catch (_: NativeCompletionDependencyPending) { continue }
+                }
                 if (pendingKey == "counterOutbox" && !canonical.baselines.has(command.getString("day"))) continue
                 if (pendingKey == "focusOutbox" && state.optJSONObject("causalProjectionReviews")?.optJSONObject(id)?.opt("code") == "TASK_REVIEW_REQUIRED") continue
                 candidates.add(state.getJSONObject(admissionKey).getJSONObject(id).getLong("sequence") to id)
@@ -141,10 +147,11 @@ class NativeCausalRequestStore(private val database: GoalflowDatabase) {
         }
         if (type == "counter") require(NativeCausalReplay.replayAt(accountId, state.getJSONObject("causalHistory"), revision)
             .baselines.has(command.getString("day"))) { "The counter is waiting for a verified day baseline." }
-        val operation = JSONObject().put("schemaVersion", 2).put("epoch", capability.getString("epoch")).put("type", type).put("command", command)
-        NativeCausalProtocol.operation(accountId, operation)
+        val operation = if (type == "completion") NativeCompletionRequestEvidence.resolved(accountId, state, actionId)
+            else JSONObject().put("schemaVersion", 2).put("epoch", capability.getString("epoch")).put("type", type).put("command", command)
+        NativeCausalRequestJournal.operation(accountId, operation)
         val bytes = operation.toString()
-        require(bytes.toByteArray(Charsets.UTF_8).size <= 256 * 1024) { "The action exceeds its transport envelope. Its admission remains retained." }
+        require(bytes.toByteArray(Charsets.UTF_8).size <= if (JSONObject(bytes).opt("type") == "completion") NativeCompletionAdmissionEvidence.MAX_BYTES else 256 * 1024) { "The action exceeds its transport envelope. Its admission remains retained." }
         requests.put(actionId, bytes); state.put("causalRequests", requests)
         NativeCausalJournal.validate(entity.copy(payload = state.toString()))
         check(database.causalAccountDao().update(entity.copy(payload = state.toString())) == 1)
@@ -159,9 +166,9 @@ class NativeCausalRequestStore(private val database: GoalflowDatabase) {
         val captured = JSONObject(supplied.toString())
         return database.withTransaction {
             val (entity, state) = state(accountId)
-            val operation = NativeCausalProtocol.operation(accountId, JSONObject(state.getJSONObject("causalRequests").getString(actionId)))
+            val operation = NativeCausalRequestJournal.operation(accountId, JSONObject(state.getJSONObject("causalRequests").getString(actionId)))
             require(operation.getJSONObject("command").opt("actionId") == actionId) { "The receipt action differs from its retained request." }
-            NativeCausalProtocol.receipt(accountId, operation, captured)
+            NativeCausalRequestJournal.receipt(accountId, operation, captured)
             val receipts = state.optJSONObject("causalReceipts") ?: JSONObject()
             val prior = receipts.optJSONObject(actionId)
             require(prior == null || ActionJson.canonical(prior) == ActionJson.canonical(captured)) { "The retained receipt is immutable." }

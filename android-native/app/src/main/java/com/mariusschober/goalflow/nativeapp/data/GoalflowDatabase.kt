@@ -160,11 +160,32 @@ data class CausalAccountEntity(
 
 @Dao
 interface CausalAccountDao {
-    @Query("SELECT * FROM causal_accounts WHERE accountId = :accountId LIMIT 1")
-    suspend fun get(accountId: String): CausalAccountEntity?
+    @Query("SELECT length(payload) FROM causal_accounts WHERE accountId = :accountId LIMIT 1")
+    suspend fun payloadLength(accountId: String): Long?
 
-    @Query("SELECT * FROM causal_accounts ORDER BY accountId")
-    suspend fun getAll(): List<CausalAccountEntity>
+    @Query("SELECT substr(payload, :start, :count) FROM causal_accounts WHERE accountId = :accountId LIMIT 1")
+    suspend fun payloadChunk(accountId: String, start: Long, count: Int): String?
+
+    @Query("SELECT accountId FROM causal_accounts ORDER BY accountId")
+    suspend fun accountIds(): List<String>
+
+    /** SQLite substr counts Unicode characters, so each bounded chunk fits a
+     * CursorWindow even when the complete durable journal does not. The read
+     * transaction prevents mixing revisions across chunks. */
+    @androidx.room.Transaction
+    suspend fun get(accountId: String): CausalAccountEntity? {
+        val length = payloadLength(accountId) ?: return null
+        val payload = StringBuilder()
+        var start = 1L
+        while (start <= length) {
+            payload.append(requireNotNull(payloadChunk(accountId, start, 16_384)))
+            start += 16_384
+        }
+        return CausalAccountEntity(accountId, payload.toString())
+    }
+
+    @androidx.room.Transaction
+    suspend fun getAll(): List<CausalAccountEntity> = accountIds().map { requireNotNull(get(it)) }
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(account: CausalAccountEntity)

@@ -167,9 +167,11 @@ object NativeCausalTimeline {
                         for (action in local.keys()) if (action in reservedIds) {
                             val operation = canonical.receipts.optJSONObject(action)?.getJSONObject("operation")
                             val command = local.getJSONObject(action).getJSONObject(if (localType == "counter") "event" else "command")
-                            require(operation != null && operation.opt("type") == localType && same(operation.opt("command"), command)) {
+                            val expectedType = if (localType == "focus" && command.opt("kind") == "complete") "completion" else localType
+                            require(operation != null && operation.opt("type") == expectedType && same(operation.opt("command"), command)) {
                                 "A server identity differs from the original local admission."
                             }
+                            if (expectedType == "completion") NativeCompletionRequestEvidence.assertOperation(accountId, state, action, operation)
                         }
                     }
                     reserved = reservedIds

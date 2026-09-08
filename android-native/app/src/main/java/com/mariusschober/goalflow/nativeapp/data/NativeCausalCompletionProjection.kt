@@ -35,10 +35,18 @@ object NativeCompletionApplicationEvidence {
                 val serverAfter = receipt.getJSONArray("changes").getJSONObject(index).getLong("serverVersion")
                 require(decision.keys().asSequence().toSet() == setOf("decision", "preimage", "serverVersionBefore", "localVersionBefore")
                     && serverBefore != null && serverBefore >= 0 && localBefore != null && localBefore >= 0
-                    && decision.opt("decision") in setOf("applied", "represented")
-                    && (if (decision.getString("decision") == "represented") serverBefore >= serverAfter else serverBefore < serverAfter)
+                    && decision.opt("decision") in setOf("applied", "represented", "local")
+                    && (when (decision.getString("decision")) { "represented" -> serverBefore >= serverAfter; "local" -> true; else -> serverBefore < serverAfter })
                     && (decision.isNull("preimage") || decision.opt("preimage") is String)) {
                     "The completion member decision differs from its receipt."
+                }
+                if (decision.opt("decision") == "local") {
+                    val accountId = operationAccount(receipt)
+                    val bytes = state.getJSONObject("causalRequests").getString(id)
+                    require(ActionJson.canonical(JSONObject(bytes)) == ActionJson.canonical(receipt.getJSONObject("operation"))) {
+                        "The locally admitted completion differs from its frozen request."
+                    }
+                    NativeCompletionRequestEvidence.assertOperation(accountId, state, id, JSONObject(bytes))
                 }
             }
         }
@@ -58,6 +66,8 @@ object NativeCompletionApplicationEvidence {
                 }) { "The completion review differs from retained history." }
         }
     }
+
+    private fun operationAccount(receipt: JSONObject) = receipt.getJSONObject("operation").getJSONObject("command").getString("accountId")
 
     fun requireApplied(state: JSONObject, id: String, receipt: JSONObject, sequence: Long) {
         val application = state.optJSONObject("completionApplications")?.optJSONObject(id)
@@ -81,6 +91,14 @@ class NativeCausalCompletionProjection(private val database: GoalflowDatabase,
         for (id in canonical.receipts.keys().asSequence().toList().sortedBy { canonical.receipts.getJSONObject(it).getLong("projectionRevision") }) {
             val receipt = canonical.receipts.getJSONObject(id); val operation = receipt.getJSONObject("operation")
             if (operation.getString("type") != "completion" || !receipt.getBoolean("accepted")) continue
+            val localAdmission = state.optJSONObject("completionAdmissions")?.has(id) == true
+            val local = localAdmission && !applications.has(id)
+            if (localAdmission) {
+                val bytes = state.optJSONObject("causalRequests")?.optString(id)?.takeIf { it.isNotEmpty() }
+                    ?: throw NativeCompletionReview(id, "COMPLETION_BASE_REQUIRED", "tasks:${operation.getJSONObject("command").getString("taskId")}")
+                require(ActionJson.canonical(JSONObject(bytes)) == ActionJson.canonical(operation)) { "Completion history differs from the frozen local request." }
+                NativeCompletionRequestEvidence.assertOperation(operation.getJSONObject("command").getString("accountId"), state, id, operation)
+            }
             val revision = receipt.getLong("projectionRevision")
             val proof = history.getJSONObject("entries").getJSONObject(revision.toString())
             val decisions = JSONObject(); val changes = operation.getJSONArray("changes")
@@ -96,7 +114,17 @@ class NativeCausalCompletionProjection(private val database: GoalflowDatabase,
                     || database.syncOutboxDao().get(member.getString("mutationId")) != null
                     || database.syncConflictDao().getUnresolved(type, entityId) != null
                 val decision: String
-                if (serverBefore >= serverAfter) {
+                if (local) {
+                    requireLocalProjection(state, id, member, current)
+                    // The effects were committed at admission. Acknowledging
+                    // them must not replay rewards or replace later notes.
+                    for (dependent in database.syncOutboxDao().getAll().filter { it.dependsOnMutationId == member.getString("mutationId") }) {
+                        require(dependent.attemptedAt == null) { "An attempted dependent cannot be rebased." }
+                        database.syncOutboxDao().insert(dependent.copy(dependsOnMutationId = null,
+                            baseServerVersion = if (dependent.entityType == type && dependent.entityId == entityId) serverAfter else dependent.baseServerVersion))
+                    }
+                    decision = "local"
+                } else if (serverBefore >= serverAfter) {
                     if (serverBefore == serverAfter && !pending) {
                         val expected = try { nativePayload(type, member.getJSONObject("payload").toString()) }
                             catch (_: IllegalArgumentException) { throw NativeCompletionReview(id, "COMPLETION_MEMBER_REVIEW", key) }
@@ -132,5 +160,22 @@ class NativeCausalCompletionProjection(private val database: GoalflowDatabase,
                 .put("revision", revision).put("sha256", proof.getString("sha256")).put("members", decisions))
         }
         if (applications.length() > 0) state.put("completionApplications", applications)
+    }
+
+    private suspend fun requireLocalProjection(state: JSONObject, actionId: String, member: JSONObject, current: String?) {
+        val type = member.getString("entityType"); val entityId = member.getString("entityId"); val key = "$type:$entityId"
+        if (database.syncConflictDao().getUnresolved(type, entityId) != null) throw NativeCompletionReview(actionId, "COMPLETION_LOCAL_REVIEW", key)
+        val candidates = mutableListOf(member)
+        for (row in database.syncOutboxDao().getForEntity(type, entityId)) if (row.version > member.getLong("version")) {
+            if (row.deletedAt != null) throw NativeCompletionReview(actionId, "COMPLETION_LOCAL_REVIEW", key)
+            candidates.add(NativeCompletionAdmissionEvidence.member(row))
+        }
+        NativeCompletionAdmissionEvidence.reserved(state, type, entityId)?.second?.let { if (it.getLong("version") > member.getLong("version")) candidates.add(it) }
+        require(candidates.map { it.getLong("version") }.toSet().size == candidates.size) { "Ambiguous local completion projection versions." }
+        val latest = candidates.maxBy { it.getLong("version") }
+        val expected = nativePayload(type, latest.getJSONObject("payload").toString())
+        if (current == null || ActionJson.canonical(JSONObject(current)) != ActionJson.canonical(JSONObject(expected))) {
+            throw NativeCompletionReview(actionId, "COMPLETION_PROJECTION_MISMATCH", key)
+        }
     }
 }

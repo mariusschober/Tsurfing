@@ -51,10 +51,122 @@ class NativeCausalActionSyncTest {
     private fun engine(backend: Backend) = NativeSyncEngine(repository, NativeSessionProvider { currentSession }, backend,
         { true }, NativeSyncRetryPolicy(maxAttempts = 1))
 
+    private suspend fun complete(notes: String): NativeFocusIntent {
+        val focusId = state().getJSONObject("focus").getString("currentSessionId")
+        val command = NativeFocusIntent(UUID.randomUUID().toString(), "complete", focusId, "task-F", focusId, null, time)
+        repository.admitCausalCompletion(owner, command, NativeCompletionDetails("2026-09-08", "UTC", 10, "flow", notes))
+        return command
+    }
+
+    private suspend fun acknowledge(row: SyncOutboxEntity, version: Long) {
+        val record = JSONObject().put("user_id", owner).put("entity_type", row.entityType).put("entity_id", row.entityId)
+            .put("device_id", row.deviceId).put("version", row.version).put("server_version", version).put("payload", JSONObject(row.payload))
+            .put("updated_at", row.updatedAt).put("deleted_at", JSONObject.NULL)
+        val receipt = JSONObject().put("mutationId", row.mutationId).put("accepted", true).put("serverVersion", version).put("record", record)
+        repository.commitPushResults(listOf(row), listOf(NativePushResult(row.mutationId, true, version,
+            recordEntityType = row.entityType, recordEntityId = row.entityId, recordDeviceId = row.deviceId,
+            recordVersion = row.version, recordServerVersion = version, recordPayload = row.payload,
+            recordUpdatedAt = row.updatedAt, receiptJson = receipt.toString())))
+    }
+
+    @Test fun `completion sends staged exact bytes and retires after history without replaying local effects`() = runTest {
+        val backend = Backend(history(2)); val engine = engine(backend); engine.synchronizeCausalActions()
+        val command = complete("界".repeat(100_000))
+        val rewards = database.rawCollectionDao().get("stats")
+        val result = engine.synchronizeCausalActions()
+        assertEquals(1, result.sent); assertFalse(result.moreReady); assertTrue(backend.chunks.isNotEmpty())
+        assertEquals(backend.attempts.single(), state().getJSONObject("causalRequests").getString(command.actionId))
+        assertFalse(state().getJSONObject("focusOutbox").has(command.actionId))
+        assertEquals(rewards, database.rawCollectionDao().get("stats"))
+        assertEquals("completed", state().getJSONObject("tracking").getJSONObject("focusSession").getString("phase"))
+        assertEquals(0, engine.synchronizeCausalActions().sent)
+    }
+
+    @Test fun `lost completion response recovers from history and preserves a later task edit`() = runTest {
+        val backend = Backend(history(2)); val engine = engine(backend); engine.synchronizeCausalActions()
+        val command = complete("Final notes")
+        repository.updateTask("task-F", "Later title", "Later notes", SchedulePrecision.DAY, "2026-09-08")
+        val before = database.taskDao().get("task-F")
+        val pending = database.syncOutboxDao().getForEntity("tasks", "task-F").single()
+        assertNotNull(pending.dependsOnMutationId)
+        backend.loseAfterCommit = true
+        assertTrue(runCatching { engine.synchronizeCausalActions() }.isFailure)
+        val bytes = state().getJSONObject("causalRequests").getString(command.actionId)
+        assertEquals(0, engine.synchronizeCausalActions().sent)
+        assertEquals(listOf(bytes), backend.attempts); assertEquals(before, database.taskDao().get("task-F"))
+        val released = database.syncOutboxDao().get(pending.mutationId)!!
+        assertNull(released.dependsOnMutationId); assertEquals(pending.payload, released.payload); assertNotNull(released.baseServerVersion)
+        assertFalse(state().getJSONObject("focusOutbox").has(command.actionId))
+        acknowledge(released, 600)
+        assertEquals(0, engine.synchronizeCausalActions().sent)
+        assertEquals(before, database.taskDao().get("task-F"))
+    }
+
+    @Test fun `bad completion chunk acknowledgment retains the complete request for retry`() = runTest {
+        val backend = Backend(history(2)); val engine = engine(backend); engine.synchronizeCausalActions()
+        val command = complete("界".repeat(100_000)); backend.badChunkAck = true
+        assertTrue(runCatching { engine.synchronizeCausalActions() }.isFailure)
+        assertTrue(backend.attempts.isEmpty()); assertTrue(state().getJSONObject("focusOutbox").has(command.actionId))
+        val original = state().getJSONObject("causalRequests").getString(command.actionId)
+        backend.badChunkAck = false
+        assertEquals(1, engine.synchronizeCausalActions().sent)
+        assertEquals(original, backend.attempts.single())
+    }
+
+    @Test fun `completion waits for both focus and ordinary predecessor receipts before freezing its base`() = runTest {
+        val backend = Backend(history(2)); val engine = engine(backend); engine.synchronizeCausalActions()
+        repository.updateTask("task-F", "Edited title", "Edited notes", SchedulePrecision.DAY, "2026-09-08")
+        val predecessor = database.syncOutboxDao().getForEntity("tasks", "task-F").single()
+        val focusId = state().getJSONObject("focus").getString("currentSessionId")
+        repository.admitCausalFocus(owner, NativeFocusIntent(UUID.randomUUID().toString(), "pause", focusId, "task-F", focusId, null, time))
+        val command = complete("Final notes")
+        assertEquals(1, engine.synchronizeCausalActions().sent)
+        assertFalse(state().getJSONObject("causalRequests").has(command.actionId))
+        val record = JSONObject().put("user_id", owner).put("entity_type", predecessor.entityType).put("entity_id", predecessor.entityId)
+            .put("device_id", predecessor.deviceId).put("version", predecessor.version).put("server_version", 100)
+            .put("payload", JSONObject(predecessor.payload)).put("updated_at", predecessor.updatedAt).put("deleted_at", JSONObject.NULL)
+        val receipt = JSONObject().put("mutationId", predecessor.mutationId).put("accepted", true).put("serverVersion", 100).put("record", record)
+        repository.commitPushResults(listOf(predecessor), listOf(NativePushResult(predecessor.mutationId, true, 100,
+            recordEntityType = predecessor.entityType, recordEntityId = predecessor.entityId, recordDeviceId = predecessor.deviceId,
+            recordVersion = predecessor.version, recordServerVersion = 100, recordPayload = predecessor.payload,
+            recordUpdatedAt = predecessor.updatedAt, receiptJson = receipt.toString())))
+        assertEquals(1, engine.synchronizeCausalActions().sent)
+        val bytes = state().getJSONObject("causalRequests").getString(command.actionId)
+        val members = JSONObject(bytes).getJSONArray("changes")
+        val member = (0 until members.length()).map { members.getJSONObject(it) }.single { it.getString("entityType") == "tasks" }
+        assertEquals(100, member.getInt("baseServerVersion"))
+        assertEquals(bytes, repository.causalRequestStore.prepare(owner, command.actionId))
+        val damaged = JSONObject(state().toString())
+        damaged.getJSONObject("completionAdmissions").getJSONObject(command.actionId).getJSONObject("dependencies")
+            .getJSONObject(member.getString("mutationId")).getJSONObject("request").put("ignoredTransportField", true)
+        assertTrue(runCatching { NativeCausalJournal.validate(CausalAccountEntity(owner, damaged.toString())) }.isFailure)
+    }
+
+    @Test fun `failed completion history application rolls back dependency release and recovers without a resend`() = runTest {
+        val backend = Backend(history(2)); val engine = engine(backend); engine.synchronizeCausalActions()
+        val command = complete("Final notes")
+        repository.updateTask("task-F", "Later title", "Later notes", SchedulePrecision.DAY, "2026-09-08")
+        val pending = database.syncOutboxDao().getForEntity("tasks", "task-F").single()
+        val meta = database.syncMetaDao().getAll()
+        backend.afterAction = {
+            database.openHelper.writableDatabase.execSQL("CREATE TRIGGER fail_completion_tracking BEFORE INSERT ON raw_collections WHEN NEW.entityType='tracking' BEGIN SELECT RAISE(ABORT,'synthetic completion apply failure'); END")
+            backend.afterAction = null
+        }
+        assertTrue(runCatching { engine.synchronizeCausalActions() }.isFailure)
+        assertEquals(pending, database.syncOutboxDao().get(pending.mutationId)); assertEquals(meta, database.syncMetaDao().getAll())
+        assertTrue(state().getJSONObject("focusOutbox").has(command.actionId))
+        assertEquals(2L, NativeCausalRequestJournal.appliedRevision(state()))
+        database.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_completion_tracking")
+        assertEquals(0, engine.synchronizeCausalActions().sent)
+        assertEquals(1, backend.attempts.size); assertNull(database.syncOutboxDao().get(pending.mutationId)!!.dependsOnMutationId)
+    }
+
     /** Synthetic server state, not PostgreSQL acceptance. The client under test
      * is the production engine, transport, durable stores and Room transaction. */
     private inner class Backend(val saved: JSONObject = history()) : NativeSyncTransport {
         val attempts = mutableListOf<String>()
+        val chunks = mutableMapOf<Int, ByteArray>()
+        var badChunkAck = false
         var failBeforeCommit = false
         var loseAfterCommit = false
         var afterAction: (() -> Unit)? = null
@@ -76,10 +188,21 @@ class NativeCausalActionSyncTest {
                     .put("chunkSha256", NativeCausalHistoryProtocol.hash(chunk)).put("data", Base64.getEncoder().encodeToString(chunk))
                     .put("nextOffset", (offset + chunk.size).takeIf { it < bytes.size } ?: JSONObject.NULL))
             }
-            assertEquals("/api/v1/sync/actions", path); assertEquals("POST", method)
-            attempts.add(requireNotNull(body))
+            if (path == "/api/v1/sync/conflicts/stage") {
+                val chunk = JSONObject(requireNotNull(body)); val index = chunk.getInt("chunkIndex")
+                chunks[index] = Base64.getDecoder().decode(chunk.getString("data"))
+                return response(JSONObject().put("staged", true).put("manifest", chunk.getJSONObject("manifest"))
+                    .put("chunkIndex", index).put("chunkSha256", if (badChunkAck) "different" else chunk.getString("chunkSha256")))
+            }
+            require(path in setOf("/api/v1/sync/actions", "/api/v1/sync/complete-focus", "/api/v1/sync/complete-focus-staged")); assertEquals("POST", method)
+            val requestBody = if (path == "/api/v1/sync/complete-focus-staged") {
+                val manifest = JSONObject(requireNotNull(body))
+                val all = (0 until manifest.getInt("chunkCount")).flatMap { chunks.getValue(it).asIterable() }.toByteArray()
+                assertEquals(manifest.getString("sha256"), NativeCausalHistoryProtocol.hash(all)); String(all, Charsets.UTF_8)
+            } else requireNotNull(body)
+            attempts.add(requestBody)
             if (failBeforeCommit) { failBeforeCommit = false; throw IOException("Synthetic pre-commit failure") }
-            val operation = NativeCausalProtocol.operation(owner, JSONObject(body)); val command = operation.getJSONObject("command")
+            val operation = NativeCausalRequestJournal.operation(owner, JSONObject(requestBody)); val command = operation.getJSONObject("command")
             val canonical = NativeCausalReplay.replay(owner, saved)
             canonical.receipts.optJSONObject(command.getString("actionId"))?.let {
                 assertEquals(ActionJson.canonical(it.getJSONObject("operation")), ActionJson.canonical(operation)); return response(it)
@@ -104,17 +227,29 @@ class NativeCausalActionSyncTest {
                     if (command.getString("kind") == "select") payload.put("date", command.getString("day"))
                         .put("planViewCount", counts.get("planViewCount")).put("dailyPostponeCount", counts.get("dailyPostponeCount"))
                 }
-                "focus" -> {
+                "focus", "completion" -> {
                     val result = CausalFocus.apply(canonical.focus, command)
                     receipt.put("accepted", result.outcome.getBoolean("accepted")).put("outcome", result.outcome)
                     if (result.outcome.getBoolean("accepted")) payload.put("focusSession",
                         result.journal.getJSONObject("sessions").getJSONObject(result.journal.getString("currentSessionId")).getJSONObject("projection"))
                 }
             }
+            if (operation.opt("type") == "completion") {
+                val changes = operation.getJSONArray("changes"); val results = JSONArray()
+                if (receipt.getBoolean("accepted")) for (index in 0 until changes.length()) {
+                    val member = changes.getJSONObject(index); val serverVersion = (revision + 2) * 100 + index + 1
+                    results.put(JSONObject().put("mutationId", member.getString("mutationId")).put("accepted", true).put("serverVersion", serverVersion)
+                        .put("record", JSONObject().put("user_id", owner).put("entity_type", member.getString("entityType"))
+                            .put("entity_id", member.getString("entityId")).put("device_id", member.getString("deviceId"))
+                            .put("version", member.getLong("version")).put("server_version", serverVersion).put("payload", member.getJSONObject("payload"))
+                            .put("updated_at", member.getString("updatedAt")).put("deleted_at", JSONObject.NULL)))
+                }
+                receipt.put("changes", results)
+            }
             receipt.put("record", JSONObject().put("user_id", owner).put("entity_type", "tracking").put("entity_id", "singleton")
-                .put("device_id", "causal-action-v2").put("version", revision + 3).put("server_version", (revision + 2) * 10)
+                .put("device_id", "causal-action-v2").put("version", revision + 3).put("server_version", (revision + 2) * 100 + 10)
                 .put("updated_at", time).put("deleted_at", JSONObject.NULL).put("payload", payload))
-            NativeCausalProtocol.receipt(owner, operation, receipt)
+            NativeCausalRequestJournal.receipt(owner, operation, receipt)
             val entry = JSONObject().put("schemaVersion", 2).put("accountId", owner).put("epoch", epoch).put("revision", revision + 1).put("receipt", receipt).toString()
             saved.getJSONObject("entries").put((revision + 1).toString(), JSONObject().put("body", entry).put("sha256", NativeCausalHistoryProtocol.hash(entry.toByteArray(Charsets.UTF_8))))
             saved.put("throughRevision", revision + 1).put("downloadedRevision", revision + 1)
