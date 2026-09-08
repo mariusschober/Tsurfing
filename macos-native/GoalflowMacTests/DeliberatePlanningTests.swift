@@ -97,6 +97,12 @@ final class DeliberatePlanningTests: XCTestCase {
         try plans.clearAll()
         XCTAssertNil(try plans.load(for: day))
         XCTAssertTrue(try plans.isOrderLocked(for: day))
+        // Recreating the projection must not bypass its retained policy.
+        XCTAssertThrowsError(try plans.save(DailyPlan(localDate: day, confirmedAt: "2026-09-08T11:00:00Z", taskIds: ["b", "a"])))
+        XCTAssertNil(try plans.load(for: day))
+        try plans.save(DailyPlan(localDate: day, confirmedAt: "2026-09-08T11:00:00Z", taskIds: ["a", "b"]))
+        XCTAssertEqual(try plans.load(for: day)?.taskIds, ["a", "b"])
+        try plans.clearAll()
         a.plannedOrder = 2
         XCTAssertThrowsError(try tasks.saveAll([a, b]))
         _ = try tasks.completeTask(id: "a", actualDurationMinutes: 10, flowState: nil)

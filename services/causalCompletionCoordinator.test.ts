@@ -350,7 +350,8 @@ it('keeps an offline completion behind its planning command and binds the planni
   expect(operation.changes.find((member: any) => member.entityType === 'progress').baseServerVersion).toBe(201);
 });
 
-it.each([{ chained: false, edit: 'none' }, { chained: true, edit: 'none' }, { chained: false, edit: 'before' }, { chained: false, edit: 'after' }, { chained: false, edit: 'before', continuation: true }, { chained: false, edit: 'after', continuation: true }])('resolves rejected planning with completion and saved edits (%j)', async ({ chained, edit, continuation }) => {
+it.each([{ chained: false, edit: 'none' }, { chained: true, edit: 'none' }, { chained: false, edit: 'before' }, { chained: false, edit: 'after' }, { chained: false, edit: 'before', continuation: true }, { chained: false, edit: 'after', continuation: true }]
+  .flatMap(scenario => [false, true].map(conflictingNotes => ({ ...scenario, conflictingNotes }))))('resolves rejected planning or retains competing completion notes (%j)', async ({ chained, edit, continuation, conflictingNotes }) => {
   const f = await fixture(true), localDate = '2026-09-08';
   const command = { schemaVersion: 1 as const, operationId: crypto.randomUUID(), accountId: f.accountId, localDate,
     baselineRevision: null, proposedOrder: ['task'], ratings: [], maximumAcceptedXp: 0, capturedAt: '2026-09-08T00:01:00.000Z' };
@@ -390,8 +391,20 @@ it.each([{ chained: false, edit: 'none' }, { chained: true, edit: 'none' }, { ch
     records: pending.members.map((member, index) => ({ user_id: f.accountId, entity_type: member.entityType, entity_id: member.entityId,
       version: 1, server_version: index + 10, device_id: 'other-device', updated_at: command.capturedAt, deleted_at: null,
       payload: member.entityType === 'progress' ? { ...(member.payload as any), xp: 80 }
-        : member.entityType === 'tasks' ? { ...(member.payload as any), plannedOrder: 4, description: 'remote note' } : member.payload })) };
+        : member.entityType === 'tasks' ? { ...(member.payload as any), plannedOrder: 4, ...(conflictingNotes ? { description: 'remote note' } : {}) } : member.payload })) };
   await retainPlanningReview(f.name, f.accountId, command, snapshot);
+  if (conflictingNotes) {
+    // Choosing an order is not consent to erase an independently saved note.
+    // Both choices must roll back atomically, retaining all original evidence.
+    const before = await f.read(), planningBefore = await readDailyPlanning(f.name, f.accountId, localDate);
+    for (const choice of ['synced', 'draft'] as const) {
+      await expect(resolvePlanningReview(f.name, f.accountId, command.operationId, choice))
+        .rejects.toThrow('Both devices changed description');
+      expect(await f.read()).toEqual(before);
+      expect(await readDailyPlanning(f.name, f.accountId, localDate)).toEqual(planningBefore);
+    }
+    return;
+  }
   await resolvePlanningReview(f.name, f.accountId, command.operationId, 'synced');
   const values = await f.read(), state = values[CAUSAL_STORE];
   expect(state.completionAdmissions[intent.focus.actionId]).toEqual(original);
