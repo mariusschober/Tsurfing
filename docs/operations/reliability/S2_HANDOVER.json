@@ -3829,6 +3829,130 @@
         "macOS causal integration",
         "Cross-client acceptance"
       ]
+    },
+    {
+      "id": "recovery-dismissal",
+      "sourceCommit": "b37c0d2e91bcd01e5c5c906ec3f473d626fe77ff",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "components/SyncStatus.tsx",
+        "services/causalCompletionCoordinator.ts",
+        "services/causalCompletionDismissal.test.ts",
+        "services/storage.recovery.test.ts",
+        "services/storage.ts",
+        "services/syncProtocol.ts",
+        "tests/e2e/s1-local-storage.spec.ts"
+      ],
+      "verification": [
+        {
+          "command": "VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "passed": 731,
+          "files": 108
+        },
+        {
+          "command": "npx vitest run services/storage.recovery.test.ts services/causalCompletionDismissal.test.ts",
+          "exitCode": 0,
+          "passed": 7
+        },
+        {
+          "command": "npm run test:s1:storage (x3)",
+          "exitCode": 0,
+          "passed": 38,
+          "files": 5
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0,
+          "checked": 24
+        },
+        {
+          "command": "npm run verify:migrations",
+          "exitCode": 0,
+          "migrations": 32
+        },
+        {
+          "command": "npm run verify:migration-hashes",
+          "exitCode": 0,
+          "migrations": 32
+        },
+        {
+          "command": "npm run verify:room-hashes",
+          "exitCode": 0,
+          "schemas": 9
+        },
+        {
+          "command": "npm run test:migrations:postgres (empty + upgrade)",
+          "exitCode": 0
+        },
+        {
+          "command": "android-native gradle testProductionDebugUnitTest lintProductionDebug assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": 228,
+          "passed": 227,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "xcodebuild test GoalflowMac Debug platform=macOS CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0,
+          "tests": 226,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "npx playwright test --config playwright.s1.config.ts",
+          "exitCode": 0,
+          "passed": 44
+        },
+        {
+          "command": "npx playwright test --config playwright.s2.config.ts",
+          "exitCode": 0,
+          "passed": 26
+        },
+        {
+          "command": "npm run test:e2e",
+          "exitCode": 0,
+          "passed": 94
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-recovery-release.log",
+          "sha256": "6e43087239a6675de6f23f5784a1893314ee9b2ff882ee969f1ce2b0c99a6282"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-recovery-postgres.log",
+          "sha256": "bea25f67a75a60ff2081b165e758e5272c4057cee9ab35c80cdaf2fea695837c"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-recovery-android.log",
+          "sha256": "b38f23ca68c7a641dbce733876218604880e92230e870c1f481737ea20903316"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-recovery-macos.log",
+          "sha256": "6c5e195ebf6ad79ffc94480799571751c7b30381cee1bd4329e79db5a264aff8"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-recovery-s1browser.log",
+          "sha256": "5b78261180b5841950c46b79fa9c684e1adc46158662f755005915f88a197cbb"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-recovery-s2browser.log",
+          "sha256": "a81dd9b73b2dc8287ece40a39643ae490d9e5a4d5e48c9cf92d4e0c007fe437a"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-recovery-e2e.log",
+          "sha256": "89779a90f6771817871b48d824b1d63a82ab27442bbfb48ee64918317bb856d5"
+        }
+      ],
+      "compatibility": "Additive discardedReviews localState field with merge + validation. No schema, migration, identifier, wire or receipt-contract change. Rejected-completion audit retained; identities never reusable.",
+      "remaining": [
+        "Divergent legacy ambiguity import",
+        "Nonempty-restore reconciliation",
+        "macOS causal integration",
+        "Cross-client acceptance"
+      ]
     }
   ],
   "findings": [
