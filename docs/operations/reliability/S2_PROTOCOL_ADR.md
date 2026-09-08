@@ -279,3 +279,8 @@ A day selection for an unknown baseline retains the last provable tracking date/
 ## Native history evidence boundary
 
 Android now retains bounded history chunks and exact complete bodies in the private account journal. A downloaded revision is transport evidence only: no projection or outbox is changed by download. Restore revalidates every consecutive revision, checksum and receipt, including the complete member receipt contract for atomic completion. Partial chunks retain their original epoch and through-revision until the entry completes. A future replay transaction must bind cutover to local evidence, replay authoritative history, overlay unrepresented local admissions and retire only exact represented receipts atomically. This checkpoint does not enable that unfinished integration.
+
+
+## Native enrollment and evidence orchestration
+
+Android now has an explicit evidence sync entrypoint using the production session-bound HTTP method. Enrollment requests are persisted before sending and retries reuse the same bytes and identity. A known tracking cutover requires exactly one preserved positive server version; missing or conflicting evidence remains a recovery case. Fresh local defaults may initialize an absent server record or receive proof of an existing legacy baseline without relabeling local pending increments as baseline counts. Downloaded history remains separate from projection application. Normal UI activation and atomic acknowledgment await the remaining native integration.

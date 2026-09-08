@@ -3033,6 +3033,71 @@
         "Divergent legacy recovery and comprehensive mixed-version acceptance remain incomplete."
       ],
       "permittedNextStage": "Continue S2; S3 blocked"
+    },
+    {
+      "commit": "6e15682d89089d974c6b5f98ca53deaed53e4bd8",
+      "scope": "Native durable enrollment and authenticated resumable history orchestration through NativeSyncEngine",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowRepository.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalEnrollment.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalHistoryStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeCausalEvidenceSync.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeSyncEngine.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/sync/NativeCausalEvidenceSyncTest.kt"
+      ],
+      "findingIds": [
+        "S2-NATIVE-ENROLLMENT"
+      ],
+      "commands": [
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": {
+            "passed": 171,
+            "failed": 0,
+            "skipped": 1
+          },
+          "skipped": "hostedBrowserRecordConvergesThroughProductionTransport"
+        },
+        {
+          "command": "env VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "tests": {
+            "passed": 719,
+            "failed": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "command": "npm run verify:room-hashes && npm run verify:identifiers",
+          "exitCode": 0,
+          "checked": [
+            9,
+            24
+          ]
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Additive private enrollment request/receipt/capability evidence; original cutover and initialization identities remain immutable. Explicit engine entrypoint only; no UI activation or queue retirement.",
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-enrollment-android.log",
+          "sha256": "efc7d10057cedc4585eaaafef3995b4c462957a2fdf696dd6fdb643351a10ae2"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-enrollment-release.log",
+          "sha256": "e80bfbc2ce4be4e57c7186bb1eaa0ee0e3f185d8e24a7c6c84a6aaf38633d72d"
+        }
+      ],
+      "testIdentity": "Robolectric Room and production NativeSyncEngine with a synthetic HTTP backend; not hosted or device acceptance.",
+      "blockers": [
+        "Native projection application, request/receipt acknowledgment and pending overlay remain incomplete.",
+        "Native causal completion admission and UI integration remain incomplete.",
+        "macOS causal integration, divergent recovery and comprehensive acceptance remain incomplete."
+      ],
+      "permittedNextStage": "Continue S2; S3 blocked"
     }
   ],
   "findings": [

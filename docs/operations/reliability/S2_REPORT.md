@@ -2,7 +2,7 @@
 
 Stage acceptance: **BLOCKED — implementation continues. S3 is not permitted.**
 
-Latest tested source: `01acdbaa31cff8bc204ff27c5fd62b8d2f46b218`. Native causal replay: **PASS_LOCAL** (167 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release gate passed). Native projection application and exact acknowledgment, UI/completion integration, macOS and recovery remain incomplete. S3 remains blocked.
+Latest tested source: `6e15682d89089d974c6b5f98ca53deaed53e4bd8`. Native authenticated enrollment/history orchestration: **PASS_LOCAL** (171 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release gate passed). Native projection/acknowledgment, UI/completion, macOS and recovery remain incomplete. S3 remains blocked.
 
 S1's tested commit `09245261b6174ec878f0296ca61682c603f54304` is integrated.
 S1.2 correction `262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d` is integrated;
@@ -654,3 +654,10 @@ Native replay now reconstructs the complete downloaded prefix from cutover throu
 Review also closed a Web replay gap: a new day baseline could reuse the cutover, another baseline or an accepted completion member identity. Web and Android now reject these collisions; a shared fixture specifically covers cutover reuse. Shared sequential history proves consistent counter/focus/completion/day reconstruction.
 
 Final native command `env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true`: exit 0, 167 passed, one hosted test skipped; lint/debug build passed. `env VERIFY_PORT=54173 npm run verify:release`: exit 0, 719 tests passed. The default-port run failed liveness because port 4173 served an unrelated Python HTTP 404; it was left untouched. Room hashes 9 and identifiers 24 passed. Evidence: `evidence/s2-native-replay-android.log`, `evidence/s2-native-replay-release.log`. No deployment or installation occurred.
+
+
+## Native enrollment checkpoint `6e15682d89089d974c6b5f98ca53deaed53e4bd8`
+
+The explicit `synchronizeCausalEvidence` engine entrypoint now verifies the server account and uses existing in-flight session checks and retries. Room saves one immutable initialization/cutover request before HTTP. Known cutover uses only preserved pre-command payload and an unambiguous retained server version. Fresh initialization retains zero local defaults separately from a selected existing server baseline. Exact enrollment receipts, capability epochs and monotonic history frontiers are validated and retained. Large cutovers use the existing staged-upload protocol; partial history resumes before a later frontier is downloaded. No ordinary cursor, tracking projection or pending action is retired by this evidence path.
+
+Four production-engine/Room tests with a synthetic HTTP backend prove lost-response retry bytes, pending-counter preservation, large staged cutover/history, fresh-local existing-server selection and session-change rejection. Tamper checks reject changed capability epochs, created-record versions and retained cutover versions. These are native unit tests, not hosted evidence. Full native command `env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true` exited 0 with 171 passed and one hosted test skipped; lint/debug build passed. `env VERIFY_PORT=54173 npm run verify:release` passed 719 tests and all release checks. Room hashes 9 and identifiers 24 passed. Logs: `evidence/s2-native-enrollment-android.log`, `evidence/s2-native-enrollment-release.log`. No deployment or installation occurred.
