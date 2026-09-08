@@ -1,0 +1,41 @@
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+ ❯ services/storage.causal.test.ts (7 tests | 1 failed) 74ms
+   × uses authority for actual reads, new note captures, immutable retry requests and exact receipt retirement 29ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  services/storage.causal.test.ts > uses authority for actual reads, new note captures, immutable retry requests and exact receipt retirement
+AssertionError: expected [ { …(12) } ] to deeply equal [ { …(12) } ]
+
+- Expected
++ Received
+
+@@ -1,8 +1,8 @@
+  [
+    {
+-     "attemptedAt": undefined,
++     "attemptedAt": "2026-09-08T03:53:00.503Z",
+      "baseServerVersion": null,
+      "deletedAt": null,
+      "dependsOnMutationId": undefined,
+      "deviceId": "7e2b6d16-08b1-4ca0-9065-a919b35f3500",
+      "entityId": "task",
+
+ ❯ services/storage.causal.test.ts:42:57
+     40|   const batch = await storageService.preparePushBatch(f.user); expect(…
+     41|   expect((await f.read()).tasks).toEqual(notes); expect((await f.read(…
+     42|   expect(await storageService.preparePushBatch(f.user)).toEqual(batch);
+       |                                                         ^
+     43|   await storageService.commitPushResults(f.user, batch, batch.map(requ…
+     44|     record: { ...request, serverVersion: 1 } })));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 5 passed (6)
+      Tests  1 failed | 73 passed (74)
+   Start at  04:53:00
+   Duration  836ms (transform 921ms, setup 0ms, import 1.46s, tests 1.26s, environment 0ms)
+

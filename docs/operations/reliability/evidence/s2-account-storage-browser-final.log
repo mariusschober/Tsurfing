@@ -1,0 +1,32 @@
+[WebServer] (node:62292) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:62311) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:62338) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 12 tests using 2 workers
+
+(node:62344) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:62345) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   2 [chromium] › tests/e2e/s2-storage-fence.spec.ts:9:1 › current storage retains a pre-cutover tracking capture for review without guessing its counter (558ms)
+  ✓   3 [chromium] › tests/e2e/s2-storage-fence.spec.ts:47:1 › an uncooperative older connection delays cutover; its final committed write is preserved (345ms)
+  ✓   4 [chromium] › tests/e2e/s2-storage-fence.spec.ts:82:1 › causal local admission serializes real browser transactions and preserves an action across rollback (195ms)
+  ✓   5 [chromium] › tests/e2e/s2-storage-fence.spec.ts:125:1 › counter and focus admissions share one authority across concurrent browser transactions (226ms)
+  ✓   1 [webkit] › tests/e2e/s2-storage-fence.spec.ts:9:1 › current storage retains a pre-cutover tracking capture for review without guessing its counter (1.5s)
+  ✓   6 [chromium] › tests/e2e/s2-storage-fence.spec.ts:160:1 › business authority survives legacy deletes and restores a pending completion without changing its request (462ms)
+  ✓   8 [chromium] › tests/e2e/s2-storage-fence.spec.ts:217:1 › business upgrade waits for an older tab and preserves its last committed note edit (358ms)
+  ✓   7 [webkit] › tests/e2e/s2-storage-fence.spec.ts:47:1 › an uncooperative older connection delays cutover; its final committed write is preserved (826ms)
+  ✓   9 [webkit] › tests/e2e/s2-storage-fence.spec.ts:82:1 › causal local admission serializes real browser transactions and preserves an action across rollback (387ms)
+  ✓  10 [webkit] › tests/e2e/s2-storage-fence.spec.ts:125:1 › counter and focus admissions share one authority across concurrent browser transactions (383ms)
+  ✓  11 [webkit] › tests/e2e/s2-storage-fence.spec.ts:160:1 › business authority survives legacy deletes and restores a pending completion without changing its request (892ms)
+  ✓  12 [webkit] › tests/e2e/s2-storage-fence.spec.ts:217:1 › business upgrade waits for an older tab and preserves its last committed note edit (709ms)
+
+  12 passed (10.5s)

@@ -1,0 +1,62 @@
+[WebServer] (node:62866) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:62876) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:62903) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 42 tests using 2 workers
+
+(node:62917) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:62918) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [chromium] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (1.7s)
+  ✓   3 [chromium] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (396ms)
+  ✓   2 [webkit] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (2.6s)
+  ✓   5 [webkit] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (706ms)
+  ✓   4 [chromium] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (1.4s)
+  ✓   7 [chromium] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (695ms)
+  ✓   6 [webkit] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (2.0s)
+  ✓   8 [chromium] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (1.3s)
+  ✓   9 [webkit] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (999ms)
+  ✓  10 [chromium] › tests/e2e/s1-local-storage.spec.ts:147:46 › A: empty production pull after peer paused refreshes the next focus baseline (1.5s)
+  ✓  11 [webkit] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (1.9s)
+  ✓  12 [chromium] › tests/e2e/s1-local-storage.spec.ts:147:46 › A: empty production pull after peer completed refreshes the next focus baseline (1.3s)
+  ✓  14 [chromium] › tests/e2e/s1-local-storage.spec.ts:202:1 › C: account switch and unmount retire old React callbacks without creating actions (636ms)
+  ✓  15 [chromium] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (992ms)
+  ✓  16 [chromium] › tests/e2e/s1-local-storage.spec.ts:241:1 › status: an obsolete async commit read cannot overwrite a newer permanent error (376ms)
+  ✓  13 [webkit] › tests/e2e/s1-local-storage.spec.ts:147:46 › A: empty production pull after peer paused refreshes the next focus baseline (2.3s)
+  ✓  17 [chromium] › tests/e2e/s1-local-storage.spec.ts:260:1 › E: real grouped completion and an independent note edit remain queued (2.1s)
+  ✓  18 [webkit] › tests/e2e/s1-local-storage.spec.ts:147:46 › A: empty production pull after peer completed refreshes the next focus baseline (2.1s)
+  ✓  19 [chromium] › tests/e2e/s1-local-storage.spec.ts:293:56 › D: real IndexedDB inbound retains before/during/after intent (336ms)
+  ✓  21 [chromium] › tests/e2e/s1-local-storage.spec.ts:293:56 › D: real IndexedDB reconciliation retains before/during/after intent (358ms)
+  ✓  20 [webkit] › tests/e2e/s1-local-storage.spec.ts:202:1 › C: account switch and unmount retire old React callbacks without creating actions (760ms)
+  ✓  22 [chromium] › tests/e2e/s1-local-storage.spec.ts:340:1 › B: real IndexedDB metadata writers preserve a queued independent transaction and exact receipts (340ms)
+  ✓  24 [chromium] › tests/e2e/s1-local-storage.spec.ts:400:42 › F: real browser unavailable IndexedDB preserves cursor and WAL, mirror fault=false (191ms)
+  ✓  25 [chromium] › tests/e2e/s1-local-storage.spec.ts:400:42 › F: real browser unavailable IndexedDB preserves cursor and WAL, mirror fault=true (191ms)
+  ✓  26 [chromium] › tests/e2e/s1-local-storage.spec.ts:428:1 › G: equal-count WAL replacement in another page invalidates content and stays idempotent (597ms)
+  ✓  23 [webkit] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.5s)
+  ✓  27 [chromium] › tests/e2e/s1-local-storage.spec.ts:454:1 › note capture failure preserves editable text and exposes the failure at the editor (850ms)
+  ✓  28 [webkit] › tests/e2e/s1-local-storage.spec.ts:241:1 › status: an obsolete async commit read cannot overwrite a newer permanent error (602ms)
+  ✓  29 [chromium] › tests/e2e/s1-local-storage.spec.ts:474:1 › bootstrap: two simultaneous real app hydrations import one legacy plan without duplicate actions (539ms)
+  ✓  31 [chromium] › tests/e2e/s1-local-storage.spec.ts:498:1 › local retry: a captured action commits after storage recovery without a cloud client (743ms)
+  ✓  32 [chromium] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error (328ms)
+  ✓  30 [webkit] › tests/e2e/s1-local-storage.spec.ts:260:1 › E: real grouped completion and an independent note edit remain queued (2.8s)
+  ✓  33 [webkit] › tests/e2e/s1-local-storage.spec.ts:293:56 › D: real IndexedDB inbound retains before/during/after intent (607ms)
+  ✓  34 [webkit] › tests/e2e/s1-local-storage.spec.ts:293:56 › D: real IndexedDB reconciliation retains before/during/after intent (556ms)
+  ✓  35 [webkit] › tests/e2e/s1-local-storage.spec.ts:340:1 › B: real IndexedDB metadata writers preserve a queued independent transaction and exact receipts (552ms)
+  ✓  36 [webkit] › tests/e2e/s1-local-storage.spec.ts:400:42 › F: real browser unavailable IndexedDB preserves cursor and WAL, mirror fault=false (379ms)
+  ✓  37 [webkit] › tests/e2e/s1-local-storage.spec.ts:400:42 › F: real browser unavailable IndexedDB preserves cursor and WAL, mirror fault=true (386ms)
+  ✓  38 [webkit] › tests/e2e/s1-local-storage.spec.ts:428:1 › G: equal-count WAL replacement in another page invalidates content and stays idempotent (960ms)
+  ✓  39 [webkit] › tests/e2e/s1-local-storage.spec.ts:454:1 › note capture failure preserves editable text and exposes the failure at the editor (1.2s)
+  ✓  40 [webkit] › tests/e2e/s1-local-storage.spec.ts:474:1 › bootstrap: two simultaneous real app hydrations import one legacy plan without duplicate actions (1.0s)
+  ✓  41 [webkit] › tests/e2e/s1-local-storage.spec.ts:498:1 › local retry: a captured action commits after storage recovery without a cloud client (996ms)
+  ✓  42 [webkit] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error (568ms)
+
+  42 passed (31.5s)

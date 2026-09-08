@@ -1,0 +1,78 @@
+[WebServer] (node:63273) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:63293) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:63320) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 54 tests using 2 workers
+
+(node:63322) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:63323) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [chromium] › tests/e2e/s2-storage-fence.spec.ts:9:1 › current storage retains a pre-cutover tracking capture for review without guessing its counter (466ms)
+  ✓   3 [chromium] › tests/e2e/s2-storage-fence.spec.ts:47:1 › an uncooperative older connection delays cutover; its final committed write is preserved (375ms)
+  ✓   4 [chromium] › tests/e2e/s2-storage-fence.spec.ts:82:1 › causal local admission serializes real browser transactions and preserves an action across rollback (214ms)
+  ✓   5 [chromium] › tests/e2e/s2-storage-fence.spec.ts:125:1 › counter and focus admissions share one authority across concurrent browser transactions (190ms)
+  ✓   2 [chromium] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (1.6s)
+  ✓   6 [chromium] › tests/e2e/s2-storage-fence.spec.ts:160:1 › business authority survives legacy deletes and restores a pending completion without changing its request (465ms)
+  ✓   7 [chromium] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (383ms)
+  ✓   8 [chromium] › tests/e2e/s2-storage-fence.spec.ts:217:1 › business upgrade waits for an older tab and preserves its last committed note edit (340ms)
+(node:63366) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   9 [chromium] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (1.4s)
+  ✓  11 [chromium] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (724ms)
+  ✓  10 [webkit] › tests/e2e/s1-local-storage.spec.ts:24:1 › A/E: one profile, two real app tabs observe committed tasks without reload or cloud pull (2.3s)
+  ✓  12 [chromium] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (1.3s)
+  ✓  13 [webkit] › tests/e2e/s1-local-storage.spec.ts:36:1 › C: releasing an obsolete React debounce after remote hydration creates no action (709ms)
+  ✓  14 [chromium] › tests/e2e/s1-local-storage.spec.ts:147:46 › A: empty production pull after peer paused refreshes the next focus baseline (1.6s)
+  ✓  15 [webkit] › tests/e2e/s1-local-storage.spec.ts:63:1 › A: paused peer focus reaches rendered refs; ticks and empty peer hints create no actions (2.1s)
+  ✓  16 [chromium] › tests/e2e/s1-local-storage.spec.ts:147:46 › A: empty production pull after peer completed refreshes the next focus baseline (1.4s)
+  ✓  18 [chromium] › tests/e2e/s1-local-storage.spec.ts:202:1 › C: account switch and unmount retire old React callbacks without creating actions (373ms)
+  ✓  17 [webkit] › tests/e2e/s1-local-storage.spec.ts:103:1 › capture failure preserves editable task input and reports the local failure (1.0s)
+  ✓  19 [chromium] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (992ms)
+  ✓  21 [chromium] › tests/e2e/s1-local-storage.spec.ts:241:1 › status: an obsolete async commit read cannot overwrite a newer permanent error (346ms)
+  ✓  20 [webkit] › tests/e2e/s1-local-storage.spec.ts:122:1 › dirty note text survives peer hydration and wrong-account success hints (1.8s)
+  ✓  22 [chromium] › tests/e2e/s1-local-storage.spec.ts:260:1 › E: real grouped completion and an independent note edit remain queued (1.9s)
+  ✓  24 [chromium] › tests/e2e/s1-local-storage.spec.ts:293:56 › D: real IndexedDB inbound retains before/during/after intent (380ms)
+  ✓  23 [webkit] › tests/e2e/s1-local-storage.spec.ts:147:46 › A: empty production pull after peer paused refreshes the next focus baseline (1.9s)
+  ✓  25 [chromium] › tests/e2e/s1-local-storage.spec.ts:293:56 › D: real IndexedDB reconciliation retains before/during/after intent (335ms)
+  ✓  27 [chromium] › tests/e2e/s1-local-storage.spec.ts:340:1 › B: real IndexedDB metadata writers preserve a queued independent transaction and exact receipts (362ms)
+  ✓  28 [chromium] › tests/e2e/s1-local-storage.spec.ts:400:42 › F: real browser unavailable IndexedDB preserves cursor and WAL, mirror fault=false (201ms)
+  ✓  29 [chromium] › tests/e2e/s1-local-storage.spec.ts:400:42 › F: real browser unavailable IndexedDB preserves cursor and WAL, mirror fault=true (203ms)
+  ✓  30 [chromium] › tests/e2e/s1-local-storage.spec.ts:428:1 › G: equal-count WAL replacement in another page invalidates content and stays idempotent (562ms)
+  ✓  26 [webkit] › tests/e2e/s1-local-storage.spec.ts:147:46 › A: empty production pull after peer completed refreshes the next focus baseline (1.9s)
+  ✓  31 [chromium] › tests/e2e/s1-local-storage.spec.ts:454:1 › note capture failure preserves editable text and exposes the failure at the editor (1.0s)
+  ✓  32 [webkit] › tests/e2e/s1-local-storage.spec.ts:202:1 › C: account switch and unmount retire old React callbacks without creating actions (724ms)
+  ✓  33 [chromium] › tests/e2e/s1-local-storage.spec.ts:474:1 › bootstrap: two simultaneous real app hydrations import one legacy plan without duplicate actions (543ms)
+  ✓  35 [chromium] › tests/e2e/s1-local-storage.spec.ts:498:1 › local retry: a captured action commits after storage recovery without a cloud client (766ms)
+  ✓  34 [webkit] › tests/e2e/s1-local-storage.spec.ts:219:1 › visibility: missed hints and absent BroadcastChannel recover on resume (1.4s)
+  ✓  36 [chromium] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error (327ms)
+(node:63466) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  37 [webkit] › tests/e2e/s1-local-storage.spec.ts:241:1 › status: an obsolete async commit read cannot overwrite a newer permanent error (586ms)
+  ✓  39 [webkit] › tests/e2e/s2-storage-fence.spec.ts:9:1 › current storage retains a pre-cutover tracking capture for review without guessing its counter (728ms)
+  ✓  40 [webkit] › tests/e2e/s2-storage-fence.spec.ts:47:1 › an uncooperative older connection delays cutover; its final committed write is preserved (833ms)
+  ✓  41 [webkit] › tests/e2e/s2-storage-fence.spec.ts:82:1 › causal local admission serializes real browser transactions and preserves an action across rollback (484ms)
+  ✓  38 [webkit] › tests/e2e/s1-local-storage.spec.ts:260:1 › E: real grouped completion and an independent note edit remain queued (2.6s)
+  ✓  42 [webkit] › tests/e2e/s2-storage-fence.spec.ts:125:1 › counter and focus admissions share one authority across concurrent browser transactions (440ms)
+  ✓  43 [webkit] › tests/e2e/s1-local-storage.spec.ts:293:56 › D: real IndexedDB inbound retains before/during/after intent (611ms)
+  ✓  44 [webkit] › tests/e2e/s2-storage-fence.spec.ts:160:1 › business authority survives legacy deletes and restores a pending completion without changing its request (922ms)
+  ✓  45 [webkit] › tests/e2e/s1-local-storage.spec.ts:293:56 › D: real IndexedDB reconciliation retains before/during/after intent (600ms)
+  ✓  46 [webkit] › tests/e2e/s2-storage-fence.spec.ts:217:1 › business upgrade waits for an older tab and preserves its last committed note edit (765ms)
+  ✓  47 [webkit] › tests/e2e/s1-local-storage.spec.ts:340:1 › B: real IndexedDB metadata writers preserve a queued independent transaction and exact receipts (606ms)
+  ✓  48 [webkit] › tests/e2e/s1-local-storage.spec.ts:400:42 › F: real browser unavailable IndexedDB preserves cursor and WAL, mirror fault=false (377ms)
+  ✓  49 [webkit] › tests/e2e/s1-local-storage.spec.ts:400:42 › F: real browser unavailable IndexedDB preserves cursor and WAL, mirror fault=true (373ms)
+  ✓  50 [webkit] › tests/e2e/s1-local-storage.spec.ts:428:1 › G: equal-count WAL replacement in another page invalidates content and stays idempotent (919ms)
+  ✓  51 [webkit] › tests/e2e/s1-local-storage.spec.ts:454:1 › note capture failure preserves editable text and exposes the failure at the editor (1.3s)
+  ✓  52 [webkit] › tests/e2e/s1-local-storage.spec.ts:474:1 › bootstrap: two simultaneous real app hydrations import one legacy plan without duplicate actions (1.2s)
+  ✓  53 [webkit] › tests/e2e/s1-local-storage.spec.ts:498:1 › local retry: a captured action commits after storage recovery without a cloud client (986ms)
+  ✓  54 [webkit] › tests/e2e/s1-local-storage.spec.ts:518:1 › S1.2: local recovery cannot erase an earlier unresolved cloud error (571ms)
+
+  54 passed (33.1s)

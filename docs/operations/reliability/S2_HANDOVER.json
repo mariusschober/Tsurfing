@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Dormant Web completion and business-store compatibility fence pass locally; active ordinary storage, backup/recovery, Web coordination, native integration and mixed-version activation remain incomplete.",
+  "acceptanceReason": "Implementation continues. Schema-6 authoritative backup and ordinary Web storage pass local and browser checks; typed UI actions, day/enrollment handling, causal sync orchestration, native integration and recovery remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -1731,6 +1731,195 @@
         "Mixed-version rollout acceptance"
       ],
       "permittedNextStage": null
+    },
+    {
+      "commit": "a16a227890f7d72395e61b64f69219c31f79b444",
+      "scope": "Schema-6 authoritative business backup/restore",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "services/causalBackup.ts",
+        "services/causalBusinessBackup.test.ts",
+        "services/causalBusinessStorage.ts",
+        "services/causalCompletionCoordinator.test.ts",
+        "services/causalCompletionProjection.test.ts",
+        "services/storage.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-BUSINESS-BACKUP",
+          "disposition": "Implemented complete tagged authority backup and empty-account restore; nonempty reconciliation remains pending."
+        }
+      ],
+      "tests": {
+        "release": {
+          "passed": 631,
+          "files": 97,
+          "exitCode": 0
+        },
+        "focused": {
+          "passed": 45,
+          "files": 4,
+          "exitCode": 0
+        }
+      },
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run lint",
+          "exitCode": 0
+        },
+        {
+          "command": "npx vitest run services/causalBusinessBackup.test.ts services/causalBackup.test.ts services/causalCompletionCoordinator.test.ts services/causalCompletionProjection.test.ts",
+          "exitCode": 0
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Exports schema 6 only for business-fenced databases, schema 5 for tracking-only authority, schema 4 otherwise. Schema 5 remains importable. Exact requests/receipts/cutover and mirror evidence retained.",
+      "evidenceSha256": {
+        "evidence/s2-business-backup-focused.log": "a4663d4d6190365f8441f03172a242d07e1060c8a389c846190c2c2a1ee9c8bf",
+        "evidence/s2-business-backup-lint.log": "e90ee48ea12d3a4c3b7a3b27a3894b3cf36c40b2d5d29e5bd6efc2dafbd309e5",
+        "evidence/s2-business-backup-release.log": "e6b88cbbef941fdbcb4f0426be8583394b4f8eba495d2fda378d46860f0ec450"
+      },
+      "blockers": [
+        "Nonempty restore reconciliation",
+        "Recovery of retained late captures"
+      ],
+      "permittedNextStage": null
+    },
+    {
+      "commit": "a78701b19f1a2c5b42002cfee2d08fd0457b31da",
+      "scope": "Ordinary storage authority access, capture compatibility and actual browser regression checks",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "scripts/verify-client-artifacts.mjs",
+        "services/causalCompletionCoordinator.ts",
+        "services/storage.causal.test.ts",
+        "services/storage.ts",
+        "services/syncProtocol.ts",
+        "tests/browser/s1Harness.ts",
+        "tests/e2e/s1-local-storage.spec.ts",
+        "tests/e2e/s2-storage-fence.spec.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-ORDINARY-AUTHORITY",
+          "disposition": "Ordinary storage reads/writes use authority; protected causal tracking changes require command APIs."
+        },
+        {
+          "id": "S2-CAPTURE-COMPATIBILITY",
+          "disposition": "Old/inconsistent captures and groups are retained as exact review evidence without partial application or inferred deltas."
+        }
+      ],
+      "tests": {
+        "release": {
+          "passed": 639,
+          "files": 98,
+          "exitCode": 0
+        },
+        "focused": {
+          "passed": 8,
+          "files": 1,
+          "exitCode": 0
+        },
+        "browser": {
+          "passed": 54,
+          "engines": [
+            "Chromium",
+            "WebKit"
+          ],
+          "s1": 42,
+          "s2": 12,
+          "exitCode": 0
+        },
+        "staticMigrations": 31,
+        "migrationHashes": 31,
+        "roomHashes": 8,
+        "identifiers": 24
+      },
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0
+        },
+        {
+          "command": "S1_INCLUDE_EXISTING=1 npx playwright test --config playwright.s1.config.ts s1-local-storage.spec.ts s2-storage-fence.spec.ts",
+          "exitCode": 0
+        },
+        {
+          "command": "npx vitest run services/storage.causal.test.ts",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:migrations",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:migration-hashes",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:room-hashes",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0
+        }
+      ],
+      "iterationFailures": [
+        {
+          "check": "Focused unit integration",
+          "failed": 1,
+          "passed": 73,
+          "reason": "Test compared local attemptedAt metadata rather than immutable production wire fields; corrected assertion."
+        },
+        {
+          "check": "S2 browser",
+          "failed": 2,
+          "passed": 10,
+          "reason": "Restore fixture reused source localStorage; refusal preserved existing recovery copies. Corrected to a fresh isolated profile."
+        },
+        {
+          "check": "S1 browser",
+          "failed": 4,
+          "passed": 38,
+          "reason": "Fixture mocked obsolete unpaged conflict endpoint. Updated to existing paginated contract; final 42 passed."
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Unfenced S1 behavior remains supported. No application path enables cutover. Fenced ordinary snapshots cannot change causal tracking. Original captures are retained before normal WAL retirement.",
+      "evidenceSha256": {
+        "evidence/s2-account-storage-focused-final.log": "a3622a9d1a2e2b402836377f494749b5b5cf30c6020544dc84f036bbaceda617",
+        "evidence/s2-account-storage-integration.log": "a6b33370005aedafa578369412435869c8a8acaa9985a15bd9ac18d9a555f378",
+        "evidence/s2-account-storage-browser.log": "3a719022611c3ac8f723b9c8ec5f9ddbcb85a73f8ec7329771dc9bc8e397c4cb",
+        "evidence/s2-account-storage-browser-final.log": "1d156d26e6191f6ad299d6488f7f322d746b2dde793e69ceb7da94cbd61c3cb1",
+        "evidence/s2-account-storage-s1-browser.log": "5bc5c8313c08014da64026bb674f885d915c02f908c8cee4637adcdf5c40e635",
+        "evidence/s2-account-storage-s1-browser-final.log": "56182f801d42184e2db9dcd37b00461e781e46f6fad95b34e116a35b36d2bfe0",
+        "evidence/s2-account-storage-browser-combined.log": "22bd82144c9d2aa490b590762cca684597f04601e3f6c6cafb6d06acf9503b91",
+        "evidence/s2-account-storage-release-final.log": "89e72407243f3f9a8c579fee18c538fd549203201d9ea9b887f6acc5451d8d26",
+        "evidence/s2-account-storage-migrations.log": "3d76195fde51e0d0524da0b3d83db913454e2ae2d9680101b371abf3281e264a",
+        "evidence/s2-account-storage-migration-hashes.log": "d72fc9af196628df10efea970bf95bf77b4b115b54e067d93babc66e354897f7",
+        "evidence/s2-account-storage-room-hashes.log": "1015e6557ed195d80ec201920064e103606df131e216c25175cb437f0e4e26be",
+        "evidence/s2-account-storage-identifiers.log": "ec5eafc9e1ac1f1965c335182bab5829bf57e4853d5c2ba3f776836e06db657b"
+      },
+      "notMeasured": [
+        "Hosted/server receipt acceptance for browser synthetic completion",
+        "PostgreSQL rerun",
+        "Native rerun",
+        "Active causal UI and cross-client rollout"
+      ],
+      "blockers": [
+        "Typed causal UI actions and local day handling",
+        "Enrollment and fresh-account initialization behind global fence",
+        "Causal/ordinary pull ordering",
+        "Native integration",
+        "Legacy and nonempty restore recovery actions",
+        "Mixed-version activation"
+      ],
+      "permittedNextStage": null
     }
   ],
   "findings": [
@@ -1938,7 +2127,22 @@
     "evidence/s2-completion-sql-unit-final.log",
     "evidence/s2-completion-sql-unit.log",
     "evidence/s2-completion-unit-final.log",
-    "evidence/s2-completion-unit.log"
+    "evidence/s2-completion-unit.log",
+    "evidence/s2-business-backup-focused.log",
+    "evidence/s2-business-backup-lint.log",
+    "evidence/s2-business-backup-release.log",
+    "evidence/s2-account-storage-focused-final.log",
+    "evidence/s2-account-storage-integration.log",
+    "evidence/s2-account-storage-browser.log",
+    "evidence/s2-account-storage-browser-final.log",
+    "evidence/s2-account-storage-s1-browser.log",
+    "evidence/s2-account-storage-s1-browser-final.log",
+    "evidence/s2-account-storage-browser-combined.log",
+    "evidence/s2-account-storage-release-final.log",
+    "evidence/s2-account-storage-migrations.log",
+    "evidence/s2-account-storage-migration-hashes.log",
+    "evidence/s2-account-storage-room-hashes.log",
+    "evidence/s2-account-storage-identifiers.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

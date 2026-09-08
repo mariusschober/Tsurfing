@@ -1,0 +1,82 @@
+[WebServer] (node:62052) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:62062) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:62089) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 12 tests using 2 workers
+
+(node:62097) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:62096) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   2 [chromium] › tests/e2e/s2-storage-fence.spec.ts:9:1 › current storage retains a pre-cutover tracking capture for review without guessing its counter (590ms)
+  ✓   3 [chromium] › tests/e2e/s2-storage-fence.spec.ts:47:1 › an uncooperative older connection delays cutover; its final committed write is preserved (362ms)
+  ✓   4 [chromium] › tests/e2e/s2-storage-fence.spec.ts:82:1 › causal local admission serializes real browser transactions and preserves an action across rollback (220ms)
+  ✓   5 [chromium] › tests/e2e/s2-storage-fence.spec.ts:125:1 › counter and focus admissions share one authority across concurrent browser transactions (206ms)
+  ✘   6 [chromium] › tests/e2e/s2-storage-fence.spec.ts:160:1 › business authority survives legacy deletes and restores a pending completion without changing its request (271ms)
+(node:62146) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   7 [chromium] › tests/e2e/s2-storage-fence.spec.ts:208:1 › business upgrade waits for an older tab and preserves its last committed note edit (389ms)
+  ✓   1 [webkit] › tests/e2e/s2-storage-fence.spec.ts:9:1 › current storage retains a pre-cutover tracking capture for review without guessing its counter (3.3s)
+  ✓   8 [webkit] › tests/e2e/s2-storage-fence.spec.ts:47:1 › an uncooperative older connection delays cutover; its final committed write is preserved (777ms)
+  ✓   9 [webkit] › tests/e2e/s2-storage-fence.spec.ts:82:1 › causal local admission serializes real browser transactions and preserves an action across rollback (419ms)
+  ✓  10 [webkit] › tests/e2e/s2-storage-fence.spec.ts:125:1 › counter and focus admissions share one authority across concurrent browser transactions (422ms)
+  ✘  11 [webkit] › tests/e2e/s2-storage-fence.spec.ts:160:1 › business authority survives legacy deletes and restores a pending completion without changing its request (459ms)
+(node:62176) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  12 [webkit] › tests/e2e/s2-storage-fence.spec.ts:208:1 › business upgrade waits for an older tab and preserves its last committed note edit (1.0s)
+
+
+  1) [chromium] › tests/e2e/s2-storage-fence.spec.ts:160:1 › business authority survives legacy deletes and restores a pending completion without changing its request 
+
+    Error: page.evaluate: DurableStorageError: Existing local captures require journal reconciliation before restore. They remain unchanged.
+        at u (http://127.0.0.1:4175/assets/index-BXJmF9DJ.js:2:134004)
+        at async http://127.0.0.1:4175/assets/index-BXJmF9DJ.js:2:134211
+        at u (http://127.0.0.1:4175/assets/index-BXJmF9DJ.js:2:134004)
+        at async http://127.0.0.1:4175/assets/index-BXJmF9DJ.js:2:134211
+        at /Users/schober/Projects/TSurfing/tests/e2e/s2-storage-fence.spec.ts:162:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-business--7c6e9-ithout-changing-its-request-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-business--7c6e9-ithout-changing-its-request-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s2-storage-fence-business--7c6e9-ithout-changing-its-request-chromium/error-context.md
+
+  2) [webkit] › tests/e2e/s2-storage-fence.spec.ts:160:1 › business authority survives legacy deletes and restores a pending completion without changing its request 
+
+    Error: page.evaluate: DurableStorageError: Existing local captures require journal reconciliation before restore. They remain unchanged.
+
+      160 | test('business authority survives legacy deletes and restores a pending completion without changing its request', async ({ page }) => {
+      161 |   await load(page);
+    > 162 |   const result = await page.evaluate(async () => {
+          |                             ^
+      163 |     const api = window as any, storage = api.__s1Storage;
+      164 |     const name = 's2-business-browser-' + crypto.randomUUID(), accountId = crypto.randomUUID(), sessionId = crypto.randomUUID(), epoch = crypto.randomUUID();
+      165 |     localStorage.setItem('goalflow_active_database_v2', name);
+        at /Users/schober/Projects/TSurfing/tests/e2e/s2-storage-fence.spec.ts:162:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-business--7c6e9-ithout-changing-its-request-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-business--7c6e9-ithout-changing-its-request-webkit/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s2-storage-fence-business--7c6e9-ithout-changing-its-request-webkit/error-context.md
+
+  2 failed
+    [chromium] › tests/e2e/s2-storage-fence.spec.ts:160:1 › business authority survives legacy deletes and restores a pending completion without changing its request 
+    [webkit] › tests/e2e/s2-storage-fence.spec.ts:160:1 › business authority survives legacy deletes and restores a pending completion without changing its request 
+  10 passed (13.3s)
