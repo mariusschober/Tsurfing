@@ -2491,6 +2491,61 @@
         "Server enrollment, new-account baseline reconciliation, native queues, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain open.",
         "No SQL/native changes or reruns, installation, live configuration or deployment."
       ]
+    },
+    {
+      "commit": "da914a649c3bb90f506a4cdd85f788e8869817cf",
+      "scope": "Explicit durable causal enrollment and staged HTTP transport",
+      "status": "PASS_LOCAL",
+      "prerequisiteCommit": "b88750b",
+      "changedFiles": [
+        "server/routes/sync.reconciliation.test.ts",
+        "server/routes/sync.ts",
+        "services/causalBackup.ts",
+        "services/causalCutoverProtocol.test.ts",
+        "services/causalCutoverProtocol.ts",
+        "services/causalCutoverTransport.ts",
+        "services/causalEnrollment.test.ts",
+        "services/causalEnrollment.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-EXACT-CUTOVER-ENROLLMENT",
+          "disposition": "Exact baseline request persists before transport; receipt archival, capability binding and backup import validate the same identity. Staged enrollment supports existing 4 MiB transport."
+        }
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 697,
+          "testFiles": 103
+        },
+        {
+          "command": "npx vitest run server/routes/sync.reconciliation.test.ts",
+          "exitCode": 0,
+          "tests": 9
+        },
+        {
+          "command": "git diff --cached --check",
+          "exitCode": 0
+        }
+      ],
+      "evidence": [
+        {
+          "path": "evidence/s2-cutover-release-final.log",
+          "sha256": "2241fcead455383fd1afc9c1b23250aad2a0f060265934e6bbbbe23e979c1512"
+        }
+      ],
+      "failedAttempts": [
+        "TypeScript rejected a singleton IDB transaction type; used the existing array-store transaction convention.",
+        "TypeScript rejected broad backup state as a complete enrollment state; validation now explicitly accepts unknown evidence fields."
+      ],
+      "limitations": [
+        "HTTP RPC responses are synthetic; this checkpoint does not prove hosted enrollment.",
+        "Ordinary sync does not yet choose or initiate enrollment; changed or absent local baselines still require history reconciliation.",
+        "Native integration, non-focus completion concurrency and comprehensive legacy recovery/mixed-version acceptance remain incomplete.",
+        "No SQL changes, native or browser reruns, installation, live configuration or deployment."
+      ]
     }
   ],
   "findings": [

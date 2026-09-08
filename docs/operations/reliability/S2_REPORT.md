@@ -575,3 +575,14 @@ An ordinary tracking pull racing a local or peer action retains its cursor and r
 Validation: full release exit 0, 678 tests in 102 files; existing S1/S2 Chromium/WebKit journeys exit 0, 66 tests; final production build/artifact checks exit 0. Three sanitized logs and hashes are recorded in the JSON checkpoint. Corrected fixture/type/path failures and the initial sandbox loopback failure are recorded separately.
 
 Enrollment, new-account history reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete. No SQL/native changes or reruns, installation, live configuration or deployment. Overall S2 remains **BLOCKED**, with no S3 handoff.
+
+
+## Explicit enrollment checkpoint
+
+`da914a649c3bb90f506a4cdd85f788e8869817cf`: **PASS_LOCAL**. Exact cutover requests persist before transport. Replays reuse their original bytes; receipt archival never changes pending actions, tracking projections or cursors. Capability binding and backup import validate retained enrollment proof. Competing identities serialize, failed writes roll back, and unknown baseline fields remain preserved.
+
+Direct and staged authenticated HTTP paths call the existing compare-and-establish SQL function. Changed baselines require review; interrupted requests retain their identity. The existing staging protocol supports up to 4 MiB, with UTF-8 size validation before new admission. Tests cover lost responses, competing requests, receipt-write failure, backup validation, multibyte uploads and mismatched chunk acknowledgments.
+
+Validation: full release exit 0, 697 tests in 103 files, including production build and artifact checks. The JSON handover records the sanitized log and checksum. HTTP database responses are synthetic; hosted enrollment is not proven.
+
+Automatic enrollment selection, absent/divergent local baseline reconciliation, native integration, non-focus completion concurrency and comprehensive legacy recovery/mixed-version acceptance remain incomplete. No SQL changes, native/browser reruns, installation or deployment. S2 remains **BLOCKED**, and S3 is not permitted.
