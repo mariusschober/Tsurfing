@@ -25,10 +25,12 @@ import {
 } from './syncProtocol';
 import { mergeTrackingFocusSession, normalizeFocusSession } from '../src/domain/focusSession';
 import { assertNewSyncPayload, transportablePushBatch } from './syncEnvelope';
+import { CAUSAL_STORE, readCausalAccount } from './causalStorage';
+import { encodeCausalBackup } from './causalBackup';
 
 const BASE_DB_NAME = 'GoalflowDB';
 const ACTIVE_DB_KEY = 'goalflow_active_database_v2';
-const BACKUP_SCHEMA_VERSION = 4;
+const BACKUP_SCHEMA_VERSION = 5;
 const WAL_PREFIX = 'goalflow_wal_v2_';
 const LOCAL_SYNC_CONTEXT = import.meta.env.VITE_LOCAL_SYNC_CONTEXT || 's1-v1-unbundled';
 
@@ -113,6 +115,9 @@ export const validateBackupCollections = (backup: unknown): Record<string, any> 
     ? envelope.collections
     : backup;
   if (!isRecord(collections)) throw new Error('The backup does not contain typed collections.');
+  if (envelope.schemaVersion === 5 && !Object.hasOwn(collections, CAUSAL_STORE)) {
+    throw new Error('The causal backup journal is missing. Nothing was restored.');
+  }
   if (envelope.checksum !== undefined && !/^[a-f0-9]{64}$/i.test(String(envelope.checksum))) {
     throw new Error('Backup checksum validation failed. The file may be incomplete or modified.');
   }
@@ -1525,19 +1530,40 @@ export const storageService = {
   },
 
   async exportBackup(userKey: string): Promise<GoalflowBackup> {
-    await this.flushPendingLocalChanges(userKey);
+    const initialDb = await getDB();
+    // Old captures cannot be replayed through the fenced tracking key model.
+    // Export them verbatim instead; exporting is not recovery/admission.
+    if (!initialDb?.objectStoreNames.contains(CAUSAL_STORE)) await this.flushPendingLocalChanges(userKey);
     return queueMutation(async () => {
       const collections: Record<string, unknown> = {};
       const db = await getDB();
       if (db) {
-        const tx = db.transaction([...DATA_STORES, STORES.SYNC], 'readonly');
+        const causal = db.objectStoreNames.contains(CAUSAL_STORE);
+        const tx = db.transaction([...DATA_STORES, STORES.SYNC, ...(causal ? [CAUSAL_STORE] : [])], 'readonly');
+        const authority = causal ? await readCausalAccount(tx, userKey) : undefined;
         for (const storeName of DATA_STORES) {
-          const value = await tx.objectStore(storeName).get(userKey);
+          const value = causal && storeName === STORES.TRACKING
+            ? (authority?.trackingPresent ? authority.trackingValue : undefined)
+            : await tx.objectStore(storeName).get(userKey);
           if (value !== undefined) collections[storeName] = value;
         }
         const meta = await tx.objectStore(STORES.SYNC).get(userKey);
+        const trackingMirror = causal ? await tx.objectStore(STORES.TRACKING).get(userKey) : undefined;
         if (meta !== undefined) collections[STORES.SYNC] = normalizeSyncMeta(meta);
         await tx.done;
+        if (causal) {
+          const captures: Record<string, string> = {};
+          if (hasWindow()) {
+            const prefix = walPrefixForUser(userKey);
+            for (let i = 0; i < window.localStorage.length; i++) {
+              const key = window.localStorage.key(i);
+              if (!key || (!key.startsWith(prefix) && ![...DATA_STORES, STORES.SYNC].some(store => key === fallbackKey(store, userKey)))) continue;
+              const raw = window.localStorage.getItem(key);
+              if (raw !== null) captures[key] = raw;
+            }
+          }
+          collections[CAUSAL_STORE] = { schemaVersion: 1, encoded: encodeCausalBackup({ authority, trackingMirror, sync: meta, captures }) };
+        }
       } else {
         for (const storeName of [...DATA_STORES, STORES.SYNC]) {
           const value = readLocalCopy(storeName, userKey);
@@ -1545,7 +1571,7 @@ export const storageService = {
         }
       }
       return {
-        schemaVersion: BACKUP_SCHEMA_VERSION,
+        schemaVersion: Object.hasOwn(collections, CAUSAL_STORE) ? BACKUP_SCHEMA_VERSION : 4,
         exportedAt: new Date().toISOString(),
         ownerKey: userKey,
         checksum: await checksumCollections(collections),
@@ -1562,6 +1588,9 @@ export const storageService = {
     }
     if (envelope.checksum && await checksumCollections(verifiedCollections) !== envelope.checksum.toLowerCase()) {
       throw new Error('Backup checksum validation failed. The file may be incomplete or modified.');
+    }
+    if (Object.hasOwn(verifiedCollections, CAUSAL_STORE) || (await getDB())?.objectStoreNames.contains(CAUSAL_STORE)) {
+      throw new DurableStorageError('Causal backup recovery requires journal reconciliation before restore. The backup and existing data remain unchanged.');
     }
     const collections = normalizeBackupCollectionsForWeb(verifiedCollections);
     await this.flushPendingLocalChanges(userKey);
@@ -1649,6 +1678,7 @@ export const storageService = {
     try {
       const backup = await this.exportBackup(userKey);
       if (backup.checksum !== await checksumCollections(backup.collections)) throw new Error('Pre-repair backup verification failed.');
+      if (Object.hasOwn(backup.collections, CAUSAL_STORE)) throw new DurableStorageError('Causal journal reconciliation is required before preparing a repair database. Export remains available; the active database is unchanged.');
       return await queueMutation(async () => {
         const shadowName = `${BASE_DB_NAME}-repair-${randomUuid()}`;
         const shadow = await openAndMigrate(shadowName, 1);
