@@ -3,6 +3,7 @@ import { assertCausalReceipt, parseCausalOperation } from './causalProtocol';
 import { validateCompletionEvidence } from './causalCompletionCoordinator';
 import { CAUSAL_BUSINESS_STORES, type BusinessBackupEvidence } from './causalBusinessStorage';
 import { normalizeSyncMeta, stableJson } from './syncProtocol';
+import { validateCounterDayEvidence } from './causalCounterDayCoordinator';
 
 /** Tagged JSON preserves absent/undefined fields in retained cutover preimages.
  * Unsupported structured-clone values fail export explicitly rather than being
@@ -116,6 +117,7 @@ export function readCausalBackup(accountKey: string, value: unknown, collections
     if (Object.hasOwn(receipts, id)) assertCausalReceipt(accountKey, operation, receipts[id]);
   }
   if (Object.keys(receipts).some(id => !Object.hasOwn(requests, id))) throw new Error('A retained receipt has no exact request.');
+  validateCounterDayEvidence(accountKey, state as any);
   validateCompletionEvidence(accountKey, state as any, decoded.sync, effectiveCollections);
   return decoded as CausalBackupEvidence;
 }

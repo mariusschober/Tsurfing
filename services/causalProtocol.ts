@@ -18,6 +18,11 @@ const dayCommand = z.object({ schemaVersion: z.literal(1), actionId: uuid, accou
   actorId: z.string().min(1).max(240).refine(value => value.trim().length > 0),
   kind: z.enum(['establish', 'select']), day, timeZone: z.string().regex(/^[A-Za-z0-9_+./-]{1,128}$/), capturedAt: timestamp }).passthrough();
 export type CausalOperation = z.infer<typeof envelope>;
+export type CounterDayCommand = z.infer<typeof dayCommand>;
+
+export function parseCounterDayCommand(input: unknown): CounterDayCommand {
+  return dayCommand.parse(input);
+}
 
 /** Validate without normalizing or dropping unknown command evidence. SQL is
  * authoritative for epoch, timezone, task eligibility and causal history. */
@@ -82,4 +87,3 @@ export function assertCausalReceipt(userId: string, operation: CausalOperation, 
   }
   return value;
 }
-

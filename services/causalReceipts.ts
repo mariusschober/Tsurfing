@@ -7,13 +7,14 @@ import type { CounterAccountState } from './causalCounterCoordinator';
 import { sendCausalAction } from './causalTransport';
 import type { CausalEnrollmentState } from './causalEnrollment';
 import { assertCausalCapability } from './causalCapability';
+import { validateCounterDayEvidence, type CounterDayAccountState } from './causalCounterDayCoordinator';
 
 export interface CausalReceiptState extends CausalAccountState {
   /** Never rewrite an attempted operation, including its account cutover epoch. */
   causalRequests?: Record<string, string>;
   causalReceipts?: Record<string, Record<string, any>>;
 }
-type State = CausalReceiptState & FocusAccountState & CounterAccountState & CausalEnrollmentState;
+type State = CausalReceiptState & FocusAccountState & CounterAccountState & CounterDayAccountState & CausalEnrollmentState;
 
 async function transaction<T>(name: string, accountId: string, work: (state: State) => T): Promise<T> {
   // Receipt handling must never trigger cutover on an unprepared database.
@@ -38,13 +39,15 @@ async function transaction<T>(name: string, accountId: string, work: (state: Sta
 }
 
 function admitted(state: State, operation: CausalOperation) {
+  validateCounterDayEvidence(operation.command.accountId as string, state);
   const id = operation.command.actionId as string;
   const original = operation.type === 'focus' ? state.focusAdmissions?.[id]?.command
-    : operation.type === 'counter' ? state.counterEvents?.[id] : undefined;
+    : operation.type === 'counter' ? state.counterEvents?.[id] : state.counterDayAdmissions?.[id]?.command;
   if (!original || stableJson(original) !== stableJson(operation.command)) {
     throw new Error('The wire operation does not match its durable local admission.');
   }
-  const pending = operation.type === 'focus' ? state.focusOutbox?.[id] : state.counterOutbox?.[id];
+  const pending = operation.type === 'focus' ? state.focusOutbox?.[id]
+    : operation.type === 'counter' ? state.counterOutbox?.[id] : state.counterDayOutbox?.[id];
   if (pending && stableJson(pending) !== stableJson(original)) throw new Error('The pending causal command differs from its admission.');
   return { id, pending };
 }
@@ -96,7 +99,8 @@ export async function commitCausalReceipt(name: string, accountId: string, actio
     state.causalReceipts[actionId] = verified;
     if (verified.accepted) {
       if (operation.type === 'focus') delete state.focusOutbox![actionId];
-      else delete state.counterOutbox![actionId];
+      else if (operation.type === 'counter') delete state.counterOutbox![actionId];
+      else delete state.counterDayOutbox![actionId];
     }
     return { accepted: verified.accepted as boolean, duplicate: false };
   });

@@ -11,6 +11,7 @@ import type { CausalEnrollmentState } from './causalEnrollment';
 import type { CausalReceiptState } from './causalReceipts';
 import type { FocusAccountState, LocalFocusIntent } from './causalFocusCoordinator';
 import type { CounterAccountState } from './causalCounterCoordinator';
+import { validateCounterDayEvidence, type CounterDayAccountState } from './causalCounterDayCoordinator';
 import { normalizeSyncMeta, stableJson, type SyncMeta } from './syncProtocol';
 import { parseCausalCompletion } from './causalCompletionProtocol';
 import { assertCompletionCapturesMaterialized, validateCompletionEvidence } from './causalCompletionCoordinator';
@@ -82,7 +83,7 @@ export function replayCausalHistory(accountId: string, history: SavedCausalHisto
   return { tracking, focus, baselines, events, receipts };
 }
 
-type State = CausalEnrollmentState & CausalReceiptState & FocusAccountState & CounterAccountState & CompletionProjectionState & {
+type State = CausalEnrollmentState & CausalReceiptState & FocusAccountState & CounterAccountState & CounterDayAccountState & CompletionProjectionState & {
   causalHistory?: SavedCausalHistory;
   causalProjection?: { schemaVersion: 1; epoch: string; revision: number };
   causalProjectionPreimage?: { tracking: unknown; focus: unknown };
@@ -178,6 +179,7 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
       if (!capability.enrolled || capability.epoch !== history.epoch || capability.projectionRevision < history.downloadedRevision
         || (state.causalProjection && (state.causalProjection.epoch !== history.epoch || state.causalProjection.revision > history.downloadedRevision))) throw new Error('The causal projection epoch or revision cannot be rewound.');
       const before = stableJson(state);
+      validateCounterDayEvidence(accountId, state);
       const completions = Object.entries(canonical.receipts).filter(([, receipt]) => receipt.operation?.type === 'completion');
       const needsCompletion = completions.length > 0 || Object.keys(state.completionAdmissions ?? {}).length > 0;
       const values: Record<string, unknown> = {};
@@ -204,7 +206,8 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
       }
       for (const [id, bytes] of Object.entries(state.causalRequests ?? {})) {
         const operation = parseCausalOperation(accountId, JSON.parse(bytes));
-        const admitted = operation.type === 'focus' ? state.focusAdmissions?.[id]?.command : state.counterEvents?.[id];
+        const admitted = operation.type === 'focus' ? state.focusAdmissions?.[id]?.command
+          : operation.type === 'counter' ? state.counterEvents?.[id] : state.counterDayAdmissions?.[id]?.command;
         if (operation.epoch !== history.epoch || operation.command.actionId !== id || !same(admitted, operation.command)) {
           throw new Error('A retained request differs from its account epoch or original admission.');
         }
@@ -252,14 +255,16 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
         if (bytes !== undefined) {
           const attempted = parseCausalOperation(accountId, JSON.parse(bytes));
           assertCausalReceipt(accountId, attempted, receipt);
-          const pending = operation.type === 'focus' ? state.focusOutbox?.[id] : state.counterOutbox?.[id];
+          const pending = operation.type === 'focus' ? state.focusOutbox?.[id]
+            : operation.type === 'counter' ? state.counterOutbox?.[id] : state.counterDayOutbox?.[id];
           if (pending && !same(pending, command)) throw new Error('The pending action differs from its original receipt.');
           if (!pending && !state.causalReceipts?.[id]) throw new Error('The local request is missing its durable pending intent.');
           state.causalReceipts ??= {};
           state.causalReceipts[id] = receipt;
           if (receipt.accepted) {
             if (operation.type === 'focus') delete state.focusOutbox?.[id];
-            else delete state.counterOutbox?.[id];
+            else if (operation.type === 'counter') delete state.counterOutbox?.[id];
+            else delete state.counterDayOutbox?.[id];
           }
         }
       }

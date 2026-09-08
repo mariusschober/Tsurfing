@@ -5,6 +5,7 @@ import { expect, it, vi } from 'vitest';
 import { applyFocusCommand, initialFocusJournal, type FocusCommand } from '../src/domain/causalFocus';
 import { CAUSAL_STORE, fenceLegacyTracking } from './causalStorage';
 import { admitLocalCounter } from './causalCounterCoordinator';
+import { admitLocalCounterDay } from './causalCounterDayCoordinator';
 import { admitLocalFocus, type LocalFocusIntent } from './causalFocusCoordinator';
 import { bindCausalCapability } from './causalEnrollment';
 import { prepareCausalRequest } from './causalReceipts';
@@ -80,6 +81,28 @@ it('conserves both counters across remote actions, local pending actions and exa
   expect((await applyDownloadedCausalHistory(f.name, f.accountId)).duplicate).toBe(true);
   expect(await f.read()).toEqual(state);
   expect((await admitLocalCounter(f.name, d, f.baseline)).duplicate).toBe(true);
+});
+
+it('applies day history with exact local admission and retires only an attempted command', async () => {
+  const f = await fixture();
+  const command = { schemaVersion: 1 as const, actionId: crypto.randomUUID(), accountId: f.accountId,
+    actorId: 'tab', kind: 'select' as const, day: f.baseline.day, timeZone: 'UTC', capturedAt: '2026-09-08T00:00:10.000Z' };
+  await admitLocalCounterDay(f.name, command);
+  const operation = { schemaVersion: 2, epoch: f.epoch, type: 'counterDay', command };
+  const receipt = { schemaVersion: 2, epoch: f.epoch, projectionRevision: 1, accepted: true,
+    operation, baseline: f.baseline, counts: f.baseline.counts, record: f.receipts[0].record };
+  f.receipts.push(receipt); await f.save();
+  await applyDownloadedCausalHistory(f.name, f.accountId);
+  expect((await f.read()).counterDayOutbox[command.actionId]).toEqual(command);
+  const bytes = await prepareCausalRequest(f.name, f.accountId, operation);
+  await applyDownloadedCausalHistory(f.name, f.accountId);
+  const state = await f.read();
+  expect(state.counterDayOutbox).toEqual({});
+  expect(state.counterDayAdmissions[command.actionId].command).toEqual(command);
+  expect(state.causalRequests[command.actionId]).toBe(bytes);
+  expect(state.causalReceipts[command.actionId]).toEqual(receipt);
+  expect(state.trackingValue).toEqual(f.tracking);
+  expect((await applyDownloadedCausalHistory(f.name, f.accountId)).duplicate).toBe(true);
 });
 
 it('applies concurrent extensions once and retains the exact local command parent', async () => {
