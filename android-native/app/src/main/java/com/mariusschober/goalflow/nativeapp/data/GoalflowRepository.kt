@@ -133,9 +133,31 @@ class GoalflowRepository(
     internal val causalEnrollmentStore = NativeCausalEnrollmentStore(database)
     internal val causalHistoryStore = NativeCausalHistoryStore(database)
     internal val causalRequestStore = NativeCausalRequestStore(database)
-    private val causalProjectionStore = NativeCausalProjectionStore(database)
+    private val causalProjectionStore = NativeCausalProjectionStore(database,
+        NativeCausalCompletionProjection(database, ::causalBusinessPayload, ::nativeCausalBusinessPayload) { record ->
+            validateRemoteRecord(record)
+            require(!applyRemoteRecordInTransaction(record)) { "Completion member requires identity recovery." }
+        })
 
     suspend fun applyCausalHistory(userId: String): NativeCausalProjectionResult = causalProjectionStore.apply(userId)
+
+    private suspend fun causalBusinessPayload(type: String, id: String): String? = when (type) {
+        "tasks" -> tasks.get(id)?.let { GoalflowJson.taskPayload(toDomain(it)).toString() }
+        "goals" -> goals.get(id)?.let { GoalflowJson.goalPayload(toDomain(it)).toString() }
+        "habits" -> habits.get(id)?.let { GoalflowJson.habitPayload(toDomain(it)).toString() }
+        "task_events" -> taskEvents.get(id)?.let { GoalflowTaskEventJson.eventPayload(it).toString() }
+        "stats", "progress" -> rawCollections.get(type)?.payload
+        else -> error("Unsupported completion member.")
+    }
+
+    private fun nativeCausalBusinessPayload(type: String, payload: String): String = when (type) {
+        "tasks" -> GoalflowJson.taskPayload(GoalflowJson.parseTask(payload, strict = true)).toString()
+        "goals" -> GoalflowJson.goalPayload(GoalflowJson.parseGoal(payload, strict = true)).toString()
+        "habits" -> GoalflowJson.habitPayload(GoalflowJson.parseHabit(payload, strict = true)).toString()
+        "task_events" -> GoalflowTaskEventJson.eventPayload(GoalflowTaskEventJson.parseEvent(payload, strict = true)).toString()
+        "stats", "progress" -> JSONObject(payload).toString()
+        else -> error("Unsupported completion member.")
+    }
 
     suspend fun prepareCausalAccount(userId: String): CausalAccountEntity =
         causalStore.enable(userId, timeProvider.today().toString())

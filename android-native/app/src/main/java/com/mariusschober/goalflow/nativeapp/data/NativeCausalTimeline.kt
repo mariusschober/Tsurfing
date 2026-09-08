@@ -147,13 +147,12 @@ object NativeCausalTimeline {
                         NativeCausalJournal.protectedTracking(original), NativeCausalJournal.protectedTracking(cutover.tracking))) {
                         "The local cutover differs from server evidence. Explicit legacy recovery is required."
                     }
-                    // Applying terminal focus before its task/notes/effects would
-                    // expose partial completion. Keep downloaded evidence until
-                    // the native business-member transaction is available.
-                    require(canonical.receipts.keys().asSequence().none {
-                        val receipt = canonical.receipts.getJSONObject(it)
-                        receipt.getJSONObject("operation").getString("type") == "completion" && receipt.getBoolean("accepted")
-                    }) { "Atomic completion member application is required before this history can be applied." }
+                    for (action in canonical.receipts.keys()) {
+                        val receipt = canonical.receipts.getJSONObject(action)
+                        if (receipt.getJSONObject("operation").getString("type") == "completion" && receipt.getBoolean("accepted")) {
+                            NativeCompletionApplicationEvidence.requireApplied(state, action, receipt, sequence)
+                        }
+                    }
                     val reservedIds = mutableSetOf(history.getString("epoch"))
                     for (day in canonical.baselines.keys()) reservedIds.add(canonical.baselines.getJSONObject(day).getString("baselineId"))
                     for (action in canonical.receipts.keys()) {

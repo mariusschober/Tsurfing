@@ -10,8 +10,35 @@ data class NativeCausalProjectionResult(val epoch: String, val revision: Long, v
 /** The protected mirror and the admission basis commit together. Downloaded
  * evidence and ordinary sync cursors remain distinct. Pending commands retire
  * only against exact saved request/receipt evidence in this applied history. */
-class NativeCausalProjectionStore(private val database: GoalflowDatabase) {
-    suspend fun apply(accountId: String): NativeCausalProjectionResult = database.withTransaction {
+class NativeCausalProjectionStore(private val database: GoalflowDatabase,
+    private val completion: NativeCausalCompletionProjection) {
+    suspend fun apply(accountId: String): NativeCausalProjectionResult {
+        try { return applyOnce(accountId) }
+        catch (review: NativeCompletionReview) {
+            // The failed member transaction has rolled back. Retain only a
+            // reference to exact downloaded evidence in a separate transaction.
+            database.withTransaction {
+                require(database.localAccountDao().get()?.userId == accountId) { "Completion review account changed." }
+                val entity = database.causalAccountDao().get(accountId) ?: error("Causal account preparation is required.")
+                val state = NativeCausalJournal.validate(entity); val history = state.getJSONObject("causalHistory")
+                val entries = history.getJSONObject("entries")
+                val revision = entries.keys().asSequence().first { key ->
+                    JSONObject(entries.getJSONObject(key).getString("body")).getJSONObject("receipt").optJSONObject("operation")
+                        ?.optJSONObject("command")?.opt("actionId") == review.actionId
+                }.toLong()
+                val proof = JSONObject().put("actionId", review.actionId).put("epoch", history.getString("epoch"))
+                    .put("revision", revision).put("sha256", entries.getJSONObject(revision.toString()).getString("sha256"))
+                    .put("code", review.code).put("entityKey", review.entityKey)
+                val reviews = state.optJSONObject("completionApplicationReviews") ?: JSONObject()
+                reviews.put(ActionJson.canonical(proof), proof); state.put("completionApplicationReviews", reviews)
+                val updated = entity.copy(payload = state.toString()); NativeCausalJournal.validate(updated)
+                check(database.causalAccountDao().update(updated) == 1)
+            }
+            throw review
+        }
+    }
+
+    private suspend fun applyOnce(accountId: String): NativeCausalProjectionResult = database.withTransaction {
         require(database.localAccountDao().get()?.userId == accountId) { "Projection account differs from this database." }
         val entity = database.causalAccountDao().get(accountId) ?: error("Causal account preparation is required.")
         val state = NativeCausalJournal.validate(entity)
@@ -25,6 +52,9 @@ class NativeCausalProjectionStore(private val database: GoalflowDatabase) {
             "Tracking changed outside its causal journal. Original evidence is retained."
         }
         val canonical = NativeCausalReplay.replay(accountId, history)
+        val generation = state.getLong("generation") + 1
+        require(generation <= ActionJson.MAX_SAFE_INTEGER) { "Local causal generation exhausted." }
+        completion.apply(state, canonical, generation)
         val evidence = JSONObject(); val admissions = state.getJSONObject("focusAdmissions")
         for (id in admissions.keys()) {
             val admission = admissions.getJSONObject(id)
@@ -38,8 +68,6 @@ class NativeCausalProjectionStore(private val database: GoalflowDatabase) {
         val latestRevision = projectionAdmissions.keys().asSequence().map { projectionAdmissions.getJSONObject(it) }
             .maxByOrNull { it.getLong("sequence") }?.getLong("revision") ?: -1L
         val revision = history.getLong("downloadedRevision"); val epoch = history.getString("epoch")
-        val generation = state.getLong("generation") + 1
-        require(generation <= ActionJson.MAX_SAFE_INTEGER) { "Local causal generation exhausted." }
         projectionAdmissions.put(generation.toString(), JSONObject().put("sequence", generation).put("epoch", epoch)
             .put("revision", revision).put("taskEvidence", evidence))
         val previousTracking = ActionJson.canonical(state.getJSONObject("tracking"))

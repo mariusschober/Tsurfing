@@ -100,6 +100,7 @@ object NativeCausalJournal {
         }
         NativeCausalEnrollmentProtocol.validate(account.accountId, state)
         NativeCausalRequestJournal.validate(account.accountId, state)
+        NativeCompletionApplicationEvidence.validate(state)
         return state
     }
 

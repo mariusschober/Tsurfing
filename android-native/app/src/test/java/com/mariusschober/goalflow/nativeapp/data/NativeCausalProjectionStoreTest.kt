@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.mariusschober.goalflow.nativeapp.domain.SchedulePrecision
+import com.mariusschober.goalflow.nativeapp.domain.TaskStatus
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
 import org.json.JSONObject
@@ -16,6 +18,7 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.util.Base64
 import java.util.UUID
+import java.time.Instant
 
 @RunWith(RobolectricTestRunner::class)
 class NativeCausalProjectionStoreTest {
@@ -115,6 +118,42 @@ class NativeCausalProjectionStoreTest {
         history.put("downloadedRevision", revision).put("throughRevision", revision)
     }
 
+    private suspend fun nativeCompletion(): JSONObject {
+        history = prefix(2); download(); repository.applyCausalHistory(owner)
+        val task = repository.taskStream.first().first { it.id == "task-F" }
+        val timestamp = Instant.parse("2026-09-07T12:10:00Z").toEpochMilli()
+        val payload = GoalflowJson.taskPayload(task.copy(status = TaskStatus.COMPLETED, notes = "Final native notes retained",
+            completedAt = timestamp, updatedAt = timestamp)).put("unknownCompletion", "retained")
+        history = fixture().getJSONObject("history")
+        val saved = history.getJSONObject("entries").getJSONObject("3"); val entry = JSONObject(saved.getString("body"))
+        val receipt = entry.getJSONObject("receipt"); val changes = receipt.getJSONObject("operation").getJSONArray("changes")
+        changes.getJSONObject(0).put("payload", payload)
+        receipt.getJSONArray("changes").getJSONObject(0).getJSONObject("record").put("payload", payload)
+        fun add(type: String, id: String, value: JSONObject) {
+            val mutation = UUID.randomUUID().toString(); val version = 4L + changes.length()
+            changes.put(JSONObject().put("mutationId", mutation).put("deviceId", "peer").put("entityType", type).put("entityId", id)
+                .put("baseServerVersion", JSONObject.NULL).put("version", 1).put("payload", value).put("updatedAt", "2026-09-07T12:10:00.000Z").put("deletedAt", JSONObject.NULL))
+            receipt.getJSONArray("changes").put(JSONObject().put("mutationId", mutation).put("accepted", true).put("serverVersion", version)
+                .put("record", JSONObject().put("user_id", owner).put("entity_type", type).put("entity_id", id).put("device_id", "peer")
+                    .put("version", 1).put("server_version", version).put("payload", value).put("updated_at", "2026-09-07T12:10:00.000Z").put("deleted_at", JSONObject.NULL)))
+        }
+        add("stats", "singleton", JSONObject().put("2026-09-08", JSONObject().put("tasksCompleted", 1).put("timeFocused", 10)))
+        add("progress", "singleton", JSONObject().put("level", 1).put("xp", 10).put("xpToNextLevel", 100))
+        val goal = UUID.randomUUID().toString()
+        add("goals", goal, JSONObject().put("id", goal).put("name", "Synthetic goal").put("description", "Retained")
+            .put("deadline", JSONObject.NULL).put("completedTasks", 1).put("color", "blue").put("createdAt", timestamp))
+        val habit = UUID.randomUUID().toString()
+        add("habits", habit, JSONObject().put("id", habit).put("title", "Synthetic habit").put("frequency", "daily")
+            .put("specificDays", JSONArray()).put("streak", 1).put("bestStreak", 1).put("lastCompletedDate", "2026-09-08")
+            .put("isHighPriority", false).put("beforeFrog", false).put("duration", JSONObject.NULL).put("goalId", JSONObject.NULL).put("createdAt", timestamp))
+        val event = UUID.randomUUID().toString()
+        add("task_events", event, GoalflowTaskEventJson.eventPayload(TaskEventEntity(event, "task-F", "completed", "2026-09-08", "{}", timestamp)))
+        val body = entry.toString(); saved.put("body", body).put("sha256", NativeCausalHistoryProtocol.hash(body.toByteArray(Charsets.UTF_8)))
+        database.syncMetaDao().insert(SyncMetaEntity("tasks:task-F", 123, 0, 1, null))
+        download()
+        return receipt
+    }
+
     @Test fun `represented increments are counted once and independent pending increments remain visible`() = runTest {
         val first = counter(); val second = counter()
         repository.admitCausalCounter(owner, first); repository.admitCausalCounter(owner, second)
@@ -175,8 +214,13 @@ class NativeCausalProjectionStoreTest {
         history = fixture().getJSONObject("history"); download()
         val before = state(); val mirror = database.rawCollectionDao().get("tracking"); val task = database.taskDao().get("task-F")
         val failure = runCatching { repository.applyCausalHistory(owner) }.exceptionOrNull()
-        assertTrue(failure?.message?.contains("Atomic completion member") == true)
-        assertEquals(before, state()); assertEquals(mirror, database.rawCollectionDao().get("tracking")); assertEquals(task, database.taskDao().get("task-F"))
+        assertTrue(failure is NativeCompletionReview)
+        assertEquals("COMPLETION_BASE_REQUIRED", (failure as NativeCompletionReview).code)
+        val reviewed = NativeCausalJournal.validate(state())
+        assertEquals(1, reviewed.getJSONObject("completionApplicationReviews").length())
+        reviewed.remove("completionApplicationReviews")
+        assertEquals(ActionJson.canonical(JSONObject(before.payload)), ActionJson.canonical(reviewed))
+        assertEquals(mirror, database.rawCollectionDao().get("tracking")); assertEquals(task, database.taskDao().get("task-F"))
     }
 
     @Test fun `newly established days project retained events without relabeling earlier admission outcomes`() = runTest {
@@ -312,5 +356,67 @@ class NativeCausalProjectionStoreTest {
                 }
             } finally { fresh.close() }
         }
+    }
+
+    @Test fun `remote completion applies all six members with focus and preserves exact evidence`() = runTest {
+        val receipt = nativeCompletion(); val outbox = database.syncOutboxDao().getAll()
+        repository.applyCausalHistory(owner)
+        val completed = state(); val journal = NativeCausalJournal.validate(completed)
+        assertEquals("completed", journal.getJSONObject("tracking").getJSONObject("focusSession").getString("phase"))
+        assertEquals("Final native notes retained", database.taskDao().get("task-F")!!.notes)
+        assertEquals(TaskStatus.COMPLETED.name, database.taskDao().get("task-F")!!.status)
+        assertEquals("retained", JSONObject(database.taskDao().get("task-F")!!.extraJson).getString("unknownCompletion"))
+        assertEquals(1, JSONObject(database.rawCollectionDao().get("stats")!!.payload).getJSONObject("2026-09-08").getInt("tasksCompleted"))
+        assertEquals(10, JSONObject(database.rawCollectionDao().get("progress")!!.payload).getInt("xp"))
+        val changes = receipt.getJSONObject("operation").getJSONArray("changes")
+        assertEquals(1, database.goalDao().get(changes.getJSONObject(3).getString("entityId"))!!.completedTasks)
+        assertEquals(1, database.habitDao().get(changes.getJSONObject(4).getString("entityId"))!!.streak)
+        assertEquals("completed", database.taskEventDao().get(changes.getJSONObject(5).getString("entityId"))!!.eventType)
+        assertEquals(123L, database.syncMetaDao().get("tasks:task-F")!!.cursor)
+        assertEquals(outbox, database.syncOutboxDao().getAll())
+        assertTrue(repository.applyCausalHistory(owner).duplicate); assertEquals(completed, state())
+        assertEquals(listOf(completed), GoalflowBackup.decryptDocument(repository.exportBackup("synthetic completion password"), "synthetic completion password").payload.causalAccounts)
+        val damaged = JSONObject(completed.payload); val proof = damaged.getJSONObject("completionApplications").getJSONObject(receipt.getJSONObject("operation").getJSONObject("command").getString("actionId"))
+        proof.getJSONObject("members").remove("stats:singleton")
+        assertTrue(runCatching { NativeCausalJournal.validate(completed.copy(payload = damaged.toString())) }.isFailure)
+    }
+
+    @Test fun `failure after business writes rolls back task notes effects metadata and focus`() = runTest {
+        nativeCompletion()
+        val before = state(); val task = database.taskDao().get("task-F"); val meta = database.syncMetaDao().getAll(); val raw = database.rawCollectionDao().getAll()
+        val events = database.taskEventDao().getAll(); val goals = database.goalDao().getAll(); val habits = database.habitDao().getAll()
+        database.openHelper.writableDatabase.execSQL("CREATE TRIGGER fail_completion_tracking BEFORE INSERT ON raw_collections WHEN NEW.entityType='tracking' BEGIN SELECT RAISE(ABORT,'synthetic completion rollback'); END")
+        assertTrue(runCatching { repository.applyCausalHistory(owner) }.isFailure)
+        assertEquals(before, state()); assertEquals(task, database.taskDao().get("task-F")); assertEquals(meta, database.syncMetaDao().getAll())
+        assertEquals(raw, database.rawCollectionDao().getAll()); assertEquals(events, database.taskEventDao().getAll())
+        assertEquals(goals, database.goalDao().getAll()); assertEquals(habits, database.habitDao().getAll())
+        database.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_completion_tracking")
+        repository.applyCausalHistory(owner)
+        assertEquals(TaskStatus.COMPLETED.name, database.taskDao().get("task-F")!!.status)
+    }
+
+    @Test fun `pending local member edits retain a durable review without partial completion`() = runTest {
+        nativeCompletion()
+        val localStats = RawCollectionEntity("stats", "{\"draftCount\":1}", time, null)
+        database.rawCollectionDao().insert(localStats)
+        database.syncOutboxDao().insert(SyncOutboxEntity(UUID.randomUUID().toString(), "fixture", "stats", "singleton", null, 1,
+            localStats.payload, time, null, attemptedAt = time))
+        val task = database.taskDao().get("task-F"); val outbox = database.syncOutboxDao().getAll(); val tracking = database.rawCollectionDao().get("tracking")
+        val failure = runCatching { repository.applyCausalHistory(owner) }.exceptionOrNull()
+        assertTrue(failure is NativeCompletionReview); assertEquals("COMPLETION_LOCAL_REVIEW", (failure as NativeCompletionReview).code)
+        assertEquals(task, database.taskDao().get("task-F")); assertEquals(outbox, database.syncOutboxDao().getAll()); assertEquals(tracking, database.rawCollectionDao().get("tracking"))
+        assertEquals(localStats, database.rawCollectionDao().get("stats"))
+        assertEquals(1, NativeCausalJournal.validate(state()).getJSONObject("completionApplicationReviews").length())
+    }
+
+    @Test fun `a later local notes edit is preserved when completion history is replayed`() = runTest {
+        nativeCompletion(); repository.applyCausalHistory(owner)
+        val task = database.taskDao().get("task-F")!!
+        repository.updateTask("task-F", task.title, "Later local notes retained", SchedulePrecision.DAY, "2026-09-08")
+        val pending = database.syncOutboxDao().getAll(); val updated = database.taskDao().get("task-F")
+        val proof = state(); repository.applyCausalHistory(owner)
+        assertEquals(updated, database.taskDao().get("task-F")); assertEquals(pending, database.syncOutboxDao().getAll())
+        assertEquals(proof, state())
+        assertEquals(1, JSONObject(database.rawCollectionDao().get("stats")!!.payload).getJSONObject("2026-09-08").getInt("tasksCompleted"))
     }
 }
