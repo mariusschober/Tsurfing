@@ -1,0 +1,1 @@
+{"status":"PASS","engine":"PostgreSQL","atomicVisibility":"PASS","concurrentDuplicate":"EXACT","publicationOrder":"PASS","canonicalFinalNotes":"FULL","completionReceipt":"EXACT","historyChunks":4,"hostedPostgREST":"NOT_MEASURED"}

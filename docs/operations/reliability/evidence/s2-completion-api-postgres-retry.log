@@ -1,0 +1,292 @@
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+... Skipped lines
+
+  {
+    accepted: true,
+    changes: [
+      {
+        accepted: true,
+...
+            completedAt: 1788825900000,
++           description: '🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭 [long synthetic fixture text omitted] 🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭'... 30000 more characters,
+-           description: '🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭 [long synthetic fixture text omitted] 🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭'... 30009 more characters,
+            id: '76c1f327-f21f-4574-aa98-b85c0b03a9a8',
+            lifecycleStatus: 'completed',
+            scheduledFor: '2026-09-08',
+            title: 'Synthetic complete'
+          },
+
+    at <anonymous> (/Users/schober/Projects/TSurfing/scripts/test-s2-completion-api-postgres.ts:71:8) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: {
+    epoch: 'e0bd2536-59d7-4d9f-9ddc-6ba146e9c17a',
+    record: {
+      payload: {
+        date: '2026-09-08',
+        focusSession: {
+          phase: 'completed',
+          taskId: '76c1f327-f21f-4574-aa98-b85c0b03a9a8',
+          endedAt: '2026-09-08T00:05:00.000Z',
+          pausedAt: null,
+          sessionId: '8036c585-fbf3-4b17-aade-7484999db0b7',
+          startedAt: '2026-09-08T00:05:00.000Z',
+          updatedAt: '2026-09-08T00:05:00.000Z',
+          schemaVersion: 1,
+          elapsedSeconds: 300,
+          plannedDurationSeconds: 600
+        },
+        planViewCount: 27,
+        dailyPostponeCount: 3
+      },
+      user_id: '07f96be4-5be1-4dd0-ab4a-9091da7d2cac',
+      version: 2,
+      device_id: 'causal-completion-v2',
+      entity_id: 'singleton',
+      deleted_at: null,
+      updated_at: '2026-09-08T03:01:34.203953+01:00',
+      entity_type: 'tracking',
+      server_version: 28
+    },
+    changes: [
+      {
+        record: {
+          payload: {
+            id: '76c1f327-f21f-4574-aa98-b85c0b03a9a8',
+            title: 'Synthetic complete',
+            completed: true,
+            completedAt: 1788825900000,
+            description: '🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭 [long synthetic fixture text omitted] 🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭'... 30000 more characters,
+            scheduledFor: '2026-09-08',
+            lifecycleStatus: 'completed'
+          },
+          user_id: '07f96be4-5be1-4dd0-ab4a-9091da7d2cac',
+          version: 2,
+          device_id: 'fixture',
+          entity_id: '76c1f327-f21f-4574-aa98-b85c0b03a9a8',
+          deleted_at: null,
+          updated_at: '2026-09-08T01:05:00+01:00',
+          entity_type: 'tasks',
+          server_version: 26
+        },
+        accepted: true,
+        mutationId: '215cfd11-15b0-437f-95ec-0828113ee743',
+        serverVersion: 26
+      },
+      {
+        record: {
+          payload: { '2026-09-08': [Object] },
+          user_id: '07f96be4-5be1-4dd0-ab4a-9091da7d2cac',
+          version: 2,
+          device_id: 'fixture',
+          entity_id: 'singleton',
+          deleted_at: null,
+          updated_at: '2026-09-08T01:05:00+01:00',
+          entity_type: 'stats',
+          server_version: 27
+        },
+        accepted: true,
+        mutationId: '608212bf-a416-4505-9a45-28da7df92401',
+        serverVersion: 27
+      }
+    ],
+    outcome: {
+      code: 'APPLIED',
+      accepted: true,
+      revision: '78902626-3f6c-4607-81b3-ce0ab913c331'
+    },
+    accepted: true,
+    operation: {
+      type: 'completion',
+      epoch: 'e0bd2536-59d7-4d9f-9ddc-6ba146e9c17a',
+      changes: [
+        {
+          payload: {
+            id: '76c1f327-f21f-4574-aa98-b85c0b03a9a8',
+            title: 'Synthetic complete',
+            completed: true,
+            completedAt: 1788825900000,
+            description: '🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭 [long synthetic fixture text omitted] 🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭'... 30000 more characters,
+            scheduledFor: '2026-09-08',
+            lifecycleStatus: 'completed'
+          },
+          version: 2,
+          deviceId: 'fixture',
+          entityId: '76c1f327-f21f-4574-aa98-b85c0b03a9a8',
+          deletedAt: null,
+          updatedAt: '2026-09-08T00:05:00.000Z',
+          entityType: 'tasks',
+          mutationId: '215cfd11-15b0-437f-95ec-0828113ee743',
+          baseServerVersion: 23
+        },
+        {
+          payload: { '2026-09-08': [Object] },
+          version: 2,
+          deviceId: 'fixture',
+          entityId: 'singleton',
+          deletedAt: null,
+          updatedAt: '2026-09-08T00:05:00.000Z',
+          entityType: 'stats',
+          mutationId: '608212bf-a416-4505-9a45-28da7df92401',
+          baseServerVersion: 24
+        }
+      ],
+      command: {
+        kind: 'complete',
+        epoch: '8036c585-fbf3-4b17-aade-7484999db0b7',
+        taskId: '76c1f327-f21f-4574-aa98-b85c0b03a9a8',
+        actorId: 'fixture',
+        actionId: '78902626-3f6c-4607-81b3-ce0ab913c331',
+        accountId: '07f96be4-5be1-4dd0-ab4a-9091da7d2cac',
+        sessionId: '8036c585-fbf3-4b17-aade-7484999db0b7',
+        capturedAt: '2026-09-08T00:05:00.000Z',
+        schemaVersion: 1,
+        durationSeconds: null,
+        expectedRevision: '8036c585-fbf3-4b17-aade-7484999db0b7',
+        expectedCurrentSessionId: '8036c585-fbf3-4b17-aade-7484999db0b7'
+      },
+      schemaVersion: 2
+    },
+    schemaVersion: 2,
+    projectionRevision: 1
+  },
+  expected: {
+    epoch: 'e0bd2536-59d7-4d9f-9ddc-6ba146e9c17a',
+    record: {
+      payload: {
+        date: '2026-09-08',
+        focusSession: {
+          phase: 'completed',
+          taskId: '76c1f327-f21f-4574-aa98-b85c0b03a9a8',
+          endedAt: '2026-09-08T00:05:00.000Z',
+          pausedAt: null,
+          sessionId: '8036c585-fbf3-4b17-aade-7484999db0b7',
+          startedAt: '2026-09-08T00:05:00.000Z',
+          updatedAt: '2026-09-08T00:05:00.000Z',
+          schemaVersion: 1,
+          elapsedSeconds: 300,
+          plannedDurationSeconds: 600
+        },
+        planViewCount: 27,
+        dailyPostponeCount: 3
+      },
+      user_id: '07f96be4-5be1-4dd0-ab4a-9091da7d2cac',
+      version: 2,
+      device_id: 'causal-completion-v2',
+      entity_id: 'singleton',
+      deleted_at: null,
+      updated_at: '2026-09-08T03:01:34.203953+01:00',
+      entity_type: 'tracking',
+      server_version: 28
+    },
+    changes: [
+      {
+        record: {
+          payload: {
+            id: '76c1f327-f21f-4574-aa98-b85c0b03a9a8',
+            title: 'Synthetic complete',
+            completed: true,
+            completedAt: 1788825900000,
+            description: '🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭 [long synthetic fixture text omitted] 🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭'... 30000 more characters,
+            scheduledFor: '2026-09-08',
+            lifecycleStatus: 'completed'
+          },
+          user_id: '07f96be4-5be1-4dd0-ab4a-9091da7d2cac',
+          version: 2,
+          device_id: 'fixture',
+          entity_id: '76c1f327-f21f-4574-aa98-b85c0b03a9a8',
+          deleted_at: null,
+          updated_at: '2026-09-08T01:05:00+01:00',
+          entity_type: 'tasks',
+          server_version: 26
+        },
+        accepted: true,
+        mutationId: '215cfd11-15b0-437f-95ec-0828113ee743',
+        serverVersion: 26
+      },
+      {
+        record: {
+          payload: { '2026-09-08': [Object] },
+          user_id: '07f96be4-5be1-4dd0-ab4a-9091da7d2cac',
+          version: 2,
+          device_id: 'fixture',
+          entity_id: 'singleton',
+          deleted_at: null,
+          updated_at: '2026-09-08T01:05:00+01:00',
+          entity_type: 'stats',
+          server_version: 27
+        },
+        accepted: true,
+        mutationId: '608212bf-a416-4505-9a45-28da7df92401',
+        serverVersion: 27
+      }
+    ],
+    outcome: {
+      code: 'APPLIED',
+      accepted: true,
+      revision: '78902626-3f6c-4607-81b3-ce0ab913c331'
+    },
+    accepted: true,
+    operation: {
+      type: 'completion',
+      epoch: 'e0bd2536-59d7-4d9f-9ddc-6ba146e9c17a',
+      changes: [
+        {
+          payload: {
+            id: '76c1f327-f21f-4574-aa98-b85c0b03a9a8',
+            title: 'Synthetic complete',
+            completed: true,
+            completedAt: 1788825900000,
+            description: '🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭 [long synthetic fixture text omitted] 🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭🧭'... 30009 more characters,
+            scheduledFor: '2026-09-08',
+            lifecycleStatus: 'completed'
+          },
+          version: 2,
+          deviceId: 'fixture',
+          entityId: '76c1f327-f21f-4574-aa98-b85c0b03a9a8',
+          deletedAt: null,
+          updatedAt: '2026-09-08T00:05:00.000Z',
+          entityType: 'tasks',
+          mutationId: '215cfd11-15b0-437f-95ec-0828113ee743',
+          baseServerVersion: 23
+        },
+        {
+          payload: { '2026-09-08': [Object] },
+          version: 2,
+          deviceId: 'fixture',
+          entityId: 'singleton',
+          deletedAt: null,
+          updatedAt: '2026-09-08T00:05:00.000Z',
+          entityType: 'stats',
+          mutationId: '608212bf-a416-4505-9a45-28da7df92401',
+          baseServerVersion: 24
+        }
+      ],
+      command: {
+        kind: 'complete',
+        epoch: '8036c585-fbf3-4b17-aade-7484999db0b7',
+        taskId: '76c1f327-f21f-4574-aa98-b85c0b03a9a8',
+        actorId: 'fixture',
+        actionId: '78902626-3f6c-4607-81b3-ce0ab913c331',
+        accountId: '07f96be4-5be1-4dd0-ab4a-9091da7d2cac',
+        sessionId: '8036c585-fbf3-4b17-aade-7484999db0b7',
+        capturedAt: '2026-09-08T00:05:00.000Z',
+        schemaVersion: 1,
+        durationSeconds: null,
+        expectedRevision: '8036c585-fbf3-4b17-aade-7484999db0b7',
+        expectedCurrentSessionId: '8036c585-fbf3-4b17-aade-7484999db0b7'
+      },
+      schemaVersion: 2
+    },
+    schemaVersion: 2,
+    projectionRevision: 1
+  },
+  operator: 'deepStrictEqual'
+}
+
+Node.js v22.16.0

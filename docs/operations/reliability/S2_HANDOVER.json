@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues; Web causal history download/application now verified locally. Native causal journals, atomic server completion, recovery and active client rollout remain incomplete.",
+  "acceptanceReason": "Implementation continues. Server atomic completion and Web transport/history are verified locally; client completion admission/application, native causal journals, recovery and active rollout remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -1138,6 +1138,190 @@
         "Ambiguous legacy and nonempty restore recovery pending"
       ],
       "permittedNextStage": null
+    },
+    {
+      "commit": "2d29a8dddb51aac3c5d41e61d68b4cb3f7e9532a",
+      "scope": "Dormant atomic server focus completion, exact member receipts, staged transport and lossless canonical notes",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "config/durable-identifiers.json",
+        "scripts/migration-causal-completion-assertions.sql",
+        "scripts/test-postgres-migrations.sh",
+        "scripts/test-s2-completion-api-postgres.ts",
+        "server/causalCompletion.ts",
+        "server/routes/sync.reconciliation.test.ts",
+        "server/routes/sync.ts",
+        "server/taskReconciliation.test.ts",
+        "server/taskReconciliation.ts",
+        "services/causalCompletionProtocol.test.ts",
+        "services/causalCompletionProtocol.ts",
+        "services/causalCompletionTransport.ts",
+        "services/causalHistoryProtocol.ts",
+        "services/causalProjection.ts",
+        "supabase/migrations/20260908015740_s2_atomic_focus_completion.sql",
+        "supabase/migrations/MIGRATION_SHA256_MANIFEST.json"
+      ],
+      "findings": [
+        {
+          "id": "S2-ATOMIC-SERVER-COMPLETION",
+          "disposition": "PASS_LOCAL transaction and receipt; client admission/application pending"
+        },
+        {
+          "id": "S2-CANONICAL-NOTE-TRUNCATION",
+          "disposition": "Fixed forward constraint/projection and compatibility adapter; full Unicode notes verified"
+        }
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "passed": 564,
+          "files": 92,
+          "evidence": "evidence/s2-completion-release-final.log"
+        },
+        {
+          "command": "PATH=/opt/homebrew/opt/postgresql@17/bin:$PATH PGHOST=127.0.0.1 PGPORT=55437 PGUSER=schober npm run test:migrations:postgres",
+          "exitCode": 0,
+          "paths": [
+            "empty",
+            "upgrade"
+          ],
+          "evidence": "evidence/s2-completion-postgres-final.log"
+        },
+        {
+          "command": "npm run verify:migrations",
+          "exitCode": 0,
+          "migrations": 31,
+          "evidence": "evidence/s2-completion-migrations.log"
+        },
+        {
+          "command": "npm run verify:migration-hashes",
+          "exitCode": 0,
+          "migrations": 31,
+          "evidence": "evidence/s2-completion-hashes-final.log"
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0,
+          "checked": 22,
+          "evidence": "evidence/s2-completion-identifiers.log"
+        }
+      ],
+      "migration": {
+        "file": "20260908015740_s2_atomic_focus_completion.sql",
+        "sha256": "9a65d3c91a1a38f0ba14af2c10dc27cc8a75d02dcaa9fa3e87b609d514734709",
+        "priorFiles": "UNCHANGED"
+      },
+      "evidenceHashes": {
+        "s2-completion-advisors-final.log": {
+          "rawSha256": "71a1aaac0f3b9e49c09dd2e4a5edad71728f3a49e3009899e0c813a95f98e311",
+          "sanitizedSha256": "71a1aaac0f3b9e49c09dd2e4a5edad71728f3a49e3009899e0c813a95f98e311"
+        },
+        "s2-completion-advisors.log": {
+          "rawSha256": "71a1aaac0f3b9e49c09dd2e4a5edad71728f3a49e3009899e0c813a95f98e311",
+          "sanitizedSha256": "71a1aaac0f3b9e49c09dd2e4a5edad71728f3a49e3009899e0c813a95f98e311"
+        },
+        "s2-completion-api-postgres-final.log": {
+          "rawSha256": "080176f21df7e584276e29b828890a1fba816004f55583c2f9bb6757fb51dbc1",
+          "sanitizedSha256": "080176f21df7e584276e29b828890a1fba816004f55583c2f9bb6757fb51dbc1"
+        },
+        "s2-completion-api-postgres-retry.log": {
+          "rawSha256": "edc21421610db01771ba25fd7490b21e7c1c9289aab3d587d68e92d01c8a44e8",
+          "sanitizedSha256": "22d188bc41201cca7cd9d9752cf56321ebbca174d0b89c2ad8f44fab683c1089"
+        },
+        "s2-completion-api-postgres.log": {
+          "rawSha256": "3cde4f073687c752bf428d2b65050e9b635cd4e9fc099d3ca7c5f99b5f71453d",
+          "sanitizedSha256": "3cde4f073687c752bf428d2b65050e9b635cd4e9fc099d3ca7c5f99b5f71453d"
+        },
+        "s2-completion-bootstrap.log": {
+          "rawSha256": "ef680cd273621c155000584175760bde87c0245142816b8a497274794ae79ca5",
+          "sanitizedSha256": "ef680cd273621c155000584175760bde87c0245142816b8a497274794ae79ca5"
+        },
+        "s2-completion-hashes-final.log": {
+          "rawSha256": "d72fc9af196628df10efea970bf95bf77b4b115b54e067d93babc66e354897f7",
+          "sanitizedSha256": "d72fc9af196628df10efea970bf95bf77b4b115b54e067d93babc66e354897f7"
+        },
+        "s2-completion-hashes.log": {
+          "rawSha256": "be3a48105db8bb4e2351da73adf60ffcb16004e46ee687467292ce88450ab56d",
+          "sanitizedSha256": "be3a48105db8bb4e2351da73adf60ffcb16004e46ee687467292ce88450ab56d"
+        },
+        "s2-completion-identifiers.log": {
+          "rawSha256": "a2b485073200a5fea59c036d976d18c19c67ae27bfddce0d093fc29548c6f4e3",
+          "sanitizedSha256": "a2b485073200a5fea59c036d976d18c19c67ae27bfddce0d093fc29548c6f4e3"
+        },
+        "s2-completion-iteration-final.log": {
+          "rawSha256": "d2b9e95f9fcfd96b1a8e04bffb8c4154c416a704a6a22d00005dd712e0a304c6",
+          "sanitizedSha256": "d2b9e95f9fcfd96b1a8e04bffb8c4154c416a704a6a22d00005dd712e0a304c6"
+        },
+        "s2-completion-iteration-psql.log": {
+          "rawSha256": "d2b9e95f9fcfd96b1a8e04bffb8c4154c416a704a6a22d00005dd712e0a304c6",
+          "sanitizedSha256": "d2b9e95f9fcfd96b1a8e04bffb8c4154c416a704a6a22d00005dd712e0a304c6"
+        },
+        "s2-completion-iteration-retry.log": {
+          "rawSha256": "c0a806b80229023eeceefe1cf6125f69a501bc5997c95727d224492ee7475cc4",
+          "sanitizedSha256": "c0a806b80229023eeceefe1cf6125f69a501bc5997c95727d224492ee7475cc4"
+        },
+        "s2-completion-iteration.log": {
+          "rawSha256": "9ba41b77cb86b4ac671101cbb96f3e12fbd6359f0970fbc1d609eb01d2995b01",
+          "sanitizedSha256": "9ba41b77cb86b4ac671101cbb96f3e12fbd6359f0970fbc1d609eb01d2995b01"
+        },
+        "s2-completion-lint.log": {
+          "rawSha256": "e90ee48ea12d3a4c3b7a3b27a3894b3cf36c40b2d5d29e5bd6efc2dafbd309e5",
+          "sanitizedSha256": "e90ee48ea12d3a4c3b7a3b27a3894b3cf36c40b2d5d29e5bd6efc2dafbd309e5"
+        },
+        "s2-completion-member-guard.log": {
+          "rawSha256": "d2b9e95f9fcfd96b1a8e04bffb8c4154c416a704a6a22d00005dd712e0a304c6",
+          "sanitizedSha256": "d2b9e95f9fcfd96b1a8e04bffb8c4154c416a704a6a22d00005dd712e0a304c6"
+        },
+        "s2-completion-migrations.log": {
+          "rawSha256": "3d76195fde51e0d0524da0b3d83db913454e2ae2d9680101b371abf3281e264a",
+          "sanitizedSha256": "3d76195fde51e0d0524da0b3d83db913454e2ae2d9680101b371abf3281e264a"
+        },
+        "s2-completion-notes-iteration.log": {
+          "rawSha256": "c14aee5b62ffd744902b84a24398e930998597dda300e71334862f0ef148e50a",
+          "sanitizedSha256": "c14aee5b62ffd744902b84a24398e930998597dda300e71334862f0ef148e50a"
+        },
+        "s2-completion-postgres-final.log": {
+          "rawSha256": "56fda6a03c044cd7b6a643d87c7c71a7da658266280607f411817f4dbd5a8ace",
+          "sanitizedSha256": "56fda6a03c044cd7b6a643d87c7c71a7da658266280607f411817f4dbd5a8ace"
+        },
+        "s2-completion-postgres.log": {
+          "rawSha256": "56fda6a03c044cd7b6a643d87c7c71a7da658266280607f411817f4dbd5a8ace",
+          "sanitizedSha256": "56fda6a03c044cd7b6a643d87c7c71a7da658266280607f411817f4dbd5a8ace"
+        },
+        "s2-completion-release-final.log": {
+          "rawSha256": "0969064fc34ce0a0f01824baa895546d2cde2cff6471544767932a07c101eb85",
+          "sanitizedSha256": "0969064fc34ce0a0f01824baa895546d2cde2cff6471544767932a07c101eb85"
+        },
+        "s2-completion-release.log": {
+          "rawSha256": "701c2af55f937ad420d996f958e18221470a3d8fc13b5f46f45385755bcb34eb",
+          "sanitizedSha256": "701c2af55f937ad420d996f958e18221470a3d8fc13b5f46f45385755bcb34eb"
+        },
+        "s2-completion-sql-unit-final.log": {
+          "rawSha256": "18fae98f6c14cccefd374186e5d2f15e5e3d601029c16c61551859c3db9650f2",
+          "sanitizedSha256": "18fae98f6c14cccefd374186e5d2f15e5e3d601029c16c61551859c3db9650f2"
+        },
+        "s2-completion-sql-unit.log": {
+          "rawSha256": "18fae98f6c14cccefd374186e5d2f15e5e3d601029c16c61551859c3db9650f2",
+          "sanitizedSha256": "18fae98f6c14cccefd374186e5d2f15e5e3d601029c16c61551859c3db9650f2"
+        },
+        "s2-completion-unit-final.log": {
+          "rawSha256": "0b622dc9361bca172172ec8c208666f773e78dbe1c6afd3b97e14ee436c4b237",
+          "sanitizedSha256": "0b622dc9361bca172172ec8c208666f773e78dbe1c6afd3b97e14ee436c4b237"
+        },
+        "s2-completion-unit.log": {
+          "rawSha256": "18083f2e52138848680291254e5131e34603ad19c20ef531c29cddbf78efe2f0",
+          "sanitizedSha256": "18083f2e52138848680291254e5131e34603ad19c20ef531c29cddbf78efe2f0"
+        }
+      },
+      "compatibility": "Dormant service-only transaction; legacy member receipts remain exact. Original notes are not truncated. Combined request 4 MiB staged, retained receipt/history 16 MiB. Web history applier refuses completion until its atomic task/effect coordinator is implemented.",
+      "blockers": [
+        "Client durable completion admission and all-member projection application pending",
+        "Native causal journals/transport and active rollout pending",
+        "Member conflicts and legacy/nonempty-restore reconciliation remain recovery boundaries",
+        "Hosted PostgREST and cross-client live completion NOT_MEASURED"
+      ],
+      "permittedNextStage": null
     }
   ],
   "findings": [
@@ -1320,7 +1504,32 @@
     "evidence/s2-history-projection-rejected-receipt.log",
     "evidence/s2-history-projection-release.log",
     "evidence/s2-history-projection-unit-final.log",
-    "evidence/s2-history-projection-unit.log"
+    "evidence/s2-history-projection-unit.log",
+    "evidence/s2-completion-advisors-final.log",
+    "evidence/s2-completion-advisors.log",
+    "evidence/s2-completion-api-postgres-final.log",
+    "evidence/s2-completion-api-postgres-retry.log",
+    "evidence/s2-completion-api-postgres.log",
+    "evidence/s2-completion-bootstrap.log",
+    "evidence/s2-completion-hashes-final.log",
+    "evidence/s2-completion-hashes.log",
+    "evidence/s2-completion-identifiers.log",
+    "evidence/s2-completion-iteration-final.log",
+    "evidence/s2-completion-iteration-psql.log",
+    "evidence/s2-completion-iteration-retry.log",
+    "evidence/s2-completion-iteration.log",
+    "evidence/s2-completion-lint.log",
+    "evidence/s2-completion-member-guard.log",
+    "evidence/s2-completion-migrations.log",
+    "evidence/s2-completion-notes-iteration.log",
+    "evidence/s2-completion-postgres-final.log",
+    "evidence/s2-completion-postgres.log",
+    "evidence/s2-completion-release-final.log",
+    "evidence/s2-completion-release.log",
+    "evidence/s2-completion-sql-unit-final.log",
+    "evidence/s2-completion-sql-unit.log",
+    "evidence/s2-completion-unit-final.log",
+    "evidence/s2-completion-unit.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"
