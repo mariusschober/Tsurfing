@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createSyncRouter } from './sync';
 import { prepareStagedBody } from '../../services/reconciliationStaging';
+import { causalHistoryHash } from '../../services/causalHistoryProtocol';
 const owner='11111111-1111-4111-8111-111111111111';
 let server:Server|undefined;
 afterEach(async()=>{ if(server) await new Promise<void>(resolve=>server!.close(()=>resolve())); server=undefined; });
@@ -16,6 +17,39 @@ async function endpoint(rpc:any) {
   return `http://127.0.0.1:${(server.address() as any).port}/sync/conflicts/reconcile`;
 }
 describe('automatic sync API boundary',()=>{
+  it('scopes history chunks to the authenticated owner and rejects invalid positions and corrupt bytes', async () => {
+    const epoch = '33333333-3333-4333-8333-333333333333';
+    const bytes = new TextEncoder().encode('synthetic transport');
+    const sha256 = await causalHistoryHash(bytes);
+    const chunk = { schemaVersion: 2, accountId: owner, epoch, revision: 0, throughRevision: 1,
+      offset: 0, totalBytes: bytes.length, sha256, chunkSha256: sha256,
+      data: Buffer.from(bytes).toString('base64'), nextOffset: null };
+    const rpc = vi.fn().mockResolvedValue({ data: chunk, error: null });
+    const url = (await endpoint(rpc)).replace('/conflicts/reconcile', '/causal-history');
+    const query = `?epoch=${epoch}&revision=0&throughRevision=1&offset=0`;
+    const response = await fetch(url + query);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(await response.json()).toEqual(chunk);
+    expect(rpc).toHaveBeenCalledWith('goalflow_causal_history_chunk_v2', {
+      target_user_id: owner, target_epoch: epoch, target_revision: 0, through_revision: 1, target_offset: 0
+    });
+    for (const invalid of [query + '&accountId=other', query.replace('offset=0', 'offset=1'),
+      query.replace('revision=0', 'revision=2'), query.replace('offset=0', 'offset=NaN')]) {
+      expect((await fetch(url + invalid)).status).toBe(400);
+    }
+    expect(rpc).toHaveBeenCalledTimes(1);
+    rpc.mockResolvedValue({ data: { ...chunk, data: 'AAAA' }, error: null });
+    expect((await fetch(url + query)).status).toBe(503);
+    rpc.mockResolvedValue({ data: null, error: { code: '22023', message: 'private synthetic diagnostic' } });
+    const conflict = await fetch(url + query);
+    expect(conflict.status).toBe(409);
+    expect(await conflict.text()).not.toContain('private synthetic');
+    rpc.mockResolvedValue({ data: null, error: { code: 'XX000', message: 'private synthetic diagnostic' } });
+    const failure = await fetch(url + query);
+    expect(failure.status).toBe(503);
+    expect(await failure.text()).not.toContain('private synthetic');
+  });
   it('discovers only the authenticated account epoch and never caches or enrolls it', async () => {
     const result = { schemaVersion: 2, accountId: owner, enrolled: true, epoch: '33333333-3333-4333-8333-333333333333', projectionRevision: 3, rolloutReady: false };
     const rpc = vi.fn().mockResolvedValue({ data: result, error: null });

@@ -5,6 +5,7 @@ import { reconcileLegacyTasks } from '../taskReconciliation';
 import { readConflictPage } from '../conflictPages';
 import { readStagedReconciliation, stageReconciliationChunk } from '../reconciliationStaging';
 import { admitCausalOperation, readCausalCapability } from '../causalActions';
+import { readCausalHistoryChunk } from '../causalHistory';
 
 const syncEntityType = z.enum([
   'tasks', 'goals', 'habits', 'stats', 'progress', 'hashtags', 'accountability',
@@ -215,6 +216,18 @@ export const reconcileCandidate = async (database: SupabaseClient, userId: strin
 export const createSyncRouter = (admin?: SupabaseClient) => {
   const router = Router();
   const requireHardenedProtocol = admin ? createSyncProtocolGuard(admin) : undefined;
+
+  router.get('/sync/causal-history', async (request, response) => {
+    response.setHeader('Cache-Control', 'no-store');
+    try {
+      const position = z.object({ epoch: z.string().uuid(), revision: z.coerce.number(), throughRevision: z.coerce.number(), offset: z.coerce.number() }).strict().parse(request.query);
+      response.json(await readCausalHistoryChunk(requireDatabase(admin), request.user!.id, position));
+    } catch (error) {
+      if (isRecord(error) && error.code === '22023') response.status(409).json({ error: { code: 'causal_history_review_required', message: 'The requested causal history needs review. Keep its retained evidence.' } });
+      else if (error instanceof z.ZodError) invalidRequest(response, error);
+      else response.status(503).json({ error: { code: 'causal_history_unavailable', message: 'Causal history is unavailable. Retry the same saved position.' } });
+    }
+  });
 
   router.get('/sync/causal-capability', async (request, response) => {
     response.setHeader('Cache-Control', 'no-store');

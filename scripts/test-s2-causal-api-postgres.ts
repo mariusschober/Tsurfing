@@ -5,6 +5,8 @@ import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { admitCausalOperation } from '../server/causalActions';
+import { readCausalHistoryChunk } from '../server/causalHistory';
+import { assembleCausalHistoryEntry } from '../services/causalHistoryProtocol';
 
 if (!/^(goalflow_empty_|goalflow_upgrade_|s2_)/.test(process.env.PGDATABASE ?? '')) throw new Error('Disposable fixture database required');
 const literal = (value: unknown) => "'" + JSON.stringify(value).replaceAll("'", "''") + "'::jsonb";
@@ -15,7 +17,7 @@ function query(sql: string, service = false): any {
 }
 const owner = randomUUID(), epoch = randomUUID(), task = randomUUID();
 query(`insert into auth.users(id) values ('${owner}')`);
-const tracking = { date: '2026-09-07', planViewCount: 27, dailyPostponeCount: 3, future: { preserved: '🐸' } };
+const tracking = { date: '2026-09-07', planViewCount: 27, dailyPostponeCount: 3, future: { preserved: '🐸'.repeat(16000) } };
 function push(kind: string, id: string, payload: unknown) {
   return query(`select public.push_sync_mutation_v2('${owner}','${randomUUID()}','fixture','${kind}','${id}',null,1,${literal(payload)},'2026-09-07T00:00:00.123456Z',null,null)`);
 }
@@ -24,7 +26,12 @@ assert.equal(original.accepted, true);
 assert.equal(push('tasks', task, { id: task, title: 'Synthetic', scheduledFor: '2026-09-07', completed: false, duration: 10 }).accepted, true);
 query(`select public.goalflow_causal_cutover_v2('${owner}',${literal({ schemaVersion: 2, accountId: owner, cutoverId: epoch,
   expectedTrackingPayload: tracking, expectedTrackingServerVersion: original.serverVersion })})`, true);
-const database = { rpc: async (name: string, input: { target_user_id: string; operation: unknown }) => {
+const database = { rpc: async (name: string, input: { target_user_id: string; operation: unknown; target_epoch?: string; target_revision?: number; through_revision?: number; target_offset?: number }) => {
+  if (name === 'goalflow_causal_history_chunk_v2') {
+    assert.equal(input.target_user_id, owner); assert.equal(input.target_epoch, epoch);
+    for (const value of [input.target_revision, input.through_revision, input.target_offset]) assert.ok(Number.isSafeInteger(value));
+    return { error: null, data: query(`select public.${name}('${owner}','${epoch}',${input.target_revision},${input.through_revision},${input.target_offset})`, true) };
+  }
   assert.ok(['goalflow_admit_action_v2', 'goalflow_counter_day_v2'].includes(name));
   assert.equal(input.target_user_id, owner);
   return { error: null, data: query(`select public.${name}('${owner}',${literal(input.operation)})`, true) };
@@ -49,5 +56,18 @@ assert.equal((await send('focus', { ...pause, actionId: randomUUID() })).accepte
 const selected = await send('counterDay', { ...common, actionId: randomUUID(), kind: 'select', day: '2026-09-08', timeZone: 'UTC' });
 assert.deepEqual(selected.counts, { planViewCount: 0, dailyPostponeCount: 0 });
 assert.deepEqual(selected.record.payload.focusSession, paused.record.payload.focusSession);
+let historyChunks = 0;
+for (let revision = 0; revision <= 5; revision++) {
+  const position = { epoch, revision, throughRevision: 5, offset: 0 };
+  const parts = []; let offset: number | null = 0;
+  while (offset !== null) {
+    const part = await readCausalHistoryChunk(database, owner, { ...position, offset });
+    parts.push(part); offset = part.nextOffset; historyChunks++;
+  }
+  const result = await assembleCausalHistoryEntry(owner, position, parts);
+  assert.equal(result.entry.revision, revision);
+  assert.deepEqual(result.entry.receipt.record.payload.future, tracking.future);
+}
+assert.ok(historyChunks > 6);
 console.log(JSON.stringify({ status: 'PASS', engine: 'PostgreSQL', apiReceiptValidation: 'EXACT', cases: 7,
-  unknownEvidence: 'PRESERVED', rejectedFocus: 'AUDITED', daySelection: 'FOCUS_PRESERVED', hostedPostgREST: 'NOT_MEASURED' }));
+  unknownEvidence: 'PRESERVED', rejectedFocus: 'AUDITED', daySelection: 'FOCUS_PRESERVED', historyEntries: 6, historyChunks, hostedPostgREST: 'NOT_MEASURED' }));
