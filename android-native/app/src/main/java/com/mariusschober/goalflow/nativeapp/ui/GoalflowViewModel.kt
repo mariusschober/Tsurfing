@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.mariusschober.goalflow.nativeapp.data.GoalflowRepository
 import com.mariusschober.goalflow.nativeapp.data.HabitGenerationHealth
 import com.mariusschober.goalflow.nativeapp.data.HabitGenerationStatus
+import com.mariusschober.goalflow.nativeapp.data.NativeCausalAdmission
 import com.mariusschober.goalflow.nativeapp.data.NativeReorderResult
 import com.mariusschober.goalflow.nativeapp.data.NativeFocusSessionRecord
 import com.mariusschober.goalflow.nativeapp.data.SyncConflictEntity
@@ -235,34 +236,49 @@ class GoalflowViewModel(
         val taskId = task.id
         val sessionId = java.util.UUID.randomUUID().toString()
         val capturedAt = Instant.now()
+        val plannedDurationSeconds = runCatching {
+            org.json.JSONObject(task.extraJson).optInt("duration", 25).coerceIn(1, 1440) * 60L
+        }.getOrDefault(25L * 60L)
+        val expectedCurrentSessionId = focusSession.value?.sessionId
         viewModelScope.launch {
             clearError()
             runCatching {
-                repository.startFocus(taskId, sessionId, capturedAt)
+                if (repository.hasCausalJournal()) {
+                    val admission = repository.admitFocusIntent(
+                        "start", sessionId, taskId, expectedCurrentSessionId, plannedDurationSeconds, capturedAt)
+                    admittedSession(requireAccepted(admission,
+                        "The focus session changed before this action could be applied. Review the current session and try again."), null)
+                        ?: error("The focus session could not start.")
+                } else repository.startFocus(taskId, sessionId, capturedAt)
             }.onSuccess(onComplete)
                 .onFailure { failure -> _error.value = failure.message ?: "The focus session could not start." }
         }
     }
 
     fun pauseFocus(onComplete: (NativeFocusSessionRecord) -> Unit = {}) = updateFocus(
+        kind = "pause",
         transform = { session, capturedAt -> session.pause(capturedAt) },
         onComplete = onComplete,
         failureMessage = "The focus session could not be paused."
     )
 
     fun resumeFocus(onComplete: (NativeFocusSessionRecord) -> Unit = {}) = updateFocus(
+        kind = "resume",
         transform = { session, capturedAt -> session.resume(capturedAt) },
         onComplete = onComplete,
         failureMessage = "The focus session could not be resumed."
     )
 
     fun stopFocus(onComplete: (NativeFocusSessionRecord) -> Unit = {}) = updateFocus(
+        kind = "stop",
         transform = { session, capturedAt -> session.stop(capturedAt) },
         onComplete = onComplete,
         failureMessage = "The focus session could not be stopped."
     )
 
     fun extendFocus(deltaSeconds: Long, onComplete: (NativeFocusSessionRecord) -> Unit = {}) = updateFocus(
+        kind = "extend",
+        durationSeconds = deltaSeconds,
         transform = { session, capturedAt -> session.extend(deltaSeconds, capturedAt) },
         onComplete = onComplete,
         failureMessage = "The focus session could not be extended."
@@ -280,16 +296,33 @@ class GoalflowViewModel(
             clearError()
             runCatching {
                 require(expectedSessionId != null) { "The focus session is not ready. Your task remains open." }
-                repository.completeFocus(task.id, expectedSessionId, capturedAt, actualDuration, flowState)
+                if (repository.hasCausalJournal()) {
+                    requireAccepted(repository.admitCompletionIntent(
+                        task.id, expectedSessionId, capturedAt, actualDuration, flowState, null),
+                        "The focus session changed before completion. Your task remains open; review it and retry.")
+                } else {
+                    repository.completeFocus(task.id, expectedSessionId, capturedAt, actualDuration, flowState)
+                }
             }.onSuccess { onComplete() }
                 .onFailure { failure -> _error.value = failure.message ?: "The commitment could not be completed." }
         }
     }
 
+    private fun requireAccepted(admission: NativeCausalAdmission, message: String): NativeCausalAdmission {
+        val accepted = runCatching { org.json.JSONObject(admission.outcome).getBoolean("accepted") }.getOrDefault(false)
+        require(accepted) { message }
+        return admission
+    }
+
+    private fun admittedSession(admission: NativeCausalAdmission, fallback: NativeFocusSessionRecord?): NativeFocusSessionRecord? =
+        runCatching { NativeFocusSessionRecord.fromTrackingPayload(admission.tracking) }.getOrNull() ?: fallback
+
     private fun updateFocus(
+        kind: String,
         transform: (NativeFocusSessionRecord, Instant) -> NativeFocusSessionRecord,
         onComplete: (NativeFocusSessionRecord) -> Unit,
-        failureMessage: String
+        failureMessage: String,
+        durationSeconds: Long? = null
     ) {
         val target = focusSession.value
         val capturedAt = Instant.now()
@@ -297,7 +330,14 @@ class GoalflowViewModel(
             clearError()
             runCatching {
                 require(target != null) { "No shared focus session is open." }
-                repository.transitionFocus(target.sessionId, target.taskId) { transform(it, capturedAt) }
+                if (repository.hasCausalJournal()) {
+                    val admission = requireAccepted(repository.admitFocusIntent(
+                        kind, target.sessionId, target.taskId, target.sessionId, durationSeconds, capturedAt),
+                        "The focus session changed before this action could be applied. Review the current session and try again.")
+                    admittedSession(admission, target) ?: error(failureMessage)
+                } else {
+                    repository.transitionFocus(target.sessionId, target.taskId) { transform(it, capturedAt) }
+                }
             }.onSuccess(onComplete)
                 .onFailure { failure -> _error.value = failure.message ?: failureMessage }
         }

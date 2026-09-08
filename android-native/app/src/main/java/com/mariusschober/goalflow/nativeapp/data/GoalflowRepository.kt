@@ -264,6 +264,42 @@ class GoalflowRepository(
         return result
     }
 
+    /** True once explicit causal preparation created the private journal. The
+     * normal UI admits causal intents exactly in this case and keeps the
+     * legacy paths otherwise; journals are never created implicitly here. */
+    suspend fun hasCausalJournal(): Boolean = database.withTransaction {
+        val userId = accounts.get()?.userId ?: return@withTransaction false
+        causalAccounts.get(userId) != null
+    }
+
+    /** Normal-UI focus admission. The caller captures target identity and time
+     * before launching work; the journal derives the actual parent inside its
+     * transaction. Requires explicit preparation; legacy callers keep their path. */
+    suspend fun admitFocusIntent(
+        kind: String, sessionId: String, taskId: String,
+        expectedCurrentSessionId: String?, durationSeconds: Long?, capturedAt: Instant
+    ): NativeCausalAdmission {
+        val userId = database.withTransaction { accounts.get()?.userId } ?: error("No signed-in account.")
+        return admitCausalFocus(userId, NativeFocusIntent(
+            actionId = UUID.randomUUID().toString(), kind = kind, sessionId = sessionId,
+            taskId = taskId, expectedCurrentSessionId = expectedCurrentSessionId,
+            durationSeconds = durationSeconds, capturedAt = ActionJson.instantFormatter.format(capturedAt)))
+    }
+
+    /** Normal-UI focus completion admission with final notes and effects. */
+    suspend fun admitCompletionIntent(
+        taskId: String, sessionId: String, capturedAt: Instant,
+        actualDuration: Int?, flowState: String?, finalDescription: String?
+    ): NativeCausalAdmission {
+        val userId = database.withTransaction { accounts.get()?.userId } ?: error("No signed-in account.")
+        return admitCausalCompletion(userId,
+            NativeFocusIntent(actionId = UUID.randomUUID().toString(), kind = "complete",
+                sessionId = sessionId, taskId = taskId, expectedCurrentSessionId = sessionId,
+                durationSeconds = null, capturedAt = ActionJson.instantFormatter.format(capturedAt)),
+            NativeCompletionDetails(timeProvider.today().toString(), java.time.ZoneId.systemDefault().id,
+                actualDuration, flowState, finalDescription))
+    }
+
     val taskStream: Flow<List<GoalflowTask>> = tasks.observeAll().map { rows -> rows.map(::toDomain) }
     val goalStream: Flow<List<GoalflowGoal>> = goals.observeAll().map { rows -> rows.map(::toDomain) }
     val habitStream: Flow<List<GoalflowHabit>> = habits.observeAll().map { rows -> rows.map(::toDomain) }
