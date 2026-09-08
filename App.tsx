@@ -1,31 +1,28 @@
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, useId } from 'react';
 import { useGoalflow } from './hooks/useGoalflow';
 import type { FocusSessionRecord } from './src/domain/focusSession';
 import { CurrentView } from './components/CurrentView';
-import { PlanningView } from './components/PlanningView';
+import { PlanningView, type PlanningMode } from './components/PlanningView';
 import { DoneView } from './components/DoneView';
 import { HabitsView } from './components/HabitsView';
-import { XPDisplay } from './components/XPDisplay';
 import { Celebration } from './components/Celebration';
 import { LevelUpModal } from './components/LevelUpModal';
-import { Logo } from './components/Logo';
-import { CalendarIcon, InboxIcon, StatsIcon, PlusIcon, TrophyIcon, SearchIcon, RepeatIcon, SunIcon, MoonIcon, ShieldIcon, SettingsIcon } from './components/Icons';
+import { AppHeader, type View } from './components/AppHeader';
+import { ModeSelector } from './components/ModeSelector';
+import { PlusIcon, ShieldIcon, ChevronDownIcon } from './components/Icons';
 import { playCompleteSound, playFrogCompleteSound } from './utils/audioUtils';
 import { Modal } from './components/Modal';
 import { TaskForm } from './components/TaskForm';
 import { SearchModal } from './components/SearchModal';
 import { Task, FlowState, Session } from './types';
 import { HashtagManager } from './components/HashtagManager';
-import { DeepWorkPlayer } from './components/DeepWorkPlayer';
 import { GamificationToast } from './components/GamificationToast';
 import { BioStateCheckIn } from './components/BioStateCheckIn';
 import { getTodayYYYYMMDD } from './utils/dateUtils';
-import { SyncStatus } from './components/SyncStatus';
 import { startCloudSync } from './services/cloudSync';
 import { PwaLifecycle } from './components/PwaLifecycle';
 
-type View = 'current' | 'planning' | 'goals' | 'stats' | 'done' | 'habits' | 'gamification';
 type Theme = 'light' | 'dark';
 
 const GoalsView = React.lazy(() => import('./components/GoalsView').then(module => ({ default: module.GoalsView })));
@@ -45,6 +42,9 @@ interface AppProps {
 const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetup = false, onLogout }) => {
   const [currentLocalDay, setCurrentLocalDay] = useState(getTodayYYYYMMDD());
   const [currentView, setCurrentView] = useState<View>('current');
+  const [planModeState, setPlanModeState] = useState<{ user: string; day: string; mode: PlanningMode }>(() => ({ user: userKey, day: currentLocalDay, mode: 'manual' }));
+  const planMode: PlanningMode = planModeState.user === userKey && planModeState.day === currentLocalDay ? planModeState.mode : 'manual';
+  const setPlanMode = useCallback((mode: PlanningMode) => setPlanModeState({ user: userKey, day: currentLocalDay, mode }), [userKey, currentLocalDay]);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -55,6 +55,9 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
   const [theme, setTheme] = useState<Theme>('light');
   const [selectedHashtag, setSelectedHashtag] = useState<string | null>(null);
   const [isBioCheckInOpen, setIsBioCheckInOpen] = useState(false);
+  const [isModeSelectorOpen, setIsModeSelectorOpen] = useState(false);
+  const modeSelectorId = useId();
+  const [isHeaderModalOpen, setIsHeaderModalOpen] = useState(false);
   
   const [openAssessmentOnGoalsMount, setOpenAssessmentOnGoalsMount] = useState(false);
   const [planningSaveError, setPlanningSaveError] = useState<string | null>(null);
@@ -123,7 +126,6 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
     resetCircadianState,
     userSettings,
     updateUserSettings,
-    sortTodayTasksCircadian,
     dailyPlans,
     confirmDailyPlan: persistDailyPlan
   } = useGoalflow(userKey, userEmail);
@@ -238,7 +240,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isBioCheckInOpen) return;
+      if (isBioCheckInOpen || isModeSelectorOpen || isHeaderModalOpen || document.querySelector('[aria-modal="true"]')) return;
 
       const target = e.target as HTMLElement;
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable) {
@@ -278,7 +280,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hasOverdue, isTaskModalOpen, isSearchOpen, openAddTaskModal, isBioCheckInOpen, isSettingsOpen]);
+  }, [hasOverdue, isTaskModalOpen, isSearchOpen, openAddTaskModal, isBioCheckInOpen, isSettingsOpen, isModeSelectorOpen, isHeaderModalOpen]);
 
   const handleCompleteTask = async (id: string, duration?: number, flowState?: FlowState, finalDescription?: string,
     observed?: FocusSessionRecord | null): Promise<boolean> => {
@@ -336,40 +338,6 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
       setOpenAssessmentOnGoalsMount(false);
   };
 
-  const NavItem: React.FC<{ view: View, label: string, icon: React.ReactNode, hotkey: string, active?: boolean, disabled?: boolean }> = ({ view, label, icon, hotkey, active, disabled }) => {
-    const isActive = active !== undefined ? active : currentView === view;
-    return (
-    <button
-      onClick={() => !disabled && handleSetView(view)}
-      disabled={disabled}
-      className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition text-sm sm:text-base whitespace-nowrap group relative ${
-        isActive
-          ? 'bg-indigo-100 text-indigo-700 font-bold dark:bg-indigo-900 dark:text-indigo-200'
-          : disabled 
-            ? 'text-gray-300 dark:text-slate-700 cursor-not-allowed'
-            : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-800'
-      }`}
-      title={disabled ? "Complete overdue tasks first" : `Shortcut: ${hotkey}`}
-    >
-      {icon}
-      <span className="hidden sm:inline">{label}</span>
-    </button>
-  )};
-
-  const getBioModeLabel = () => {
-      if (!isCircadianActive) return 'Bio-Adaptive';
-      if (circadianState.mode === 'apex') return 'Apex Mode';
-      if (circadianState.mode === 'recovery') return 'Recovery';
-      return 'Maintenance';
-  };
-
-  const getBioModeColor = () => {
-      if (!isCircadianActive) return 'text-gray-400 hover:text-indigo-500';
-      if (circadianState.mode === 'apex') return 'bg-red-500 text-white shadow-red-500/50';
-      if (circadianState.mode === 'recovery') return 'bg-emerald-500 text-white shadow-emerald-500/50';
-      return 'bg-blue-500 text-white shadow-blue-500/50';
-  };
-
   if (isLoading) {
       return (
           <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex flex-col justify-center items-center gap-4">
@@ -386,7 +354,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-slate-900 min-h-screen font-sans flex flex-col transition-colors duration-200 print:bg-white relative">
+    <div className={`app-shell ${currentView === 'current' ? 'app-shell--current' : currentView === 'planning' ? 'app-shell--planning' : ''} bg-gray-50 dark:bg-slate-900 min-h-screen font-sans flex flex-col transition-colors duration-200 print:bg-white relative`}>
       <PwaLifecycle />
       {isBioCheckInOpen && (
           <BioStateCheckIn 
@@ -409,102 +377,10 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
           />
       )}
 
-      {/* Header and Player stick around even if hidden visually, to keep music playing */}
-      <header className={`bg-white dark:bg-slate-800 shadow-sm sticky top-0 z-20 border-b border-gray-200 dark:border-slate-700 print:hidden ${currentView === 'gamification' ? 'hidden' : 'block'}`}>
-        <nav className="container mx-auto px-4 py-3 flex justify-between items-center">
-        <div className="flex items-center gap-4 overflow-hidden shrink-0">
-            <Logo onReset={() => handleSetView('current')} />
-            
-            {/* Mode Switcher Toggle */}
-            <div className="hidden sm:flex bg-gray-100 dark:bg-slate-700/50 p-1 rounded-full border border-gray-200 dark:border-slate-600 relative shadow-inner">
-                {/* Manual Option */}
-                <button
-                    onClick={resetCircadianState}
-                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300 z-10 ${
-                        !isCircadianActive 
-                        ? 'bg-white dark:bg-slate-600 text-gray-800 dark:text-white shadow-sm' 
-                        : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300'
-                    }`}
-                >
-                    Manual
-                </button>
-
-                {/* Bio-Adaptive Option */}
-                <button
-                    onClick={() => setIsBioCheckInOpen(true)}
-                    className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 z-10 ${
-                        isCircadianActive 
-                        ? `${getBioModeColor()} shadow-md`
-                        : 'text-gray-400 hover:text-indigo-500 dark:text-gray-500 dark:hover:text-indigo-400'
-                    }`}
-                >
-                    {isCircadianActive && <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>}
-                    {getBioModeLabel()}
-                </button>
-            </div>
-        </div>
-        
-        <div className="flex items-center space-x-1 sm:space-x-2 ml-2 overflow-x-auto lg:overflow-visible custom-scrollbar no-scrollbar">
-            
-            {/* Deep Work Music Player - Persists here */}
-            <div className="mr-1 sm:mr-3">
-                <DeepWorkPlayer />
-            </div>
-
-            <button 
-                onClick={toggleTheme} 
-                className="p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-700 rounded-lg transition-colors" 
-                title="Toggle Theme"
-            >
-                {theme === 'light' ? <MoonIcon className="w-5 h-5" /> : <SunIcon className="w-5 h-5" />}
-            </button>
-            
-            <button onClick={() => setIsSearchOpen(true)} className="p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-700 rounded-lg" title="Search (/)">
-                <SearchIcon className="w-5 h-5" />
-            </button>
-            <SyncStatus userKey={userKey} />
-            <NavItem view="current" label="Current" hotkey="f" icon={<CalendarIcon className="w-5 h-5" />} disabled={hasOverdue} />
-            <NavItem view="planning" label="Plan" hotkey="p" icon={<InboxIcon className="w-5 h-5" />} />
-            <NavItem view="habits" label="Habits" hotkey="h" icon={<RepeatIcon className="w-5 h-5" />} disabled={hasOverdue} />
-            <NavItem view="goals" label="Goals" hotkey="g" icon={<TrophyIcon className="w-5 h-5" />} disabled={hasOverdue} />
-            <NavItem view="stats" label="Insights" hotkey="s" icon={<StatsIcon className="w-5 h-5" />} active={currentView === 'stats' || currentView === 'done'} disabled={hasOverdue} />
-            <button type="button" onClick={() => setIsSettingsOpen(true)} className="p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-700 rounded-lg sm:hidden" aria-label="Open settings">
-                <SettingsIcon className="w-5 h-5" />
-            </button>
-            <button type="button" onClick={onLogout} className="px-2 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-lg sm:hidden" aria-label="Sign out">Sign out</button>
-            <div className="border-l border-gray-200 dark:border-slate-600 h-6 mx-2 hidden md:block"></div>
-            <div className="hidden md:block">
-                <XPDisplay 
-                    userProgress={userProgress} 
-                    onClick={() => setCurrentView('gamification')} 
-                />
-            </div>
-            
-            {/* User Menu Dropdown */}
-            <div className="relative group ml-2 hidden sm:block">
-                <button className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold cursor-pointer shadow-sm focus:outline-none" aria-label="Open account menu">
-                    {userEmail.charAt(0).toUpperCase()}
-                </button>
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-md shadow-lg py-1 z-50 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity invisible group-hover:visible group-focus-within:visible border border-gray-100 dark:border-slate-600">
-                    <div className="px-4 py-2 text-sm text-gray-700 dark:text-gray-200 truncate font-medium">{userEmail}</div>
-                    <div className="border-t border-gray-100 dark:border-slate-700"></div>
-                    <button 
-                        onClick={() => setIsSettingsOpen(true)} 
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
-                    >
-                        <SettingsIcon className="w-4 h-4" /> Settings
-                    </button>
-                    <button 
-                        onClick={onLogout} 
-                        className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-slate-700 transition-colors"
-                    >
-                        Logout
-                    </button>
-                </div>
-            </div>
-        </div>
-        </nav>
-      </header>
+      <AppHeader currentView={currentView} hasOverdue={hasOverdue} userKey={userKey} userEmail={userEmail}
+        userProgress={userProgress} theme={theme} onNavigate={handleSetView}
+        onSearch={() => setIsSearchOpen(true)} onSettings={() => setIsSettingsOpen(true)} onLogout={onLogout}
+        onToggleTheme={toggleTheme} onModalChange={setIsHeaderModalOpen} />
       
       {currentView === 'gamification' ? (
           <React.Suspense fallback={<ViewFallback />}>
@@ -547,11 +423,14 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
                 completeTask={handleCompleteTask}
                 isAiEnabled={userSettings.enableAi}
                 createTask={addTask}
-                sortTodayTasksCircadian={sortTodayTasksCircadian}
+                userKey={userKey}
+                planningMode={planMode}
+                onPlanningModeChange={setPlanMode}
+                onSubmitBioCheckIn={submitBioCheckIn}
             />
-            <div className="sticky bottom-4 z-10 mx-auto mt-6 max-w-xl rounded-xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-800/95">
-                <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
-                    {requiresMonthlyPlanning ? 'Assign every current-month task to an exact day before starting today.' : hasOverdue ? 'Resolve every overdue task before starting today.' : `Confirm today's order, then leave planning and focus on one task.`}
+            <div className="planning-confirmation border border-gray-200 bg-white/95 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-800/95">
+                <p className="planning-confirmation__summary text-sm text-gray-600 dark:text-gray-300">
+                    {requiresMonthlyPlanning ? 'Assign every current-month task to an exact day before starting today.' : hasOverdue ? 'Resolve every overdue task before starting today.' : `Confirm today's order, then start focus.`}
                 </p>
                 {planningSaveError && (
                     <p role="alert" className="mb-3 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-700 dark:bg-red-950/40 dark:text-red-200">
@@ -623,6 +502,12 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
                 />
                 </React.Suspense>
             }
+            {currentView === 'current' && <div className="current-mode">
+              <button type="button" onClick={event => { event.currentTarget.focus(); setIsModeSelectorOpen(true); }} aria-haspopup="dialog" aria-expanded={isModeSelectorOpen} aria-controls={modeSelectorId}
+                className="header-control text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-800">
+                <span>Mode: {isCircadianActive ? 'Bio-Adaptive' : 'Manual'}</span><ChevronDownIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              </button>
+            </div>}
             {currentView === 'current' && dailyPlanConfirmed &&
             <CurrentView
                 currentTask={currentTask}
@@ -649,7 +534,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
             />
             }
             {currentView === 'current' && !dailyPlanConfirmed && (
-                <section className="mx-auto mt-16 max-w-xl rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                <section className="current-planning-gate mx-auto mt-16 max-w-xl rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
                     <p className="mb-2 text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">{requiresMonthlyPlanning ? 'Monthly planning' : 'Daily planning'}</p>
                     <h1 className="mb-3 text-3xl font-bold text-gray-900 dark:text-white">Plan once. Then focus.</h1>
                     <p className="mb-6 text-gray-600 dark:text-gray-300">
@@ -663,7 +548,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
 
             <button 
                 onClick={() => openAddTaskModal()}
-                className="fixed bottom-8 right-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-4 shadow-lg transform transition-transform hover:scale-110 z-30 active:scale-95 flex items-center justify-center print:hidden"
+                className="app-add-task fixed bottom-8 right-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-4 shadow-lg transform transition-transform hover:scale-110 z-30 active:scale-95 flex items-center justify-center print:hidden"
                 title="Add new task (a)"
             >
                 <PlusIcon className="w-8 h-8" />
@@ -726,6 +611,12 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
         newLevel={userProgress.level}
       />
       
+      <Modal isOpen={isModeSelectorOpen} onClose={() => setIsModeSelectorOpen(false)} title="Planning mode" variant="compact" id={modeSelectorId}>
+        <div className="p-4"><ModeSelector active={isCircadianActive} mode={circadianState.mode}
+          onManual={() => { setIsModeSelectorOpen(false); resetCircadianState(); }}
+          onBioAdaptive={() => { setIsModeSelectorOpen(false); setIsBioCheckInOpen(true); }} /></div>
+      </Modal>
+
       {/* Warning Modal for Planning Overuse */}
       <Modal isOpen={planningWarning} onClose={() => setPlanningWarning(false)} title="Decision Fatigue Warning">
           <div className="p-6 text-center">

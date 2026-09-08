@@ -15,6 +15,7 @@ import {
 } from './Icons';
 
 interface ExcitementPlannerProps {
+    dialogProps?: React.HTMLAttributes<HTMLDivElement> & React.RefAttributes<HTMLDivElement>;
   items: (Task | Goal)[];
   mode?: 'task' | 'goal';
   onComplete: (ratings: Record<string, { excitement: number, roi: number }>) => void;
@@ -22,7 +23,7 @@ interface ExcitementPlannerProps {
   onBreakdown: (item: Task | Goal) => void;
 }
 
-export const ExcitementPlanner: React.FC<ExcitementPlannerProps> = ({ items, mode = 'task', onComplete, onClose, onBreakdown }) => {
+export const ExcitementPlanner: React.FC<ExcitementPlannerProps> = ({ items, mode = 'task', onComplete, onClose, onBreakdown, dialogProps }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [ratings, setRatings] = useState<Record<string, { excitement: number, roi: number }>>({});
   const [hoverCoords, setHoverCoords] = useState<{x: number, y: number} | null>(null);
@@ -100,13 +101,13 @@ export const ExcitementPlanner: React.FC<ExcitementPlannerProps> = ({ items, mod
       setHoverCoords({ x, y });
   };
 
-  const commitSelection = () => {
-      if (!gridRef.current || !hoverCoords) return;
+  const commitSelection = (coords = hoverCoords) => {
+      if (!gridRef.current || !coords) return;
       
       const rect = gridRef.current.getBoundingClientRect();
-      const xPct = (hoverCoords.x / rect.width) * 100;
+      const xPct = (coords.x / rect.width) * 100;
       // Invert Y because typically graph Y=0 is bottom, but screen Y=0 is top
-      const yPct = 100 - ((hoverCoords.y / rect.height) * 100);
+      const yPct = 100 - ((coords.y / rect.height) * 100);
 
       // Check Pit (Low Spark < 50, High Drag > 50)
       if (xPct > 50 && yPct < 50) {
@@ -204,7 +205,7 @@ export const ExcitementPlanner: React.FC<ExcitementPlannerProps> = ({ items, mod
 
   // --- RENDER ---
   return ReactDOM.createPortal(
-      <div className="fixed inset-0 z-[9999] bg-[#020617] text-white font-sans flex flex-col overflow-hidden animate-fadeIn">
+      <div {...dialogProps} className="fixed inset-0 z-[9999] bg-[#020617] text-white font-sans flex flex-col overflow-hidden animate-fadeIn">
           
           {/* Dynamic Background */}
           <div 
@@ -295,6 +296,21 @@ export const ExcitementPlanner: React.FC<ExcitementPlannerProps> = ({ items, mod
                    {/* Interaction Surface */}
                    <div 
                         ref={gridRef}
+                        tabIndex={dialogProps ? 0 : undefined}
+                        role={dialogProps ? 'group' : undefined}
+                        aria-label={dialogProps ? 'Task rating grid: arrows adjust Spark and Drag; Enter confirms' : undefined}
+                        onKeyDown={dialogProps ? event => {
+                            const rect = gridRef.current?.getBoundingClientRect();
+                            if (!rect || isPitTrapActive) return;
+                            const coords = hoverCoords || { x: rect.width / 2, y: rect.height / 2 };
+                            if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); commitSelection(coords); return; }
+                            if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+                            event.preventDefault();
+                            setHoverCoords({
+                                x: Math.max(0, Math.min(rect.width, coords.x + (event.key === 'ArrowRight' ? .1 : event.key === 'ArrowLeft' ? -.1 : 0) * rect.width)),
+                                y: Math.max(0, Math.min(rect.height, coords.y + (event.key === 'ArrowDown' ? .1 : event.key === 'ArrowUp' ? -.1 : 0) * rect.height)),
+                            });
+                        } : undefined}
                         className={`w-full h-full bg-[#0f172a]/60 rounded-3xl border transition-all duration-300 relative overflow-hidden shadow-2xl cursor-crosshair ${isPitTrapActive ? 'border-red-600 shadow-[0_0_50px_rgba(220,38,38,0.4)]' : 'border-slate-700 hover:border-slate-500'}`}
                         onPointerDown={handlePointerDown}
                         onPointerMove={handlePointerMove}

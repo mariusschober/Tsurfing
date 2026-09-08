@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback, useId } from 'react';
 import { Task, Session, Goal, HashtagConfig, CircadianState, FlowState, BioMetrics } from '../types';
 import { PencilIcon, RepeatIcon, CompassIcon, ArrowUpCircleIcon, PlusIcon, SunIcon, TrashIcon, AxeIcon, MoonIcon, ZapIcon, CoffeeIcon, FlameIcon, StickyNoteIcon, CalendarIcon, CheckIcon, InfinityIcon, UtensilsIcon, BrainCircuit, ActivityIcon } from './Icons';
 import { formatDuration } from '../utils/timeAndTagParser';
@@ -7,13 +7,25 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 import { formatDisplayDate, getTodayYYYYMMDD, getTomorrowYYYYMMDD, toYYYYMMDD } from '../utils/dateUtils';
 import { Modal } from './Modal';
 import { ExcitementPlanner } from './ExcitementPlanner';
+import { BioStateCheckIn } from './BioStateCheckIn';
 import { YellowPad } from './YellowPad';
 import { DatePicker } from './DatePicker';
 import { getPhotoperiod, getSeasonalSleepRecommendation } from '../utils/sunUtils';
 
 // --- Types & Interfaces ---
 
+export type PlanningMode = 'manual' | 'prioritize' | 'circadian';
+type PlanDensity = 'compact' | 'proportional';
+const readPlanDensity = (userKey: string): PlanDensity => {
+    try { return localStorage.getItem(`tsurfing:plan-density:${userKey}`) === 'proportional' ? 'proportional' : 'compact'; }
+    catch { return 'compact'; }
+};
+
 interface PlanningViewProps {
+    userKey: string;
+    planningMode: PlanningMode;
+    onPlanningModeChange: (mode: PlanningMode) => void;
+    onSubmitBioCheckIn: React.ComponentProps<typeof BioStateCheckIn>['onSubmit'];
     todayTasks: Task[];
     upcomingTasks: Task[];
     allTasks: Task[];
@@ -36,7 +48,6 @@ interface PlanningViewProps {
     completeTask: (id: string, duration?: number, flowState?: FlowState, finalDescription?: string) => void;
     isAiEnabled?: boolean;
     createTask?: (task: { title: string; description?: string; dateAssigned: string, goalId?: string, isFrog?: boolean, isRepetitive?: boolean, duration?: number, isBreak?: boolean }) => void;
-    sortTodayTasksCircadian: () => void;
 }
 
 // ... (BreakCreationModal, DurationEstimatorModal, NoteEditorModal, RescheduleDropModal, HorizonTaskCard remain the same as previous)
@@ -468,9 +479,10 @@ const TimelineTaskCard = React.memo<{
         isEating?: boolean;
         isDip?: boolean;
     };
+    density: PlanDensity;
     markers?: Array<{ type: 'sunrise' | 'sunset' | 'noon' | 'sleep', time: string }>;
 }>(({ 
-    task, goal, setFrog, openEditModal, deleteTask, hashtagConfigs, onSelectHashtag, isDragging, startTime, endTime, onTimeClick, onEditNote, bioContext, markers
+    task, goal, setFrog, openEditModal, deleteTask, hashtagConfigs, onSelectHashtag, isDragging, startTime, endTime, onTimeClick, onEditNote, bioContext, markers, density
 }) => {
     if (!task) return null;
 
@@ -519,7 +531,7 @@ const TimelineTaskCard = React.memo<{
     let BreakIcon = CoffeeIcon;
     
     return (
-        <div className="flex gap-4 group relative" style={{ height: `${cardHeight}px` }}>
+        <div className={`planning-task planning-task--${density} flex gap-4 group relative`} style={density === 'proportional' ? { height: `${cardHeight}px` } : undefined}>
             {/* Left Timeline Track */}
             <div className="flex flex-col items-center w-16 pt-2 relative flex-shrink-0">
                 <button 
@@ -577,7 +589,7 @@ const TimelineTaskCard = React.memo<{
 
                 {!task.isBreak && <div className="w-1.5 h-full shrink-0" style={{ backgroundColor: accentColor }}></div>}
 
-                <div className={`flex-grow p-4 flex flex-col justify-center min-w-0 relative ${contentStyle}`}>
+                <div className={`planning-task__content flex-grow p-4 flex flex-col justify-center min-w-0 relative ${contentStyle}`}>
                     <div className={`flex items-center gap-3 ${task.isBreak ? 'justify-center' : 'pr-8'}`}>
                         {task.isBreak ? (
                             <BreakIcon className="w-5 h-5 text-teal-500 shrink-0" />
@@ -592,7 +604,7 @@ const TimelineTaskCard = React.memo<{
                         <div className="min-w-0 text-center sm:text-left flex-grow">
                             <div className="flex items-center gap-2 mb-1 justify-center sm:justify-start">
                                 {task.isFrog && <span className="text-lg animate-bounce leading-none" title="Eat The Frog">🐸</span>}
-                                <h4 className={`font-bold text-sm truncate ${isLocked ? 'text-red-800 dark:text-red-300' : task.isBreak ? 'text-teal-700 dark:text-teal-300' : 'text-gray-800 dark:text-gray-200'}`}>
+                                <h4 className={`planning-task__title font-bold text-sm truncate ${isLocked ? 'text-red-800 dark:text-red-300' : task.isBreak ? 'text-teal-700 dark:text-teal-300' : 'text-gray-800 dark:text-gray-200'}`}>
                                     {task.title}
                                 </h4>
                             </div>
@@ -638,7 +650,7 @@ const TimelineTaskCard = React.memo<{
                         </div>
                     </div>
 
-                    <div className="absolute top-1/2 right-4 transform -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-4 group-hover:translate-x-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 z-10">
+                    <div className="planning-task__actions absolute top-1/2 right-4 transform -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-4 group-hover:translate-x-0 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm p-1 rounded-xl shadow-sm border border-gray-100 dark:border-slate-700 z-10">
                         {!task.isBreak && (
                             <>
                                 <button 
@@ -680,15 +692,48 @@ const TimelineTaskCard = React.memo<{
     && prev.bioContext?.isDip === next.bioContext?.isDip
     && prev.startTime === next.startTime
     && prev.endTime === next.endTime
-    && prev.isDragging === next.isDragging);
+    && prev.isDragging === next.isDragging
+    && prev.density === next.density);
 
 export const PlanningView: React.FC<PlanningViewProps> = ({ 
     todayTasks, upcomingTasks, allTasks, goals, setFrog, openEditModal, deleteTask, reorderTodayTasks, 
     hashtagConfigs, updateTaskPriorities, moveTaskToTopToday, onSelectHashtag, overdueTasks, markWontDo, onAddTask,
     updateTask, onRescheduleTask, circadianState, addSubtasks, completeTask, isAiEnabled = false, createTask,
-    sortTodayTasksCircadian
+    userKey, planningMode, onPlanningModeChange, onSubmitBioCheckIn
 }) => {
-    const [isPlannerOpen, setIsPlannerOpen] = useState(false);
+    const [quizState, setQuizState] = useState<{ kind: 'prioritize' | 'circadian'; day: string } | null>(null);
+    const openQuiz = (kind: 'prioritize' | 'circadian') => setQuizState({ kind, day: getTodayYYYYMMDD() });
+    const [density, setDensity] = useState<PlanDensity>(() => readPlanDensity(userKey));
+    const quizDialogRef = useRef<HTMLDivElement>(null);
+    const quizTriggerRef = useRef<HTMLButtonElement | null>(null);
+    const noTasksHintId = useId();
+    const eligibleTasks = useMemo(() => todayTasks.filter(task => !task.isBreak), [todayTasks]);
+    const requestedQuiz = quizState?.day === getTodayYYYYMMDD() ? quizState.kind : null;
+    const activeQuiz = requestedQuiz === 'prioritize' && eligibleTasks.length === 0 ? null : requestedQuiz;
+    useEffect(() => setDensity(readPlanDensity(userKey)), [userKey]);
+    const changeDensity = (next: PlanDensity) => {
+        setDensity(next);
+        try { localStorage.setItem(`tsurfing:plan-density:${userKey}`, next); } catch { /* Still usable when browser storage is unavailable. */ }
+    };
+    const closeQuiz = useCallback(() => setQuizState(null), []);
+    useEffect(() => {
+        if (!activeQuiz) return;
+        const dialog = quizDialogRef.current;
+        const trigger = quizTriggerRef.current;
+        const focusable = () => dialog ? Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex="0"]')).filter(el => el.getClientRects().length > 0) : [];
+        (focusable()[0] || dialog)?.focus();
+        const trap = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeQuiz(); return; }
+            if (event.key !== 'Tab') return;
+            const targets = focusable();
+            const first = targets[0]; const last = targets[targets.length - 1];
+            if (!first) { event.preventDefault(); dialog?.focus(); }
+            else if (event.shiftKey && (document.activeElement === first || !dialog?.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+            else if (!event.shiftKey && (document.activeElement === last || !dialog?.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+        };
+        document.addEventListener('keydown', trap, true);
+        return () => { document.removeEventListener('keydown', trap, true); if (trigger?.isConnected) trigger.focus(); };
+    }, [activeQuiz, closeQuiz]);
     const [isEstimatorOpen, setIsEstimatorOpen] = useState(false);
     const [isBreakModalOpen, setIsBreakModalOpen] = useState(false);
     const [noteModalTask, setNoteModalTask] = useState<Task | null>(null);
@@ -704,7 +749,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
         };
     }, []);
 
-    const isCircadianActive = circadianState.lastCheckIn === getTodayYYYYMMDD();
+    const isCircadianActive = planningMode === 'circadian' && circadianState.lastCheckIn === getTodayYYYYMMDD();
 
     // --- CIRCADIAN CALCULATIONS ---
     const circadianContext = useMemo(() => {
@@ -804,7 +849,9 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
             return;
         }
         if (source.droppableId === 'today-list' && destination.droppableId === 'today-list') {
+            if (source.index === destination.index) return;
             reorderTodayTasks(draggableId, 'unassigned', source.index, 'unassigned', destination.index);
+            onPlanningModeChange('manual');
         }
     };
 
@@ -827,7 +874,8 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
 
     const handlePlanPrioritize = (ratings: Record<string, { excitement: number, roi: number }>) => {
         updateTaskPriorities(ratings);
-        setIsPlannerOpen(false);
+        onPlanningModeChange('prioritize');
+        closeQuiz();
     };
     
     const confirmAddBreak = (duration: number) => {
@@ -860,38 +908,29 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
     const dropTask = rescheduleTaskDropId ? allTasks.find(t => t.id === rescheduleTaskDropId) : null;
 
     return (
-        <div className="max-w-6xl mx-auto p-4 sm:p-8 space-y-12 pb-32">
-            
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                <div>
+        <div className={`planning-view planning-view--${density} max-w-6xl mx-auto`}>
+            <div className="planning-heading">
+                <div className="planning-heading__identity">
                     <h2 className="text-4xl font-heading font-bold text-gray-800 dark:text-white">Plan</h2>
                     <p className="text-gray-500 dark:text-gray-400 mt-1">Design your flow.</p>
                 </div>
-                {/* Circadian Score Badge */}
-                {isCircadianActive && (
-                    <div className="flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-slate-800 rounded-full border border-indigo-100 dark:border-slate-700 animate-fadeIn">
-                        <ZapIcon className="w-4 h-4 text-amber-500" />
-                        <span className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Circadian Score:</span>
-                        <span className="font-bold text-indigo-600 dark:text-indigo-400">{circadianState.score}%</span>
+                <div className="plan-mode">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Planning mode</span>
+                    <div role="group" aria-label="Planning mode" className="plan-mode__options bg-gray-100 dark:bg-slate-800 border border-gray-200 dark:border-slate-600">
+                        {(['manual', 'prioritize', 'circadian'] as const).map(mode => <button key={mode} type="button"
+                            aria-pressed={planningMode === mode}
+                            disabled={mode === 'prioritize' && eligibleTasks.length === 0}
+                            aria-describedby={mode === 'prioritize' && eligibleTasks.length === 0 ? noTasksHintId : undefined}
+                            className={`plan-mode__option ${planningMode === mode ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-slate-700'}`}
+                            onClick={event => {
+                                if (mode === 'manual') onPlanningModeChange('manual');
+                                else { quizTriggerRef.current = event.currentTarget; openQuiz(mode); }
+                            }}>
+                            {mode === 'manual' ? 'Manual' : mode === 'prioritize' ? 'Prioritize' : 'Circadian'}
+                        </button>)}
                     </div>
-                )}
-                <div className="flex gap-3">
-                    {isCircadianActive && (
-                        <button 
-                            onClick={() => setIsPlannerOpen(true)}
-                            disabled={todayTasks.length === 0}
-                            className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold shadow-sm transition-all ${todayTasks.length === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 hover:bg-indigo-200'}`}
-                        >
-                            <CompassIcon className="w-5 h-5" /> Prioritize
-                        </button>
-                    )}
-                    <button 
-                        onClick={() => onAddTask()}
-                        className="flex items-center gap-2 px-5 py-3 bg-gray-900 dark:bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-gray-800 dark:hover:bg-indigo-700 transition transform hover:-translate-y-0.5"
-                    >
-                        <PlusIcon className="w-5 h-5" /> Add Task
-                    </button>
+                    {eligibleTasks.length === 0 && <span id={noTasksHintId} className="text-xs text-gray-500 dark:text-gray-400">Add a task to use Prioritize.</span>}
+                    {isCircadianActive && <span className="text-xs text-gray-600 dark:text-gray-300">Circadian score: <strong>{circadianState.score}%</strong> · {circadianState.mode === 'apex' ? 'Apex' : circadianState.mode === 'recovery' ? 'Recovery' : 'Maintenance'}</span>}
                 </div>
             </div>
 
@@ -924,7 +963,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                         
                         {/* Left Column: Today's Timeline */}
                         <div className="lg:col-span-2 space-y-6">
-                            <div className="flex justify-between items-end">
+                            <div className="planning-flow-heading">
                                 <div className="flex items-center gap-3">
                                     <h3 className="text-2xl font-bold text-gray-800 dark:text-white">
                                         Today's Flow
@@ -935,7 +974,10 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                                         </span>
                                     )}
                                 </div>
-                                <div className="flex items-center gap-4">
+                                <div className="planning-flow-heading__actions">
+                                    <div role="group" aria-label="Task layout" className="plan-density border border-gray-200 dark:border-slate-600">
+                                        {(['compact', 'proportional'] as const).map(value => <button type="button" key={value} aria-pressed={density === value} onClick={() => changeDensity(value)} className={density === value ? 'bg-gray-100 text-gray-900 dark:bg-slate-700 dark:text-white' : 'text-gray-500 dark:text-gray-400'}>{value === 'compact' ? 'Compact' : 'Proportional'}</button>)}
+                                    </div>
                                     <button 
                                         onClick={() => setIsBreakModalOpen(true)}
                                         className="text-xs font-bold text-teal-600 dark:text-teal-400 flex items-center gap-1 hover:underline"
@@ -946,7 +988,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                             </div>
 
                             <div 
-                                className="bg-white dark:bg-slate-900/50 rounded-[2rem] p-6 min-h-[600px] border border-gray-100 dark:border-slate-800 shadow-xl shadow-indigo-100/20 dark:shadow-none relative overflow-hidden transition-all duration-1000"
+                                className="planning-timeline bg-white dark:bg-slate-900/50 rounded-[2rem] p-6 border border-gray-100 dark:border-slate-800 shadow-xl shadow-indigo-100/20 dark:shadow-none relative overflow-hidden transition-all duration-1000"
                                 style={{ backgroundImage: timelineGradient }}
                             >
                                 {/* Timeline Spine Background */}
@@ -957,7 +999,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                                         <div 
                                             {...provided.droppableProps} 
                                             ref={provided.innerRef} 
-                                            className={`space-y-4 relative z-10 transition-colors ${snapshot.isDraggingOver ? 'bg-indigo-50/10 rounded-xl' : ''}`}
+                                            className={`planning-task-list space-y-4 relative z-10 transition-colors ${snapshot.isDraggingOver ? 'bg-indigo-50/10 rounded-xl' : ''}`}
                                         >
                                             {timelineTasks.map((task, index) => (
                                                 <Draggable key={task.id} draggableId={task.id} index={index}>
@@ -971,6 +1013,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                                                         >
                                                             <TimelineTaskCard 
                                                                 task={task}
+                                                                density={density}
                                                                 goal={goals.find(g => g.id === task.goalId)}
                                                                 setFrog={setFrog}
                                                                 openEditModal={openEditModal}
@@ -991,7 +1034,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                                             ))}
                                             {provided.placeholder}
                                             
-                                            <button
+                                            {todayTasks.length === 0 && <button
                                                 onClick={() => onAddTask({ dateAssigned: getTodayYYYYMMDD() })}
                                                 className="w-full py-4 border-2 border-dashed border-gray-200 dark:border-slate-700 rounded-2xl flex items-center justify-center gap-3 text-gray-400 hover:text-indigo-500 hover:border-indigo-200 dark:hover:border-indigo-900/50 hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-all group ml-[4.5rem] mt-4"
                                                 style={{ width: 'calc(100% - 4.5rem)' }}
@@ -1000,7 +1043,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                                                     <PlusIcon className="w-5 h-5 group-hover:text-indigo-600 dark:group-hover:text-indigo-400" />
                                                 </div>
                                                 <span className="font-bold text-sm">Add Task</span>
-                                            </button>
+                                            </button>}
                                         </div>
                                     )}
                                 </Droppable>
@@ -1056,14 +1099,6 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                                                         </div>
                                                     )}
                                                 </div>
-
-                                                <button
-                                                    onClick={() => sortTodayTasksCircadian()}
-                                                    className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-1.5 focus:outline-none"
-                                                >
-                                                    <ZapIcon className="w-4 h-4 text-amber-300" />
-                                                    Auto-Align Chronology (Frogs First)
-                                                </button>
                                             </div>
                                         </div>
                                     )}
@@ -1082,7 +1117,7 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
 
                                     <div className={snapshot.isDraggingOver ? 'hidden' : ''}>
                                         {groupedUpcoming.length === 0 ? (
-                                            <div className="bg-gray-50 dark:bg-slate-800/50 rounded-3xl p-8 text-center border border-dashed border-gray-200 dark:border-slate-700">
+                                            <div className="planning-horizon-empty bg-gray-50 dark:bg-slate-800/50 rounded-3xl p-8 text-center border border-dashed border-gray-200 dark:border-slate-700">
                                                 <p className="text-gray-400 text-sm">No upcoming tasks.</p>
                                                 <button onClick={() => onAddTask({ dateAssigned: getTomorrowYYYYMMDD() })} className="mt-4 text-xs font-bold text-indigo-500 hover:underline">
                                                     Plan Tomorrow
@@ -1151,15 +1186,21 @@ export const PlanningView: React.FC<PlanningViewProps> = ({
                 onReschedule={onRescheduleTask}
             />
 
-            {isPlannerOpen && (
+            {activeQuiz === 'prioritize' && (
                 <ExcitementPlanner 
-                    items={todayTasks} 
+                    items={eligibleTasks}
                     mode="task"
                     onComplete={handlePlanPrioritize} 
-                    onClose={() => setIsPlannerOpen(false)}
-                    onBreakdown={() => setIsPlannerOpen(false)}
+                    onClose={closeQuiz}
+                    onBreakdown={closeQuiz}
+                    dialogProps={{ ref: quizDialogRef, role: 'dialog', 'aria-modal': true, 'aria-label': 'Prioritize tasks', tabIndex: -1 }}
                 />
             )}
+            {activeQuiz === 'circadian' && <BioStateCheckIn
+                onSubmit={(data, score, mode, solar) => { onSubmitBioCheckIn(data, score, mode, solar); onPlanningModeChange('circadian'); closeQuiz(); }}
+                onClose={closeQuiz}
+                dialogProps={{ ref: quizDialogRef, role: 'dialog', 'aria-modal': true, 'aria-label': 'Circadian check-in', tabIndex: -1 }}
+            />}
         </div>
     );
 };

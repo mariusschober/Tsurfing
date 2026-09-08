@@ -10,11 +10,12 @@ import { getSunTimes } from '../utils/sunUtils';
 import { resolveUserLocation } from '../utils/locationUtils';
 
 interface BioStateCheckInProps {
+    dialogProps?: React.HTMLAttributes<HTMLDivElement> & React.RefAttributes<HTMLDivElement>;
     onSubmit: (data: any, score: number, mode: CircadianMode, solar?: { sunrise?: string, sunset?: string, solarNoon?: string }) => void;
     onClose?: () => void;
 }
 
-export const BioStateCheckIn: React.FC<BioStateCheckInProps> = ({ onSubmit, onClose }) => {
+export const BioStateCheckIn: React.FC<BioStateCheckInProps> = ({ onSubmit, onClose, dialogProps }) => {
     const [stepIndex, setStepIndex] = useState(0);
     const [geoError, setGeoError] = useState(false);
     const [locationRequested, setLocationRequested] = useState(false);
@@ -163,7 +164,7 @@ export const BioStateCheckIn: React.FC<BioStateCheckInProps> = ({ onSubmit, onCl
     }, [stepIndex, handleFinalize]);
 
     return ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[9999] bg-[#020617] text-white flex flex-col font-sans animate-fadeIn select-none overflow-hidden">
+        <div {...dialogProps} className="fixed inset-0 z-[9999] bg-[#020617] text-white flex flex-col font-sans animate-fadeIn select-none overflow-hidden">
             
             {/* Dynamic Background */}
             <div className="absolute inset-0 pointer-events-none">

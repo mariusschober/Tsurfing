@@ -157,7 +157,7 @@ const waitForFreshDurableSync = async (
     state = await runFreshDurableSync(page);
   }
   expect(state, 'A fresh synchronization cycle must end in durable success').toBe('synced');
-  await expect(page.getByRole('button', { name: 'Synced', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sync status: Synced', exact: true })).toBeVisible();
   return recoveredTrackingConflicts;
 };
 
@@ -250,8 +250,8 @@ const observeSyncPullDeliveringTitle = (
 
 const signOutLocally = async (page: Page) => {
   await dismissDecisionFatigueWarning(page);
-  await page.getByRole('button', { name: 'Open account menu', exact: true }).click();
-  await page.getByRole('button', { name: 'Logout', exact: true }).click();
+  await page.getByRole('button', { name: 'Open menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click();
   await expect(page.getByLabel('Email')).toBeVisible();
 };
 

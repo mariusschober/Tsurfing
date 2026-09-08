@@ -11,7 +11,7 @@ const renderPlanner = (tasks: Task[]) => renderToStaticMarkup(<PlanningView
     moveTaskToTopToday={vi.fn()} onSelectHashtag={vi.fn()} overdueTasks={tasks}
     markWontDo={vi.fn()} onAddTask={vi.fn()} updateTask={vi.fn()}
     onRescheduleTask={vi.fn(() => true)} circadianState={{ lastCheckIn: '' } as any}
-    addSubtasks={vi.fn()} completeTask={vi.fn()} sortTodayTasksCircadian={vi.fn()}
+    addSubtasks={vi.fn()} completeTask={vi.fn()} userKey="plan-test" planningMode="manual" onPlanningModeChange={vi.fn()} onSubmitBioCheckIn={vi.fn()}
 />);
 
 const task = (extra: Partial<Task> = {}) => ({

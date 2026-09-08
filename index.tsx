@@ -16,4 +16,5 @@ root.render(
 
 if (import.meta.env.MODE === 'test') {
   void import('./tests/browser/s1Harness').then(({ installS1Harness }) => installS1Harness(root));
+  void import('./tests/browser/navigationHarness').then(({ installNavigationHarness }) => installNavigationHarness(root));
 }
