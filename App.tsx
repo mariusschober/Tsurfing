@@ -339,7 +339,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
   }
 
   return (
-    <div className="bg-gray-50 dark:bg-slate-900 min-h-screen font-sans flex flex-col transition-colors duration-200 print:bg-white relative">
+    <div className={`app-shell ${currentView === 'current' ? 'app-shell--current' : ''} bg-gray-50 dark:bg-slate-900 min-h-screen font-sans flex flex-col transition-colors duration-200 print:bg-white relative`}>
       <PwaLifecycle />
       {isBioCheckInOpen && (
           <BioStateCheckIn 
@@ -517,7 +517,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
             />
             }
             {currentView === 'current' && !dailyPlanConfirmed && (
-                <section className="mx-auto mt-16 max-w-xl rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                <section className="current-planning-gate mx-auto mt-16 max-w-xl rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-800">
                     <p className="mb-2 text-xs font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-300">{requiresMonthlyPlanning ? 'Monthly planning' : 'Daily planning'}</p>
                     <h1 className="mb-3 text-3xl font-bold text-gray-900 dark:text-white">Plan once. Then focus.</h1>
                     <p className="mb-6 text-gray-600 dark:text-gray-300">
@@ -531,7 +531,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
 
             <button 
                 onClick={() => openAddTaskModal()}
-                className="fixed bottom-8 right-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-4 shadow-lg transform transition-transform hover:scale-110 z-30 active:scale-95 flex items-center justify-center print:hidden"
+                className="app-add-task fixed bottom-8 right-8 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-4 shadow-lg transform transition-transform hover:scale-110 z-30 active:scale-95 flex items-center justify-center print:hidden"
                 title="Add new task (a)"
             >
                 <PlusIcon className="w-8 h-8" />

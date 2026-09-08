@@ -119,7 +119,7 @@ const CircularTimer = React.memo<{
     }
 
     return (
-        <div className="relative flex justify-center items-center my-8 group z-10 w-full max-w-[280px] sm:max-w-[340px] md:max-w-[380px] aspect-square flex-shrink-0">
+        <div className="focus-timer relative flex justify-center items-center my-8 group z-10 w-full max-w-[280px] sm:max-w-[340px] md:max-w-[380px] aspect-square flex-shrink-0">
             
             <svg viewBox={`0 0 ${size} ${size}`} className="w-full h-full transform -rotate-90 relative z-10 overflow-visible">
                 <defs>
@@ -157,17 +157,17 @@ const CircularTimer = React.memo<{
             
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-auto">
                  <button 
-                    className="focus:outline-none transition-transform active:scale-95 mb-6"
+                    className="focus-timer__time focus:outline-none transition-transform active:scale-95 mb-6"
                     onClick={onTimeClick}
                     title="Edit Duration"
                     disabled={isBreak}
                  >
-                    <div className={`text-6xl sm:text-7xl md:text-8xl font-bold tracking-tighter font-sans tabular-nums transition-all duration-300 ${isActive ? 'text-gray-900 dark:text-white drop-shadow-sm' : 'text-gray-300 dark:text-gray-600'}`}>
+                    <div className={`focus-timer__digits text-6xl sm:text-7xl md:text-8xl font-bold tracking-tighter font-sans tabular-nums transition-all duration-300 ${isActive ? 'text-gray-900 dark:text-white drop-shadow-sm' : 'text-gray-300 dark:text-gray-600'}`}>
                         {String(minutes).padStart(2, '0')}:{String(remainingSeconds).padStart(2, '0')}
                     </div>
                  </button>
                  
-                 <div className={`px-5 py-2 rounded-full flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] transition-all duration-500 border ${flowStateConfig.style}`}>
+                 <div className={`focus-timer__state px-5 py-2 rounded-full flex items-center gap-2 text-xs font-bold uppercase tracking-[0.15em] transition-all duration-500 border ${flowStateConfig.style}`}>
                     <span className="relative flex h-2 w-2">
                         {isActive && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${flowStateConfig.dotColor}`}></span>}
                         <span className={`relative inline-flex rounded-full h-2 w-2 ${flowStateConfig.dotColor}`}></span>
@@ -723,11 +723,11 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
     const isQuickie = (currentTask?.duration || 25) <= 2;
 
     return (
-        <div className="max-w-5xl mx-auto relative rounded-[2.5rem] p-1 flex-grow flex flex-col">
+        <div className="current-view max-w-5xl mx-auto relative rounded-[2.5rem] p-1 flex-grow flex flex-col">
             {currentTask ? (
                 // CONDITIONAL RENDER: Check if Current Task is a Break
                 isBreak ? (
-                    <div className="flex flex-col items-center justify-center flex-grow w-full bg-teal-950 rounded-[2rem] border border-teal-900 relative overflow-hidden animate-fadeIn backdrop-blur-md min-h-[500px] p-8">
+                    <div className="current-break flex flex-col items-center justify-center flex-grow w-full bg-teal-950 rounded-[2rem] border border-teal-900 relative overflow-hidden animate-fadeIn backdrop-blur-md min-h-[500px] p-8">
                         {/* Auto Start Indicator */}
                         {!isActive && autoStartCountdown !== null && autoStartCountdown > 0 && (
                             <div className="absolute top-10 left-1/2 transform -translate-x-1/2 bg-teal-500 text-white px-6 py-2 rounded-full font-bold text-sm shadow-lg animate-pulse z-20">
@@ -735,7 +735,7 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                             </div>
                         )}
 
-                        <div className="text-center z-10 w-full max-w-lg">
+                        <div className="current-break__content text-center z-10 w-full max-w-lg">
                             <h2 className="text-4xl sm:text-6xl font-heading font-bold text-teal-100 mb-2 tracking-wide uppercase leading-tight break-words">
                                 {currentTask.title}
                             </h2>
@@ -773,25 +773,25 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                     </div>
                 ) : (
                     // STANDARD TASK VIEW
-                    <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-[2rem] shadow-xl shadow-indigo-100/50 dark:shadow-none overflow-hidden border border-white dark:border-slate-700 relative z-10 flex flex-col md:flex-row min-h-[600px] transition-colors duration-500 flex-grow">
+                    <div className="focus-card bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-[2rem] shadow-xl shadow-indigo-100/50 dark:shadow-none overflow-hidden border border-white dark:border-slate-700 relative z-10 flex flex-col md:flex-row min-h-[600px] transition-colors duration-500 flex-grow">
                         
-                        <div className={`flex-grow flex flex-col transition-all duration-300 ${showYellowPad ? 'md:w-3/5' : 'w-full'} relative z-10`}>
+                        <div className={`focus-workspace flex-grow flex flex-col transition-all duration-300 ${showYellowPad ? 'md:w-3/5' : 'w-full'} relative z-10`}>
                             {amalgam && (
-                                <div className="w-full bg-indigo-50/50 dark:bg-slate-900/50 border-b border-indigo-100/20 dark:border-slate-700 py-2 text-center backdrop-blur-sm shrink-0">
+                                <div className="focus-affirmation w-full bg-indigo-50/50 dark:bg-slate-900/50 border-b border-indigo-100/20 dark:border-slate-700 py-2 text-center backdrop-blur-sm shrink-0">
                                     <span className="text-[10px] font-bold tracking-[0.2em] text-indigo-400/80 uppercase animate-pulse">
                                         {amalgam}
                                     </span>
                                 </div>
                             )}
 
-                            <div className="p-6 flex justify-between items-center relative">
+                            <div className="focus-toolbar p-6 flex justify-between items-center relative">
                                 <div className="flex gap-2">
-                                    <button onClick={() => setIsReframeOpen(true)} className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/40 transition flex items-center">
+                                    <button onClick={() => setIsReframeOpen(true)} aria-label="Reframe" className="focus-reframe px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/40 transition flex items-center">
                                         <RefreshIcon className="w-3 h-3 mr-1"/> Reframe
                                     </button>
                                 </div>
 
-                                <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-gray-50 dark:bg-slate-700/50 rounded-full px-3 py-1 border border-gray-100 dark:border-slate-600 shadow-sm">
+                                <div className="focus-ticking absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-gray-50 dark:bg-slate-700/50 rounded-full px-3 py-1 border border-gray-100 dark:border-slate-600 shadow-sm">
                                     <button 
                                         onClick={() => setIsTickingMuted(!isTickingMuted)}
                                         className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
@@ -820,7 +820,7 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                                 </div>
                             </div>
 
-                            <div className="px-8 pb-10 flex flex-col items-center justify-center flex-grow">
+                            <div className="focus-center px-8 pb-10 flex flex-col items-center justify-center flex-grow">
                                 {isLocked && isAiEnabled && (
                                     <div className="mb-4 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-300 px-4 py-2 rounded-xl text-center font-bold text-sm animate-pulse border border-red-200 dark:border-red-800">
                                         🛑 Task Hardened: Breakdown Required
@@ -839,7 +839,7 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                                 />
 
                                 {isAiEnabled && isActive && (
-                                    <div className="text-center mb-8 px-4 animate-[fadeIn_1s_ease-out_forwards] z-10 max-w-lg mx-auto opacity-0 animate-[fadeIn_1s_ease-out_forwards_0.5s]">
+                                    <div className="focus-visualization text-center mb-8 px-4 animate-[fadeIn_1s_ease-out_forwards] z-10 max-w-lg mx-auto opacity-0 animate-[fadeIn_1s_ease-out_forwards_0.5s]">
                                         <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-700 dark:to-slate-800 p-4 rounded-xl border border-indigo-100 dark:border-slate-600 shadow-sm">
                                             <p className="text-sm font-medium text-indigo-900 dark:text-indigo-100 max-w-md mx-auto leading-relaxed italic">
                                                 "{visualizationPrompt || "Imagine completing this task easily and gracefully."}"
@@ -848,9 +848,9 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                                     </div>
                                 )}
 
-                                <h2 className="text-4xl sm:text-5xl font-heading font-semibold text-gray-900 dark:text-white leading-tight mb-4 px-4 text-center z-10">{currentTask.title}</h2>
+                                <h2 className="focus-title text-4xl sm:text-5xl font-heading font-semibold text-gray-900 dark:text-white leading-tight mb-4 px-4 text-center z-10">{currentTask.title}</h2>
                                 
-                                <div className="flex flex-wrap items-center justify-center gap-2 mb-10 z-10">
+                                <div className="focus-tags flex flex-wrap items-center justify-center gap-2 mb-10 z-10">
                                     {currentTask.isFrog && (
                                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 border border-green-100 dark:border-green-800">
                                         🐸 Frog
@@ -882,7 +882,7 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                                     ))}
                                 </div>
 
-                                <div className="flex items-center justify-center gap-8 w-full max-w-md mt-auto z-10">
+                                <div className="focus-actions flex items-center justify-center gap-8 w-full max-w-md mt-auto z-10">
                                     {isLocked && isAiEnabled ? (
                                         <button 
                                             onClick={handleOpenBreakdown}
@@ -927,7 +927,7 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                                 {(!isLocked || !isAiEnabled) && (
                                     <button 
                                         onClick={handleOpenBreakdown}
-                                        className="absolute bottom-6 right-6 p-3 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-full text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-md transition z-20 group"
+                                        className="focus-breakdown absolute bottom-6 right-6 p-3 bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-full text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-md transition z-20 group"
                                         title="Breakdown Task"
                                     >
                                         <AxeIcon className="w-5 h-5 group-hover:rotate-12 transition-transform" />
@@ -937,7 +937,7 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                         </div>
 
                         {showYellowPad && (
-                            <div className="w-full md:w-2/5 border-t md:border-t-0 md:border-l border-gray-100 dark:border-slate-700 h-[500px] md:h-auto animate-slideIn z-20">
+                            <div className="focus-notes w-full md:w-2/5 border-t md:border-t-0 md:border-l border-gray-100 dark:border-slate-700 h-[500px] md:h-auto animate-slideIn z-20">
                                 <YellowPad 
                                     key={currentTask.id} 
                                     content={padContent} 
@@ -952,7 +952,7 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                     </div>
                 )
             ) : (
-                 <div className="flex flex-col justify-center items-center h-[60vh] text-center px-4 animate-fadeIn flex-grow">
+                 <div className="current-empty flex flex-col justify-center items-center h-[60vh] text-center px-4 animate-fadeIn flex-grow">
                     <div className="w-32 h-32 bg-green-50 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-8 animate-bounce shadow-xl shadow-green-100/50 dark:shadow-none border border-green-100 dark:border-green-800">
                         <CheckIcon className="w-16 h-16 text-green-600 dark:text-green-400" />
                     </div>

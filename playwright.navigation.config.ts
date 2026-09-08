@@ -4,7 +4,7 @@ import base from './playwright.config';
 // Keep this UI worktree independent of concurrent protocol/browser test servers.
 export default defineConfig({
   ...base,
-  testMatch: ['**/navigation-responsive.spec.ts', '**/web-critical.spec.ts'],
+  testMatch: ['**/navigation-responsive.spec.ts', '**/current-viewport.spec.ts', '**/web-critical.spec.ts'],
   outputDir: 'test-results/navigation',
   reporter: [['list'], ['json', { outputFile: 'test-results/navigation-results.json' }]],
   use: { ...base.use, baseURL: 'http://127.0.0.1:4188' },

@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef, useId } from 'react';
 import ReactDOM from 'react-dom';
 import { Modal } from './Modal';
 import { somaFmChannels, SomaFmChannel } from '../utils/somaFmChannels';
-import { PlayIcon, PauseIcon, Volume2Icon, VolumeXIcon, ChevronDownIcon } from './Icons';
+import { Volume2Icon, VolumeXIcon, ChevronDownIcon } from './Icons';
 
 interface DeepWorkPlayerProps {
   controlsTarget?: HTMLElement | null;
@@ -179,15 +179,15 @@ export const DeepWorkPlayer: React.FC<DeepWorkPlayerProps> = ({ controlsTarget, 
   );
 
   const controls = <div className="music-player">
-    <div ref={buttonRef} className={`music-player__controls ${presentation === 'panel' ? 'music-player__controls--panel' : ''} rounded-xl border ${isPlaying ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300'}`}>
+    <div ref={buttonRef} className={`music-player__controls ${presentation === 'panel' ? 'music-player__controls--panel' : ''} rounded-xl border ${isPlaying ? 'music-player__controls--playing bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300'}`}>
       <button type="button" onClick={togglePlay} aria-label={isPlaying ? 'Pause focus music' : 'Play focus music'} title={isPlaying ? 'Pause (M)' : 'Play Focus Music (M)'} className="header-control gap-2">
-        {isLoading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" /> : isPlaying ? <PauseIcon className="h-4 w-4 shrink-0" aria-hidden="true" /> : <PlayIcon className="h-4 w-4 shrink-0" aria-hidden="true" />}
+        {isLoading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" /> : isPlaying ? <svg className="music-control-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.25" /><rect x="14" y="4" width="4" height="16" rx="1.25" /></svg> : <svg className="music-control-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5a1 1 0 0 1 1.52-.85l11 6.5a2.15 2.15 0 0 1 0 3.7l-11 6.5A1 1 0 0 1 7 19.5z" /></svg>}
         {presentation === 'panel' && <span>{isPlaying ? 'Pause' : 'Play'}</span>}
       </button>
       <button ref={stationButtonRef} type="button" onClick={toggleMenu} aria-label="Select station" title="Select Station" aria-expanded={isMenuOpen} aria-controls={pickerId} aria-haspopup={presentation === 'toolbar' ? 'dialog' : undefined}
-        className="header-control music-player__station-toggle border-l border-current/10">
+        className="header-control music-player__station-toggle">
         {presentation === 'panel' && <span className="truncate">{currentStation.title}</span>}
-        <ChevronDownIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <ChevronDownIcon className="music-control-icon" strokeWidth={2.5} aria-hidden="true" />
       </button>
     </div>
     {presentation === 'panel' && isMenuOpen && <div id={pickerId} className="mt-3 rounded-xl border border-gray-200 dark:border-slate-600">{stationPicker}</div>}
