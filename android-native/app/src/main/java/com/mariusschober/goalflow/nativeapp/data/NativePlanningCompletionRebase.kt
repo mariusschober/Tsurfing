@@ -165,6 +165,12 @@ object NativePlanningCompletionRebase {
         for (key in (before.keys().asSequence() + after.keys().asSequence()).toSet()) {
             if (same(before.opt(key), after.opt(key))) continue
             require(key in owned) { "The completion also changes unrelated task fields." }
+            // A captured completion does not authorize overwriting another
+            // device's independently saved notes, duration or flow rating.
+            require(key !in setOf("description", "actualDuration", "flowState")
+                || same(synced.opt(key), before.opt(key)) || same(synced.opt(key), after.opt(key))) {
+                "Both devices changed $key. Your completion is retained for review."
+            }
             if (after.has(key)) result.put(key, after.get(key)) else result.remove(key)
         }
         return result

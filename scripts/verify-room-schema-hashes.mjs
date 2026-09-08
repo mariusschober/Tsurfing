@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
 const schemaDir = 'android-native/app/schemas/com.mariusschober.goalflow.nativeapp.data.GoalflowDatabase';
@@ -7,6 +7,13 @@ const manifestPath = path.join(schemaDir, 'ROOM_SCHEMA_SHA256_MANIFEST.json');
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
 
 let ok = true;
+// A hash-only loop can report PASS while a newly added schema is unpinned.
+const schemaFiles = readdirSync(schemaDir).filter(file => file.endsWith('.json') && file !== 'ROOM_SCHEMA_SHA256_MANIFEST.json').sort();
+const declaredFiles = Object.keys(manifest).sort();
+if (JSON.stringify(schemaFiles) !== JSON.stringify(declaredFiles)) {
+  console.error(`ROOM_SCHEMA_MANIFEST_MISMATCH: declared ${JSON.stringify(declaredFiles)}, present ${JSON.stringify(schemaFiles)}`);
+  ok = false;
+}
 for (const [file, expected] of Object.entries(manifest)) {
   const content = readFileSync(path.join(schemaDir, file));
   const hash = createHash('sha256').update(content).digest('hex');

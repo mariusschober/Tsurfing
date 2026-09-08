@@ -59,7 +59,9 @@
     "20260908004753_s2_causal_capability_discovery.sql",
     "20260908011224_s2_causal_history_chunks.sql",
     "20260908015740_s2_atomic_focus_completion.sql",
-    "20260908065315_s2_causal_account_initialization.sql"
+    "20260908065315_s2_causal_account_initialization.sql",
+    "20260908180500_deliberate_planning.sql",
+    "20260908193000_planning_review_snapshot.sql"
   ],
   "roomSchemaFiles": [
     "1.json",
@@ -70,6 +72,7 @@
     "6.json",
     "7.json",
     "8.json",
-    "9.json"
+    "9.json",
+    "10.json"
   ]
 }
