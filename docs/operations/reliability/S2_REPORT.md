@@ -542,3 +542,14 @@ The dialog waits for durable admission, stays open on failure and blocks simulta
 Validation: full release exit 0, 660 tests in 100 files; combined S1/S2 Chromium/WebKit journeys exit 0, 62 tests; final production build and artifact checks exit 0. Three sanitized logs and SHA-256 hashes are recorded in the JSON handover. Initial sandbox loopback failures and the corrected browser fixture are recorded as failed attempts, not passes.
 
 Planning-visit penalty admission, causal scheduling/enrollment, non-focus completion concurrency, native integration and full recovery/mixed-version acceptance remain incomplete. No SQL/native changes or reruns, installation, live configuration or deployment. S2 remains **BLOCKED** and S3 is not permitted.
+
+
+## Web planning business checkpoint
+
+`b2eda61d08a43f16d92892571c3398832478d9de`: **PASS_LOCAL**. Planning visits now bind immutable user intent, a child counter event, the observed counter-event frontier and the captured penalty setting. Known-baseline counter/progress/ordinary-queue/effect updates commit together. Unknown-baseline visits remain durable; verified history later settles their original observed frontiers atomically, without using yesterday's count or later events to change an earlier threshold decision.
+
+The sixth observed visit warns, later visits preserve off/gentle/classic penalties, and retries cannot charge twice. The rendered navigation waits for durable admission and retains failed intent for retry. Warning copy accurately states six visits and reflects disabled penalties. Tests cover concurrent equal-time visits, all penalty modes, rollback, delayed baseline/history application, replay and changed evidence. The real browser journey proves warning six, rollback of a failed seventh visit and exactly one 25-XP gentle penalty on identical retry.
+
+Validation: full release exit 0, 668 tests in 101 files; combined S1/S2 real Chromium/WebKit journeys exit 0, 64 tests; final production build/artifact checks exit 0. Four sanitized logs/hashes and iterative failures are recorded in the JSON handover.
+
+Causal scheduling/enrollment, non-focus completion concurrency, native integration and comprehensive recovery/mixed-version acceptance remain open. No SQL/native changes or reruns, installation, live configuration or deployment. S2 remains **BLOCKED** and S3 is not permitted.

@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Fenced Web rescheduling now admits task and counter effects atomically with a rendered retry flow. Planning-visit penalties, non-focus completion concurrency, causal scheduling/enrollment, native integration and recovery remain incomplete.",
+  "acceptanceReason": "Implementation continues. Fenced Web planning visits and reschedules now admit counter/business effects atomically; unknown-baseline planning effects settle with verified history. Causal scheduling/enrollment, non-focus completion concurrency, native integration and recovery remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -2258,6 +2258,89 @@
         "This proves local reschedule/counter atomicity; task transport retains its existing exact ordinary receipts.",
         "Non-focus completion concurrency, native integration, enrollment and full backup/recovery acceptance remain.",
         "No SQL/native changes, PostgreSQL/native rerun, installation, configuration or deployment."
+      ]
+    },
+    {
+      "commit": "b2eda61d08a43f16d92892571c3398832478d9de",
+      "scope": "Atomic Web planning visits, observed counter frontier and deferred penalties",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "App.tsx",
+        "docs/operations/reliability/S2_PROTOCOL_ADR.md",
+        "hooks/useGoalflow.ts",
+        "services/causalPlanningCoordinator.test.ts",
+        "services/causalPlanningCoordinator.ts",
+        "services/causalProjection.ts",
+        "services/storage.ts",
+        "tests/e2e/s2-storage-fence.spec.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-PLANNING-COUNTER-EFFECTS",
+          "disposition": "Fixed locally: each admitted visit binds a unique child counter and records the observed event frontier and penalty mode with its atomic business effects."
+        },
+        {
+          "id": "S2-PLANNING-BASELINE-WAIT",
+          "disposition": "Fixed locally: unknown-baseline effects wait; verified history settles original frontiers without retroactively including later events or charging twice."
+        },
+        {
+          "id": "S2-PLANNING-UI-ACK",
+          "disposition": "Fixed locally: navigation awaits admission, failed attempts reuse captured intent, and the warning accurately states six visits and penalty setting."
+        }
+      ],
+      "commands": [
+        {
+          "command": "npx vitest run services/causalPlanningCoordinator.test.ts services/causalProjection.test.ts",
+          "exitCode": 0,
+          "tests": 16,
+          "testFiles": 2
+        },
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 668,
+          "testFiles": 101
+        },
+        {
+          "command": "S1_INCLUDE_EXISTING=1 npx playwright test --config playwright.s1.config.ts tests/e2e/s1-local-storage.spec.ts tests/e2e/s2-storage-fence.spec.ts",
+          "exitCode": 0,
+          "tests": 64,
+          "platforms": [
+            "Chromium",
+            "WebKit"
+          ]
+        },
+        {
+          "command": "npm run build",
+          "exitCode": 0
+        }
+      ],
+      "evidence": [
+        {
+          "path": "evidence/s2-planning-focused-final.log",
+          "sha256": "dbaf96ec5ed0b379500d491b00675c0d3c3e84af34dcb2975d8449b3a9286f0f"
+        },
+        {
+          "path": "evidence/s2-planning-release.log",
+          "sha256": "3d77023ef8d71e8163599e7a8c9fb7549db7f04f9f9ad1b113b1f60214baa477"
+        },
+        {
+          "path": "evidence/s2-planning-browser-combined.log",
+          "sha256": "6a6eff1b9a47e5e752bea8a497dcf9edd98a1ece8dddbb99ea2f3743f8ade5aa"
+        },
+        {
+          "path": "evidence/s2-planning-production-build.log",
+          "sha256": "6f9d4ad1653cb6fdc625e5f70cb38c3a8d081027a52d67d29f2613cc6d9f7a4e"
+        }
+      ],
+      "failedAttempts": [
+        "Two iterative npm run lint attempts exited 2 for TypeScript settings narrowing and a missing useRef import; corrected before successful lint/release verification.",
+        "Initial targeted planning browser run failed 2 tests on an incorrect status-label selector; using the actual SyncStatus error title passed both browsers, followed by the full combined suite."
+      ],
+      "limitations": [
+        "Observed-count penalty semantics are retained; this is not a new policy ordered by later server receipt arrival.",
+        "Causal scheduling/enrollment, non-focus completion concurrency, native integration and full recovery/mixed-version acceptance remain unfinished.",
+        "No SQL/native source change, PostgreSQL/native rerun, installation, live configuration or deployment."
       ]
     }
   ],
