@@ -791,7 +791,7 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                                     </button>
                                 </div>
 
-                                <div className="focus-ticking absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-gray-50 dark:bg-slate-700/50 rounded-full px-3 py-1 border border-gray-100 dark:border-slate-600 shadow-sm">
+                                <div role="group" aria-label="Ticking sound" className="focus-ticking absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2 bg-gray-50 dark:bg-slate-700/50 rounded-full px-3 py-1 border border-gray-100 dark:border-slate-600 shadow-sm">
                                     <button 
                                         onClick={() => setIsTickingMuted(!isTickingMuted)}
                                         className="text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition"
@@ -804,6 +804,7 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                                         min="0" 
                                         max="3" 
                                         step="0.1" 
+                                        aria-label="Ticking sound volume"
                                         value={tickingVolume}
                                         onChange={(e) => setTickingVolume(parseFloat(e.target.value))}
                                         className="w-16 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 accent-indigo-500"

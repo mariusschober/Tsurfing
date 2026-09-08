@@ -140,7 +140,7 @@ button, input, textarea, select { font: inherit; }
 .app-shell--current .focus-affirmation { padding-block: 4px; line-height: 1.2; }
 .app-shell--current .focus-toolbar { flex: none; padding: 4px 16px; gap: 4px; }
 .app-shell--current .focus-toolbar button { min-inline-size: 44px; min-block-size: 44px; display: inline-flex; align-items: center; justify-content: center; }
-.app-shell--current .focus-ticking { position: static; transform: none; padding: 0 4px; gap: 4px; }
+.app-shell--current .focus-ticking { position: static; transform: none; padding: 0 12px 0 4px; gap: 4px; }
 .app-shell--current .focus-center { min-block-size: 0; min-inline-size: 0; padding: 4px clamp(8px, 2cqw, 24px) 12px; gap: clamp(4px, 1cqh, 12px); }
 .app-shell--current .focus-timer { container: focus-timer / size; flex: 1 1 0; min-block-size: 0; inline-size: min(100%, 380px); max-block-size: 380px; max-inline-size: 380px; aspect-ratio: auto; margin: 0; }
 .app-shell--current .focus-timer__time { margin-block-end: clamp(2px, 5cqh, 24px); }
@@ -193,7 +193,6 @@ button, input, textarea, select { font: inherit; }
   .app-shell--current .focus-reframe { font-size: 0; padding-inline: 8px; }
   .app-shell--current .focus-reframe svg { inline-size: 18px; block-size: 18px; margin: 0; }
   .app-shell--current .focus-ticking { margin-inline-start: 44px; }
-  .app-shell--current .focus-ticking input { inline-size: 40px; }
   .app-shell--current .focus-notes { inset-block-start: 52px; }
   .app-shell--current .focus-visualization { grid-column: 2; max-block-size: 2rem; }
 }
@@ -203,3 +202,13 @@ button, input, textarea, select { font: inherit; }
   .app-shell--current .focus-timer__state > span > span { inline-size: 4px; block-size: 4px; }
 }
 @media print { .app-shell--current { block-size: auto; } .app-shell--current .current-view { container-type: normal; } }
+
+/* Keep the thumb inset from the pill while giving the slider a full-height hit area. */
+.app-shell--current .focus-ticking input { inline-size: 56px; block-size: 44px; margin: 0; flex: none; background: transparent; appearance: none; -webkit-appearance: none; border-radius: 4px; }
+.app-shell--current .focus-ticking input::-webkit-slider-runnable-track { block-size: 4px; background: #d1d5db; border-radius: 999px; }
+.app-shell--current .focus-ticking input::-moz-range-track { block-size: 4px; background: #d1d5db; border-radius: 999px; }
+.dark .app-shell--current .focus-ticking input::-webkit-slider-runnable-track { background: #64748b; }
+.dark .app-shell--current .focus-ticking input::-moz-range-track { background: #64748b; }
+.app-shell--current .focus-ticking input::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; inline-size: 16px; block-size: 16px; margin-block-start: -6px; border: 0; border-radius: 50%; background: #6366f1; }
+.app-shell--current .focus-ticking input::-moz-range-thumb { inline-size: 16px; block-size: 16px; border: 0; border-radius: 50%; background: #6366f1; }
+@container current-view (max-height: 460px) { .app-shell--current .focus-ticking input { inline-size: 32px; } }
