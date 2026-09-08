@@ -1,4 +1,5 @@
 import { openDB, type IDBPDatabase, type IDBPTransaction } from 'idb';
+import { validateBaselineBindings, type BaselineBinding } from './causalBaselineBinding';
 
 /** Private authority, deliberately absent from the legacy sync/backup store list. */
 export const CAUSAL_STORE = 'causal_actions';
@@ -7,6 +8,7 @@ export interface CausalAccountState {
   schemaVersion: 1;
   accountKey: IDBValidKey;
   generation: number;
+  counterBaselineBindings?: Record<string, BaselineBinding>;
   actionIdentities?: Record<string, { kind: string; intent: unknown }>;
   trackingPresent: boolean;
   trackingValue: unknown;
@@ -124,5 +126,6 @@ export async function readCausalAccount(
     || !Number.isSafeInteger(state.generation) || state.generation < 0)) {
     throw new Error('The causal account journal is damaged. Its data remains preserved.');
   }
+  if (state?.counterBaselineBindings !== undefined) validateBaselineBindings(String(accountKey), state);
   return state;
 }

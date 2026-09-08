@@ -50,6 +50,7 @@ export function applyLocalCounter(state: CounterDayAccountState, event: CounterD
   }
   state.counterEvents ??= {};
   state.counterEvents[event.actionId] = event;
+  validateCounterDayEvidence(event.accountId, state);
   state.counterOutbox ??= {};
   state.counterOutbox[event.actionId] = event;
   state.actionIdentities ??= {};

@@ -3,6 +3,7 @@ import { projectCounters } from '../src/domain/counterLedger';
 import { parseCounterDayCommand, type CounterDayCommand } from './causalProtocol';
 import type { CounterAccountState } from './causalCounterCoordinator';
 import { stableJson } from './syncProtocol';
+import { validateBaselineBindings } from './causalBaselineBinding';
 
 export interface CounterDayAccountState extends CounterAccountState {
   counterDayAdmissions?: Record<string, { command: CounterDayCommand; sequence: number }>;
@@ -31,6 +32,7 @@ export function projectPendingCounterDays(state: CounterDayAccountState, canonic
 }
 
 export function validateCounterDayEvidence(accountId: string, state: CounterDayAccountState) {
+  validateBaselineBindings(accountId, state);
   for (const ledger of [state.counterDayAdmissions, state.counterDayOutbox]) {
     if (ledger !== undefined && (ledger === null || typeof ledger !== 'object' || Array.isArray(ledger))) {
       throw new Error('The day journal is invalid.');

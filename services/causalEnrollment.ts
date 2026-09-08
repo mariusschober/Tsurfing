@@ -4,7 +4,7 @@ import { assertCausalCapability, fetchCausalCapability, type CausalCapability } 
 import { parseCausalOperation } from './causalProtocol';
 import { parseCausalCompletion } from './causalCompletionProtocol';
 import { assertCausalCutoverReceipt, parseCausalCutover } from './causalCutoverProtocol';
-import { stableJson } from './syncProtocol';
+import { normalizeSyncMeta, stableJson, syncEntityKey } from './syncProtocol';
 import { sendCausalCutover } from './causalCutoverTransport';
 import { MAX_RECONCILIATION_BYTES } from './reconciliationStaging';
 
@@ -59,23 +59,40 @@ async function enrollmentTransaction<T>(name: string, accountId: string,
  * evidence requires recovery; pending commands never become baseline counts. */
 export async function prepareCausalCutover(name: string, accountId: string, input: unknown): Promise<string> {
   const operation = parseCausalCutover(accountId, structuredClone(input));
+  return enrollmentTransaction(name, accountId, state => retainCutoverRequest(state, accountId, operation));
+}
+
+function retainCutoverRequest(state: CausalEnrollmentState, accountId: string, operation: ReturnType<typeof parseCausalCutover>) {
   const bytes = JSON.stringify(operation);
+  if (state.cutoverRequest !== undefined) {
+    const prior = parseCausalCutover(accountId, JSON.parse(state.cutoverRequest));
+    if (stableJson(prior) !== stableJson(operation)) throw new Error('The attempted cutover is immutable.');
+    return state.cutoverRequest;
+  }
+  if (state.causalCapability?.enrolled || state.cutoverReceipt) throw new Error('Existing enrollment requires history reconciliation.');
+  if (new TextEncoder().encode(bytes).byteLength > MAX_RECONCILIATION_BYTES) {
+    throw new Error('The baseline exceeds the supported 4 MiB enrollment envelope. Its original evidence remains preserved.');
+  }
+  if (!state.cutover.trackingPresent
+    || stableJson(state.cutover.trackingValue) !== stableJson(operation.expectedTrackingPayload)) {
+    throw new Error('The preserved local baseline differs. Explicit legacy recovery is required.');
+  }
+  state.cutoverRequest = bytes;
+  return bytes;
+}
+
+/** Use only preserved pre-command evidence. SQL must still prove the exact
+ * payload and server version; the current pending projection is never a baseline. */
+export async function prepareKnownCausalCutover(name: string, accountId: string): Promise<string | null> {
   return enrollmentTransaction(name, accountId, state => {
-    if (state.cutoverRequest !== undefined) {
-      const prior = parseCausalCutover(accountId, JSON.parse(state.cutoverRequest));
-      if (stableJson(prior) !== stableJson(operation)) throw new Error('The attempted cutover is immutable.');
-      return state.cutoverRequest;
-    }
-    if (state.causalCapability?.enrolled || state.cutoverReceipt) throw new Error('Existing enrollment requires history reconciliation.');
-    if (new TextEncoder().encode(bytes).byteLength > MAX_RECONCILIATION_BYTES) {
-      throw new Error('The baseline exceeds the supported 4 MiB enrollment envelope. Its original evidence remains preserved.');
-    }
-    if (!state.cutover.trackingPresent
-      || stableJson(state.cutover.trackingValue) !== stableJson(operation.expectedTrackingPayload)) {
-      throw new Error('The preserved local baseline differs. Explicit legacy recovery is required.');
-    }
-    state.cutoverRequest = bytes;
-    return bytes;
+    if (state.cutoverRequest !== undefined) return state.cutoverRequest;
+    if (!state.cutover.trackingPresent || !state.cutover.syncPresent) return null;
+    const meta = normalizeSyncMeta(state.cutover.syncValue);
+    const version = meta.versions[syncEntityKey('tracking', 'singleton')]?.server ?? meta.versions.tracking?.server;
+    if (!version || !Number.isSafeInteger(version) || version < 1) return null;
+    const operation = parseCausalCutover(accountId, { schemaVersion: 2, accountId, cutoverId: crypto.randomUUID(),
+      expectedTrackingServerVersion: version, expectedTrackingPayload: state.cutover.trackingValue });
+    return retainCutoverRequest(state, accountId, operation);
   });
 }
 

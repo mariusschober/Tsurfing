@@ -1,4 +1,5 @@
 import { settlePlanningVisits, validatePlanningEvidence, type PlanningAccountState } from './causalPlanningCoordinator';
+import { bindCanonicalBaseline, validateBaselineBindings } from './causalBaselineBinding';
 import { causalBusinessTransactionStores, readCausalBusiness, writeCausalBusiness } from './causalBusinessStorage';
 import { openDB, type IDBPDatabase } from 'idb';
 import { applyFocusCommand, initialFocusJournal, type FocusCommand } from '../src/domain/causalFocus';
@@ -233,7 +234,7 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
       state.causalProjectionPreimage ??= { tracking: structuredClone(state.trackingValue), focus: structuredClone(state.focus) };
       state.counterBaselines ??= {};
       for (const [day, baseline] of Object.entries(canonical.baselines)) {
-        if (state.counterBaselines[day] && !same(state.counterBaselines[day], baseline)) throw new Error('The local baseline needs explicit recovery; it was not replaced.');
+        bindCanonicalBaseline(accountId, state, baseline);
         state.counterBaselines[day] = baseline;
       }
       state.counterEvents ??= {};
@@ -283,6 +284,7 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
       // present in server history are represented once, even before their local
       // request has been sent/acknowledged after a restore.
       const events = Object.values(state.counterEvents);
+      validateBaselineBindings(accountId, state);
       for (const [id, event] of Object.entries(state.counterEvents)) {
         if (event.actionId !== id || (!state.counterBaselines[event.day]
           && (!Object.values(state.counterDayAdmissions ?? {}).some(a => a.command.day === event.day) || event.correctionOf !== null))) {

@@ -1,7 +1,7 @@
 import { openDB } from 'idb';
 import { CAUSAL_STORE, readCausalAccount } from './causalStorage';
-import { discoverCausalCapability } from './causalEnrollment';
-import { pullCausalHistory, type HistoryRuntime } from './causalHistory';
+import { discoverCausalCapability, prepareKnownCausalCutover, syncCausalCutover, commitCausalCutoverReceipt } from './causalEnrollment';
+import { pullCausalHistory, type HistoryRuntime, type SavedCausalHistory } from './causalHistory';
 import { applyDownloadedCausalHistory, orderedPendingFocus } from './causalProjection';
 import { syncCausalAction } from './causalReceipts';
 import { syncLocalCompletion, type CompletionAccountState } from './causalCompletionCoordinator';
@@ -10,7 +10,7 @@ import { causalBusinessTransactionStores, readCausalBusiness } from './causalBus
 import { normalizeSyncMeta, stableJson, type SyncMeta } from './syncProtocol';
 import type { CausalOperation } from './causalProtocol';
 
-type State = CompletionAccountState & CounterDayAccountState;
+type State = CompletionAccountState & CounterDayAccountState & { causalHistory?: SavedCausalHistory };
 export type CausalQueueWork = { type: 'completion'; actionId: string } | { type: 'action'; operation: CausalOperation };
 const same = (a: unknown, b: unknown) => stableJson(a) === stableJson(b);
 
@@ -60,8 +60,8 @@ async function snapshot(name: string, accountId: string) {
 const pendingCount = (state: State) => [state.focusOutbox, state.counterOutbox, state.counterDayOutbox, state.completionOutbox]
   .reduce((sum, outbox) => sum + Object.keys(outbox ?? {}).length, 0);
 
-/** Existing enrolled accounts only. Enrollment of an unbound account remains
- * explicit; missing enrollment must never silently fall back to legacy pushes.
+/** Fenced accounts may establish their preserved, known-version baseline.
+ * Missing evidence must never silently fall back to legacy pushes.
  * Refresh after each exact receipt so day baselines and completion projections
  * are verified before their dependent actions become transportable. */
 export async function synchronizeCausalQueues(name: string, accountId: string, runtime: HistoryRuntime,
@@ -70,12 +70,24 @@ export async function synchronizeCausalQueues(name: string, accountId: string, r
   const attempted = new Set<string>();
   for (;;) {
     runtime.signal?.throwIfAborted();
-    const capability = await discoverCausalCapability(name, accountId, runtime);
-    if (!capability.enrolled) return { ready: false, sent, pending: pendingCount((await snapshot(name, accountId)).state), reason: 'ENROLLMENT_REQUIRED' as const };
+    let capability = await discoverCausalCapability(name, accountId, runtime);
+    if (!capability.enrolled) {
+      const bytes = await prepareKnownCausalCutover(name, accountId);
+      if (bytes === null) return { ready: false, sent, pending: pendingCount((await snapshot(name, accountId)).state), reason: 'ENROLLMENT_REQUIRED' as const };
+      await syncCausalCutover(name, accountId, JSON.parse(bytes), runtime);
+      capability = await discoverCausalCapability(name, accountId, runtime);
+      if (!capability.enrolled) throw new Error('The acknowledged cutover is not visible yet. Retry the retained enrollment.');
+    }
     for (;;) {
       const history = await pullCausalHistory(name, accountId, runtime);
       if (history.complete) break;
       if (!history.fetched) throw new Error('Causal history made no durable progress. Retained history remains available.');
+    }
+    const downloaded = (await snapshot(name, accountId)).state;
+    if (downloaded.cutoverRequest !== undefined && downloaded.cutoverReceipt === undefined) {
+      const entry = downloaded.causalHistory?.entries['0'];
+      if (!entry) throw new Error('The attempted enrollment needs its verified cutover history.');
+      await commitCausalCutoverReceipt(name, accountId, JSON.parse(entry.body).receipt);
     }
     const projection = await applyDownloadedCausalHistory(name, accountId);
     onProjection();

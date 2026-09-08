@@ -12,8 +12,9 @@ import { causalHistoryHash } from './causalHistoryProtocol';
 import { emptySyncMeta, normalizeSyncMeta } from './syncProtocol';
 afterEach(() => { vi.unstubAllGlobals(); });
 
-async function fixture() {
-  const accountId = crypto.randomUUID(), epoch = crypto.randomUUID(), sessionId = crypto.randomUUID(), name = 's2-cloud-' + crypto.randomUUID();
+async function fixture(enrolled = true) {
+  const accountId = crypto.randomUUID(), sessionId = crypto.randomUUID(), name = 's2-cloud-' + crypto.randomUUID();
+  let epoch = crypto.randomUUID();
   const values = new Map<string, string>([['goalflow_active_database_v2', name]]);
   const localStorage = { get length() { return values.size; }, key: (i: number) => [...values.keys()][i] ?? null,
     getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); }, removeItem: (key: string) => { values.delete(key); } };
@@ -24,7 +25,9 @@ async function fixture() {
   const baseline = { schemaVersion: 1 as const, baselineId: epoch, accountId, day: tracking.date, counts: { planViewCount: 27, dailyPostponeCount: 3 }, evidenceIds: [epoch] };
   const db = await openDB(name, 1, { upgrade(db) { for (const store of Object.values(STORES)) db.createObjectStore(store); } });
   await db.put('tracking', tracking, accountId); await db.put('tasks', [{ id: 'task', title: 'Synthetic', completed: false }], accountId);
-  await db.put('sync', emptySyncMeta(), accountId); db.close(); (await fenceLegacyTracking(name)).close();
+  const initialMeta = emptySyncMeta();
+  if (!enrolled) initialMeta.versions['tracking:singleton'] = { local: 1, server: 1 };
+  await db.put('sync', initialMeta, accountId); db.close(); (await fenceLegacyTracking(name)).close();
   const record = (payload: unknown, revision: number) => ({ user_id: accountId, entity_type: 'tracking', entity_id: 'singleton',
     version: revision + 1, server_version: revision + 1, device_id: 'causal-v2', updated_at: '2026-09-08T10:00:00.000Z', deleted_at: null, payload });
   const receipts: any[] = [{ schemaVersion: 2, epoch, projectionRevision: 0, baseline,
@@ -32,11 +35,23 @@ async function fixture() {
   let serverTracking: any = structuredClone(tracking), journal = initialFocusJournal(accountId, tracking.focusSession);
   const events: CounterDelta[] = [], requests: string[] = [];
   let loseResponse = false;
+  let loseEnrollmentResponse = false;
   let unverifiedPull = false;
   let beforePull: (() => Promise<void>) | undefined;
   const fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), 'https://fixture.invalid');
-    if (url.pathname.endsWith('/causal-capability')) return Response.json({ schemaVersion: 2, accountId, enrolled: true, epoch, projectionRevision: receipts.length - 1, rolloutReady: false });
+    if (url.pathname.endsWith('/causal-capability')) return Response.json({ schemaVersion: 2, accountId, enrolled,
+      epoch: enrolled ? epoch : null, projectionRevision: enrolled ? receipts.length - 1 : null, rolloutReady: false });
+    if (url.pathname.endsWith('/causal-cutover')) {
+      const operation = JSON.parse(String(init?.body));
+      expect(operation.expectedTrackingPayload).toEqual(tracking);
+      expect(operation.expectedTrackingServerVersion).toBe(1);
+      epoch = operation.cutoverId; enrolled = true;
+      baseline.baselineId = epoch; baseline.evidenceIds = [epoch];
+      receipts[0] = { ...receipts[0], operation, epoch, baseline };
+      if (loseEnrollmentResponse) { loseEnrollmentResponse = false; throw new Error('Synthetic lost enrollment response'); }
+      return Response.json(receipts[0]);
+    }
     if (url.pathname.endsWith('/causal-history')) {
       const revision = Number(url.searchParams.get('revision')), throughRevision = Number(url.searchParams.get('throughRevision'));
       const body = JSON.stringify({ schemaVersion: 2, accountId, epoch, revision, receipt: receipts[revision] });
@@ -74,9 +89,49 @@ async function fixture() {
     timeZone: 'UTC', capturedAt: '2026-09-08T10:00:00.000Z', counter: 'planViewCount', delta: 1, businessActionId: null, correctionOf: null };
   const run = () => synchronizeCloudOnce(accountId, { fetch, isOnline: () => true, now: () => new Date(), deviceId: () => 'local', maxAttempts: 1 }, { seedLocalData: false });
   return { accountId, name, epoch, sessionId, tracking, baseline, event, requests, run, unverified: () => { unverifiedPull = true; }, onPull: (callback: () => Promise<void>) => { beforePull = callback; },
+    loseEnrollment: () => { loseEnrollmentResponse = true; },
     peerIncrement: () => fetch('/api/v1/sync/actions', { method: 'POST', body: JSON.stringify({ schemaVersion: 2, epoch, type: 'counter',
       command: { ...event, actionId: crypto.randomUUID(), actorId: 'peer' } }) }).then(() => undefined), lose: () => { loseResponse = true; } };
 }
+
+it.each([false, true])('enrolls the preserved baseline before sending a pending increment (lost response: %s)', async lost => {
+  const f = await fixture(false);
+  const originalBaseline = structuredClone(f.baseline);
+  await admitLocalCounter(f.name, f.event, f.baseline);
+  if (lost) {
+    f.loseEnrollment();
+    await expect(f.run()).rejects.toThrow('Synthetic lost enrollment');
+  }
+  const meta = await f.run();
+  const db = await openDB(f.name); const state = await db.get(CAUSAL_STORE, f.accountId); db.close();
+  expect(JSON.parse(state.cutoverRequest).expectedTrackingPayload.planViewCount).toBe(27);
+  expect(state.cutoverReceipt.operation).toEqual(JSON.parse(state.cutoverRequest));
+  expect(state.counterBaselineBindings[f.event.day].original).toEqual(originalBaseline);
+  expect(state.counterBaselineBindings[f.event.day].canonical).toEqual(state.cutoverReceipt.baseline);
+  expect(state.trackingValue.planViewCount).toBe(28);
+  expect(Object.keys(state.counterOutbox)).toHaveLength(0);
+  expect(f.requests).toHaveLength(1);
+  expect(meta.cursor).toBe(2);
+});
+
+it('retains unknown baseline evidence and rejects replay of its historical identities after enrollment', async () => {
+  const f = await fixture(false);
+  const historicalId = crypto.randomUUID();
+  const original = { ...structuredClone(f.baseline), evidenceIds: [historicalId], audit: { source: 'preserved fixture' } };
+  await admitLocalCounter(f.name, f.event, original);
+  await f.run();
+  const db = await openDB(f.name);
+  const before = await db.get(CAUSAL_STORE, f.accountId);
+  expect(before.counterBaselineBindings[f.event.day].original).toEqual(original);
+  await expect(admitLocalCounter(f.name, { ...f.event, actionId: historicalId })).rejects.toThrow('Historical baseline evidence');
+  expect(await db.get(CAUSAL_STORE, f.accountId)).toEqual(before);
+  const damaged = structuredClone(before);
+  damaged.counterBaselineBindings[f.event.day].original.counts.planViewCount++;
+  await db.put(CAUSAL_STORE, damaged);
+  await expect(f.run()).rejects.toThrow('baseline binding differs');
+  expect(await db.get(CAUSAL_STORE, f.accountId)).toEqual(damaged);
+  db.close();
+});
 
 it('sends saved focus parents and counters through the actual cloud loop and applies the ordinary tracking row', async () => {
   const f = await fixture();
