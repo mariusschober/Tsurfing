@@ -863,6 +863,35 @@
       ],
       "compatibility": "Ordinary checksums unchanged. Historical backups containing own __proto__ may require explicit recovery; never silently bless omitted evidence. Causal journal backup/restore is still pending.",
       "migrations": []
+    },
+    {
+      "commit": "d1888d93d4702c5b7c24ec372de23b25006b4437",
+      "scope": "Causal journal backup export with explicit restore and repair guard",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "services/storage.ts",
+        "services/causalBackup.ts",
+        "services/causalBackup.test.ts"
+      ],
+      "commands": [
+        {
+          "command": "npx vitest run services/causalBackup.test.ts services/storage.test.ts",
+          "exitCode": 0,
+          "testsPassed": 38
+        },
+        {
+          "command": "npm run lint",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "testsPassed": 528,
+          "testFilesPassed": 85
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Schema 5 only for fenced database exports. Schema 4 unchanged for ordinary exports. Causal restore/reconciliation remains blocked before any replacement; unsupported structured-clone preimages fail export visibly."
     }
   ],
   "findings": [
@@ -1000,7 +1029,10 @@
     "evidence/s2-causal-receipts-release-final.log",
     "evidence/s2-backup-checksum-before.log",
     "evidence/s2-backup-checksum-after.log",
-    "evidence/s2-backup-checksum-release.log"
+    "evidence/s2-backup-checksum-release.log",
+    "evidence/s2-causal-backup-unit.log",
+    "evidence/s2-causal-backup-lint.log",
+    "evidence/s2-causal-backup-release.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

@@ -146,3 +146,7 @@ The client validates version-2 receipts using the same pure boundary as the API.
 ### Durable Web receipt application
 
 The private causal account row retains a wire request by logical action ID before transport. That request must exactly match an admitted command and is immutable across retry and account-epoch changes. Receipt archival and accepted-command retirement share one IndexedDB transaction; rejected receipts remain pending for explicit resolution. The original domain admission and wire/receipt evidence are never removed. Receipt records are historical snapshots, so this transaction does not apply their projection or advance the authoritative pull cursor. The pipeline returns an already archived receipt without a new HTTP request. Authenticated epoch enrollment and authoritative projection reconciliation are required before activation.
+
+### Causal backup transport boundary
+
+Causal account exports use schema 5 and retain an encoded private journal under `causal_actions`, including original wire bytes and receipts. The codec preserves undefined and own keys without treating user-shaped tags as metadata; unsupported structured-clone preimages fail visibly. This is preservation, not authentication or server acceptance. Ordinary accounts continue schema-4 exports. Legacy code must reject schema 5. Import and self-repair cannot fall through to legacy tracking writes on a fenced database; until causal ledger reconciliation exists they fail before replacement. A backup checksum is not evidence of server acceptance.
