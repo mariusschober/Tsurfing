@@ -6,6 +6,7 @@ import { getTodayYYYYMMDD } from '../utils/dateUtils';
 import { parseTitleForExtras } from '../utils/timeAndTagParser';
 import { storageService, STORES, type LocalValueChange } from '../services/storage';
 import type { LocalFocusControl } from '../services/causalFocusCoordinator';
+import { validateCompletionDetails } from '../src/domain/taskCompletion';
 import { assertSchedule, compareQueueCandidates } from '../src/domain/scheduling';
 import {
   completeFocusSession,
@@ -241,6 +242,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
   const [planningWarning, setPlanningWarning] = useState(false);
   const completedTaskIds = useRef(new Set<string>());
   const causalMode = useRef(false);
+  const completionRetries = useRef(new Map<string, Parameters<typeof storageService.admitFocusCompletion>[1]>());
 
   // --- Initialization (Hydration) ---
   useEffect(() => {
@@ -941,13 +943,50 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
     });
   }, []);
 
-  const completeTask = useCallback((taskId: string, actualDuration?: number, flowState?: FlowState, finalDescription?: string) => {
-    if (completedTaskIds.current.has(taskId)) return;
+  const completeTask = useCallback((taskId: string, actualDuration?: number, flowState?: FlowState, finalDescription?: string,
+      observed?: FocusSessionRecord | null): boolean | Promise<boolean> => {
+    if (completedTaskIds.current.has(taskId)) return true;
     const previousTasks = getTasks();
     const task = previousTasks.find(t => t.id === taskId);
-    if (!task || task.completed || task.wontDo || task.deletedAt) return;
+    if (!task || task.completed || task.wontDo || task.deletedAt) return false;
+    const target = causalMode.current && observed !== undefined ? observed : normalizeFocusSession(getDailyTracking().focusSession);
+    const latestFocus = normalizeFocusSession(getDailyTracking().focusSession);
+    if (causalMode.current && latestFocus?.taskId === taskId && ['active', 'paused'].includes(latestFocus.phase)
+      && (!target || target.sessionId !== latestFocus.sessionId)) {
+      window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: { userKey: USER_KEY,
+        state: 'error', localFailure: true, message: 'A different focus session started for this task. Review it before completing; your notes are retained.' } }));
+      return false;
+    }
+    if (causalMode.current && target?.taskId === taskId && ['active', 'paused'].includes(target.phase)) {
+      validateCompletionDetails({ day: getTodayYYYYMMDD(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        ...(actualDuration === undefined ? {} : { actualDuration }), ...(flowState === undefined ? {} : { flowState }),
+        ...(finalDescription === undefined ? {} : { finalDescription }) });
+      const fingerprint = JSON.stringify([USER_KEY, taskId, target.sessionId, actualDuration, flowState, finalDescription]);
+      let capture = completionRetries.current.get(fingerprint);
+      if (!capture) {
+        capture = { focus: { schemaVersion: 1, actionId: crypto.randomUUID(), accountId: USER_KEY,
+          kind: 'complete', sessionId: target.sessionId, taskId, expectedCurrentSessionId: target.sessionId,
+          capturedAt: new Date().toISOString(), durationSeconds: null },
+          details: { day: getTodayYYYYMMDD(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            ...(actualDuration === undefined ? {} : { actualDuration }), ...(flowState === undefined ? {} : { flowState }),
+            ...(finalDescription === undefined ? {} : { finalDescription }) } };
+        completionRetries.current.set(fingerprint, capture);
+      }
+      return storageService.admitFocusCompletion(USER_KEY, capture).then(result => {
+        if (!result.admission.outcome.accepted) throw new Error('The focus session changed before completion. Your final notes remain available; review the task and retry.');
+        completedTaskIds.current.add(taskId);
+        if (!result.duplicate && result.admission.leveledUp) setJustLeveledUp(true);
+        if (!result.duplicate && result.admission.dayComplete) setGamificationEvent({ type: 'reward', amount: 50, message: 'Day Complete!' });
+        return true;
+      }).catch(error => {
+        window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: { userKey: USER_KEY,
+          state: 'error', localFailure: true, message: error instanceof Error ? error.message : 'Completion could not be saved. Your notes remain available to retry.' } }));
+        return false;
+      });
+    }
     const nextTasks: Task[] = previousTasks.map(t => t.id === taskId ? {
-        ...t, completed: true, lifecycleStatus: 'completed' as const, completedAt: Date.now(), actualDuration, flowState, description: finalDescription || t.description
+        ...t, completed: true, lifecycleStatus: 'completed' as const, completedAt: Date.now(), actualDuration, flowState,
+        description: finalDescription === undefined ? t.description : finalDescription
     } : t);
     const today = getTodayYYYYMMDD();
     const previousAllStats = getAllStats();
@@ -997,6 +1036,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
         previousProgress.xpToNextLevel
     );
     const nextProgress = {
+        ...previousProgress,
         level: progressResult.level,
         xp: progressResult.xp,
         xpToNextLevel: progressResult.next
@@ -1006,6 +1046,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
     const previousFocusSession = normalizeFocusSession(previousTracking.focusSession);
     const nextFocusSession = previousFocusSession && previousFocusSession.taskId === taskId
         && previousFocusSession.phase !== 'completed'
+        && !causalMode.current
         ? completeFocusSession(previousFocusSession)
         : previousFocusSession;
     const nextTracking: DailyTracking = nextFocusSession === previousFocusSession
@@ -1037,6 +1078,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
     if (dayComplete) {
         setTimeout(() => setGamificationEvent({ type: 'reward', amount: 50, message: "Day Complete!" }), 500);
     }
+    return true;
   }, [getAllStats, getDailyTracking, getGoals, getHabits, getTasks, getUserProgress, setAllStatsFromStorage,
       setDailyTrackingFromStorage, setGoalsFromStorage, setHabitsFromStorage, setTasksFromStorage, setUserProgressFromStorage, USER_KEY]);
 

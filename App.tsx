@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useGoalflow } from './hooks/useGoalflow';
+import type { FocusSessionRecord } from './src/domain/focusSession';
 import { CurrentView } from './components/CurrentView';
 import { PlanningView } from './components/PlanningView';
 import { DoneView } from './components/DoneView';
@@ -274,12 +275,18 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [hasOverdue, isTaskModalOpen, isSearchOpen, openAddTaskModal, isBioCheckInOpen, isSettingsOpen]);
 
-  const handleCompleteTask = (id: string, duration?: number, flowState?: FlowState, finalDescription?: string) => {
+  const handleCompleteTask = async (id: string, duration?: number, flowState?: FlowState, finalDescription?: string,
+    observed?: FocusSessionRecord | null): Promise<boolean> => {
     const task = todayTasks.find(t => t.id === id) || upcomingTasks.find(t => t.id === id);
-    completeTask(id, duration, flowState, finalDescription);
+    try {
+      if (!await completeTask(id, duration, flowState, finalDescription, observed)) return false;
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: { userKey,
+        state: 'error', localFailure: true, message: error instanceof Error ? error.message : 'Completion could not be saved. Your notes remain available.' } }));
+      return false;
+    }
 
-    // Completion feedback is emitted only after the synchronous durable WAL
-    // write succeeds. A storage rejection must never sound like success.
+    // Feedback follows durable admission, including asynchronous causal work.
     if (task?.isFrog) {
         playFrogCompleteSound();
     } else {
@@ -288,6 +295,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
 
     setShowCelebration(true);
     setTimeout(() => setShowCelebration(false), 3000);
+    return true;
   }
 
   const openEditTaskModal = useCallback((task: Task) => {

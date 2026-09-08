@@ -4,7 +4,7 @@ import { v5 as uuidv5 } from 'uuid';
 import { applyFocusCommand, initialFocusJournal, validateFocusCommand, type FocusCommand, type FocusOutcome } from '../src/domain/causalFocus';
 import { deriveTaskCompletion, validateCompletionDetails, type CompletionDetails } from '../src/domain/taskCompletion';
 import { CAUSAL_STORE, TRACKING_KEY_PATH, readCausalAccount } from './causalStorage';
-import type { FocusAccountState, LocalFocusIntent } from './causalFocusCoordinator';
+import type { FocusAccountState, LocalFocusIntent, LocalFocusControl } from './causalFocusCoordinator';
 import type { CausalEnrollmentState } from './causalEnrollment';
 import { assertCausalCapability } from './causalCapability';
 import { parseCausalCompletion, assertCausalCompletionReceipt, type CausalCompletionOperation } from './causalCompletionProtocol';
@@ -18,6 +18,11 @@ type Member = CausalCompletionOperation['changes'][number];
 type Dependency = { kind: 'legacy' | 'completion'; actionId?: string; request: Member };
 export interface CompletionIntent {
   focus: LocalFocusIntent;
+  details: CompletionDetails;
+  deviceId: string;
+}
+export interface CompletionControlIntent {
+  focus: Omit<LocalFocusControl, 'kind'> & { kind: 'complete' };
   details: CompletionDetails;
   deviceId: string;
 }
@@ -106,16 +111,36 @@ async function run<T>(name: string, accountId: string, work: (state: CompletionA
  * parent are derived only after acquiring the same transaction as persistence.
  * This remains dormant until the application rollout coordinator selects it. */
 export async function admitLocalCompletion(name: string, captured: CompletionIntent) {
-  const intent = structuredClone(captured);
-  validateFocusCommand({ ...intent.focus, expectedRevision: null });
-  validateCompletionDetails(intent.details);
-  if (intent.focus.kind !== 'complete' || typeof intent.deviceId !== 'string' || !intent.deviceId.length || intent.deviceId.length > 128) {
+  return admitCompletion(name, captured, false);
+}
+
+export async function admitLocalCompletionControl(name: string, captured: CompletionControlIntent) {
+  return admitCompletion(name, captured, true);
+}
+
+async function admitCompletion(name: string, captured: CompletionIntent | CompletionControlIntent, fromControl: boolean) {
+  const original = structuredClone(captured);
+  validateFocusCommand({ ...original.focus, epoch: 'epoch' in original.focus ? original.focus.epoch : original.focus.sessionId, expectedRevision: null });
+  validateCompletionDetails(original.details);
+  if (original.focus.kind !== 'complete' || typeof original.deviceId !== 'string' || !original.deviceId.length || original.deviceId.length > 128) {
     throw new Error('Invalid completion intent. Nothing was admitted.');
   }
-  const accountId = intent.focus.accountId, id = intent.focus.actionId;
+  const accountId = original.focus.accountId, id = original.focus.actionId;
   return run(name, accountId, async (state, meta, tx) => {
     if (!object(state.trackingValue)) throw new Error('Completion requires valid tracking.');
     const prior = state.completionAdmissions?.[id];
+    let intent: CompletionIntent;
+    if (fromControl) {
+      if (prior) {
+        if (!same(prior.intent.focus.uiCompletionControl, original.focus) || !same(prior.intent.details, original.details)
+          || prior.intent.deviceId !== original.deviceId) throw new Error('The completion control identity has different intent.');
+        intent = prior.intent;
+      } else {
+        intent = { ...original, focus: { ...original.focus,
+          epoch: state.focus?.sessions[original.focus.sessionId]?.epoch ?? original.focus.sessionId,
+          uiCompletionControl: original.focus } };
+      }
+    } else intent = original as CompletionIntent;
     const known = state.actionIdentities?.[id];
     if (known && (known.kind !== 'completion' || !same(known.intent, intent))) throw new Error('The completion identity has different intent.');
     if (known && !prior) throw new Error('The completion identity is missing its original admission.');

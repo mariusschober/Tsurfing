@@ -280,7 +280,7 @@ test('offline day intent and unprojected increments survive a real browser resta
   expect(restored.state.counterDaySelection).toEqual({ actionId: saved.day.actionId, requestedDay: saved.day.day, status: 'WAITING_BASELINE' });
 });
 
-test('the rendered focus controls use causal admission after an existing account is fenced', async ({ page }) => {
+async function fencedFocusApp(page: import('@playwright/test').Page) {
   await load(page);
   const account = crypto.randomUUID();
   await page.evaluate(account => (window as any).__s1RenderAccount(account), account);
@@ -307,6 +307,11 @@ test('the rendered focus controls use causal admission after an existing account
     return { tracking, ordinaryIds: meta.outbox.map((m: any) => m.mutationId) };
   }, account);
   await expect(page.getByTitle('Pause Timer (Space)')).toBeVisible();
+  return { account, before };
+}
+
+test('the rendered focus controls use causal admission after an existing account is fenced', async ({ page }) => {
+  const { account, before } = await fencedFocusApp(page);
   await page.getByTitle('Pause Timer (Space)').click();
   await expect(page.getByTitle('Start Focus (Space)')).toBeVisible();
   await page.getByTitle('Edit Duration').click();
@@ -326,4 +331,58 @@ test('the rendered focus controls use causal admission after an existing account
   expect(Object.values(after.state.focusAdmissions).map((a: any) => a.intent.uiControl.kind).sort()).toEqual(['addTime', 'pause']);
   expect(Object.values(after.state.focusOutbox).map((a: any) => a.kind).sort()).toEqual(['extendAndResume', 'pause']);
   expect(after.snapshot.pendingCount).toBe(2); // Ordinary requests remain separately counted in meta.outbox.
+});
+
+test('failed rendered completion keeps checkout and notes, then retries the same atomic action', async ({ page }) => {
+  const { account } = await fencedFocusApp(page);
+  await page.evaluate(async account => {
+    const api = window as any, name = localStorage.getItem('goalflow_active_database_v2') || 'GoalflowDB';
+    await api.__s2BindCapability(name, account, { schemaVersion: 2, accountId: account, enrolled: true,
+      epoch: crypto.randomUUID(), projectionRevision: 0, rolloutReady: false });
+    const original = api.__s1Storage.admitFocusCompletion;
+    api.__completionCalls = [];
+    api.__s1Storage.admitFocusCompletion = function (...args: any[]) {
+      api.__completionCalls.push(structuredClone(args[1])); return original.apply(this, args);
+    };
+    const put = IDBObjectStore.prototype.put;
+    api.__restoreCompletionWrites = () => { IDBObjectStore.prototype.put = put; };
+    IDBObjectStore.prototype.put = function (...args: any[]) {
+      if (this.name === 'tracking' && args[0]?.payload?.focusSession?.phase === 'completed') throw new Error('Synthetic terminal write failure');
+      return put.apply(this, args as [any]);
+    };
+  }, account);
+  await page.getByTitle('Toggle Notes (N)').click();
+  const editor = page.getByPlaceholder('Add session notes...');
+  await editor.fill('Synthetic final notes retained through failed completion.');
+  await page.getByTitle('Done (D)').click();
+  const checkout = page.getByRole('dialog', { name: 'Check Out', exact: true });
+  await checkout.getByRole('button', { name: /Good Focus/ }).click();
+  await expect(checkout.getByRole('alert')).toBeVisible();
+  await expect(checkout).toBeVisible();
+  const failed = await page.evaluate(async account => {
+    const api = window as any; const snapshot = await api.__s1Storage.readCommittedSnapshot(account);
+    const name = localStorage.getItem('goalflow_active_database_v2') || 'GoalflowDB';
+    const db = await api.__s1Fence(name); const state = await db.get('causal_actions', account); db.close();
+    api.__restoreCompletionWrites(); return { snapshot, state };
+  }, account);
+  expect(failed.snapshot.values.tasks[0].completed).toBe(false);
+  expect(failed.snapshot.values.tasks[0].description).toBe('Synthetic final notes retained through failed completion.');
+  expect(failed.snapshot.values.tracking.focusSession.phase).toBe('active');
+  expect(failed.state.completionAdmissions).toBeUndefined();
+  await checkout.getByRole('button', { name: /Good Focus/ }).click();
+  await expect(checkout).toBeHidden();
+  const saved = await page.evaluate(async account => {
+    const api = window as any, name = localStorage.getItem('goalflow_active_database_v2') || 'GoalflowDB';
+    const snapshot = await api.__s1Storage.readCommittedSnapshot(account);
+    const db = await api.__s1Fence(name); const state = await db.get('causal_actions', account); db.close();
+    return { snapshot, state, calls: api.__completionCalls };
+  }, account);
+  expect(saved.calls).toHaveLength(2); expect(saved.calls[1]).toEqual(saved.calls[0]);
+  expect(saved.snapshot.values.tasks[0].completed).toBe(true);
+  expect(saved.snapshot.values.tasks[0].description).toBe('Synthetic final notes retained through failed completion.');
+  expect(saved.snapshot.values.tracking.focusSession.phase).toBe('completed');
+  expect(Object.keys(saved.state.completionAdmissions)).toHaveLength(1);
+  expect(Object.keys(saved.state.completionOutbox)).toHaveLength(1);
+  expect(saved.snapshot.values.task_events).toHaveLength(1);
+  expect(Object.values(saved.snapshot.values.stats).map((s: any) => s.tasksCompleted)).toEqual([1]);
 });

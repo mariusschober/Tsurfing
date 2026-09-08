@@ -32,6 +32,7 @@ import { CAUSAL_BUSINESS_STORE, CAUSAL_BUSINESS_STORES, BUSINESS_KEY_PATH, causa
 import { encodeCausalBackup, readCausalBackup } from './causalBackup';
 import { admitLocalFocusControl, type LocalFocusControl, type FocusAccountState } from './causalFocusCoordinator';
 import { admitLocalCounterDay, type CounterDayAccountState } from './causalCounterDayCoordinator';
+import { admitLocalCompletionControl, type CompletionControlIntent } from './causalCompletionCoordinator';
 
 const BASE_DB_NAME = 'GoalflowDB';
 const ACTIVE_DB_KEY = 'goalflow_active_database_v2';
@@ -1152,6 +1153,23 @@ export const storageService = {
       || !await db.get(CAUSAL_STORE, userKey)) throw new DurableStorageError('The focus control requires the prepared causal account.');
     const result = await admitLocalFocusControl(name, control);
     publishCommit(userKey, result.generation, [STORES.TRACKING], name);
+    return result;
+  },
+
+  async admitFocusCompletion(userKey: string, input: {
+    focus: Omit<CompletionControlIntent['focus'], 'actorId'>; details: CompletionControlIntent['details'];
+  }) {
+    const captured = structuredClone(input), deviceId = readDeviceId(), name = activeDatabaseName();
+    const control: CompletionControlIntent = { ...captured, focus: { ...captured.focus, actorId: deviceId }, deviceId };
+    if (control.focus.accountId !== userKey) throw new DurableStorageError('The completion belongs to another account.');
+    await storageService.flushPendingLocalChanges(userKey);
+    const db = await getDB();
+    if (!db || db.name !== name || !db.objectStoreNames.contains(CAUSAL_STORE)
+      || !await db.get(CAUSAL_STORE, userKey)) throw new DurableStorageError('Completion requires the prepared causal account.');
+    const result = await admitLocalCompletionControl(name, control);
+    // This is a wake-up hint only; subscribers read the committed generation.
+    // A post-commit read failure must not report the saved completion as failed.
+    publishCommit(userKey, 0, [STORES.TRACKING, ...result.admission.members.map(member => member.entityType)], name);
     return result;
   },
 

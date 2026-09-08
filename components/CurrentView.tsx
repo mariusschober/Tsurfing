@@ -14,7 +14,8 @@ interface CurrentViewProps {
   currentTask: Task | null;
   goals: Goal[];
   allTasks: Task[];
-  completeTask: (id: string, duration?: number, flowState?: FlowState, finalDescription?: string) => void;
+  completeTask: (id: string, duration?: number, flowState?: FlowState, finalDescription?: string,
+    observed?: FocusSessionRecord | null) => void | boolean | Promise<void | boolean>;
   addSubtasks: (subtasks: {title: string, duration: number}[], parent: Task) => void;
   onFrogEaten: () => void;
   deprioritizeTask: (id: string) => void;
@@ -271,6 +272,10 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
     
     const [isExpiryModalOpen, setIsExpiryModalOpen] = useState(false);
     const [isFlowModalOpen, setIsFlowModalOpen] = useState(false);
+    const [completionError, setCompletionError] = useState<string | null>(null);
+    const [isCompleting, setIsCompleting] = useState(false);
+    const completionBusy = useRef(false);
+    const completionDraft = useRef<{ task: Task; focus: FocusSessionRecord | null; notes: string; duration?: number } | null>(null);
     const [isBreakSetupOpen, setIsBreakSetupOpen] = useState(false);
     const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
     const [showYellowPad, setShowYellowPad] = useState(false);
@@ -432,8 +437,11 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
             completeTask(currentTask.id, Math.ceil(elapsedSeconds / 60), undefined, "Break finished");
             return;
         }
+        if (!currentTask) return;
+        completionDraft.current = { task: currentTask, focus: focusSession, notes: padContentRef.current };
+        setCompletionError(null);
         setIsFlowModalOpen(true);
-    }, [savePadContent, currentTask, completeTask, elapsedSeconds]);
+    }, [savePadContent, currentTask, completeTask, elapsedSeconds, focusSession]);
 
     const handleDoneClickRef = useRef(handleDoneClick);
     useEffect(() => { handleDoneClickRef.current = handleDoneClick; }, [handleDoneClick]);
@@ -505,24 +513,24 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
         }
     }, [isActive, currentTask, isAiEnabled]);
 
-    const confirmCompletion = useCallback((flow: FlowState) => {
-        setIsFlowModalOpen(false);
-        
-        if (currentTask?.isFrog) onFrogEaten();
-
-        if (currentTask) {
-            const durationInMinutes = Math.ceil(elapsedSeconds / 60);
-            const finalDuration = durationInMinutes > 0 ? durationInMinutes : 1;
-            
+    const confirmCompletion = useCallback(async (flow: FlowState) => {
+        const draft = completionDraft.current;
+        if (!draft || completionBusy.current) return;
+        completionBusy.current = true; setIsCompleting(true); setCompletionError(null);
+        const finalDuration = draft.duration ??= Math.max(1, Math.ceil(elapsedSeconds / 60));
+        try {
+            const saved = await completeTask(draft.task.id, finalDuration, flow, draft.notes, draft.focus);
+            if (saved === false) throw new Error('Completion was not saved. Your notes are retained; review the task and retry.');
+            setIsFlowModalOpen(false);
+            if (draft.task.isFrog) onFrogEaten();
             setLastSessionData({ duration: finalDuration, rating: flow });
-            
             if (finalDuration >= 50) setDefaultBreakDuration(15);
             else setDefaultBreakDuration(5);
-
-            completeTask(currentTask.id, finalDuration, flow, padContent);
             setIsBreakSetupOpen(true);
-        }
-    }, [currentTask, elapsedSeconds, padContent, onFrogEaten, completeTask]);
+        } catch (error) {
+            setCompletionError(error instanceof Error ? error.message : 'Completion could not be saved. Your notes are retained.');
+        } finally { completionBusy.current = false; setIsCompleting(false); }
+    }, [elapsedSeconds, onFrogEaten, completeTask]);
 
     const startImmediateBreak = useCallback((duration: number) => {
         setIsBreakSetupOpen(false);
@@ -1164,10 +1172,12 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                 </div>
             </Modal>
 
-             <Modal isOpen={isFlowModalOpen} onClose={() => setIsFlowModalOpen(false)} title="Check Out">
+             <Modal isOpen={isFlowModalOpen} onClose={() => { if (!completionBusy.current) setIsFlowModalOpen(false); }} title="Check Out">
                 <div className="text-center p-8">
                     <p className="text-gray-600 dark:text-gray-300 mb-8 font-medium">How was your focus during this session?</p>
-                    <div className="grid grid-cols-2 gap-6 mb-4">
+                    {completionError && <p role="alert" className="mb-4 text-red-600 dark:text-red-400">{completionError}</p>}
+                    {isCompleting && <p role="status" className="mb-4 text-gray-500">Saving completion…</p>}
+                    <fieldset disabled={isCompleting} className="grid grid-cols-2 gap-6 mb-4">
                         <button onClick={() => confirmCompletion('distracted')} className="relative p-6 border-2 border-gray-100 dark:border-slate-700 rounded-2xl hover:border-red-200 hover:bg-red-50 dark:hover:bg-red-900/20 transition flex flex-col items-center gap-3">
                             <span className="absolute top-2 right-2 text-[10px] font-mono text-gray-300 dark:text-gray-600">[1]</span>
                             <span className="text-4xl">😫</span>
@@ -1188,7 +1198,7 @@ export const CurrentView: React.FC<CurrentViewProps> = ({ currentTask, goals, al
                             <span className="text-4xl">🌊</span>
                             <span className="text-sm font-bold text-gray-600 dark:text-gray-300">Flow State</span>
                         </button>
-                    </div>
+                    </fieldset>
                 </div>
             </Modal>
             

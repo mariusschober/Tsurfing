@@ -3,7 +3,7 @@ import 'fake-indexeddb/auto';
 import { openDB } from 'idb';
 import { IDBObjectStore } from 'fake-indexeddb';
 import { afterEach, expect, it, vi } from 'vitest';
-import { admitLocalCompletion, prepareCompletionRequest, commitCompletionReceipt, syncLocalCompletion, validateCompletionEvidence, type CompletionIntent } from './causalCompletionCoordinator';
+import { admitLocalCompletion, admitLocalCompletionControl, prepareCompletionRequest, commitCompletionReceipt, syncLocalCompletion, validateCompletionEvidence, type CompletionIntent } from './causalCompletionCoordinator';
 import { CAUSAL_STORE, fenceLegacyTracking } from './causalStorage';
 import { bindCausalCapability } from './causalEnrollment';
 import { admitLocalFocus } from './causalFocusCoordinator';
@@ -79,6 +79,32 @@ it.each([false, true])('admits all six effects with final notes and derives rewa
   expect((await admitLocalCompletion(f.name, intent)).duplicate).toBe(true);
   expect(await f.read()).toEqual(values);
   await expect(admitLocalCompletion(f.name, { ...intent, details: { ...intent.details, finalDescription: 'different' } })).rejects.toThrow('different intent');
+});
+
+it('derives a completion control epoch under the transaction and retains exact control evidence through retry', async () => {
+  const f = await fixture(true), intent = f.intent();
+  const { epoch: _epoch, ...focus } = intent.focus;
+  const control = { ...intent, focus: { ...focus, kind: 'complete' as const } };
+  const before = await f.read();
+  const put = IDBObjectStore.prototype.put;
+  const spy = vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function(this: IDBObjectStore, ...args) {
+    if (this.name === 'tracking') throw new Error('Synthetic completion control failure');
+    return put.apply(this, args);
+  });
+  try { await expect(admitLocalCompletionControl(f.name, control)).rejects.toThrow('Synthetic completion control failure'); }
+  finally { spy.mockRestore(); }
+  expect(await f.read()).toEqual(before);
+  const result = await admitLocalCompletionControl(f.name, control);
+  expect(result.admission.outcome.accepted).toBe(true);
+  expect(result.admission.command.epoch).toBe(f.sessionId);
+  expect(result.admission.command.uiCompletionControl).toEqual(control.focus);
+  const after = await f.read();
+  expect(after.tasks[0].description).toBe(intent.details.finalDescription);
+  expect((await admitLocalCompletionControl(f.name, control)).duplicate).toBe(true);
+  expect(await f.read()).toEqual(after);
+  const bytes = await prepareCompletionRequest(f.name, f.accountId, control.focus.actionId);
+  expect(JSON.parse(bytes).command.uiCompletionControl).toEqual(control.focus);
+  await expect(admitLocalCompletionControl(f.name, { ...control, details: { ...control.details, finalDescription: 'changed' } })).rejects.toThrow('different intent');
 });
 
 it('concurrent distinct taps award once and retain the rejected tap notes without retargeting', async () => {
