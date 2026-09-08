@@ -53,7 +53,8 @@
     "20260907211939_s2_focus_transitions.sql",
     "20260907220709_s2_private_action_ledger.sql",
     "20260907222904_s2_staged_reconciliation.sql",
-    "20260907234144_s2_counter_day_admission.sql"
+    "20260907234144_s2_counter_day_admission.sql",
+    "20260908004753_s2_causal_capability_discovery.sql"
   ],
   "roomSchemaFiles": [
     "1.json",
