@@ -31,7 +31,9 @@ data class GoalflowBackupPayload(
     /** Durable, server-verified account identity used to reject cross-account restores. */
     val ownerUserId: String? = null,
     /** Prevents a restore from mixing records from another backend/account. */
-    val syncBinding: GoalflowSyncBinding? = null
+    val syncBinding: GoalflowSyncBinding? = null,
+    /** Exact private journal bytes, including captured intents and receipts. */
+    val causalAccounts: List<CausalAccountEntity> = emptyList()
 )
 
 data class GoalflowSyncBinding(
@@ -76,7 +78,7 @@ enum class BackupRestoreMode { MERGE, REPLACE }
 object GoalflowBackup {
     private const val FORMAT = "goalflow-encrypted-backup"
     private const val FORMAT_VERSION = 1
-    private const val SCHEMA_VERSION = 4
+    private const val SCHEMA_VERSION = 5
     private const val ITERATIONS = 310_000
     private const val MIN_ITERATIONS = 100_000
     private const val MAX_ITERATIONS = 1_000_000
@@ -131,6 +133,9 @@ object GoalflowBackup {
             val envelopePayload = JSONObject(String(cipher.doFinal(ciphertext), StandardCharsets.UTF_8))
             val schemaVersion = envelopePayload.optInt("schemaVersion", 1)
             if (schemaVersion !in 1..SCHEMA_VERSION) throw BackupFormatException("This backup was created by a newer Tsurfing version.")
+            if (schemaVersion == 5 && envelopePayload.opt("nativeCausalFormat") != 1) {
+                throw BackupFormatException("This causal backup needs an explicit cross-client import.")
+            }
             if (schemaVersion >= 3) {
                 runCatching { Instant.parse(envelopePayload.getString("exportedAt")) }
                     .getOrElse { throw BackupFormatException("Backup export timestamp is invalid or missing.") }
@@ -157,7 +162,7 @@ object GoalflowBackup {
             if (ownerUserId != null && bindingOwnerUserId != null && ownerUserId != bindingOwnerUserId) {
                 throw BackupFormatException("Backup account bindings disagree.")
             }
-            val payload = parsePayload(collections, ownerUserId, syncBinding)
+            val payload = parsePayload(collections, ownerUserId, syncBinding, schemaVersion >= 5)
             val expectedChecksum = envelopePayload.optString("checksum", collections.optString("checksum"))
             if (schemaVersion >= 3 && !expectedChecksum.matches(Regex("^[0-9a-fA-F]{64}$"))) {
                 throw BackupFormatException("Backup checksum is invalid or missing.")
@@ -187,7 +192,8 @@ object GoalflowBackup {
     private fun parsePayload(
         collections: JSONObject,
         ownerUserId: String? = null,
-        syncBinding: GoalflowSyncBinding? = null
+        syncBinding: GoalflowSyncBinding? = null,
+        causalExpected: Boolean = false
     ): GoalflowBackupPayload {
         // The web backup stores only non-empty collections and calls daily
         // planning decisions `daily_plans`; native backups use explicit empty
@@ -220,7 +226,7 @@ object GoalflowBackup {
         }
         val metadataKeys = setOf(
             "tasks", "goals", "plans", "daily_plans", "events", "task_events", "habits", "outbox", "syncMeta", "conflicts",
-            "rawCollections", "schemaVersion", "exportedAt", "checksum", "ownerUserId", "syncBinding"
+            "rawCollections", "causalAccounts", "schemaVersion", "exportedAt", "checksum", "ownerUserId", "syncBinding"
         )
         val directKeys = collections.keys()
         while (directKeys.hasNext()) {
@@ -228,6 +234,16 @@ object GoalflowBackup {
             if (key !in metadataKeys) addRawCollection(rawCollections, key, jsonText(collections.get(key)))
         }
         rawCollections["sync"]?.let(::validatePreservedWebSyncState)
+        val causal = if (causalExpected) {
+            val array = collections.optJSONArray("causalAccounts") ?: throw BackupFormatException("The causal journal collection is missing.")
+            (0 until array.length()).map { index ->
+                val entry = array.getJSONObject(index)
+                CausalAccountEntity(entry.getString("accountId"), entry.getString("payload"))
+            }.also { causalAccountsPayload(it, ownerUserId) }
+        } else {
+            if (collections.has("causalAccounts")) throw BackupFormatException("The causal backup version is invalid.")
+            emptyList()
+        }
         val payload = GoalflowBackupPayload(
             tasks = tasks,
             goals = goals,
@@ -239,7 +255,8 @@ object GoalflowBackup {
             conflicts = optionalArrayOrNull(collections, "conflicts")?.let(::parseConflicts).orEmpty(),
             rawCollections = rawCollections,
             ownerUserId = ownerUserId,
-            syncBinding = syncBinding
+            syncBinding = syncBinding,
+            causalAccounts = causal
         )
         requireUnique(payload.tasks.map { it.id }, "task")
         requireUnique(
@@ -307,6 +324,7 @@ object GoalflowBackup {
 
     private fun backupJson(payload: GoalflowBackupPayload, exportedAt: String): JSONObject = JSONObject().apply {
         put("schemaVersion", SCHEMA_VERSION)
+        put("nativeCausalFormat", 1)
         requireInstant(exportedAt, "backup export timestamp")
         put("exportedAt", exportedAt)
         put("ownerKey", payload.ownerUserId ?: JSONObject.NULL)
@@ -348,6 +366,15 @@ object GoalflowBackup {
         // Schema 2 backups did not contain the native raw-collection wrapper.
         // Keep their checksum source byte-for-byte compatible with that format.
         if (schemaVersion >= 3) put("rawCollections", rawCollectionsPayload(payload.rawCollections))
+        if (schemaVersion >= 5) put("causalAccounts", causalAccountsPayload(payload.causalAccounts, payload.ownerUserId))
+    }
+
+    private fun causalAccountsPayload(accounts: List<CausalAccountEntity>, owner: String?): JSONArray {
+        if (accounts.size > 1 || accounts.any { it.accountId != owner }) throw BackupFormatException("The causal backup belongs to another account.")
+        return JSONArray(accounts.map { account ->
+            NativeCausalJournal.validate(account)
+            JSONObject().put("accountId", account.accountId).put("payload", account.payload)
+        })
     }
 
     private fun rawCollectionsPayload(collections: Map<String, String>): JSONObject = JSONObject().apply {

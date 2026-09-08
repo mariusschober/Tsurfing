@@ -151,6 +151,28 @@ data class LocalAccountEntity(
     val userId: String
 )
 
+/** Private causal authority; never an ordinary sync entity. */
+@Entity(tableName = "causal_accounts")
+data class CausalAccountEntity(
+    @PrimaryKey val accountId: String,
+    val payload: String
+)
+
+@Dao
+interface CausalAccountDao {
+    @Query("SELECT * FROM causal_accounts WHERE accountId = :accountId LIMIT 1")
+    suspend fun get(accountId: String): CausalAccountEntity?
+
+    @Query("SELECT * FROM causal_accounts ORDER BY accountId")
+    suspend fun getAll(): List<CausalAccountEntity>
+
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insert(account: CausalAccountEntity)
+
+    @Update
+    suspend fun update(account: CausalAccountEntity): Int
+}
+
 @Dao
 interface TaskDao {
     @Query("SELECT * FROM tasks ORDER BY scheduledFor ASC, plannedOrder ASC, createdAt ASC, id ASC")
@@ -441,9 +463,10 @@ interface LocalAccountDao {
         SyncConflictEntity::class,
         RawCollectionEntity::class,
         TaskEventEntity::class,
-        LocalAccountEntity::class
+        LocalAccountEntity::class,
+        CausalAccountEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 abstract class GoalflowDatabase : RoomDatabase() {
@@ -457,6 +480,7 @@ abstract class GoalflowDatabase : RoomDatabase() {
     abstract fun rawCollectionDao(): RawCollectionDao
     abstract fun taskEventDao(): TaskEventDao
     abstract fun localAccountDao(): LocalAccountDao
+    abstract fun causalAccountDao(): CausalAccountDao
 
     companion object {
         private val integrityCallback = object : RoomDatabase.Callback() {
@@ -573,6 +597,12 @@ abstract class GoalflowDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE TABLE IF NOT EXISTS causal_accounts (accountId TEXT NOT NULL PRIMARY KEY, payload TEXT NOT NULL)")
+            }
+        }
+
         fun migrations(): Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
@@ -580,7 +610,8 @@ abstract class GoalflowDatabase : RoomDatabase() {
             MIGRATION_4_5,
             MIGRATION_5_6,
             MIGRATION_6_7,
-            MIGRATION_7_8
+            MIGRATION_7_8,
+            MIGRATION_8_9
         )
         fun create(context: Context): GoalflowDatabase = Room.databaseBuilder(
             context,

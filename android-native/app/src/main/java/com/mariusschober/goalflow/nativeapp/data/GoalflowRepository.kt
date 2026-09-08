@@ -128,6 +128,17 @@ class GoalflowRepository(
     private val conflicts = database.syncConflictDao()
     private val rawCollections = database.rawCollectionDao()
     private val accounts = database.localAccountDao()
+    private val causalAccounts = database.causalAccountDao()
+    private val causalStore = NativeCausalStore(database, deviceId)
+
+    suspend fun prepareCausalAccount(userId: String): CausalAccountEntity =
+        causalStore.enable(userId, timeProvider.today().toString())
+
+    suspend fun admitCausalFocus(userId: String, intent: NativeFocusIntent): NativeCausalAdmission {
+        val result = causalStore.admitFocus(userId, intent)
+        onMutation()
+        return result
+    }
 
     val taskStream: Flow<List<GoalflowTask>> = tasks.observeAll().map { rows -> rows.map(::toDomain) }
     val goalStream: Flow<List<GoalflowGoal>> = goals.observeAll().map { rows -> rows.map(::toDomain) }
@@ -1667,7 +1678,8 @@ class GoalflowRepository(
             conflicts = conflicts.getAll(),
             rawCollections = rawCollections.getAll().associate { it.entityType to it.payload },
             ownerUserId = storedOwnerUserId ?: bindingOwnerUserId,
-            syncBinding = binding
+            syncBinding = binding,
+            causalAccounts = causalAccounts.getAll()
         )
         val envelope = GoalflowBackup.encrypt(
             payload,
@@ -1758,8 +1770,11 @@ class GoalflowRepository(
             accounts.insert(LocalAccountEntity(userId = incomingOwnerUserId))
         }
         val syncStatePresent = payload.syncBinding != null || payload.outbox.isNotEmpty() ||
-            payload.syncMeta.isNotEmpty() || payload.conflicts.isNotEmpty()
+            payload.syncMeta.isNotEmpty() || payload.conflicts.isNotEmpty() || payload.causalAccounts.isNotEmpty()
         val syncCompatible = !syncStatePresent || payload.syncBinding != null && payload.syncBinding == currentBinding
+        if (payload.causalAccounts.isNotEmpty() && !syncCompatible) throw BackupFormatException("Causal backup synchronization bindings differ. Explicit recovery is required.")
+        val originalCausal = causalAccounts.getAll()
+        val preservedCausal = mergeExactById(originalCausal, payload.causalAccounts, CausalAccountEntity::accountId, "causal account")
         val preservedOutbox = if (syncCompatible) {
             mergeExactById(outbox.getAll(), payload.outbox, SyncOutboxEntity::mutationId, "pending mutation")
         } else outbox.getAll()
@@ -1810,6 +1825,15 @@ class GoalflowRepository(
                     }
                 }
                 put(entityType, RawCollectionEntity(entityType, rawPayload, nowIso, null))
+            }
+        }
+        preservedCausal.forEach { account ->
+            val journal = NativeCausalJournal.validate(account)
+            val tracking = rawByType["tracking"]?.let { JSONObject(it.payload) }
+                ?: throw BackupFormatException("Causal tracking is missing from the restore.")
+            require(ActionJson.canonical(NativeCausalJournal.protectedTracking(tracking))
+                == ActionJson.canonical(NativeCausalJournal.protectedTracking(journal.getJSONObject("tracking")))) {
+                "Restore tracking differs from its causal journal. Explicit recovery is required."
             }
         }
         if (!syncCompatible && syncStatePresent) {
@@ -1867,6 +1891,7 @@ class GoalflowRepository(
         conflicts.insertAll(preservedConflicts)
         rawCollections.deleteAll()
         rawCollections.insertAll(rawByType.values.toList())
+        preservedCausal.filter { incoming -> originalCausal.none { it.accountId == incoming.accountId } }.forEach { causalAccounts.insert(it) }
 
         if (mode == BackupRestoreMode.REPLACE) {
             val deletedAt = timeProvider.now().toString()
@@ -1923,7 +1948,8 @@ class GoalflowRepository(
             conflicts = conflicts.getAll(),
             rawCollections = rawCollections.getAll().associate { it.entityType to it.payload },
             ownerUserId = accounts.get()?.userId ?: normalizedAccountSubject(binding.accountSubject),
-            syncBinding = binding
+            syncBinding = binding,
+            causalAccounts = causalAccounts.getAll()
         )
     }
 
@@ -2582,7 +2608,10 @@ class GoalflowRepository(
             // only after the user explicitly chooses the cloud side of a
             // preserved conflict.
             "task_events" -> taskEvents.delete(entityId)
-            in NATIVE_RAW_COLLECTION_TYPES -> rawCollections.delete(entityType)
+            in NATIVE_RAW_COLLECTION_TYPES -> {
+                if (entityType == "tracking") guardCausalTrackingWriteInTransaction(null, true)
+                rawCollections.delete(entityType)
+            }
             else -> throw IllegalArgumentException("This conflict type cannot be applied by the native client.")
         }
     }
@@ -2856,6 +2885,7 @@ class GoalflowRepository(
                 }
             }
             in NATIVE_RAW_COLLECTION_TYPES -> {
+                if (record.entityType == "tracking") guardCausalTrackingWriteInTransaction(record.payload, record.deletedAt != null)
                 if (record.deletedAt != null) rawCollections.delete(record.entityType)
                 else rawCollections.insert(
                     RawCollectionEntity(
@@ -3135,9 +3165,27 @@ class GoalflowRepository(
         }.getOrNull()
     }
 
+    private suspend fun guardCausalTrackingWriteInTransaction(payload: String?, deleted: Boolean = false) {
+        val retained = causalAccounts.getAll()
+        if (retained.isEmpty()) return
+        require(retained.size == 1 && !deleted && payload != null) { "Causal tracking cannot be deleted by a snapshot." }
+        val account = retained.single()
+        val state = NativeCausalJournal.validate(account)
+        val incoming = JSONObject(payload)
+        require(ActionJson.canonical(NativeCausalJournal.protectedTracking(incoming))
+            == ActionJson.canonical(NativeCausalJournal.protectedTracking(state.getJSONObject("tracking")))) {
+            "Tracking requires a causal command or verified history. Original evidence is retained."
+        }
+        state.put("tracking", incoming)
+        val updated = account.copy(payload = state.toString())
+        NativeCausalJournal.validate(updated)
+        check(causalAccounts.update(updated) == 1) { "The causal account disappeared." }
+    }
+
     private suspend fun upsertRawCollectionInTransaction(entityType: String, payload: String) {
         require(entityType in NATIVE_RAW_COLLECTION_TYPES) { "This collection is not supported by native synchronization." }
         parseJsonValue(payload)
+        if (entityType == "tracking") guardCausalTrackingWriteInTransaction(payload)
         rawCollections.insert(
             RawCollectionEntity(
                 entityType = entityType,
@@ -3151,6 +3199,7 @@ class GoalflowRepository(
 
     private suspend fun deleteRawCollectionInTransaction(entityType: String) {
         require(entityType in NATIVE_RAW_COLLECTION_TYPES) { "This collection is not supported by native synchronization." }
+        if (entityType == "tracking") guardCausalTrackingWriteInTransaction(null, true)
         val previousPayload = rawCollections.get(entityType)?.payload ?: "{}"
         rawCollections.delete(entityType)
         enqueueRecordInTransaction(entityType, "singleton", previousPayload, timeProvider.now().toString())
