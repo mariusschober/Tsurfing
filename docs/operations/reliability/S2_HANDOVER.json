@@ -724,6 +724,52 @@
         "Historical or unattributed legacy days require explicit baseline review.",
         "No live DDL."
       ]
+    },
+    {
+      "commit": "d9a7c6e942b10d3610455a00cb00295e0978b8f7",
+      "scope": "Authenticated causal action API and exact v2 receipt boundary",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "scripts/test-postgres-migrations.sh",
+        "scripts/test-s2-causal-api-postgres.ts",
+        "server/causalActions.test.ts",
+        "server/causalActions.ts",
+        "server/routes/sync.reconciliation.test.ts",
+        "server/routes/sync.ts"
+      ],
+      "commands": [
+        {
+          "command": "VERIFY_PORT=43973 npm run verify:release",
+          "exitCode": 0,
+          "testsPassed": 508,
+          "testFilesPassed": 82
+        },
+        {
+          "command": "PATH=/opt/homebrew/opt/postgresql@17/bin:$PATH PGHOST=127.0.0.1 PGPORT=55437 PGUSER=schober npm run test:migrations:postgres",
+          "exitCode": 0,
+          "matrices": [
+            "empty",
+            "upgrade"
+          ],
+          "apiReceiptCasesPerMatrix": 7
+        }
+      ],
+      "compatibility": "No schema changes or enrollment. Legacy receipt path unchanged. One operation per request. Completion/correction, capability rollout and native causal transport remain incomplete.",
+      "initialFailures": [
+        "Zod record normalization dropped own __proto__ evidence; validation now retains the command object.",
+        "Synthetic task lacked required scheduledFor; corrected fixture passed."
+      ],
+      "evidence": [
+        "evidence/s2-causal-api-unit.log",
+        "evidence/s2-causal-api-unit-retry.log",
+        "evidence/s2-causal-api-lint.log",
+        "evidence/s2-causal-api-lint-final.log",
+        "evidence/s2-causal-api-release.log",
+        "evidence/s2-causal-api-release-final.log",
+        "evidence/s2-causal-api-postgres.log",
+        "evidence/s2-causal-api-postgres-retry.log"
+      ],
+      "hostedPostgREST": "NOT_MEASURED"
     }
   ],
   "findings": [
@@ -841,7 +887,15 @@
     "evidence/s2-counter-days-matrix-retry.log",
     "evidence/s2-counter-days-static.log",
     "evidence/s2-counter-days-advisors.log",
-    "evidence/s2-counter-days-advisors-retry.log"
+    "evidence/s2-counter-days-advisors-retry.log",
+    "evidence/s2-causal-api-unit.log",
+    "evidence/s2-causal-api-unit-retry.log",
+    "evidence/s2-causal-api-lint.log",
+    "evidence/s2-causal-api-lint-final.log",
+    "evidence/s2-causal-api-release.log",
+    "evidence/s2-causal-api-release-final.log",
+    "evidence/s2-causal-api-postgres.log",
+    "evidence/s2-causal-api-postgres-retry.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

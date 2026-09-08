@@ -1,0 +1,29 @@
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+ ❯ server/causalActions.test.ts (13 tests | 1 failed) 18ms
+     × preserves exact unknown evidence and replays the same operation without a new ID 10ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  server/causalActions.test.ts > causal API receipt boundary > preserves exact unknown evidence and replays the same operation without a new ID
+Error: Causal synchronization did not prove the exact operation receipt.
+ ❯ fail server/causalActions.ts:45:30
+     43|  * from legacy payload acceptance. Preserve the RPC object byte-semant…
+     44| export function assertCausalReceipt(userId: string, operation: CausalO…
+     45|   const fail = () => { throw new Error('Causal synchronization did not…
+       |                              ^
+     46|   if (!object(value) || value.schemaVersion !== 2 || value.epoch !== o…
+     47|     || stableJson(value.operation) !== stableJson(operation) || typeof…
+ ❯ assertCausalReceipt server/causalActions.ts:48:76
+ ❯ admitCausalOperation server/causalActions.ts:85:10
+ ❯ server/causalActions.test.ts:26:40
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 12 passed (13)
+   Start at  00:58:56
+   Duration  1.02s (transform 238ms, setup 0ms, import 595ms, tests 18ms, environment 0ms)
+

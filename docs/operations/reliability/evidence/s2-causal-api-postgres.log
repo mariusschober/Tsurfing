@@ -1,0 +1,115 @@
+
+> tsurfing@0.4.0-beta.1 test:migrations:postgres
+> bash scripts/test-postgres-migrations.sh
+
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607170001_foundation.sql:78: NOTICE:  policy "users read own profile" for relation "public.profiles" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607170001_foundation.sql:80: NOTICE:  policy "users own sync records" for relation "public.sync_records" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:193: NOTICE:  trigger "validate_goalflow_task_schedule_trigger" for relation "public.tasks" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:209: NOTICE:  policy "users own scheduled tasks" for relation "public.tasks" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:212: NOTICE:  policy "users own daily plans" for relation "public.daily_plans" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:215: NOTICE:  policy "users read own task events" for relation "public.task_events" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:218: NOTICE:  policy "users read own telegram identity" for relation "public.telegram_identities" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:221: NOTICE:  policy "users read own pending captures" for relation "public.telegram_captures" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:224: NOTICE:  policy "users read own free entitlement" for relation "public.entitlements" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:227: NOTICE:  policy "users own sync conflicts" for relation "public.sync_conflicts" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:230: NOTICE:  policy "users read own backup metadata" for relation "public.backup_metadata" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202608260001_zero_silent_data_loss.sql:323: NOTICE:  trigger "mirror_goalflow_task_to_sync_trigger" for relation "public.tasks" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202608260001_zero_silent_data_loss.sql:466: NOTICE:  trigger "mirror_goalflow_daily_plan_to_sync_trigger" for relation "public.daily_plans" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202608260001_zero_silent_data_loss.sql:1264: NOTICE:  relation "api_mutation_receipts" already exists, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202608290001_native_task_events.sql:125: NOTICE:  trigger "project_goalflow_task_event_sync_trigger" for relation "public.sync_records" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202608300001_complete_native_sync_transport.sql:171: NOTICE:  trigger "mirror_goalflow_task_event_to_sync_trigger" for relation "public.task_events" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202609030001_access_boundary_hardening.sql:197: NOTICE:  trigger "validate_goalflow_daily_plan_ownership_trigger" for relation "public.daily_plans" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202609030004_telegram_webhook_claims.sql:11: NOTICE:  constraint "telegram_updates_outcome_check" of relation "telegram_updates" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202609030004_telegram_webhook_claims.sql:18: NOTICE:  constraint "telegram_updates_attempt_count_check" of relation "telegram_updates" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202609040003_realtime_sync_wakeup.sql:24: NOTICE:  policy "users read own sync wakeup state" for relation "public.sync_wakeup_state" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202609040003_realtime_sync_wakeup.sql:83: NOTICE:  trigger "tsurfing_sync_wakeup_trigger" for relation "public.sync_records" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202609040003_realtime_sync_wakeup.sql:90: NOTICE:  policy "users receive own sync wakeups" for relation "realtime.messages" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607170001_foundation.sql:78: NOTICE:  policy "users read own profile" for relation "public.profiles" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607170001_foundation.sql:80: NOTICE:  policy "users own sync records" for relation "public.sync_records" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:193: NOTICE:  trigger "validate_goalflow_task_schedule_trigger" for relation "public.tasks" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:209: NOTICE:  policy "users own scheduled tasks" for relation "public.tasks" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:212: NOTICE:  policy "users own daily plans" for relation "public.daily_plans" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:215: NOTICE:  policy "users read own task events" for relation "public.task_events" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:218: NOTICE:  policy "users read own telegram identity" for relation "public.telegram_identities" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:221: NOTICE:  policy "users read own pending captures" for relation "public.telegram_captures" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:224: NOTICE:  policy "users read own free entitlement" for relation "public.entitlements" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:227: NOTICE:  policy "users own sync conflicts" for relation "public.sync_conflicts" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202607180001_scheduled_execution.sql:230: NOTICE:  policy "users read own backup metadata" for relation "public.backup_metadata" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202608260001_zero_silent_data_loss.sql:323: NOTICE:  trigger "mirror_goalflow_task_to_sync_trigger" for relation "public.tasks" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202608260001_zero_silent_data_loss.sql:466: NOTICE:  trigger "mirror_goalflow_daily_plan_to_sync_trigger" for relation "public.daily_plans" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202608260001_zero_silent_data_loss.sql:1264: NOTICE:  relation "api_mutation_receipts" already exists, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202608290001_native_task_events.sql:125: NOTICE:  trigger "project_goalflow_task_event_sync_trigger" for relation "public.sync_records" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202608300001_complete_native_sync_transport.sql:171: NOTICE:  trigger "mirror_goalflow_task_event_to_sync_trigger" for relation "public.task_events" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202609030001_access_boundary_hardening.sql:197: NOTICE:  trigger "validate_goalflow_daily_plan_ownership_trigger" for relation "public.daily_plans" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202609030004_telegram_webhook_claims.sql:11: NOTICE:  constraint "telegram_updates_outcome_check" of relation "telegram_updates" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202609030004_telegram_webhook_claims.sql:18: NOTICE:  constraint "telegram_updates_attempt_count_check" of relation "telegram_updates" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202609040003_realtime_sync_wakeup.sql:24: NOTICE:  policy "users read own sync wakeup state" for relation "public.sync_wakeup_state" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202609040003_realtime_sync_wakeup.sql:83: NOTICE:  trigger "tsurfing_sync_wakeup_trigger" for relation "public.sync_records" does not exist, skipping
+psql:/Users/schober/Projects/TSurfing/supabase/migrations/202609040003_realtime_sync_wakeup.sql:90: NOTICE:  policy "users receive own sync wakeups" for relation "realtime.messages" does not exist, skipping
+{"status":"PASS","emptyDatabase":"PASS","currentSchemaUpgrade":"PASS","idempotency":"PASS","conflictPreservation":"PASS","cursorRebase":"PASS","atomicRestore":"PASS","backupDryRun":"PASS","quotaRewind":"DENIED","nativeTaskEvents":"PASS","unknownPayloadPreservation":"PASS","directDataApi":"DENIED","rlsIsolation":"PASS","sameOwnerRelations":"PASS","typedEmailOtpActivation":"PASS","telegramOidcActivation":"PASS","sessionRevocation":"PASS","ownerBootstrap":"PASS","telegramWebhookClaims":"PASS","telegramMiniSessions":"PASS","telegramAccountBinding":"PASS","telegramCaptureConfirmation":"ATOMIC","realtimeWakeup":"PASS","wakeupRollback":"PASS","topicForgery":"DENIED","databaseAdvisorHardening":"PASS"}
+{"status":"PASS","sharedFocusSession":"PASS","legacyCounterPreservation":"PASS","fieldwiseReconciliation":"PASS","originalReceipts":"UNCHANGED","terminalResurrection":"DENIED"}
+{"status": "PASS", "engine": "PostgreSQL", "conflictLockOrder": "PASS", "originalReceipt": "UNCHANGED", "committedCursorOrder": "PASS", "rollbackCursor": "UNCHANGED"}
+{"status": "PASS", "engine": "PostgreSQL", "conflictLockOrder": "PASS", "originalReceipt": "UNCHANGED", "committedCursorOrder": "PASS", "rollbackCursor": "UNCHANGED"}
+{"status": "PASS", "engine": "PostgreSQL", "counterScenarios": 12, "counterOrdersPerScenario": 2, "focusScenarios": 9, "directClientExecution": "DENIED"}
+{"status": "PASS", "engine": "PostgreSQL", "counterScenarios": 12, "counterOrdersPerScenario": 2, "focusScenarios": 9, "directClientExecution": "DENIED"}
+{"status": "PASS", "engine": "PostgreSQL", "counters": "29/5 plus rollback retry", "focusExtension": 420, "receiptReplay": "EXACT", "legacyOverwrite": "REJECTED", "rollback": "ATOMIC", "concurrentDuplicate": "EXACT", "committedCursor": "ORDERED", "clientAccess": "DENIED"}
+{"status": "PASS", "engine": "PostgreSQL", "counters": "29/5 plus rollback retry", "focusExtension": 420, "receiptReplay": "EXACT", "legacyOverwrite": "REJECTED", "rollback": "ATOMIC", "concurrentDuplicate": "EXACT", "committedCursor": "ORDERED", "clientAccess": "DENIED"}
+{"status": "PASS", "engine": "PostgreSQL", "sharedManifest": "EXACT", "missingChunk": "BLOCKED", "chunkReplay": "EXACT", "poisonedManifest": "ISOLATED", "crossAccount": "DENIED", "historyEntries": 1001, "reconciliationReceipt": "EXACT", "fullHistoryRetained": true}
+{"status": "PASS", "engine": "PostgreSQL", "sharedManifest": "EXACT", "missingChunk": "BLOCKED", "chunkReplay": "EXACT", "poisonedManifest": "ISOLATED", "crossAccount": "DENIED", "historyEntries": 1001, "reconciliationReceipt": "EXACT", "fullHistoryRetained": true}
+{"status": "PASS", "engine": "PostgreSQL", "daySelection": "FOCUS_PRESERVED", "delayedEvents": "ORIGINAL_DAY", "timezoneChange": "NO_RESET", "historicalBaseline": "REVIEW_REQUIRED", "failedCommit": "NO_CURSOR_ADVANCE", "concurrentBaseline": "ONE_IDENTITY", "receiptReplay": "EXACT"}
+{"status": "PASS", "engine": "PostgreSQL", "daySelection": "FOCUS_PRESERVED", "delayedEvents": "ORIGINAL_DAY", "timezoneChange": "NO_RESET", "historicalBaseline": "REVIEW_REQUIRED", "failedCommit": "NO_CURSOR_ADVANCE", "concurrentBaseline": "ONE_IDENTITY", "receiptReplay": "EXACT"}
+ERROR:  Task mutation has an invalid schedule
+CONTEXT:  PL/pgSQL function project_goalflow_task_sync(uuid,text,jsonb,bigint,timestamp with time zone,timestamp with time zone) line 80 at RAISE
+SQL statement "SELECT public.project_goalflow_task_sync(
+      target_user_id, target_entity_id, target_payload, next_server_version,
+      target_updated_at, target_deleted_at
+    )"
+PL/pgSQL function push_sync_mutation_v2(uuid,uuid,text,text,text,bigint,integer,jsonb,timestamp with time zone,timestamp with time zone,uuid) line 247 at PERFORM
+node:internal/errors:983
+  const err = new Error(message);
+              ^
+
+Error: Command failed: psql -X -qAt -v ON_ERROR_STOP=1 -c select public.push_sync_mutation_v2('996e5031-ddab-48d5-9b75-09839e98f4ab','b183a08f-8d01-4310-ab2b-16704ad9ec8b','fixture','tasks','704542b1-1efa-4afe-9c32-66500057b25c',null,1,'{"id":"704542b1-1efa-4afe-9c32-66500057b25c","title":"Synthetic","completed":false,"duration":10}'::jsonb,'2026-09-07T00:00:00.123456Z',null,null)
+ERROR:  Task mutation has an invalid schedule
+CONTEXT:  PL/pgSQL function project_goalflow_task_sync(uuid,text,jsonb,bigint,timestamp with time zone,timestamp with time zone) line 80 at RAISE
+SQL statement "SELECT public.project_goalflow_task_sync(
+      target_user_id, target_entity_id, target_payload, next_server_version,
+      target_updated_at, target_deleted_at
+    )"
+PL/pgSQL function push_sync_mutation_v2(uuid,uuid,text,text,text,bigint,integer,jsonb,timestamp with time zone,timestamp with time zone,uuid) line 247 at PERFORM
+
+    at genericNodeError (node:internal/errors:983:15)
+    at wrappedFn (node:internal/errors:537:14)
+    at checkExecSyncError (node:child_process:882:11)
+    at execFileSync (node:child_process:918:15)
+    at query (/Users/schober/Projects/TSurfing/scripts/test-s2-causal-api-postgres.ts:12:18)
+    at push (/Users/schober/Projects/TSurfing/scripts/test-s2-causal-api-postgres.ts:20:10)
+    at <anonymous> (/Users/schober/Projects/TSurfing/scripts/test-s2-causal-api-postgres.ts:24:14)
+    at ModuleJob.run (node:internal/modules/esm/module_job:274:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5) {
+  status: 1,
+  signal: null,
+  output: [
+    null,
+    '',
+    'ERROR:  Task mutation has an invalid schedule\n' +
+      'CONTEXT:  PL/pgSQL function project_goalflow_task_sync(uuid,text,jsonb,bigint,timestamp with time zone,timestamp with time zone) line 80 at RAISE\n' +
+      'SQL statement "SELECT public.project_goalflow_task_sync(\n' +
+      '      target_user_id, target_entity_id, target_payload, next_server_version,\n' +
+      '      target_updated_at, target_deleted_at\n' +
+      '    )"\n' +
+      'PL/pgSQL function push_sync_mutation_v2(uuid,uuid,text,text,text,bigint,integer,jsonb,timestamp with time zone,timestamp with time zone,uuid) line 247 at PERFORM\n'
+  ],
+  pid: 88133,
+  stdout: '',
+  stderr: 'ERROR:  Task mutation has an invalid schedule\n' +
+    'CONTEXT:  PL/pgSQL function project_goalflow_task_sync(uuid,text,jsonb,bigint,timestamp with time zone,timestamp with time zone) line 80 at RAISE\n' +
+    'SQL statement "SELECT public.project_goalflow_task_sync(\n' +
+    '      target_user_id, target_entity_id, target_payload, next_server_version,\n' +
+    '      target_updated_at, target_deleted_at\n' +
+    '    )"\n' +
+    'PL/pgSQL function push_sync_mutation_v2(uuid,uuid,text,text,text,bigint,integer,jsonb,timestamp with time zone,timestamp with time zone,uuid) line 247 at PERFORM\n'
+}
+
+Node.js v22.16.0
