@@ -2,7 +2,7 @@
 
 Stage acceptance: **BLOCKED — implementation continues. S3 is not permitted.**
 
-Current tested source: `a78701b19f1a2c5b42002cfee2d08fd0457b31da`. Web business authority now supports schema-6 backup/restore and ordinary storage transactions: **PASS_LOCAL**, including 639 unit tests and 54 Chromium/WebKit tests. Causal UI commands, synchronization orchestration, day/activation handling, native integration and recovery actions remain incomplete. No application cutover is enabled; S3 remains blocked.
+Latest tested source: `9b0022fc2eef7f4f3cb46a56d02b4866332ddb11`. Android transactional focus admission and encrypted journal preservation: **PASS_LOCAL** (155 passed, one hosted test skipped; lint and debug build passed). This is an explicit-preparation foundation; native transport, counter/day/completion coordination and UI integration remain incomplete. Earlier Web and server checkpoints are recorded below. S3 remains blocked.
 
 S1's tested commit `09245261b6174ec878f0296ca61682c603f54304` is integrated.
 S1.2 correction `262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d` is integrated;
@@ -615,3 +615,10 @@ Migration `20260908065315_s2_causal_account_initialization.sql` is additive and 
 Validation: full release exit 0, 711 tests in 103 files; full empty/upgrade PostgreSQL matrix exit 0; migrations, migration hashes, Room hashes and identifiers exit 0. Real PostgreSQL tests prove concurrent exact retries, rollback and committed cursor ordering. Production API validators and TypeScript history replay consume real database receipts for both new and legacy accounts. Web tests cover lost responses, failed receipt writes, backup validation and a competing initializer without duplicating a queued increment. Three sanitized logs and checksums are recorded in the JSON handover.
 
 Hosted PostgREST is **NOT MEASURED**. Divergent legacy reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete. No native/browser reruns, installation, live configuration or deployment. Overall S2 remains **BLOCKED**, with no S3 handoff.
+
+
+## Android causal journal checkpoint `9b0022fc2eef7f4f3cb46a56d02b4866332ddb11`
+
+Room 9 adds a private account journal. Focus admission reads its actual parent and atomically persists intent, command, outcome, projection and pending command. Ordinary tracking changes and conflict deletion are fenced after explicit preparation. Legacy outbox bytes remain captured and retained. Backup schema 5 carries exact journal bytes; incompatible or divergent journals require recovery. Existing backup schemas remain readable.
+
+Six focused Room tests cover serial extensions, exact retries, failed commits, snapshot fences, account/mirror mismatch, encrypted fresh-database restore and missing-command corruption. Full native gate: 155 passed, zero failed, one hosted-transport test skipped; lint and debug APK build passed. Command: `env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true` (exit 0). Room hashes: 9 checked; durable identifiers: 24 checked. Evidence: `evidence/s2-native-causal-store.log`. No native installation, hosted test or production activation occurred. Native network integration, counters/day handling and atomic business completion are still required.

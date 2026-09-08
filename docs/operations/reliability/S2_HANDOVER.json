@@ -2720,6 +2720,58 @@
         "No native/browser reruns, installation, live configuration or deployment."
       ],
       "permittedNextStage": null
+    },
+    {
+      "commit": "9b0022fc2eef7f4f3cb46a56d02b4866332ddb11",
+      "scope": "Android transactional focus journal and exact encrypted backup preservation; explicit preparation only",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/schemas/com.mariusschober.goalflow.nativeapp.data.GoalflowDatabase/9.json",
+        "android-native/app/schemas/com.mariusschober.goalflow.nativeapp.data.GoalflowDatabase/ROOM_SCHEMA_SHA256_MANIFEST.json",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowBackup.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowDatabase.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowRepository.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalStore.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalStoreTest.kt",
+        "config/durable-identifiers.json"
+      ],
+      "findingIds": [
+        "S2-NATIVE-JOURNAL"
+      ],
+      "commands": [
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": {
+            "passed": 155,
+            "skipped": 1,
+            "failed": 0
+          },
+          "skipped": "hostedBrowserRecordConvergesThroughProductionTransport; not live evidence"
+        },
+        {
+          "command": "npm run verify:room-hashes",
+          "exitCode": 0,
+          "checked": 9
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0,
+          "checked": 24
+        }
+      ],
+      "migration": "Room 8 to 9 adds private causal_accounts; prior schemas unchanged",
+      "compatibility": "Native backup schema 5 requires nativeCausalFormat 1; schemas 1 through 4 remain readable. Causal enrollment is explicit and not wired into production UI.",
+      "evidence": {
+        "path": "docs/operations/reliability/evidence/s2-native-causal-store.log",
+        "sha256": "dec770096ff28c6ba3f6d7c98844a522020a74f268bf1d4e8d21d34caf98c45b"
+      },
+      "blockers": [
+        "Native causal transport and verified receipt retirement are not integrated.",
+        "Native counter/day/business completion admission and UI integration remain incomplete.",
+        "No device installation or hosted validation."
+      ],
+      "permittedNextStage": "Continue S2; S3 blocked"
     }
   ],
   "findings": [
