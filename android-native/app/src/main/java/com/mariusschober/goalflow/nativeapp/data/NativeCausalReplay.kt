@@ -13,9 +13,17 @@ object NativeCausalReplay {
     private fun values(objectValue: JSONObject) = JSONArray(objectValue.keys().asSequence().map { objectValue.getJSONObject(it) }.toList())
 
     fun replay(accountId: String, history: JSONObject): NativeCausalReplayResult {
+        return replayAt(accountId, history, history.getLong("downloadedRevision"))
+    }
+
+    /** Local admissions retain the revision they observed. Reconstruct that
+     * basis even after later entries arrive, without trimming retained evidence
+     * or borrowing a newer causal parent. The entire saved envelope is still
+     * validated; selecting a prefix must not hide damaged retained bytes. */
+    fun replayAt(accountId: String, history: JSONObject, revision: Long): NativeCausalReplayResult {
         NativeSavedCausalHistory.validate(accountId, history)
         val downloaded = history.getLong("downloadedRevision")
-        require(downloaded >= 0) { "The causal cutover has not been downloaded." }
+        require(revision in 0..downloaded) { "The requested causal basis has not been downloaded." }
         val entries = history.getJSONObject("entries"); val epoch = history.getString("epoch")
         val first = NativeCausalHistoryProtocol.entry(accountId, epoch, 0, JSONObject(entries.getJSONObject("0").getString("body")))
         val initialReceipt = first.getJSONObject("receipt")
@@ -25,8 +33,8 @@ object NativeCausalReplay {
         val baselines = JSONObject().put(baseline.getString("day"), baseline)
         val events = JSONObject(); val receipts = JSONObject(); val members = mutableSetOf<String>()
         fun baselineIdentity(id: String) = baselines.keys().asSequence().any { baselines.getJSONObject(it).getString("baselineId") == id }
-        for (revision in 1..downloaded) {
-            val entry = NativeCausalHistoryProtocol.entry(accountId, epoch, revision, JSONObject(entries.getJSONObject(revision.toString()).getString("body")))
+        for (entryRevision in 1..revision) {
+            val entry = NativeCausalHistoryProtocol.entry(accountId, epoch, entryRevision, JSONObject(entries.getJSONObject(entryRevision.toString()).getString("body")))
             val receipt = entry.getJSONObject("receipt"); val operation = receipt.getJSONObject("operation")
             val command = operation.getJSONObject("command"); val id = command.getString("actionId")
             require(!receipts.has(id) && id !in members && id != epoch && !baselineIdentity(id)) { "History repeats an immutable action identity." }

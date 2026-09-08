@@ -9,6 +9,41 @@ import java.io.File
 
 @RunWith(RobolectricTestRunner::class)
 class NativeCausalReplayTest {
+    @Test fun `an earlier admission basis survives a later terminal transition`() {
+        val fixture = fixture(); val owner = fixture.getString("accountId"); val history = fixture.getJSONObject("history")
+        val preserved = history.toString()
+        val beforeStart = NativeCausalReplay.replayAt(owner, history, 1)
+        val running = NativeCausalReplay.replayAt(owner, history, 2)
+        val completed = NativeCausalReplay.replay(owner, history)
+        assertEquals(1, beforeStart.receipts.length())
+        assertEquals(2, running.receipts.length())
+        assertEquals("active", running.tracking.getJSONObject("focusSession").getString("phase"))
+        assertEquals("completed", completed.tracking.getJSONObject("focusSession").getString("phase"))
+        assertNotEquals(ActionJson.canonical(running.focus), ActionJson.canonical(completed.focus))
+        // A caller may overlay pending commands on the result. No returned
+        // object may alias retained history or a subsequent replay result.
+        running.tracking.put("planViewCount", 900)
+        running.focus.getJSONObject("sessions").remove(running.focus.getString("currentSessionId"))
+        running.baselines.getJSONObject(running.tracking.getString("date")).getJSONObject("counts").put("planViewCount", 900)
+        assertEquals(preserved, history.toString())
+        val repeated = NativeCausalReplay.replayAt(owner, history, 2)
+        assertEquals(28, repeated.tracking.getInt("planViewCount"))
+        assertEquals(1, repeated.focus.getJSONObject("sessions").length())
+        assertEquals(27, repeated.baselines.getJSONObject(repeated.tracking.getString("date")).getJSONObject("counts").getInt("planViewCount"))
+    }
+
+    @Test fun `a requested basis cannot use an undownloaded revision or hide damaged saved evidence`() {
+        val fixture = fixture(); val owner = fixture.getString("accountId"); val history = fixture.getJSONObject("history")
+        for (revision in listOf(-1L, 5L, Long.MAX_VALUE)) {
+            assertTrue(runCatching { NativeCausalReplay.replayAt(owner, history, revision) }.isFailure)
+        }
+        val cutover = NativeCausalReplay.replayAt(owner, history, 0)
+        assertEquals(27, cutover.tracking.getInt("planViewCount"))
+        assertEquals(0, cutover.receipts.length())
+        history.getJSONObject("entries").getJSONObject("4").put("sha256", "0".repeat(64))
+        assertTrue(runCatching { NativeCausalReplay.replayAt(owner, history, 0) }.isFailure)
+    }
+
     @Test fun `a new counter day cannot borrow the cutover baseline identity`() {
         val fixture = fixture(); val history = fixture.getJSONObject("reusedBaselineHistory")
         NativeSavedCausalHistory.validate(fixture.getString("accountId"), history)
