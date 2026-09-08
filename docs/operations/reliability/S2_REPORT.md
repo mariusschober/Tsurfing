@@ -2,7 +2,7 @@
 
 Stage acceptance: **BLOCKED — implementation continues. S3 is not permitted.**
 
-Latest tested source: `6e18026c197f1e61331c4f2c0771af646cdd56c9`. Native atomic remote completion application: **PASS_LOCAL** (194 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release verification passed). Local causal completion admission/send, UI/scheduler activation, macOS and legacy recovery remain incomplete. S3 remains blocked.
+Latest tested source: `c8465c4012b9120a777457d03665014c1234c659`. Native predecessor receipt retention: **PASS_LOCAL** (198 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release verification passed). Local causal completion admission/send, UI/scheduler activation, macOS and legacy recovery remain incomplete. S3 remains blocked.
 
 S1's tested commit `09245261b6174ec878f0296ca61682c603f54304` is integrated.
 S1.2 correction `262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d` is integrated;
@@ -701,3 +701,9 @@ Application evidence binds each completion to its original history checksum, rev
 Full native verification exited 0: 194 passed, one hosted test skipped; lint and production-debug build passed. Full repository release verification exited 0: 719 passed. Room hashes 9, identifiers 24 and diff checks passed. Logs: `evidence/s2-native-completion-projection-android.log`, `evidence/s2-native-completion-projection-release.log`; APK checksum in JSON. No deployment, native installation or live writes occurred.
 
 Native local causal completion admission/member reservation/send remains unfinished. This checkpoint implements remote completion application, not complete S2 or normal client rollout.
+
+## Native predecessor receipt checkpoint
+
+`c8465c4012b9120a777457d03665014c1234c659` — **PASS_LOCAL**. Ordinary acknowledgments now retain the original queued payload and full parsed receipt JSON in the account journal before retiring the outbox row, within the same Room transaction. Account, mutation, device, entity, versions, payload and timestamps must match. A changed in-flight queue row, mismatched parsed/full server version, or missing receipt fails closed. Duplicate acknowledgments preserve the first proof; encrypted backups retain it. Four regression tests cover these conditions and rollback of retirement/rebasing when receipt persistence fails.
+
+The explicit Homebrew Java 21 run passed 198 tests with one hosted skip, lint and debug assembly; the initial system Java selection failed before compilation. Web release verification passed 719 tests. Room hashes (9), identifiers (24) and diff checks passed. No migration, installation, live write or deployment. Exact commands, hashes and artifacts are in the handover. This supplies predecessor evidence for future native completion reservations; it does not implement local causal completion admission.

@@ -3,7 +3,7 @@
   "status": "BLOCKED",
   "acceptanceReason": "Implementation continues. Web automatic enrollment and fresh-account server initialization are locally verified. Divergent legacy reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
-  "finalCommit": "6e18026c197f1e61331c4f2c0771af646cdd56c9",
+  "finalCommit": "c8465c4012b9120a777457d03665014c1234c659",
   "prerequisites": [
     {
       "stageId": "S1",
@@ -3358,6 +3358,84 @@
       "buildArtifact": {
         "path": "android-native/app/build/outputs/apk/production/debug/app-production-debug.apk",
         "sha256": "3f2b18d462f8c50df8eb90be073c30953ad223a0ff77455d96e1b9c6e6cf0b8c",
+        "kind": "unsigned production-debug APK; not installed"
+      },
+      "blockers": [
+        "Native local causal completion admission, member reservations and completion send path remain incomplete.",
+        "Normal scheduler and UI activation remain incomplete.",
+        "macOS integration, divergent legacy recovery and comprehensive cross-client acceptance remain incomplete."
+      ],
+      "permittedNextStage": "Continue S2; S3 blocked"
+    },
+    {
+      "commit": "c8465c4012b9120a777457d03665014c1234c659",
+      "baselineCommit": "540553acae5cef875e3c76155a902e9eaa6ac088",
+      "scope": "Retain exact ordinary predecessor requests and accepted receipts atomically with outbox retirement",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowRepository.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeLegacyReceiptEvidence.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeSyncEngine.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeLegacyReceiptEvidenceTest.kt"
+      ],
+      "findingIds": [
+        "S2-NATIVE-PREDECESSOR-RECEIPTS"
+      ],
+      "commands": [
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": {
+            "passed": 198,
+            "failed": 0,
+            "skipped": 1
+          },
+          "skipped": "hostedBrowserRecordConvergesThroughProductionTransport"
+        },
+        {
+          "command": "env VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "tests": {
+            "passed": 719,
+            "failed": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "command": "npm run verify:room-hashes && npm run verify:identifiers && git diff --check",
+          "exitCode": 0,
+          "checked": [
+            9,
+            24
+          ]
+        },
+        {
+          "command": "JAVA_HOME=$(/usr/libexec/java_home -v 21) ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 1,
+          "reason": "System Java selection did not provide Java 21; corrected with explicit Homebrew path."
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Additive private legacyPushReceipts journal field; no schema migration. Original queued payload strings and complete parsed receipt JSON are retained. Existing ordinary receipts keep their contract. In-flight queue changes fail closed.",
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-predecessor-android.log",
+          "sha256": "ac9f184bae4aa101db33f58eef4724d91e4dc3aae276d332858252bad33b0718"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-predecessor-release.log",
+          "sha256": "2f16e8541b169e21069ebcce9c3de7e11c579704a11e432af55693b9126ecf01"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-predecessor-java-selection-failed.log",
+          "sha256": "4a19429b92cef8bbeec42b3d7385f6454f10f45b73dd7fa3d6ed8fac0972c126"
+        }
+      ],
+      "testIdentity": "199 native Robolectric/Room tests: 198 passed, one hosted test skipped. Four new receipt retention tests cover backup, duplicates, mismatched proof, account isolation, rollback and changed queue bytes.",
+      "buildArtifact": {
+        "path": "android-native/app/build/outputs/apk/production/debug/app-production-debug.apk",
+        "sha256": "653e8030c2e0e64f6c3bc786b8173c337667053d24839de054fb8e50676e6119",
         "kind": "unsigned production-debug APK; not installed"
       },
       "blockers": [
