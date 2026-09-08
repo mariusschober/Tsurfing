@@ -340,4 +340,4 @@ Valid history can make the private journal exceed Android’s CursorWindow. Acco
 
 Verification: 220 native tests, 219 passed, one hosted test skipped; lint and debug APK passed. Repository release verification passed (719 tests, 105 files). Room hashes (9), identifiers (24), and diff checks passed. Tests use synthetic server responses. No migration, deployment or installation.
 
-Remaining: normal UI admission/enrollment activation, rejected/conflicting completion and legacy ambiguity recovery, macOS integration and full cross-client acceptance. S2 remains incomplete and S3 is not permitted.
+Follow-up `358896a`: the normal ViewModel admits focus intents and focus completion through the journal when one exists (legacy paths otherwise; rejected outcomes fail closed; millis-precision wire timestamps). Remaining: task-only completion admission and enrollment activation, rejected/conflicting completion and legacy ambiguity recovery, macOS integration and full cross-client acceptance. S2 remains incomplete and S3 is not permitted.

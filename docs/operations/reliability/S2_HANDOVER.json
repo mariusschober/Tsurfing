@@ -3791,6 +3791,44 @@
         "macOS causal integration",
         "Cross-client acceptance"
       ]
+    },
+    {
+      "id": "native-ui-admission",
+      "sourceCommit": "358896a2b030be0e2825fcd34965a5898990cbd4",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowRepository.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/ui/GoalflowViewModel.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/GoalflowRepositoryCausalUiTest.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/ui/GoalflowViewModelCausalTest.kt"
+      ],
+      "verification": [
+        {
+          "command": "android-native gradle testProductionDebugUnitTest lintProductionDebug assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": 228,
+          "passed": 227,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "npm run lint",
+          "exitCode": 0
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-ui-admission-android.log",
+          "sha256": "e11bf50520f6bbd43ab9e19ab7601c8361c8c2443a988659fa13d2b18a6313db"
+        }
+      ],
+      "compatibility": "No schema, migration, identifier, wire or receipt-contract change. Legacy unfenced UI paths unchanged. Task-only completion stays legacy on Android. No native installation or hosted proof.",
+      "remaining": [
+        "Android task-only completion admission",
+        "Rejected/conflicting completion and legacy ambiguity recovery",
+        "macOS causal integration",
+        "Cross-client acceptance"
+      ]
     }
   ],
   "findings": [
