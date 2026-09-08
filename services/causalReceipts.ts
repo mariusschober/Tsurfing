@@ -70,6 +70,9 @@ export async function prepareCausalRequest(name: string, accountId: string, inpu
       return prior;
     }
     if (!pending) throw new Error('The causal action is not pending.');
+    if (operation.type === 'counter' && !state.counterBaselines?.[operation.command.day as string]) {
+      throw new Error('The counter is waiting for its verified day baseline. Its durable intent remains pending.');
+    }
     state.causalRequests ??= {};
     state.causalRequests[id] = bytes;
     return bytes;

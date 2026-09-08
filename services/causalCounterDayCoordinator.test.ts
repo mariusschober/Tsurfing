@@ -2,7 +2,8 @@ import 'fake-indexeddb/auto';
 import { openDB } from 'idb';
 import { IDBObjectStore } from 'fake-indexeddb';
 import { expect, it, vi } from 'vitest';
-import { admitLocalCounterDay, validateCounterDayEvidence } from './causalCounterDayCoordinator';
+import { admitLocalCounterDay, projectPendingCounterDays, validateCounterDayEvidence } from './causalCounterDayCoordinator';
+import { admitLocalCounter } from './causalCounterCoordinator';
 import { CAUSAL_STORE, fenceLegacyTracking } from './causalStorage';
 import { bindCausalCapability } from './causalEnrollment';
 import { prepareCausalRequest, commitCausalReceipt } from './causalReceipts';
@@ -36,6 +37,36 @@ it('serializes distinct equal-clock actions and preserves order across retries',
   expect(Object.values(before.counterDayAdmissions).map((a: any) => a.sequence).sort()).toEqual([1, 2]);
   await admitLocalCounterDay(f.name, f.command);
   expect(await f.read()).toEqual(before);
+});
+it('selects an established day offline and rolls back the journal with a failed mirror write', async () => {
+  const f = await fixture();
+  const baseline = { schemaVersion: 1 as const, baselineId: crypto.randomUUID(), accountId: f.accountId,
+    day: f.command.day, counts: { planViewCount: 7, dailyPostponeCount: 2 }, evidenceIds: [] };
+  await admitLocalCounter(f.name, { schemaVersion: 1, actionId: crypto.randomUUID(), accountId: f.accountId,
+    actorId: 'tab', day: baseline.day, timeZone: 'UTC', counter: 'planViewCount', delta: 1,
+    capturedAt: f.command.capturedAt, businessActionId: null, correctionOf: null }, baseline);
+  const before = await f.read(); const put = IDBObjectStore.prototype.put;
+  const spy = vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function(this: IDBObjectStore, ...args) {
+    if (this.name === 'tracking') throw new Error('Synthetic mirror failure');
+    return put.apply(this, args);
+  });
+  try { await expect(admitLocalCounterDay(f.name, f.command)).rejects.toThrow('Synthetic mirror failure'); }
+  finally { spy.mockRestore(); }
+  expect(await f.read()).toEqual(before);
+  await admitLocalCounterDay(f.name, f.command);
+  const after = await f.read();
+  expect(after.trackingValue).toEqual({ ...f.tracking, date: baseline.day, planViewCount: 8, dailyPostponeCount: 2 });
+  expect(after.counterDaySelection.status).toBe('PROJECTED');
+});
+it('never overlays an older pending selection over a newer represented selection', async () => {
+  const f = await fixture();
+  const commands = [f.command, { ...f.command, actionId: crypto.randomUUID(), day: '2026-09-09' },
+    { ...f.command, actionId: crypto.randomUUID(), day: '2026-09-10' }];
+  for (const command of commands) await admitLocalCounterDay(f.name, command);
+  const state = await f.read();
+  expect(projectPendingCounterDays(state, '2026-09-09', new Set([commands[1].actionId]))).toEqual({
+    day: '2026-09-09', selection: { actionId: commands[2].actionId, requestedDay: '2026-09-10', status: 'WAITING_BASELINE' } });
+  expect(projectPendingCounterDays(state, '2026-09-10', new Set([commands[2].actionId]))).toEqual({ day: '2026-09-10', selection: undefined });
 });
 it('rejects restored day evidence with missing identity, duplicate order or substituted pending intent', async () => {
   const f = await fixture(); await admitLocalCounterDay(f.name, f.command);

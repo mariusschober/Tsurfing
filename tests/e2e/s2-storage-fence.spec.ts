@@ -244,3 +244,38 @@ test('business upgrade waits for an older tab and preserves its last committed n
   expect(preserved.value).toEqual([{ id: 'task', description: 'late synthetic final notes' }]);
   expect(preserved.cutover.value).toEqual(preserved.value);
 });
+
+test('offline day intent and unprojected increments survive a real browser restart', async ({ page }) => {
+  await load(page);
+  const saved = await page.evaluate(async () => {
+    const api = window as any; const name = 's2-offline-day-' + crypto.randomUUID();
+    localStorage.setItem('goalflow_active_database_v2', name);
+    const accountId = crypto.randomUUID();
+    const tracking = { date: '2026-09-07', planViewCount: 27, dailyPostponeCount: 3, focusSession: null, unknown: { retained: true } };
+    await api.__s1Storage.set('tracking', accountId, tracking, 'cloud');
+    const day = { schemaVersion: 1, actionId: crypto.randomUUID(), accountId, actorId: 'browser',
+      kind: 'select', day: '2026-09-08', timeZone: 'UTC', capturedAt: '2026-09-08T00:00:00.000Z' };
+    await api.__s2AdmitCounterDay(name, day);
+    const event = { schemaVersion: 1, actionId: crypto.randomUUID(), accountId, actorId: 'browser',
+      day: day.day, timeZone: day.timeZone, capturedAt: day.capturedAt, counter: 'planViewCount', delta: 1, businessActionId: null, correctionOf: null };
+    const result = await api.__s1AdmitCounter(name, event);
+    return { name, accountId, day, event, tracking, result };
+  });
+  expect(saved.result.baselinePending).toBe(true);
+  expect(saved.result.tracking).toEqual(saved.tracking);
+  await page.reload(); await page.waitForFunction(() => Boolean((window as any).__s2AdmitCounterDay));
+  await page.evaluate(() => (window as any).__s1Unmount());
+  const restored = await page.evaluate(async saved => {
+    const api = window as any;
+    const retry = await api.__s1AdmitCounter(saved.name, saved.event);
+    const dayRetry = await api.__s2AdmitCounterDay(saved.name, saved.day);
+    const db = await api.__s1Fence(saved.name);
+    const state = await db.get('causal_actions', saved.accountId); db.close();
+    return { retry, dayRetry, state };
+  }, saved);
+  expect(restored.retry.duplicate).toBe(true); expect(restored.dayRetry.duplicate).toBe(true);
+  expect(restored.state.trackingValue).toEqual(saved.tracking);
+  expect(restored.state.counterBaselines).toBeUndefined();
+  expect(restored.state.counterOutbox).toEqual({ [saved.event.actionId]: saved.event });
+  expect(restored.state.counterDaySelection).toEqual({ actionId: saved.day.actionId, requestedDay: saved.day.day, status: 'WAITING_BASELINE' });
+});

@@ -5,6 +5,7 @@ import App from '../../App';
 import { storageService } from '../../services/storage';
 import { synchronizeCloudOnce } from '../../services/cloudSync';
 import { admitLocalCounter } from '../../services/causalCounterCoordinator';
+import { admitLocalCounterDay } from '../../services/causalCounterDayCoordinator';
 import { admitLocalFocus } from '../../services/causalFocusCoordinator';
 import { fenceLegacyTracking } from '../../services/causalStorage';
 import { fenceLegacyBusinessStores } from '../../services/causalBusinessStorage';
@@ -18,6 +19,7 @@ export const installS1Harness = (root: Root) => {
     __s1Storage: storageService,
     __s1Fence: fenceLegacyTracking,
     __s2FenceBusiness: fenceLegacyBusinessStores,
+    __s2AdmitCounterDay: admitLocalCounterDay,
     __s2BindCapability: bindCausalCapability,
     __s2AdmitCompletion: admitLocalCompletion,
     __s2PrepareCompletion: prepareCompletionRequest,

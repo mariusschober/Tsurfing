@@ -3,6 +3,7 @@ import { openDB } from 'idb';
 import { IDBObjectStore } from 'fake-indexeddb';
 import { expect, it, vi } from 'vitest';
 import { admitLocalCounter } from './causalCounterCoordinator';
+import { admitLocalCounterDay } from './causalCounterDayCoordinator';
 import { CAUSAL_STORE, fenceLegacyTracking } from './causalStorage';
 import { type CounterBaseline, type CounterDelta } from '../src/domain/counterLedger';
 
@@ -59,4 +60,22 @@ it('refuses unexplained baselines and historical replay instead of guessing a de
   await expect(admitLocalCounter(f.name, event, { ...f.baseline, counts: { ...f.baseline.counts, planViewCount: 28 } })).rejects.toThrow('recovery');
   await expect(admitLocalCounter(f.name, event, { ...f.baseline, evidenceIds: [event.actionId] })).rejects.toThrow('Historical');
   expect((await f.read()).generation).toBe(0);
+});
+it('captures unknown-day increments only after durable day admission, without guessing a count', async () => {
+  const f = await fixture(); const event = { ...f.event('planViewCount'), day: '2026-09-08' };
+  await expect(admitLocalCounter(f.name, event)).rejects.toThrow('durable day admission');
+  const command = { schemaVersion: 1 as const, actionId: crypto.randomUUID(), accountId: event.accountId,
+    actorId: event.actorId, kind: 'establish' as const, day: event.day, timeZone: event.timeZone, capturedAt: event.capturedAt };
+  await admitLocalCounterDay(f.name, command);
+  const before = await f.read();
+  await expect(admitLocalCounter(f.name, { ...event, correctionOf: crypto.randomUUID(), delta: -1 })).rejects.toThrow('durable day admission');
+  expect(await f.read()).toEqual(before);
+  const result = await admitLocalCounter(f.name, event);
+  expect(result.baselinePending).toBe(true);
+  expect(result.tracking).toEqual(f.tracking);
+  const state = await f.read();
+  expect(state.counterBaselines).toBeUndefined();
+  expect(state.counterOutbox[event.actionId]).toEqual(event);
+  await admitLocalCounter(f.name, event);
+  expect(await f.read()).toEqual(state);
 });

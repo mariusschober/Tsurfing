@@ -11,7 +11,7 @@ import type { CausalEnrollmentState } from './causalEnrollment';
 import type { CausalReceiptState } from './causalReceipts';
 import type { FocusAccountState, LocalFocusIntent } from './causalFocusCoordinator';
 import type { CounterAccountState } from './causalCounterCoordinator';
-import { validateCounterDayEvidence, type CounterDayAccountState } from './causalCounterDayCoordinator';
+import { projectPendingCounterDays, validateCounterDayEvidence, type CounterDayAccountState } from './causalCounterDayCoordinator';
 import { normalizeSyncMeta, stableJson, type SyncMeta } from './syncProtocol';
 import { parseCausalCompletion } from './causalCompletionProtocol';
 import { assertCompletionCapturesMaterialized, validateCompletionEvidence } from './causalCompletionCoordinator';
@@ -273,7 +273,10 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
       // request has been sent/acknowledged after a restore.
       const events = Object.values(state.counterEvents);
       for (const [id, event] of Object.entries(state.counterEvents)) {
-        if (event.actionId !== id || !state.counterBaselines[event.day]) throw new Error('A local counter has incomplete baseline evidence.');
+        if (event.actionId !== id || (!state.counterBaselines[event.day]
+          && (!Object.values(state.counterDayAdmissions ?? {}).some(a => a.command.day === event.day) || event.correctionOf !== null))) {
+          throw new Error('A local counter has incomplete baseline evidence.');
+        }
       }
       for (const [id, event] of Object.entries(state.counterOutbox ?? {})) {
         if (!same(state.counterEvents[id], event)) throw new Error('A pending counter has no exact durable event.');
@@ -282,8 +285,11 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
         if (baseline.day !== day) throw new Error('A counter baseline has a different day identity.');
         projectCounters(baseline, events);
       }
-      const selected = state.counterBaselines[canonical.tracking.date];
+      const dayProjection = projectPendingCounterDays(state, canonical.tracking.date, new Set(Object.keys(canonical.receipts)));
+      const selected = state.counterBaselines[dayProjection.day];
       if (!selected) throw new Error('The selected counter day has no baseline.');
+      if (dayProjection.selection) state.counterDaySelection = dayProjection.selection;
+      else delete state.counterDaySelection;
       let focus = canonical.focus;
       const tasks = needsCompletion ? values.tasks : await readCausalBusiness(tx, 'tasks', accountId);
       for (const command of orderedPendingFocus(state, canonical.receipts)) {
@@ -303,7 +309,7 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
         focus = result.journal;
         if (!result.outcome.accepted) reviews[id] = { code: result.outcome.code };
       }
-      const next: Record<string, any> = { ...state.trackingValue, date: canonical.tracking.date, ...projectCounters(selected, events) };
+      const next: Record<string, any> = { ...state.trackingValue, date: dayProjection.day, ...projectCounters(selected, events) };
       if (focus.currentSessionId) next.focusSession = focus.sessions[focus.currentSessionId].projection;
       else if (Object.hasOwn(canonical.tracking, 'focusSession')) next.focusSession = canonical.tracking.focusSession;
       else delete next.focusSession;

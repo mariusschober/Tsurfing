@@ -179,3 +179,44 @@ it('reads newer local admissions after asynchronous history verification without
     const state = await f.read(); expect(state.trackingValue.planViewCount).toBe(29); expect(state.counterOutbox[event.actionId]).toEqual(event);
   } finally { release(); spy.mockRestore(); }
 });
+
+it('retains new-day offline deltas, waits to send, and projects them once after verified day history', async () => {
+  const f = await fixture();
+  const day = { schemaVersion: 1 as const, actionId: crypto.randomUUID(), accountId: f.accountId,
+    actorId: 'tab', kind: 'select' as const, day: '2026-09-09', timeZone: 'UTC', capturedAt: '2026-09-09T00:00:00.000Z' };
+  await admitLocalCounterDay(f.name, day);
+  const a = { ...f.event(), day: day.day }, b = { ...f.event('dailyPostponeCount'), day: day.day };
+  expect((await admitLocalCounter(f.name, a)).baselinePending).toBe(true);
+  expect((await admitLocalCounter(f.name, b)).baselinePending).toBe(true);
+  expect((await admitLocalCounter(f.name, a)).duplicate).toBe(true);
+  const counterOp = { schemaVersion: 2, epoch: f.epoch, type: 'counter', command: a };
+  await expect(prepareCausalRequest(f.name, f.accountId, counterOp)).rejects.toThrow('verified day baseline');
+  await applyDownloadedCausalHistory(f.name, f.accountId);
+  let state = await f.read();
+  expect(state.trackingValue).toEqual(f.tracking);
+  expect(state.counterDaySelection).toEqual({ actionId: day.actionId, requestedDay: day.day, status: 'WAITING_BASELINE' });
+  expect(state.counterEvents[a.actionId]).toEqual(a);
+  expect(state.causalRequests?.[a.actionId]).toBeUndefined();
+  const operation = { schemaVersion: 2, epoch: f.epoch, type: 'counterDay', command: day };
+  await prepareCausalRequest(f.name, f.accountId, operation);
+  const baseline = { ...f.baseline, day: day.day, baselineId: crypto.randomUUID(), counts: { planViewCount: 0, dailyPostponeCount: 0 }, evidenceIds: [f.epoch] };
+  const payload = { ...f.tracking, date: day.day, ...baseline.counts };
+  f.receipts.push({ schemaVersion: 2, epoch: f.epoch, projectionRevision: 1, accepted: true, operation, baseline,
+    counts: baseline.counts, record: { ...f.receipts[0].record, payload } });
+  await f.save(); await applyDownloadedCausalHistory(f.name, f.accountId);
+  state = await f.read();
+  expect(state.trackingValue).toEqual({ ...payload, planViewCount: 1, dailyPostponeCount: 1 });
+  expect(state.counterDaySelection).toBeUndefined();
+  expect(state.counterDayOutbox).toEqual({});
+  const bytes = await prepareCausalRequest(f.name, f.accountId, counterOp);
+  f.receipts.push({ schemaVersion: 2, epoch: f.epoch, projectionRevision: 2, accepted: true, operation: counterOp,
+    outcome: { accepted: true, code: 'APPLIED', day: day.day, counts: { planViewCount: 1, dailyPostponeCount: 0 } },
+    record: { ...f.receipts[0].record, payload: { ...payload, planViewCount: 1 } } });
+  await f.save(); await applyDownloadedCausalHistory(f.name, f.accountId);
+  state = await f.read();
+  expect(state.trackingValue).toEqual({ ...payload, planViewCount: 1, dailyPostponeCount: 1 });
+  expect(state.counterOutbox[a.actionId]).toBeUndefined();
+  expect(state.counterOutbox[b.actionId]).toEqual(b);
+  expect(state.causalRequests[a.actionId]).toBe(bytes);
+  expect((await applyDownloadedCausalHistory(f.name, f.accountId)).duplicate).toBe(true);
+});
