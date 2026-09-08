@@ -155,6 +155,21 @@ class NativeSyncEngine(
 
     suspend fun synchronize(): SyncResult = synchronizationMutex.withLock { synchronizeOnce() }
 
+    /** Explicit evidence entrypoint until native projection/capture integration
+     * is complete. Reuses the production account and in-flight session checks. */
+    suspend fun synchronizeCausalEvidence(): NativeCausalEvidenceResult = synchronizationMutex.withLock {
+        withContext(Dispatchers.IO) {
+            require(cloudAvailable()) { "Cloud synchronization is unavailable." }
+            val session = sessionProvider.read() ?: throw AuthenticationExpiredDuringSync()
+            if (session.expiresAtMillis <= System.currentTimeMillis() + 60_000L) throw AuthenticationExpiredDuringSync()
+            val accountId = verifiedUserId(session)
+            repository.bindSyncAccount(accountId)
+            NativeCausalEvidenceSync(repository.causalEnrollmentStore, repository.causalHistoryStore) { path, method, body ->
+                requestForSession(session, path, method, body)
+            }.synchronize(accountId)
+        }
+    }
+
     private suspend fun synchronizeOnce(): SyncResult = withContext(Dispatchers.IO) {
         if (!cloudAvailable()) return@withContext SyncResult.Skipped
         val session = sessionProvider.read() ?: return@withContext SyncResult.Skipped

@@ -167,6 +167,7 @@ object NativeCausalJournal {
             NativeSavedCausalHistory.validate(account.accountId, history)
             if (history.getLong("downloadedRevision") >= 0) NativeCausalReplay.replay(account.accountId, history)
         }
+        NativeCausalEnrollmentProtocol.validate(account.accountId, state)
         return state
     }
 

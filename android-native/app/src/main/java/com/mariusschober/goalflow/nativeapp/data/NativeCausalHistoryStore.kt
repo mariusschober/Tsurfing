@@ -43,6 +43,15 @@ object NativeSavedCausalHistory {
 }
 
 class NativeCausalHistoryStore(private val database: GoalflowDatabase) {
+    suspend fun resumeOrBegin(accountId: String, epoch: String, throughRevision: Long) {
+        val previous = database.withTransaction {
+            val (_, state) = state(accountId)
+            state.optJSONObject("causalHistory")?.let { JSONObject(it.toString()) }
+        }
+        if (previous == null) begin(accountId, epoch, throughRevision)
+        else require(previous.opt("epoch") == epoch && previous.getLong("throughRevision") <= throughRevision) { "The history frontier cannot be rewound." }
+    }
+
     private suspend fun state(accountId: String): Pair<CausalAccountEntity, JSONObject> {
         require(database.localAccountDao().get()?.userId == accountId) { "History account differs from the bound database." }
         val entity = database.causalAccountDao().get(accountId) ?: error("Causal account preparation is required.")
@@ -59,6 +68,7 @@ class NativeCausalHistoryStore(private val database: GoalflowDatabase) {
         history.put("throughRevision", throughRevision)
         NativeSavedCausalHistory.validate(accountId, history)
         state.put("causalHistory", history)
+        NativeCausalEnrollmentProtocol.validate(accountId, state)
         check(database.causalAccountDao().update(entity.copy(payload = state.toString())) == 1)
     }
 

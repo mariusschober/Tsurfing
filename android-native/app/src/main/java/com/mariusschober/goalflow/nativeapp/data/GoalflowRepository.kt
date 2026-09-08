@@ -130,6 +130,8 @@ class GoalflowRepository(
     private val accounts = database.localAccountDao()
     private val causalAccounts = database.causalAccountDao()
     private val causalStore = NativeCausalStore(database, deviceId)
+    internal val causalEnrollmentStore = NativeCausalEnrollmentStore(database)
+    internal val causalHistoryStore = NativeCausalHistoryStore(database)
 
     suspend fun prepareCausalAccount(userId: String): CausalAccountEntity =
         causalStore.enable(userId, timeProvider.today().toString())
