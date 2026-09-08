@@ -2,7 +2,7 @@
 
 Stage acceptance: **BLOCKED — implementation continues. S3 is not permitted.**
 
-Latest tested source: `6e15682d89089d974c6b5f98ca53deaed53e4bd8`. Native authenticated enrollment/history orchestration: **PASS_LOCAL** (171 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release gate passed). Native projection/acknowledgment, UI/completion, macOS and recovery remain incomplete. S3 remains blocked.
+Latest tested source: `1037020629840bd6b69f7912bd855c49399dd078`. Native atomic projection application and exact applied-receipt retirement: **PASS_LOCAL** (184 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release verification passed). Native action-loop/UI activation, atomic completion members, macOS and legacy recovery remain incomplete. S3 remains blocked.
 
 S1's tested commit `09245261b6174ec878f0296ca61682c603f54304` is integrated.
 S1.2 correction `262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d` is integrated;
@@ -668,3 +668,16 @@ Four production-engine/Room tests with a synthetic HTTP backend prove lost-respo
 `replayAt` reconstructs an earlier downloaded revision after newer entries arrive, without changing retained history. The complete saved envelope remains checksum/receipt validated. Regression tests prove that an active earlier basis remains distinct from later completion, returned objects cannot mutate retained evidence, and undownloaded revisions or damaged later bytes are rejected. This supports the pending admission-timeline integration; it does not yet apply history to Room.
 
 PASS_LOCAL: native unit/lint/debug-build command recorded in the handover exited 0: 173 tests passed, one hosted test skipped. Room hashes 9, identifiers 24 and diff checks passed. Evidence: `evidence/s2-native-basis-android.log`. No schema migration, installation or deployment. S2 and S3 acceptance remain blocked by the incomplete integration listed above.
+
+
+## Native projection and receipt checkpoint `1037020629840bd6b69f7912bd855c49399dd078`
+
+Room now commits verified protected tracking, focus, selected-day state and the observed server revision as one transaction. A contiguous local timeline replays admissions around those applied revisions. Earlier accepted commands retain their original parents and outcomes even when a newer server transition makes their pending overlay stale. New actions use the actual resulting parent. Missing task eligibility or day baselines produce retained reviews, and ordinary unknown tracking fields survive.
+
+Counter projection unions exact logical identities: a server-represented local increment appears once, independent pending increments remain visible, and delayed days retain their own attribution. Newly established days can project earlier pending events without changing their original admission outcomes. A fresh local store keeps its empty defaults separately while applying a verified existing server baseline.
+
+The request journal saves immutable wire bytes before transport. Receipt capture alone cannot retire a command ahead of its applied history. Application can recover an exact lost response from history, retains rejected commands, and retires accepted commands only with the original request and exact matching applied receipt. Receipt-only changes at an already applied revision do not manufacture another local projection generation. Original ordinary outbox entries and cursors remain unchanged.
+
+Eleven Room regression tests cover deduplication, actual-parent admission after stale overlay, encrypted evidence retention, failed mirror rollback, accepted-completion deferral, unknown-day establishment, task deletion, future receipt retention, lost-response recovery, rejected receipt immutability and late proof retirement. Full native verification exited 0: 184 passed, one hosted test skipped; lint and production-debug build passed. Full repository release verification exited 0: 719 passed. Room hashes 9, identifiers 24 and diff checks passed. Logs: `evidence/s2-native-projection-android.log`, `evidence/s2-native-projection-release.log`; APK checksum is in the JSON handover.
+
+The new repository application entrypoint remains explicit. Authenticated action-loop integration and UI activation remain outstanding. Accepted completion history fails before any projection write until its native task/notes/effect members can be applied atomically. This checkpoint is not full S2 acceptance, hosted proof or installed-app proof.

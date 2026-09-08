@@ -289,3 +289,10 @@ Android now has an explicit evidence sync entrypoint using the production sessio
 ## Retained native admission bases
 
 Local admissions must remain verifiable against the server revision visible when they were captured. Native replay can reconstruct that earlier prefix after history grows, without slicing or rewriting stored evidence. A requested revision must already be downloaded; all retained envelope checksums and receipt structures are still validated. The upcoming admission timeline must record projection transitions between local commands and preserve original outcomes rather than replacing them with later server outcomes.
+
+
+## Native applied-history timeline and receipt boundary
+
+Each applied history basis has a local sequence, immutable account epoch, server revision and captured eligibility evidence for pending focus tasks. These entries share the local generation sequence with admissions. Validation replays the original cutover, each original command/outcome and intervening verified history prefixes, then compares protected projections. A newer server result changes the pending overlay and review, never the original admission outcome. Historical task eligibility remains reconstructible from the recorded projection event.
+
+Ordinary counter events are unioned by exact action identity over verified day baselines. An unestablished day remains retained with BASELINE_REQUIRED; a pending selection cannot relabel another day's counts. Request preparation requires an applied account baseline, and counter preparation additionally requires its verified day baseline. Exact receipt proof and matching applied history jointly authorize outbox retirement. Merely downloading or receiving a receipt never advances the ordinary sync cursor. All accepted completion member application remains gated until its native business transaction is implemented.
