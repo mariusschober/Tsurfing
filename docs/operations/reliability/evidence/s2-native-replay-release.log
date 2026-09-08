@@ -1,0 +1,128 @@
+
+> tsurfing@0.4.0-beta.1 verify:release
+> npm run lint && npm test && npm run build && npm run verify:server && npm run verify:maintenance && npm run verify:client-secrets && npm run verify:client-artifacts
+
+
+> tsurfing@0.4.0-beta.1 lint
+> tsc --noEmit
+
+
+> tsurfing@0.4.0-beta.1 test
+> vitest run
+
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+macOS bundle key gate failed: a current server-only Supabase key reached the application bundle
+macOS bundle key gate failed: the configured legacy JWT is not an anonymous client key
+macOS bundle key gate failed: the configured key is neither publishable nor a legacy JWT
+macOS bundle key gate failed: the public key could not be read from the application Info.plist
+
+ Test Files  105 passed (105)
+      Tests  719 passed (719)
+   Start at  09:10:01
+   Duration  8.75s (transform 2.76s, setup 0ms, import 8.05s, tests 18.70s, environment 6ms)
+
+
+> tsurfing@0.4.0-beta.1 build
+> npm run build:client && npm run build:mini && npm run build:server && npm run verify:client-secrets && npm run verify:client-artifacts
+
+
+> tsurfing@0.4.0-beta.1 build:client
+> vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 383 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/manifest.webmanifest                                    1.04 kB
+dist/client/index.html                                              1.27 kB │ gzip:   0.57 kB
+dist/client/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2     10.25 kB
+dist/client/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2      11.23 kB
+dist/client/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2       18.75 kB
+dist/client/assets/inter-greek-wght-normal-CkhJZR-_.woff2          19.00 kB
+dist/client/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2   25.96 kB
+dist/client/assets/inter-latin-wght-normal-Dx4kXJAl.woff2          48.26 kB
+dist/client/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2      85.07 kB
+dist/client/assets/vendor-CJjU_8H4.css                              2.03 kB │ gzip:   0.60 kB
+dist/client/assets/index-CapweFxC.css                             118.30 kB │ gzip:  17.30 kB
+dist/client/assets/GamificationView-TdA-hvFg.js                    22.94 kB │ gzip:   4.54 kB
+dist/client/assets/SettingsModal-DBBb9Yf2.js                       25.63 kB │ gzip:   5.47 kB
+dist/client/assets/StatsView-DN5Vd_Ie.js                           38.57 kB │ gzip:   7.66 kB
+dist/client/assets/drag-and-drop-DE_GFD0B.js                       95.64 kB │ gzip:  29.81 kB
+dist/client/assets/GoalsView-CeSsT2LB.js                          107.61 kB │ gzip:  16.71 kB
+dist/client/assets/vendor-DuMSJhSS.js                             232.08 kB │ gzip:  67.52 kB
+dist/client/assets/react-ChIBbzMz.js                              340.70 kB │ gzip: 104.19 kB
+dist/client/assets/index-Ck_5BBHm.js                              659.84 kB │ gzip: 143.32 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.58s
+
+PWA v1.3.0
+mode      generateSW
+precache  18 entries (1606.07 KiB)
+files generated
+  dist/client/sw.js
+  dist/client/workbox-2cde83c0.js
+
+> tsurfing@0.4.0-beta.1 build:mini
+> vite build --config vite.mini.config.ts
+
+vite v6.4.3 building for production...
+transforming...
+✓ 27 modules transformed.
+rendering chunks...
+computing gzip size...
+../dist/mini/index.html                   0.54 kB │ gzip:  0.32 kB
+../dist/mini/assets/index-Bf3Wux0j.css    1.25 kB │ gzip:  0.60 kB
+../dist/mini/assets/index-CUE6mK-W.js   152.60 kB │ gzip: 49.36 kB
+✓ built in 535ms
+
+> tsurfing@0.4.0-beta.1 build:server
+> esbuild server/index.ts server/maintenance.ts --bundle --platform=node --format=esm --packages=external --outdir=dist/server --out-extension:.js=.mjs
+
+
+  dist/server/index.mjs        208.0kb
+  dist/server/maintenance.mjs   18.6kb
+
+⚡ Done in 18ms
+
+> tsurfing@0.4.0-beta.1 verify:client-secrets
+> node scripts/scan-client-secrets.mjs
+
+Client secret scan passed across 30 built files.
+
+> tsurfing@0.4.0-beta.1 verify:client-artifacts
+> node scripts/verify-client-artifacts.mjs
+
+{"status":"PASS","manifest":{"name":"Tsurfing","short_name":"Tsurfing","display":"standalone","start_url":"/","scope":"/"},"requiredIcons":2,"telegramMiniApp":"secure-cookie-and-wake-relay","javascriptFiles":11,"testBackdoors":"absent"}
+
+> tsurfing@0.4.0-beta.1 verify:server
+> node scripts/verify-production.mjs
+
+{"level":"error","event":"server.production_configuration_invalid","problems":["supabase_url_missing","supabase_public_key_missing","supabase_server_key_missing","owner_user_id_missing"]}
+{"level":"info","event":"server.started","host":"127.0.0.1","port":54173,"environment":"production"}
+{"timestamp":"2026-09-08T08:10:16.658Z","level":"info","event":"http.request","requestId":"ae4a4caa-8f24-45e5-aba9-41f35c9df35c","method":"GET","path":"/api/v1/health/live","status":200,"durationMs":8}
+{"timestamp":"2026-09-08T08:10:16.665Z","level":"info","event":"http.request","requestId":"f179cc12-f3d6-44fe-aff6-2066d23ce494","method":"GET","path":"/api/v1/health/ready","status":503,"durationMs":1}
+{"timestamp":"2026-09-08T08:10:16.667Z","level":"info","event":"http.request","requestId":"0661929a-baaf-435b-913d-bb6dcc721a07","method":"GET","path":"/api/v1/health","status":503,"durationMs":1}
+{"status":"ok","contract":"production-fails-closed"}
+{"level":"info","event":"server.stopping","signal":"SIGTERM"}
+
+> tsurfing@0.4.0-beta.1 verify:maintenance
+> node scripts/verify-maintenance.mjs
+
+{"status":"ok","contract":"maintenance-fails-closed"}
+
+> tsurfing@0.4.0-beta.1 verify:client-secrets
+> node scripts/scan-client-secrets.mjs
+
+Client secret scan passed across 30 built files.
+
+> tsurfing@0.4.0-beta.1 verify:client-artifacts
+> node scripts/verify-client-artifacts.mjs
+
+{"status":"PASS","manifest":{"name":"Tsurfing","short_name":"Tsurfing","display":"standalone","start_url":"/","scope":"/"},"requiredIcons":2,"telegramMiniApp":"secure-cookie-and-wake-relay","javascriptFiles":11,"testBackdoors":"absent"}

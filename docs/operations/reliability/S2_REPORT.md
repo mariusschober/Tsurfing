@@ -2,7 +2,7 @@
 
 Stage acceptance: **BLOCKED — implementation continues. S3 is not permitted.**
 
-Latest tested source: `c8f8c7a93c7d4c4109a714319e7a6fb3d2d9916e`. Native resumable causal history: **PASS_LOCAL** (163 native tests passed, one hosted test skipped; lint/debug build passed; 716 Web/server tests and release gate passed). History projection replay, atomic acknowledgment, native completion/UI and macOS integration remain incomplete. S3 remains blocked.
+Latest tested source: `01acdbaa31cff8bc204ff27c5fd62b8d2f46b218`. Native causal replay: **PASS_LOCAL** (167 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release gate passed). Native projection application and exact acknowledgment, UI/completion integration, macOS and recovery remain incomplete. S3 remains blocked.
 
 S1's tested commit `09245261b6174ec878f0296ca61682c603f54304` is integrated.
 S1.2 correction `262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d` is integrated;
@@ -645,3 +645,12 @@ Android validates 49152-byte chunks with fixed account/epoch/revision/frontier/o
 Room stores partial chunks and exact complete entry bodies. It revalidates saved evidence on read/import, requires consecutive revisions, and cannot replace a pinned partial manifest. A failed commit leaves download position unchanged. Download never changes tracking, ordinary cursors or pending commands. Tests exercise actual Room resume, failed commit, encrypted backup retention and missing-entry corruption, plus shared cutover/focus/counter/day/completion fixtures and multibyte chunk assembly.
 
 Full native command `env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true` exited 0: 163 passed, one hosted test skipped; lint/debug build passed. `npm run verify:release` exited 0 with 716 passed tests. Room hashes 9 and identifiers 24 passed. Evidence: `evidence/s2-native-history-android.log`, `evidence/s2-native-history-release.log`. Automatic enrollment/download integration, authoritative replay and exact receipt retirement remain required; no hosted or installed-app acceptance is claimed.
+
+
+## Native replay checkpoint `01acdbaa31cff8bc204ff27c5fd62b8d2f46b218`
+
+Native replay now reconstructs the complete downloaded prefix from cutover through focus, counter, day and completion operations. It compares derived outcomes/protected projections and rejects duplicate action/member identities, rewritten baselines and invented increments. Room checks this replay before advancing a completed download revision and when reopening/importing retained history. A correctly hashed but counter-inconsistent entry leaves the prior Room journal and download position intact. Projection application and queue retirement are still separate unfinished work.
+
+Review also closed a Web replay gap: a new day baseline could reuse the cutover, another baseline or an accepted completion member identity. Web and Android now reject these collisions; a shared fixture specifically covers cutover reuse. Shared sequential history proves consistent counter/focus/completion/day reconstruction.
+
+Final native command `env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true`: exit 0, 167 passed, one hosted test skipped; lint/debug build passed. `env VERIFY_PORT=54173 npm run verify:release`: exit 0, 719 tests passed. The default-port run failed liveness because port 4173 served an unrelated Python HTTP 404; it was left untouched. Room hashes 9 and identifiers 24 passed. Evidence: `evidence/s2-native-replay-android.log`, `evidence/s2-native-replay-release.log`. No deployment or installation occurred.

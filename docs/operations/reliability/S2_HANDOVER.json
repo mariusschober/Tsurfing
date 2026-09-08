@@ -2962,6 +2962,77 @@
         "macOS end-to-end causal integration and comprehensive recovery acceptance remain incomplete."
       ],
       "permittedNextStage": "Continue S2; S3 blocked"
+    },
+    {
+      "commit": "01acdbaa31cff8bc204ff27c5fd62b8d2f46b218",
+      "scope": "Native full-prefix replay before history progress; Web and native baseline identity collision rejection",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalHistoryStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalReplay.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalStore.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalHistoryProtocolTest.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalReplayTest.kt",
+        "services/causalProjection.ts",
+        "services/causalReplayFixtures.test.ts",
+        "tests/fixtures/s2/history-replay-v2.json"
+      ],
+      "findingIds": [
+        "S2-NATIVE-REPLAY",
+        "S2-BASELINE-IDENTITY-REUSE"
+      ],
+      "commands": [
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": {
+            "passed": 167,
+            "failed": 0,
+            "skipped": 1
+          },
+          "skipped": "hostedBrowserRecordConvergesThroughProductionTransport"
+        },
+        {
+          "command": "env VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "tests": {
+            "passed": 719,
+            "failed": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "command": "npm run verify:room-hashes && npm run verify:identifiers",
+          "exitCode": 0,
+          "checked": [
+            9,
+            24
+          ]
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Existing private journal/history shapes remain unchanged. Invalid baseline identity reuse now fails closed on Web and Android. No projection or queue activation.",
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-replay-android.log",
+          "sha256": "b89e45261b97f05546ccf96ae6ba66d9ab14c74c0c8d7523dbaaacd0b0b26902"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-replay-release.log",
+          "sha256": "90745428f24672b87cac5df22fe6431ee1dded02cf235c1e033724f13f94b65e"
+        }
+      ],
+      "failedApproaches": [
+        "Initial sequential completion fixture used the pre-completion anchor; corrected to the existing transition model after both replay implementations rejected it.",
+        "Imported fixture schemaVersion inferred as number; added the SavedCausalHistory type while retaining runtime validation.",
+        "Default-port release run passed all 719 tests but liveness failed. An isolated reproduction returned Python SimpleHTTP 404 on port 4173. Left that server untouched; unchanged gate passed using supported VERIFY_PORT=54173."
+      ],
+      "blockers": [
+        "Native capability/enrollment and projection application with exact acknowledgment remain incomplete.",
+        "Native causal business completion/UI and macOS integration remain incomplete.",
+        "Divergent legacy recovery and comprehensive mixed-version acceptance remain incomplete."
+      ],
+      "permittedNextStage": "Continue S2; S3 blocked"
     }
   ],
   "findings": [
