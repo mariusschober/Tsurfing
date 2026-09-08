@@ -116,6 +116,9 @@ class NativeCausalRequestStore(private val database: GoalflowDatabase) {
             for (id in pending.keys()) {
                 if (state.optJSONObject("causalReceipts")?.has(id) == true) continue
                 val command = pending.getJSONObject(id)
+                // Completion uses its member reservations and staged action
+                // transport; it must never enter the ordinary focus endpoint.
+                if (command.opt("kind") == "complete") continue
                 if (pendingKey == "counterOutbox" && !canonical.baselines.has(command.getString("day"))) continue
                 if (pendingKey == "focusOutbox" && state.optJSONObject("causalProjectionReviews")?.optJSONObject(id)?.opt("code") == "TASK_REVIEW_REQUIRED") continue
                 candidates.add(state.getJSONObject(admissionKey).getJSONObject(id).getLong("sequence") to id)

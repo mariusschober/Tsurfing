@@ -101,6 +101,7 @@ object NativeCausalJournal {
         NativeCausalEnrollmentProtocol.validate(account.accountId, state)
         NativeCausalRequestJournal.validate(account.accountId, state)
         NativeCompletionApplicationEvidence.validate(state)
+        NativeCompletionAdmissionEvidence.validate(account.accountId, state)
         NativeLegacyReceiptEvidence.validate(account.accountId, state)
         return state
     }
@@ -166,7 +167,17 @@ class NativeCausalStore(private val database: GoalflowDatabase, private val acto
         entity
     }
 
-    suspend fun admitFocus(accountId: String, captured: NativeFocusIntent): NativeCausalAdmission {
+    suspend fun admitFocus(accountId: String, captured: NativeFocusIntent): NativeCausalAdmission =
+        admitFocus(accountId, captured, null, null)
+
+    internal suspend fun admitCompletion(accountId: String, captured: NativeFocusIntent, details: NativeCompletionDetails,
+        effects: suspend (JSONObject, JSONObject) -> JSONObject): NativeCausalAdmission {
+        require(captured.kind == "complete") { "Completion requires a completion intent." }
+        return admitFocus(accountId, captured, details.json(), effects)
+    }
+
+    private suspend fun admitFocus(accountId: String, captured: NativeFocusIntent, details: JSONObject?,
+        effects: (suspend (JSONObject, JSONObject) -> JSONObject)?): NativeCausalAdmission {
         val intent = captured.json(accountId, actorId)
         return database.withTransaction {
             bound(accountId)
@@ -182,9 +193,11 @@ class NativeCausalStore(private val database: GoalflowDatabase, private val acto
             require(state.optJSONObject("counterDayAdmissions")?.has(captured.actionId) != true) { "The action identity is already a day command." }
             admissions.optJSONObject(captured.actionId)?.let { prior ->
                 require(ActionJson.canonical(prior.getJSONObject("intent")) == ActionJson.canonical(intent)) { "The focus action identity has different intent." }
+                require(ActionJson.canonical(state.optJSONObject("completionAdmissions")?.optJSONObject(captured.actionId)?.opt("details"))
+                    == ActionJson.canonical(details)) { "The completion action identity has different final details." }
                 return@withTransaction NativeCausalAdmission(state.getJSONObject("tracking").toString(), prior.getJSONObject("outcome").toString(), true, state.getLong("generation"))
             }
-            require(captured.kind != "complete") { "Completion requires the atomic task-and-notes coordinator." }
+            require((captured.kind == "complete") == (details != null && effects != null)) { "Completion requires the atomic task-and-notes coordinator." }
             val task = database.taskDao().get(captured.taskId)
             require(task != null && task.deletedAt == null
                 && (captured.kind !in setOf("start", "resume", "extendAndResume") || task.status == TaskStatus.OPEN.name)) {
@@ -202,6 +215,15 @@ class NativeCausalStore(private val database: GoalflowDatabase, private val acto
             val command = JSONObject(intent.toString()).put("expectedRevision", parent?.opt("revision") ?: JSONObject.NULL)
                 .put("epoch", if (captured.kind == "start") captured.actionId else parent?.opt("epoch") ?: captured.sessionId)
             val result = CausalFocus.apply(focus, command)
+            if (details != null) {
+                val capability = NativeCausalEnrollmentProtocol.capability(accountId, state.getJSONObject("causalCapability"))
+                require(capability.getBoolean("enrolled")) { "Completion requires the established account epoch." }
+                val completion = if (result.outcome.getBoolean("accepted")) requireNotNull(effects).invoke(state, command)
+                    else JSONObject().put("members", JSONArray()).put("dependencies", JSONObject()).put("preimages", JSONObject())
+                completion.put("details", details).put("epoch", capability.getString("epoch"))
+                val entries = state.optJSONObject("completionAdmissions") ?: JSONObject()
+                entries.put(captured.actionId, completion); state.put("completionAdmissions", entries)
+            }
             val generation = state.getLong("generation") + 1
             require(generation <= ActionJson.MAX_SAFE_INTEGER) { "Local causal generation exhausted." }
             admissions.put(captured.actionId, JSONObject().put("intent", intent).put("command", command)

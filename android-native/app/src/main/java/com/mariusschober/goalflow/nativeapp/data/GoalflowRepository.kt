@@ -169,6 +169,82 @@ class GoalflowRepository(
         return result
     }
 
+    suspend fun admitCausalCompletion(userId: String, intent: NativeFocusIntent, details: NativeCompletionDetails): NativeCausalAdmission {
+        val result = causalStore.admitCompletion(userId, intent, details) { state, command ->
+            val task = tasks.get(intent.taskId) ?: error("The completion task is missing.")
+            require(task.status == TaskStatus.OPEN.name && task.deletedAt == null) { "The completion task is no longer open." }
+            val targets = mutableListOf("tasks" to task.id, "stats" to "singleton", "progress" to "singleton")
+            task.goalId?.let { targets.add("goals" to it) }; task.habitId?.let { targets.add("habits" to it) }
+            val preimages = JSONObject()
+            for ((type, id) in targets) {
+                require(conflicts.getUnresolved(type, id) == null) { "Resolve the affected entity conflict before completion. Final notes remain available to retry." }
+                val payload = causalBusinessPayload(type, id)
+                require(payload != null || type in setOf("stats", "progress") && syncMeta.get(syncMetaKey(type, id)) == null) {
+                    "A completion effect is missing its original state."
+                }
+                if (payload != null) nativeCausalBusinessPayload(type, payload)
+                preimages.put("$type:$id", payload ?: JSONObject.NULL)
+            }
+            // The legacy completion path tolerates malformed optional state.
+            // Atomic causal completion must award every required effect or none.
+            val stats = rawCollections.get("stats")
+            require(stats?.deletedAt == null && rawCollections.get("progress")?.deletedAt == null) { "Deleted completion effects require recovery." }
+            val root = stats?.let { JSONObject(it.payload) } ?: JSONObject()
+            val day = if (root.has("tasksCompleted") || root.has("frogsEaten")) root else {
+                require(!root.has(details.day) || root.opt(details.day) is JSONObject) { "Invalid completion day statistics." }
+                root.optJSONObject(details.day) ?: JSONObject()
+            }
+            val extras = JSONObject(task.extraJson)
+            val duration = details.actualDuration?.toLong() ?: (if (extras.has("actualDuration")) ActionJson.integer(extras.opt("actualDuration"))
+                else if (extras.has("duration")) ActionJson.integer(extras.opt("duration")) else 0L)
+            require(duration != null && duration in 0..Int.MAX_VALUE.toLong()) { "Invalid completion duration." }
+            for ((key, delta) in listOf("tasksCompleted" to 1L, "frogsEaten" to if (task.isFrog) 1L else 0L, "timeFocused" to duration)) {
+                val value = if (day.has(key)) ActionJson.integer(day.opt(key)) else 0L
+                require(value != null && value in 0..Int.MAX_VALUE.toLong() - delta) { "Completion statistics require recovery." }
+            }
+            val progress = rawCollections.get("progress")?.let { JSONObject(it.payload) }
+            if (progress != null) {
+                require(ActionJson.integer(progress.opt("level"))?.let { it in 1..1_000_000 } == true
+                    && ActionJson.integer(progress.opt("xp"))?.let { it in 0..Int.MAX_VALUE.toLong() } == true) { "Invalid completion progress." }
+            }
+            task.goalId?.let { require(goals.get(it)!!.completedTasks in 0 until Int.MAX_VALUE) { "Invalid goal completion count." } }
+            task.habitId?.let { val habit = habits.get(it)!!
+                require(habit.streak in 0..((Int.MAX_VALUE - 200) / 2) && habit.bestStreak >= 0) { "Invalid habit completion count." } }
+            val before = outbox.getAll().associateBy { it.mutationId }
+            check(completeTaskInTransaction(task.id, details.actualDuration, details.flowState, details.finalDescription,
+                completionAt = Instant.parse(intent.capturedAt), completionDay = details.day, exactNotes = true,
+                completionMetadata = JSONObject().put("source", "android").put("actionId", intent.actionId)
+                    .put("timeZone", details.timeZone).put("actualDuration", duration)))
+            val generated = outbox.getAll().filter { it.mutationId !in before }
+            require(generated.map { it.entityType }.toSet() == targets.map { it.first }.toSet() + "task_events"
+                && generated.size == targets.size + 1 && generated.all { it.attemptedAt == null }) { "Completion effects were not captured atomically." }
+            require(before.all { (id, original) -> outbox.get(id) == original }) { "Completion changed an existing queued request." }
+            val members = JSONArray(); val dependencies = JSONObject()
+            for (row in generated) {
+                val previous = before.values.filter { it.entityType == row.entityType && it.entityId == row.entityId }.maxByOrNull { it.version }
+                val reserved = NativeCompletionAdmissionEvidence.reserved(state, row.entityType, row.entityId)
+                require(previous == null || reserved == null || previous.version != reserved.second.getLong("version")) { "Ambiguous completion predecessor." }
+                val dependency = if (reserved != null && (previous == null || reserved.second.getLong("version") > previous.version))
+                    JSONObject().put("kind", "completion").put("actionId", reserved.first).put("request", JSONObject(reserved.second.toString()))
+                else previous?.let { JSONObject().put("kind", "legacy").put("request", NativeLegacyReceiptEvidence.queued(it)) }
+                val member = NativeCompletionAdmissionEvidence.member(row.copy(updatedAt = command.getString("capturedAt"),
+                    baseServerVersion = if (dependency != null) null else row.baseServerVersion))
+                members.put(member)
+                if (dependency != null) dependencies.put(row.mutationId, dependency)
+                if (row.entityType == "task_events") preimages.put("task_events:${row.entityId}", JSONObject.NULL)
+                if (row.entityType in setOf("stats", "progress")) rawCollections.get(row.entityType)?.let {
+                    rawCollections.insert(it.copy(updatedAt = command.getString("capturedAt")))
+                }
+            }
+            // Only newly generated, never-attempted rows move into the durable
+            // completion admission in this same Room transaction.
+            generated.forEach { outbox.delete(it.mutationId) }
+            JSONObject().put("members", members).put("dependencies", dependencies).put("preimages", preimages)
+        }
+        onMutation()
+        return result
+    }
+
     suspend fun admitCausalCounter(userId: String, intent: NativeCounterIntent): NativeCausalAdmission {
         val result = causalStore.admitCounter(userId, intent)
         onMutation()
@@ -438,14 +514,16 @@ class GoalflowRepository(
 
     private suspend fun completeTaskInTransaction(
         id: String, actualDuration: Int?, flowState: String?, finalDescription: String?,
-        expectedWidgetTarget: NativeWidgetTarget? = null
+        expectedWidgetTarget: NativeWidgetTarget? = null,
+        completionAt: Instant? = null, completionDay: String? = null, exactNotes: Boolean = false,
+        completionMetadata: JSONObject = JSONObject()
     ): Boolean {
         val task = tasks.getAll().firstOrNull { it.id == id }
             ?: throw SchedulingException("Task not found.")
         expectedWidgetTarget?.let { requireWidgetTargetInTransaction(it) }
         if (task.status != TaskStatus.OPEN.name) return false
-        val now = timeProvider.now().toEpochMilli()
-        val today = timeProvider.today().toString()
+        val now = (completionAt ?: timeProvider.now()).toEpochMilli()
+        val today = completionDay ?: timeProvider.today().toString()
         val taskExtras = runCatching { JSONObject(task.extraJson) }.getOrElse { JSONObject() }
         val previousGoal = task.goalId?.let { goals.get(it) }
         val previousHabit = task.habitId?.let { habits.get(it) }
@@ -531,14 +609,14 @@ class GoalflowRepository(
         }
         val updated = task.copy(
             status = TaskStatus.COMPLETED.name,
-            notes = finalDescription?.trim()?.takeIf(String::isNotBlank) ?: task.notes,
+            notes = if (exactNotes) finalDescription ?: task.notes else finalDescription?.trim()?.takeIf(String::isNotBlank) ?: task.notes,
             completedAt = now,
             updatedAt = now,
             extraJson = updatedExtras.toString()
         )
         tasks.update(updated)
         enqueueRecordInTransaction("tasks", id, GoalflowJson.taskPayload(toDomain(updated)).toString())
-        recordTaskEventInTransaction(id, "completed", today)
+        recordTaskEventInTransaction(id, "completed", today, completionMetadata, recordedAt = completionAt)
         task.goalId?.let { goalId ->
             previousGoal?.let { goal ->
                 val updatedGoal = goal.copy(completedTasks = (goal.completedTasks + 1).coerceAtLeast(0))
@@ -2772,7 +2850,8 @@ class GoalflowRepository(
         taskId: String,
         eventType: String,
         localDate: String = timeProvider.today().toString(),
-        metadata: JSONObject = JSONObject()
+        metadata: JSONObject = JSONObject(),
+        recordedAt: Instant? = null
     ) {
         require(eventType in GoalflowTaskEventJson.KNOWN_EVENT_TYPES) {
             "Unknown task event type cannot be recorded."
@@ -2789,7 +2868,7 @@ class GoalflowRepository(
             eventType = eventType,
             localDate = normalizedDate,
             metadata = metadata.toString(),
-            createdAt = timeProvider.now().toEpochMilli()
+            createdAt = (recordedAt ?: timeProvider.now()).toEpochMilli()
         )
         taskEvents.insert(event)
         val taskPredecessor = outbox.getForEntity("tasks", taskId).lastOrNull()?.mutationId
@@ -2814,6 +2893,9 @@ class GoalflowRepository(
         val metaKey = syncMetaKey(entityType, entityId)
         val current = syncMeta.get(metaKey)
         val existing = outbox.getForEntity(entityType, entityId)
+        val reserved = causalAccounts.getAll().singleOrNull()?.let {
+            NativeCompletionAdmissionEvidence.reserved(NativeCausalJournal.validate(it), entityType, entityId)
+        }?.second
         val nextVersion = maxOf(current?.localVersion ?: 0L, existing.maxOfOrNull { it.version } ?: 0L) + 1L
         val mutationId = UUID.randomUUID().toString()
         requireMutationIdAvailableInTransaction(mutationId)
@@ -2835,7 +2917,9 @@ class GoalflowRepository(
                 )
             )
         } else {
-            val predecessor = existing.lastOrNull()
+            val predecessor = existing.maxByOrNull { it.version }
+            val predecessorId = if (reserved != null && (predecessor == null || reserved.getLong("version") > predecessor.version))
+                reserved.getString("mutationId") else predecessor?.mutationId
             outbox.insert(
                 SyncOutboxEntity(
                     mutationId = mutationId,
@@ -2847,7 +2931,7 @@ class GoalflowRepository(
                     payload = payload,
                     updatedAt = updatedAt,
                     deletedAt = deletedAt,
-                    dependsOnMutationId = dependsOnMutationIdOverride ?: predecessor?.mutationId
+                    dependsOnMutationId = dependsOnMutationIdOverride ?: predecessorId
                 )
             )
         }
@@ -2888,6 +2972,12 @@ class GoalflowRepository(
 
     /** Returns true when a remote record was represented as a durable conflict. */
     private suspend fun applyRemoteRecordInTransaction(record: NativeRemoteRecord): Boolean {
+        for (account in causalAccounts.getAll()) {
+            val state = NativeCausalJournal.validate(account)
+            require(NativeCompletionAdmissionEvidence.reserved(state, record.entityType, record.entityId) == null) {
+                "The entity has a pending atomic completion. Apply its exact action receipt before replacing local effects."
+            }
+        }
         val trimmed = record.payload.trimStart()
         when (record.entityType) {
             "tasks" -> {
@@ -3360,6 +3450,16 @@ class GoalflowRepository(
     private suspend fun requireMutationIdAvailableInTransaction(mutationId: String) {
         require(outbox.get(mutationId) == null) {
             "Generated mutation id already exists; no pending mutation was overwritten."
+        }
+        for (account in causalAccounts.getAll()) {
+            val state = NativeCausalJournal.validate(account)
+            require(listOf("focusAdmissions", "counterAdmissions", "counterDayAdmissions", "legacyPushReceipts").none {
+                state.optJSONObject(it)?.has(mutationId) == true }) { "Generated mutation id already has causal evidence." }
+            val completions = state.optJSONObject("completionAdmissions") ?: JSONObject()
+            require(completions.keys().asSequence().none { id ->
+                val members = completions.getJSONObject(id).getJSONArray("members")
+                (0 until members.length()).any { members.getJSONObject(it).opt("mutationId") == mutationId }
+            }) { "Generated mutation id is an existing completion member." }
         }
         conflicts.getAll().forEach { conflict ->
             require(conflict.mutationId != mutationId) {

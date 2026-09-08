@@ -77,4 +77,23 @@ class NativeLegacyReceiptEvidenceTest {
         assertEquals(changed, database.syncOutboxDao().get(sent.mutationId))
         assertFalse(NativeCausalJournal.validate(database.causalAccountDao().get(owner)!!).has("legacyPushReceipts"))
     }
+
+    @Test fun `completion dependency resolves only from exact accepted predecessor evidence`() {
+        val state = JSONObject()
+        assertNull(NativeLegacyReceiptEvidence.resolvedBase(owner, state, sent))
+        val pending = sent.copy(baseServerVersion = null, dependsOnMutationId = UUID.randomUUID().toString())
+        val accepted = sent.copy(baseServerVersion = 7, attemptedAt = "2026-09-08T00:00:00.000Z")
+        NativeLegacyReceiptEvidence.retain(owner, state, accepted, result().receiptJson!!)
+        val before = state.toString()
+        assertEquals(10L, NativeLegacyReceiptEvidence.resolvedBase(owner, state, pending))
+        assertTrue(runCatching { NativeLegacyReceiptEvidence.resolvedBase(owner, state,
+            pending.copy(attemptedAt = "2026-09-08T00:00:00.000Z")) }.isFailure)
+        assertTrue(runCatching { NativeLegacyReceiptEvidence.resolvedBase(owner, state,
+            pending.copy(dependsOnMutationId = null)) }.isFailure)
+        assertTrue(runCatching { NativeLegacyReceiptEvidence.resolvedBase(owner, state,
+            pending.copy(payload = JSONObject(pending.payload).put("description", "Different intent").toString())) }.isFailure)
+        assertTrue(runCatching { NativeLegacyReceiptEvidence.resolvedBase(UUID.randomUUID().toString(), state, pending) }.isFailure)
+        assertTrue(runCatching { NativeLegacyReceiptEvidence.resolvedBase(owner, state, pending.copy(deviceId = "different")) }.isFailure)
+        assertEquals(before, state.toString())
+    }
 }

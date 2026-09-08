@@ -8,6 +8,34 @@ import java.time.Instant
  * so completion can resolve a base version without guessing from a cursor. */
 object NativeLegacyReceiptEvidence {
     private fun same(a: Any?, b: Any?) = ActionJson.canonical(a) == ActionJson.canonical(b)
+
+    /** A captured predecessor can acquire its base while waiting behind an
+     * older mutation. Only transport dependency bookkeeping may change; its
+     * business request must still be the exact captured intent. No cursor or
+     * current entity version can substitute for this receipt. */
+    fun resolvedBase(accountId: String, state: JSONObject, captured: SyncOutboxEntity): Long? {
+        val entry = state.optJSONObject("legacyPushReceipts")?.optJSONObject(captured.mutationId) ?: return null
+        val accepted = entry.getJSONObject("request")
+        val receipt = JSONObject(entry.getString("receipt"))
+        validateReceipt(accountId, accepted, receipt)
+        if (captured.attemptedAt != null || captured.dependsOnMutationId == null) {
+            require(same(accepted.opt("baseServerVersion"), captured.baseServerVersion ?: JSONObject.NULL)
+                && same(accepted.opt("dependsOnMutationId"), captured.dependsOnMutationId ?: JSONObject.NULL)) {
+                "The predecessor rewrites an already fixed transport dependency."
+            }
+        }
+        val original = queued(captured)
+        for (key in listOf("baseServerVersion", "dependsOnMutationId", "attemptedAt")) {
+            original.remove(key)
+        }
+        val meaning = JSONObject(accepted.toString())
+        for (key in listOf("baseServerVersion", "dependsOnMutationId", "attemptedAt")) meaning.remove(key)
+        require(same(original, meaning)) { "The accepted predecessor differs from the captured completion dependency." }
+        require(captured.deletedAt == null && captured.resolvesConflictId == null) {
+            "A deleted or conflict-resolving completion predecessor requires recovery."
+        }
+        return ActionJson.integer(receipt.get("serverVersion"))!!
+    }
     private fun field(value: JSONObject, camel: String, snake: String): Any? {
         if (value.has(camel) && value.has(snake)) require(same(value.get(camel), value.get(snake))) { "Conflicting receipt aliases." }
         require(value.has(camel) || value.has(snake)) { "Incomplete predecessor receipt." }
