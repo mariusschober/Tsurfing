@@ -1,0 +1,1698 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project macos-native/GoalflowMac.xcodeproj -scheme GoalflowMac -configuration Debug -destination platform=macOS -derivedDataPath /private/tmp/s2-a1-macos CODE_SIGNING_ALLOWED=NO
+
+Build settings from command line:
+    CODE_SIGNING_ALLOWED = NO
+
+--- xcodebuild: WARNING: Using the first of multiple matching destinations:
+{ platform:macOS, arch:arm64, id:00006000-0014189836D2801E, name:My Mac }
+{ platform:macOS, arch:x86_64, id:00006000-0014189836D2801E, name:My Mac }
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (2 targets)
+    Target 'GoalflowMacTests' in project 'GoalflowMac'
+        ➜ Explicit dependency on target 'GoalflowMac' in project 'GoalflowMac'
+    Target 'GoalflowMac' in project 'GoalflowMac' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: 3000db53abe65fd0890df457dde52000
+Build description path: /tmp/s2-a1-macos/Build/Intermediates.noindex/XCBuildData/3000db53abe65fd0890df457dde52000.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk /tmp/s2-a1-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -o /tmp/s2-a1-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache
+
+CreateBuildDirectory /tmp/s2-a1-macos/Build/Products
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    builtin-create-build-directory /tmp/s2-a1-macos/Build/Products
+
+CreateBuildDirectory /tmp/s2-a1-macos/Build/Intermediates.noindex
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    builtin-create-build-directory /tmp/s2-a1-macos/Build/Intermediates.noindex
+
+CreateBuildDirectory /tmp/s2-a1-macos/Build/Products/Debug
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    builtin-create-build-directory /tmp/s2-a1-macos/Build/Products/Debug
+
+CreateBuildDirectory /tmp/s2-a1-macos/Build/Intermediates.noindex/ExplicitPrecompiledModules
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    builtin-create-build-directory /tmp/s2-a1-macos/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+CreateBuildDirectory /tmp/s2-a1-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    builtin-create-build-directory /tmp/s2-a1-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+CreateBuildDirectory /tmp/s2-a1-macos/Build/Intermediates.noindex/EagerLinkingTBDs/Debug
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    builtin-create-build-directory /tmp/s2-a1-macos/Build/Intermediates.noindex/EagerLinkingTBDs/Debug
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac-3083011f4150d1213d93a1707dff697c-VFS/all-product-headers.yaml
+    cd /Users/schober/Projects/TSurfing/macos-native/GoalflowMac.xcodeproj
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac-3083011f4150d1213d93a1707dff697c-VFS/all-product-headers.yaml
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-DebugDylibInstallName-normal-arm64.txt (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-DebugDylibInstallName-normal-arm64.txt
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-generated-files.hmap (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-generated-files.hmap
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-project-headers.hmap (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-project-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.hmap (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.hmap
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-DebugDylibPath-normal-arm64.txt (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-DebugDylibPath-normal-arm64.txt
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-non-framework-target-headers.hmap (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-non-framework-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-target-headers.hmap (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-own-target-headers.hmap (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-own-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/empty-GoalflowMacTests.plist (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/empty-GoalflowMacTests.plist
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftFileList (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftFileList
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_const_extract_protocols.json (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_const_extract_protocols.json
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftConstValuesFileList (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.LinkFileList (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.LinkFileList
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-OutputFileMap.json (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-OutputFileMap.json
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.hmap (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.hmap
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.DependencyStaticMetadataFileList (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.DependencyMetadataFileList (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.DependencyMetadataFileList
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-project-headers.hmap (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-project-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-own-target-headers.hmap (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-own-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-generated-files.hmap (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-generated-files.hmap
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-target-headers.hmap (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-non-framework-target-headers.hmap (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-non-framework-target-headers.hmap
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.DependencyStaticMetadataFileList (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.DependencyMetadataFileList (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.DependencyMetadataFileList
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftFileList (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftFileList
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftConstValuesFileList (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.LinkFileList (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.LinkFileList
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac_const_extract_protocols.json (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac_const_extract_protocols.json
+
+WriteAuxiliaryFile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-OutputFileMap.json (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    write-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-OutputFileMap.json
+
+MkDir /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources
+
+MkDir /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest
+
+MkDir /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents
+
+MkDir /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/MacOS (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/MacOS
+
+MkDir /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns
+
+MkDir /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS
+
+MkDir /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+MkDir /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents
+
+MkDir /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app
+
+Ld /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/__preview.dylib normal (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos15.0 -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -O0 -L/tmp/s2-a1-macos/Build/Products/Debug -F/tmp/s2-a1-macos/Build/Products/Debug -install_name @rpath/Tsurfing.debug.dylib -rdynamic -Xlinker -no_deduplicate -Xlinker -dependency_info -Xlinker /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing_dependency_info.dat -o /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/__preview.dylib
+
+CpResource /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources/clock-tock.wav /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/clock-tock.wav (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/clock-tock.wav /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources
+
+MkDir /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/thinned (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/thinned
+
+CpResource /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources/clock-tick.wav /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/clock-tick.wav (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/clock-tick.wav /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources
+
+MkDir /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/unthinned (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /bin/mkdir -p /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/unthinned
+
+CpResource /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources/PrivacyInfo.xcprivacy /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/PrivacyInfo.xcprivacy (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/PrivacyInfo.xcprivacy /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources
+
+CpResource /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources/CLOCK_AUDIO_LICENSE.md /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/CLOCK_AUDIO_LICENSE.md (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/CLOCK_AUDIO_LICENSE.md /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources
+
+GenerateAssetSymbols /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Assets.xcassets (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Assets.xcassets --compile /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources --output-format human-readable-text --notices --warnings --export-dependency-info /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_dependencies --output-partial-info-plist /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist --app-icon AppIcon --enable-on-demand-resources NO --development-region en --target-device mac --minimum-deployment-target 15.0 --platform macosx --bundle-identifier com.mariusschober.tsurfing.mac --generate-swift-asset-symbol-extensions NO --generate-swift-asset-symbols /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols.swift --generate-objc-asset-symbols /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols.h --generate-asset-symbol-index /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+/* com.apple.actool.compilation-results */
+/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols-Index.plist
+/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols.h
+/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols.swift
+
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/libXCTestSwiftSupport.dylib /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/libXCTestBundleInject.dylib /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libXCTestBundleInject.dylib (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libXCTestBundleInject.dylib /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/XCUnit.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCUnit.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCUnit.framework /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/XCUIAutomation.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks/XCUIAutomation.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks/XCUIAutomation.framework /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/XCTestSupport.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCTestSupport.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCTestSupport.framework /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/XCTestCore.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCTestCore.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCTestCore.framework /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/XCTest.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks/XCTest.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks/XCTest.framework /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/XCTAutomationSupport.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCTAutomationSupport.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/PrivateFrameworks/XCTAutomationSupport.framework /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks/Testing.framework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks/Testing.framework (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -exclude Headers -exclude PrivateHeaders -exclude Modules -exclude \*.tbd -resolve-src-symlinks /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks/Testing.framework /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks
+
+CompileAssetCatalogVariant thinned /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Assets.xcassets (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Assets.xcassets --compile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/thinned --output-format human-readable-text --notices --warnings --export-dependency-info /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_dependencies_thinned --output-partial-info-plist /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist_thinned --app-icon AppIcon --enable-on-demand-resources NO --development-region en --target-device mac --minimum-deployment-target 15.0 --platform macosx
+/* com.apple.actool.compilation-results */
+/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist_thinned
+/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/thinned/AppIcon.icns
+/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/thinned/Assets.car
+
+
+LinkAssetCatalog /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Assets.xcassets (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-linkAssetCatalog --thinned /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/thinned --thinned-dependencies /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_dependencies_thinned --thinned-info-plist-content /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist_thinned --unthinned /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_output/unthinned --unthinned-dependencies /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_dependencies_unthinned --unthinned-info-plist-content /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist_unthinned --output /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources --plist-output /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist
+note: Emplaced /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources/Assets.car (in target 'GoalflowMac' from project 'GoalflowMac')
+note: Emplaced /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources/AppIcon.icns (in target 'GoalflowMac' from project 'GoalflowMac')
+
+ProcessInfoPlistFile /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Info.plist /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Info.plist (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-infoPlistUtility /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Resources/Info.plist -producttype com.apple.product-type.application -genpkginfo /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PkgInfo -expandbuildsettings -platform macosx -additionalcontentfile /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/assetcatalog_generated_info.plist -o /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Info.plist
+
+SwiftDriver GoalflowMac normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GoalflowMac -Onone @/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target arm64-apple-macos15.0 -g -module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /tmp/s2-a1-macos/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/s2-a1-macos/Build/Products/Debug -F /tmp/s2-a1-macos/Build/Products/Debug -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/s2-a1-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache -output-file-map /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/s2-a1-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -sdk-module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/s2-a1-macos/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-generated-files.hmap -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-own-target-headers.hmap -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-project-headers.hmap -Xcc -I/tmp/s2-a1-macos/Build/Products/Debug/include -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources-normal/arm64 -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/arm64 -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-Swift.h -working-directory /Users/schober/Projects/TSurfing/macos-native -experimental-emit-module-separately -disable-cmo
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/ptrauth-CIWCKYBN5UBMJGYNX4907RN4I.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_Builtin_stddef-BZ1DBX1ZRYH04QQ4OHEKCD03A.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_SwiftConcurrencyShims-921GKGM6NZABUCGBDP3SOG6LI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_Builtin_stdbool-245XX52B21UFKIMU00SZYPW7Q.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/DeveloperToolsSupport-1UVSFREQCFO9S8VHWX6W6AHEW.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/SwiftShims-4S146336NDCPZ0MYT90ZAZOI9.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_Builtin_float-4LYP6ISL44QSPDR5TBIOZKY7H.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_AvailabilityInternal-2P5CBC5R2YYISCXCDIMN76C4N.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_Builtin_stdarg-6MED5ZDF6XNB7YPT6BVELV6YP.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/ptrcheck-3HT1RSGZ1M0WWL376R99P9KL1.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_DarwinFoundation1-A9ZBGYQVJCZ0PPJOA3INR205X.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_DarwinFoundation2-DAGMZL2RO1A769NT1FA56TRRC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_Builtin_limits-9QNOA3EGAW5FMYQWWJGF7IRFI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/sys_types-31WWAZTV3GG4LLVHYTUC48GC4.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_Builtin_stdint-60F9Z45QNG3NXEX79YTMWNH34.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_Builtin_tgmath-B5ZKQXLEELFJENCBBIBH698CE.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_Builtin_stdatomic-5MWJNI8KOQDAHG4I485MNU7J.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_Builtin_intrinsics-7VJTK2X91AF69BW9Z0WCGNIKX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/OpenGL-CQEIZNEHPNFLEMUQ8N3SINFF.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_DarwinFoundation3-2QD3RMU0QKNBJP9HWGTA8VZDC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/libDER-D1PYSDWOANZ26FASZ9DHBZI5S.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_Builtin_inttypes-1F25PP5IEI0928KLT9GGFK8LO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/Darwin-B571O94EDH2N46O3XTEB1UOMQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/simd-3K0S1DVXEDYIWLVCI78R50N1A.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/launch-BEQ8IHWM3FWQN51XET3TF8HVN.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/MachO-9DKMS7W5D46QQVKGS3O4S2UYN.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/libkern-15DXSIG34ZULTA9TQS2Z0M3EI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CUPS-7YEON6IPTTRQPXIKVPZW88214.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/ObjectiveC-455MBUT3332IQS1NN0VB2QL8I.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/Spatial-3SRLZFUH6RZZZK0BHRZ6ZVZKC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/os_object-CC79NWJWLWUSYLIFHTTTX0HNY.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/os_workgroup-5XV1T6531QPC39JFY47FGJP8W.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/Dispatch-CODPIQGKR60JIU595071QBZ15.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/dnssd-1TWZE6CAQVLAY3ZKTLO5GGRIX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CoreFoundation-8T5WTP1OX825PEMFB3Y5FG4F1.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/XPC-B9Y04LJZUXC146NABAAJUDE1Z.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/os-AJ6GDCY3JOGW6E2B8EX2WZ4JB.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/ColorSync-DG9EC0BD9ID6MLVDWMHW2OEO1.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CoreAudioTypes-7LKPLBMBJZDGVSJOF9DMCZ8LO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CFNetwork-820ZSO2C46DC81709W5SRD15.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/Security-44M03LY6FMNMABJ2WZZ044D5E.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/IOKit-35D9X7L0SGS7MHPPQ1WC0PD79.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/DiskArbitration-54FPLYOT4R5OUNVJV5LN1352L.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CoreGraphics-B99STDR98U8YJGY29Z229ALHQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CoreServices-88LNGIT6SZ4RLPO661KT4HR6J.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CoreText-2IU8N42JIIDFWG46CV3FW1CFV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/ImageIO-1ZNEZQZV59T1GF76C8NXJHX6K.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/Foundation-2L5X6T7V8HEKUHFOLHKLU64BB.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/UniformTypeIdentifiers-1JUBWAABAOQM25D1O43UFUENE.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/_LocationEssentials-2DXLKZTQYVTZ5Z7PP6MUXGGQG.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CoreMIDI-43K41Q1WVMA1S0H4Y8TM3IQYJ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/OSLog-4I4YCDNRQYRC3P0ODX527F5G2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CoreAudio-2JYD3XFQP0T3PWGZ56KGQ28AZ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/DataDetection-5XHEUJ10P0UUIM7VFQ8DFJ9OL.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/IOSurface-A5WC5E53U4K6S2MQYB5ODW2OZ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/Network-AATQS5HC54VL2TUUDLUNPLVTM.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/LocalAuthentication-2ROGD943TL5JP13SNKJRPY2FP.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CoreTransferable-CJ1GI4CTKC3BR1M4VPBKVACIO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CoreData-COIAXPLY2HYXPYT82QDFU85D6.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/Symbols-5DFVTRVEQP2U8VF65LVJ09RIW.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/Accessibility-3MFRUIDJE1LDWN9O8D9U3R47G.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/ApplicationServices-6IQLBQ2A67POL5GI8YNXUQMHM.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/JavaScriptCore-77N89ARC5TAF1Y5564XRUP5Y5.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/ServiceManagement-87291AWP4L8X2NQLQY3DSIKAJ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CoreLocation-E18VWYFQ0NQ2JX029KGZMDKXB.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/Metal-1Z6CIZPOEZMLDO902LYMFOKJV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/EventKit-D7QDDJ7W2LZYVUTFWCI3RRS5A.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/Carbon-AEB7BT5OYFL7GBFLURXMCXKHA.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CoreVideo-49YV9BCWF1NEI05JZ6K8PEDCQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/QuartzCore-3IEJMJWVBFR3NO356Z1QUP6R6.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CoreImage-9ZIE4FJYRJ50K2KVV73MHLXSH.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/CoreMedia-EKUO0GAQ48546OONDBXG4HPRG.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/AudioToolbox-CZZUG1V43HBJ931Z244MPBG0O.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/SwiftUICore-AYRYVVLYUX53S47QX93U7I77R.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/AppKit-P5ML52EF9RNQ8XBDZRRB17I.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/AVFAudio-63W4DEWLL83J9QWOSKGYNCBY2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/MediaToolbox-5SIJKJXM1DMCHXG6IU7ZQVT90.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/AVFoundation-5OELAHCZTJUPWEEV099QK9GL7.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/ScreenCaptureKit-6AJDNPYVK9Y4EHWVUC3O3P3JW.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/WebKit-AZFL4YF2EM3I1A1ZH1WA8GNCA.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/ModuleCache.noindex/SwiftUI-8ZGE5U5C4CRKRG66D32WVBZ9K.pcm
+
+SwiftCompile normal arm64 Compiling\ SyncMeta.swift,\ SyncTransport.swift,\ TTSGateway.swift,\ UpdaterService.swift,\ GeneratedAssetSymbols.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncTransport.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/TTSGateway.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/UpdaterService.swift /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:68:9: warning: stored property 'value' of 'Sendable'-conforming struct 'AnyCodable' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var value: Any?
+        ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:177:9: warning: stored property 'payload' of 'Sendable'-conforming struct 'StagedEntityChange' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var payload: Any? // Any JSON value
+        ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:187:9: warning: stored property 'previousValue' of 'Sendable'-conforming struct 'StagedLocalTransaction' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var previousValue: Any?
+        ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:189:9: warning: stored property 'value' of 'Sendable'-conforming struct 'StagedLocalTransaction' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var value: Any?
+        ^
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncTransport.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/TTSGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/TTSGateway.swift:9:14: warning: instance method 'lock' is unavailable from asynchronous contexts; Use async-safe scoped locking instead; this is an error in the Swift 6 language mode
+        lock.lock(); let enabled = isEnabled; lock.unlock(); guard enabled else { return }
+             ^
+Foundation.NSLock.lock:2:11: note: 'lock()' declared here
+open func lock()}
+          ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/TTSGateway.swift:9:52: warning: instance method 'unlock' is unavailable from asynchronous contexts; Use async-safe scoped locking instead; this is an error in the Swift 6 language mode
+        lock.lock(); let enabled = isEnabled; lock.unlock(); guard enabled else { return }
+                                                   ^
+Foundation.NSLock.unlock:2:11: note: 'unlock()' declared here
+open func unlock()}
+          ^
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/UpdaterService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ GoalflowMac (in target 'GoalflowMac' from project 'GoalflowMac')
+
+EmitSwiftModule normal arm64 (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:68:9: warning: stored property 'value' of 'Sendable'-conforming struct 'AnyCodable' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var value: Any?
+        ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:177:9: warning: stored property 'payload' of 'Sendable'-conforming struct 'StagedEntityChange' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var payload: Any? // Any JSON value
+        ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:187:9: warning: stored property 'previousValue' of 'Sendable'-conforming struct 'StagedLocalTransaction' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var previousValue: Any?
+        ^
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncMeta.swift:189:9: warning: stored property 'value' of 'Sendable'-conforming struct 'StagedLocalTransaction' contains non-Sendable type 'Any'; this is an error in the Swift 6 language mode
+    var value: Any?
+        ^
+
+SwiftCompile normal arm64 Compiling\ FrogBadge.swift,\ GoalModels.swift,\ GoalStore.swift,\ GoalflowMacApp.swift,\ GoalflowTask.swift,\ HotkeyGateway.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/Components/FrogBadge.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/GoalModels.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/GoalStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/App/GoalflowMacApp.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/GoalflowTask.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/HotkeyGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/Components/FrogBadge.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/GoalModels.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/GoalStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/App/GoalflowMacApp.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/GoalflowTask.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/HotkeyGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ RealtimeWakeup.swift,\ SchedulingBridge.swift,\ ServerConflicts.swift,\ SignInView.swift,\ SoundGateway.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/RealtimeWakeup.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/SchedulingBridge.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/ServerConflicts.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/SignInView.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/SoundGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/RealtimeWakeup.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/SchedulingBridge.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/ServerConflicts.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/SignInView.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/SoundGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ Clock.swift,\ CompletionHoldController.swift,\ ConflictsSheet.swift,\ CurrentTaskProvider.swift,\ DailyPlanStore.swift,\ DeviceIdStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/Clock.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/CompletionHoldController.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/ConflictsSheet.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Providers/CurrentTaskProvider.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/DailyPlanStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/DeviceIdStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/Clock.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/CompletionHoldController.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/ConflictsSheet.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Providers/CurrentTaskProvider.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/DailyPlanStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/DeviceIdStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ CaptureOverlayView.swift,\ CaptureParser.swift,\ CaptureService.swift,\ CaptureViewModel.swift,\ CaptureWindowController.swift,\ CircularProgress.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/CaptureOverlayView.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CaptureParser.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CaptureService.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/CaptureViewModel.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/CaptureWindowController.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/Components/CircularProgress.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/CaptureOverlayView.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CaptureParser.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CaptureService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/CaptureViewModel.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/CaptureWindowController.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/Components/CircularProgress.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ ExecutionPanelView.swift,\ ExecutionState.swift,\ CounterLedger.swift,\ CausalFocus.swift,\ ExecutionTimer.swift,\ FocusSessionStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/ExecutionPanelView.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/ExecutionState.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CounterLedger.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CausalFocus.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/ExecutionTimer.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/FocusSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/ExecutionPanelView.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/ExecutionPanelView.swift:791:10: warning: 'onChange(of:perform:)' was deprecated in macOS 14.0: Use `onChange` with a two or zero parameter action closure instead.
+        .onChange(of: vm.task?.id) { _ in completionInstructionVisible = false }
+         ^
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/ExecutionState.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CounterLedger.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/CausalFocus.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/ExecutionTimer.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/FocusSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ AppDelegate.swift,\ ApplyPushResults.swift,\ ApplyRemotePage.swift,\ BreakCoverWindowController.swift,\ BreakOverlayView.swift,\ BreakSessionStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/App/AppDelegate.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/ApplyPushResults.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/ApplyRemotePage.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakCoverWindowController.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakOverlayView.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/BreakSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/App/AppDelegate.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/ApplyPushResults.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/ApplyRemotePage.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakCoverWindowController.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakCoverWindowController.swift:80:35: warning: call to main actor-isolated instance method 'orderOut' in a synchronous nonisolated context
+    deinit { for w in windows { w.orderOut(nil) } }
+                                  ^
+AppKit.NSWindow.orderOut:2:22: note: calls to instance method 'orderOut' from outside of its actor context are implicitly asynchronous
+@MainActor open func orderOut(_ sender: Any?)}
+                     ^
+AppKit.NSWindow.orderOut:2:22: note: main actor isolation inferred from inheritance from class 'NSResponder'
+@MainActor open func orderOut(_ sender: Any?)}
+                     ^
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakOverlayView.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/BreakSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ StableJson.swift,\ StoreBridge.swift,\ SupabaseAuthService.swift,\ SyncBackedCurrentTaskProvider.swift,\ SyncEngine.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/StableJson.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/StoreBridge.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/SupabaseAuthService.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Providers/SyncBackedCurrentTaskProvider.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncEngine.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/StableJson.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/StoreBridge.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/SupabaseAuthService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Providers/SyncBackedCurrentTaskProvider.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/SyncEngine.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ BreakState.swift,\ BreakTimer.swift,\ BreakdownService.swift,\ BreakdownSheet.swift,\ BuildStaging.swift,\ CalendarCollisionService.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/BreakState.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/BreakTimer.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/BreakdownService.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakdownSheet.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/BuildStaging.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/CalendarCollisionService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/BreakState.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/BreakTimer.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/BreakdownService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/BreakdownSheet.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/BuildStaging.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/CalendarCollisionService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/CalendarCollisionService.swift:48:26: warning: 'authorized' was deprecated in macOS 14.0: Check for full access or write only access
+        guard status == .authorized || status == .fullAccess else { return nil }
+                         ^
+
+SwiftCompile normal arm64 Compiling\ KeychainSessionStore.swift,\ LoginItemService.swift,\ MenuBarController.swift,\ MetaStore.swift,\ NativeCaptchaView.swift,\ PlanningGate.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/KeychainSessionStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/LoginItemService.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/MenuBarController.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/MetaStore.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/NativeCaptchaView.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/PlanningGate.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/KeychainSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Services/LoginItemService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/MenuBarController.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Sync/MetaStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/UI/NativeCaptchaView.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMac/Domain/PlanningGate.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for GoalflowMac (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriver\ Compilation\ Requirements GoalflowMac normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GoalflowMac -Onone @/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target arm64-apple-macos15.0 -g -module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /tmp/s2-a1-macos/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/s2-a1-macos/Build/Products/Debug -F /tmp/s2-a1-macos/Build/Products/Debug -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/s2-a1-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache -output-file-map /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/s2-a1-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -sdk-module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/s2-a1-macos/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-generated-files.hmap -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-own-target-headers.hmap -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-project-headers.hmap -Xcc -I/tmp/s2-a1-macos/Build/Products/Debug/include -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources-normal/arm64 -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/arm64 -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-Swift.h -working-directory /Users/schober/Projects/TSurfing/macos-native -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal arm64 Compiling StableJson.swift, StoreBridge.swift, SupabaseAuthService.swift, SyncBackedCurrentTaskProvider.swift, SyncEngine.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftMergeGeneratedHeaders /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GoalflowMac-Swift.h /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-Swift.h (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-swiftHeaderTool -arch arm64 /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-Swift.h -o /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/GoalflowMac-Swift.h
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMac.swiftmodule/arm64-apple-macos.swiftmodule /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftmodule (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftmodule /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMac.swiftmodule/arm64-apple-macos.swiftmodule
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMac.swiftmodule/arm64-apple-macos.swiftdoc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftdoc (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftdoc /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMac.swiftmodule/arm64-apple-macos.swiftdoc
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMac.swiftmodule/arm64-apple-macos.abi.json /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.abi.json (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.abi.json /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMac.swiftmodule/arm64-apple-macos.abi.json
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMac.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftsourceinfo (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftsourceinfo /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMac.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo
+
+SwiftDriver GoalflowMacTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GoalflowMacTests -Onone @/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftFileList -DDEBUG -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target arm64-apple-macos15.0 -g -module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /tmp/s2-a1-macos/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/s2-a1-macos/Build/Products/Debug -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /tmp/s2-a1-macos/Build/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -emit-localized-strings -emit-localized-strings-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64 -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/s2-a1-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache -output-file-map /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/s2-a1-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -sdk-module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/s2-a1-macos/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-generated-files.hmap -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-own-target-headers.hmap -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-project-headers.hmap -Xcc -I/tmp/s2-a1-macos/Build/Products/Debug/include -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources-normal/arm64 -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources/arm64 -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-Swift.h -working-directory /Users/schober/Projects/TSurfing/macos-native -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal arm64 Compiling CaptureOverlayView.swift, CaptureParser.swift, CaptureService.swift, CaptureViewModel.swift, CaptureWindowController.swift, CircularProgress.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling RealtimeWakeup.swift, SchedulingBridge.swift, ServerConflicts.swift, SignInView.swift, SoundGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling AppDelegate.swift, ApplyPushResults.swift, ApplyRemotePage.swift, BreakCoverWindowController.swift, BreakOverlayView.swift, BreakSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling FrogBadge.swift, GoalModels.swift, GoalStore.swift, GoalflowMacApp.swift, GoalflowTask.swift, HotkeyGateway.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling KeychainSessionStore.swift, LoginItemService.swift, MenuBarController.swift, MetaStore.swift, NativeCaptchaView.swift, PlanningGate.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling Clock.swift, CompletionHoldController.swift, ConflictsSheet.swift, CurrentTaskProvider.swift, DailyPlanStore.swift, DeviceIdStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SyncMeta.swift, SyncTransport.swift, TTSGateway.swift, UpdaterService.swift, GeneratedAssetSymbols.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling BreakState.swift, BreakTimer.swift, BreakdownService.swift, BreakdownSheet.swift, BuildStaging.swift, CalendarCollisionService.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCUIAutomation-8MGLWX98U7SGR9DATVHR78M1G.pcm
+
+SwiftExplicitDependencyCompileModuleFromInterface arm64 /tmp/s2-a1-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCUIAutomation-15KOB4RNS3SUA.swiftmodule
+
+SwiftExplicitDependencyGeneratePcm arm64 /tmp/s2-a1-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCTest-1FWALXUHEH8C43N1PBXNXJBXB.pcm
+
+SwiftExplicitDependencyCompileModuleFromInterface arm64 /tmp/s2-a1-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCTest-1B0YC4HZBNMMG.swiftmodule
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ GoalflowMacTests (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+EmitSwiftModule normal arm64 (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ SyncTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SyncTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SyncTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SyncTests.swift:583:13: warning: initialization of immutable value 'res' was never used; consider replacing with assignment to '_' or removing it
+        let res = PushResult(mutationId: "m1", accepted: true, serverVersion: 11, replayMismatch: nil, serverMissing: nil, conflictId: nil, record: rec)
+        ~~~~^~~
+        _
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SyncTests.swift:677:13: warning: variable 'meta' was never mutated; consider changing to 'let' constant
+        var meta = emptySyncMeta()
+        ~~~ ^
+        let
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SyncTests.swift:683:13: warning: variable 'meta' was never mutated; consider changing to 'let' constant
+        var meta = emptySyncMeta()
+        ~~~ ^
+        let
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SyncTests.swift:699:13: warning: variable 'meta' was never mutated; consider changing to 'let' constant
+        var meta = emptySyncMeta()
+        ~~~ ^
+        let
+
+SwiftCompile normal arm64 Compiling\ SessionBTests.swift,\ SessionCTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SessionBTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SessionCTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SessionBTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SessionCTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ RealtimeWakeupTests.swift,\ SchedulingTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/RealtimeWakeupTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SchedulingTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/RealtimeWakeupTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SchedulingTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ CausalFocusTests.swift,\ CaptureViewModelTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CausalFocusTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CaptureViewModelTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CausalFocusTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CaptureViewModelTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ ExecutionTimerTests.swift,\ FocusSessionStoreTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/ExecutionTimerTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/FocusSessionStoreTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/ExecutionTimerTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/FocusSessionStoreTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ CaptureTests.swift,\ CounterLedgerTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CaptureTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CounterLedgerTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CaptureTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CounterLedgerTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ CalendarTests.swift,\ CaptureServiceTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CalendarTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CaptureServiceTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CalendarTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/CaptureServiceTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ EmailOtpAuthTests.swift,\ ExecutionStateTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/EmailOtpAuthTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/ExecutionStateTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/EmailOtpAuthTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/ExecutionStateTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 Compiling\ BreakTests.swift,\ BreakdownTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/BreakTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/BreakdownTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/BreakTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/BreakdownTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for GoalflowMacTests (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriver\ Compilation\ Requirements GoalflowMacTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GoalflowMacTests -Onone @/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftFileList -DDEBUG -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target arm64-apple-macos15.0 -g -module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /tmp/s2-a1-macos/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/s2-a1-macos/Build/Products/Debug -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /tmp/s2-a1-macos/Build/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -emit-localized-strings -emit-localized-strings-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64 -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/s2-a1-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache -output-file-map /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/s2-a1-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -sdk-module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/s2-a1-macos/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-generated-files.hmap -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-own-target-headers.hmap -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-project-headers.hmap -Xcc -I/tmp/s2-a1-macos/Build/Products/Debug/include -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources-normal/arm64 -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources/arm64 -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-Swift.h -working-directory /Users/schober/Projects/TSurfing/macos-native -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal arm64 Compiling ExecutionTimerTests.swift, FocusSessionStoreTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 Compiling\ HardeningTests.swift,\ PlanningGateTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/HardeningTests.swift /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/PlanningGateTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/HardeningTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftCompile normal arm64 /Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/PlanningGateTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    
+
+SwiftMergeGeneratedHeaders /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources/GoalflowMacTests-Swift.h /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-Swift.h (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-swiftHeaderTool -arch arm64 /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-Swift.h -o /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources/GoalflowMacTests-Swift.h
+
+SwiftDriverJobDiscovery normal arm64 Compiling CalendarTests.swift, CaptureServiceTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/arm64-apple-macos.swiftmodule /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftmodule (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftmodule /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/arm64-apple-macos.swiftmodule
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/arm64-apple-macos.swiftdoc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftdoc (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftdoc /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/arm64-apple-macos.swiftdoc
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/arm64-apple-macos.abi.json /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.abi.json (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.abi.json /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/arm64-apple-macos.abi.json
+
+SwiftDriverJobDiscovery normal arm64 Compiling CaptureTests.swift, CounterLedgerTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+Copy /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftsourceinfo (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftsourceinfo /tmp/s2-a1-macos/Build/Products/Debug/GoalflowMacTests.swiftmodule/Project/arm64-apple-macos.swiftsourceinfo
+
+SwiftDriverJobDiscovery normal arm64 Compiling BreakTests.swift, BreakdownTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling RealtimeWakeupTests.swift, SchedulingTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling CausalFocusTests.swift, CaptureViewModelTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SessionBTests.swift, SessionCTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling EmailOtpAuthTests.swift, ExecutionStateTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling HardeningTests.swift, PlanningGateTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriverJobDiscovery normal arm64 Compiling SyncTests.swift (in target 'GoalflowMacTests' from project 'GoalflowMac')
+
+SwiftDriver\ Compilation GoalflowMacTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-Swift-Compilation -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GoalflowMacTests -Onone @/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftFileList -DDEBUG -plugin-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target arm64-apple-macos15.0 -g -module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /tmp/s2-a1-macos/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/s2-a1-macos/Build/Products/Debug -Isystem /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F /tmp/s2-a1-macos/Build/Products/Debug -F /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -emit-localized-strings -emit-localized-strings-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64 -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/s2-a1-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache -output-file-map /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/s2-a1-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -sdk-module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/s2-a1-macos/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-generated-files.hmap -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-own-target-headers.hmap -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests-project-headers.hmap -Xcc -I/tmp/s2-a1-macos/Build/Products/Debug/include -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources-normal/arm64 -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources/arm64 -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-Swift.h -working-directory /Users/schober/Projects/TSurfing/macos-native -experimental-emit-module-separately -disable-cmo
+
+SwiftDriverJobDiscovery normal arm64 Compiling ExecutionPanelView.swift, ExecutionState.swift, CounterLedger.swift, CausalFocus.swift, ExecutionTimer.swift, FocusSessionStore.swift (in target 'GoalflowMac' from project 'GoalflowMac')
+
+SwiftDriver\ Compilation GoalflowMac normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-Swift-Compilation -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GoalflowMac -Onone @/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -target arm64-apple-macos15.0 -g -module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /tmp/s2-a1-macos/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /tmp/s2-a1-macos/Build/Products/Debug -F /tmp/s2-a1-macos/Build/Products/Debug -c -j10 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /tmp/s2-a1-macos/SDKStatCaches.noindex/macosx26.5-25F70-e082c4a02f00227109f4ed75e425c832.sdkstatcache -output-file-map /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /tmp/s2-a1-macos/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -sdk-module-cache-path /tmp/s2-a1-macos/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftmodule -validate-clang-modules-once -clang-build-session-file /tmp/s2-a1-macos/ModuleCache.noindex/Session.modulevalidation -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac_const_extract_protocols.json -Xcc -iquote -Xcc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-generated-files.hmap -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-own-target-headers.hmap -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-all-target-headers.hmap -Xcc -iquote -Xcc /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-project-headers.hmap -Xcc -I/tmp/s2-a1-macos/Build/Products/Debug/include -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources-normal/arm64 -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources/arm64 -Xcc -I/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-Swift.h -working-directory /Users/schober/Projects/TSurfing/macos-native -experimental-emit-module-separately -disable-cmo
+
+Ld /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib normal (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos15.0 -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -O0 -L/tmp/s2-a1-macos/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -L/tmp/s2-a1-macos/Build/Products/Debug -F/tmp/s2-a1-macos/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -F/tmp/s2-a1-macos/Build/Products/Debug -filelist /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.LinkFileList -install_name @rpath/Tsurfing.debug.dylib -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker @executable_path/../Frameworks -Xlinker -object_path_lto -Xlinker /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -dependency_info -Xlinker /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac.swiftmodule @/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/GoalflowMac-linker-args.resp -Xlinker -alias -Xlinker _main -Xlinker ___debug_main_executable_dylib_entry_point -o /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib
+
+ConstructStubExecutorLinkFileList /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-ExecutorLinkFileList-normal-arm64.txt (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    construct-stub-executor-link-file-list /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libPreviewsJITStubExecutor_no_swift_entry_point.a /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a --output /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-ExecutorLinkFileList-normal-arm64.txt
+note: Using stub executor library with Swift entry point. (in target 'GoalflowMac' from project 'GoalflowMac')
+
+Ld /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing normal (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos15.0 -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -O0 -L/tmp/s2-a1-macos/Build/Products/Debug -F/tmp/s2-a1-macos/Build/Products/Debug -Xlinker -rpath -Xlinker @executable_path -Xlinker -rpath -Xlinker @executable_path/../Frameworks -rdynamic -Xlinker -no_deduplicate -e ___debug_blank_executor_main -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_dylib -Xlinker /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-DebugDylibPath-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_instlnm -Xlinker /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-DebugDylibInstallName-normal-arm64.txt -Xlinker -filelist -Xlinker /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing-ExecutorLinkFileList-normal-arm64.txt /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib -o /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing
+
+CopySwiftLibs /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib --scan-folder /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks --scan-folder /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns --scan-folder /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Library/SystemExtensions --scan-folder /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Extensions --platform macosx --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os --back-deploy-swift-span
+Ignoring --strip-bitcode because --sign was not passed
+
+ExtractAppIntentsMetadata (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name GoalflowMac --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk --xcode-version 17F113 --platform-family macOS --deployment-target 15.0 --bundle-identifier com.mariusschober.tsurfing.mac --output /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/Resources --target-triple arm64-apple-macos15.0 --binary-file /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing --dependency-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing_dependency_info.dat --stringsdata-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftFileList --metadata-file-list /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.DependencyMetadataFileList --static-metadata-file-list /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Tsurfing.DependencyStaticMetadataFileList --swift-const-vals-list /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMac.build/Objects-normal/arm64/Tsurfing.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-09-08 14:29:21.889 appintentsmetadataprocessor[4508:3632507] Starting appintentsmetadataprocessor export
+2026-09-08 14:29:21.894 appintentsmetadataprocessor[4508:3632507] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+ProcessInfoPlistFile /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Info.plist /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/empty-GoalflowMacTests.plist (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-infoPlistUtility /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/empty-GoalflowMacTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -platform macosx -o /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Info.plist
+
+Ld /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/MacOS/GoalflowMacTests normal (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-macos15.0 -bundle -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk -O0 -L/tmp/s2-a1-macos/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -L/tmp/s2-a1-macos/Build/Products/Debug -L/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib -F/tmp/s2-a1-macos/Build/Intermediates.noindex/EagerLinkingTBDs/Debug -F/tmp/s2-a1-macos/Build/Products/Debug -iframework /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks -filelist /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.LinkFileList -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker @loader_path/../Frameworks -Xlinker -rpath -Xlinker @executable_path/../Frameworks -bundle_loader /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing -Xlinker -object_path_lto -Xlinker /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -dependency_info -Xlinker /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.swiftmodule @/tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests-linker-args.resp -Xlinker -needed_framework -Xlinker XCTest -framework XCTest -Xlinker -needed-lXCTestSwiftSupport -lXCTestSwiftSupport /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/MacOS/Tsurfing.debug.dylib -o /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/MacOS/GoalflowMacTests
+
+CopySwiftLibs /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/MacOS/GoalflowMacTests --scan-folder /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Frameworks --scan-folder /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/PlugIns --scan-folder /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Library/SystemExtensions --scan-folder /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Extensions --platform macosx --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os --back-deploy-swift-span
+Ignoring --strip-bitcode because --sign was not passed
+
+ExtractAppIntentsMetadata (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name GoalflowMacTests --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk --xcode-version 17F113 --platform-family macOS --deployment-target 15.0 --bundle-identifier com.mariusschober.tsurfing.mac.tests --output /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/Resources --target-triple arm64-apple-macos15.0 --binary-file /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest/Contents/MacOS/GoalflowMacTests --dependency-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests_dependency_info.dat --stringsdata-file /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftFileList --metadata-file-list /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.DependencyMetadataFileList --static-metadata-file-list /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/GoalflowMacTests.DependencyStaticMetadataFileList --swift-const-vals-list /tmp/s2-a1-macos/Build/Intermediates.noindex/GoalflowMac.build/Debug/GoalflowMacTests.build/Objects-normal/arm64/GoalflowMacTests.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-09-08 14:29:22.219 appintentsmetadataprocessor[4511:3632523] Starting appintentsmetadataprocessor export
+2026-09-08 14:29:22.221 appintentsmetadataprocessor[4511:3632523] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+
+RegisterExecutionPolicyException /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-RegisterExecutionPolicyException /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest
+
+Touch /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest (in target 'GoalflowMacTests' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /usr/bin/touch -c /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app/Contents/PlugIns/GoalflowMacTests.xctest
+
+RegisterExecutionPolicyException /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-RegisterExecutionPolicyException /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app
+
+Validate /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    builtin-validationUtility /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app -no-validate-extension -infoplist-subpath Contents/Info.plist
+
+Touch /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /usr/bin/touch -c /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app
+
+RegisterWithLaunchServices /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app (in target 'GoalflowMac' from project 'GoalflowMac')
+    cd /Users/schober/Projects/TSurfing/macos-native
+    /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f -R -trusted /tmp/s2-a1-macos/Build/Products/Debug/Tsurfing.app
+
+2026-09-08 14:29:25.686553+0100 Tsurfing[4522:3632668] [Connection] Unable to get synchronousRemoteObjectProxy, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-09-08 14:29:25.687551+0100 Tsurfing[4522:3632672] [Connection] Unable to get synchronousRemoteObjectProxy, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-09-08 14:29:25.687584+0100 Tsurfing[4522:3632672] [Connection] Unable to re-register with Process Instance Registry, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-09-08 14:29:25.688457+0100 Tsurfing[4522:3632676] [Connection] Unable to get synchronousRemoteObjectProxy, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-09-08 14:29:25.688475+0100 Tsurfing[4522:3632676] [Connection] Unable to re-register wit2026-09-08 14:29:25.689297+0100 Tsurfing[4522:3632677] [Connection] Unable to get synchronousRemoteObjectProxy, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+h Process Instance Registry, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-09-08 14:29:25.689841+0100 Tsurfing[4522:3632677] [Connection] Unable to re-register with Process Instance Registry, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-09-08 14:29:25.690086+0100 Tsurfing[4522:3632677] [Connection] Will NOT re-try to establish the connection
+2026-09-08 14:29:25.690110+0100 Tsurfing[4522:3632678] [Connection] Unable to get synchronousRemoteObjectProxy, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-09-08 14:29:25.690436+0100 Tsurfing[4522:3632678] [Connection] Unable to re-register with Process Instance Registry, error: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+2026-09-08 14:29:25.686898+0100 Tsurfing[4522:3632668] [Application] Error registering app with intents framework: Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.linkd.autoShortcut" UserInfo={NSDebugDescription=connection to service named com.apple.linkd.autoShortcut}
+Test Suite 'All tests' started at 2026-09-08 14:29:26.895.
+Test Suite 'GoalflowMacTests.xctest' started at 2026-09-08 14:29:26.895.
+Test Suite 'ApplyPushResultsTests' started at 2026-09-08 14:29:26.896.
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_accepted_proves_and_clears]' started.
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_accepted_proves_and_clears]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_accepted_receipt_with_different_device_throws]' started.
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_accepted_receipt_with_different_device_throws]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_accepted_receipt_with_different_timestamp_throws]' started.
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_accepted_receipt_with_different_timestamp_throws]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_duplicate_ack_throws]' started.
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_duplicate_ack_throws]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_exact_ack_required]' started.
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_exact_ack_required]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_receipt_parser_rejects_boolean_and_fractional_versions]' started.
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_receipt_parser_rejects_boolean_and_fractional_versions]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_rejected_resolution_replaces_old_conflict_without_losing_history]' started.
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_rejected_resolution_replaces_old_conflict_without_losing_history]' passed (0.018 seconds).
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_replayMismatch_throws]' started.
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_replayMismatch_throws]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_server_snake_case_receipt_preserves_exact_record]' started.
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_server_snake_case_receipt_preserves_exact_record]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_serverVersion_zero_when_accepted_throws]' started.
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_serverVersion_zero_when_accepted_throws]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_stableJson_mismatch_throws]' started.
+Test Case '-[GoalflowMacTests.ApplyPushResultsTests test_stableJson_mismatch_throws]' passed (0.000 seconds).
+Test Suite 'ApplyPushResultsTests' passed at 2026-09-08 14:29:26.927.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.026 (0.031) seconds
+Test Suite 'ApplyRemotePageTests' started at 2026-09-08 14:29:26.927.
+Test Case '-[GoalflowMacTests.ApplyRemotePageTests test_cursor_moved_backwards_throws]' started.
+Test Case '-[GoalflowMacTests.ApplyRemotePageTests test_cursor_moved_backwards_throws]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ApplyRemotePageTests test_duplicate_serverVersion_throws]' started.
+Test Case '-[GoalflowMacTests.ApplyRemotePageTests test_duplicate_serverVersion_throws]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ApplyRemotePageTests test_pull_creates_conflict_when_pending]' started.
+Test Case '-[GoalflowMacTests.ApplyRemotePageTests test_pull_creates_conflict_when_pending]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ApplyRemotePageTests test_skip_throws]' started.
+Test Case '-[GoalflowMacTests.ApplyRemotePageTests test_skip_throws]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ApplyRemotePageTests test_stale_serverVersion_throws]' started.
+Test Case '-[GoalflowMacTests.ApplyRemotePageTests test_stale_serverVersion_throws]' passed (0.004 seconds).
+Test Case '-[GoalflowMacTests.ApplyRemotePageTests test_upsert_when_no_pending]' started.
+Test Case '-[GoalflowMacTests.ApplyRemotePageTests test_upsert_when_no_pending]' passed (0.001 seconds).
+Test Suite 'ApplyRemotePageTests' passed at 2026-09-08 14:29:26.936.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.007 (0.009) seconds
+Test Suite 'AudibleExecutionTimerTests' started at 2026-09-08 14:29:26.936.
+Test Case '-[GoalflowMacTests.AudibleExecutionTimerTests test_ticks_during_countdown_and_overtime_but_not_pause_or_repeated_time]' started.
+Test Case '-[GoalflowMacTests.AudibleExecutionTimerTests test_ticks_during_countdown_and_overtime_but_not_pause_or_repeated_time]' passed (0.002 seconds).
+Test Suite 'AudibleExecutionTimerTests' passed at 2026-09-08 14:29:26.938.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'AutomaticReconciliationTests' started at 2026-09-08 14:29:26.939.
+Test Case '-[GoalflowMacTests.AutomaticReconciliationTests test_changed_conflict_history_is_not_cleared_by_old_ack]' started.
+Test Case '-[GoalflowMacTests.AutomaticReconciliationTests test_changed_conflict_history_is_not_cleared_by_old_ack]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.AutomaticReconciliationTests test_duplicate_original_mutation_is_rejected]' started.
+Test Case '-[GoalflowMacTests.AutomaticReconciliationTests test_duplicate_original_mutation_is_rejected]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.AutomaticReconciliationTests test_edit_during_request_preserves_outbox_identity_and_visible_value]' started.
+Test Case '-[GoalflowMacTests.AutomaticReconciliationTests test_edit_during_request_preserves_outbox_identity_and_visible_value]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.AutomaticReconciliationTests test_exact_ack_applies_current_cloud_and_replay_is_noop]' started.
+Test Case '-[GoalflowMacTests.AutomaticReconciliationTests test_exact_ack_applies_current_cloud_and_replay_is_noop]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.AutomaticReconciliationTests test_invalid_record_identity_and_boolean_revision_are_rejected]' started.
+Test Case '-[GoalflowMacTests.AutomaticReconciliationTests test_invalid_record_identity_and_boolean_revision_are_rejected]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.AutomaticReconciliationTests test_mismatched_ack_and_stale_revision_leave_history_intact]' started.
+Test Case '-[GoalflowMacTests.AutomaticReconciliationTests test_mismatched_ack_and_stale_revision_leave_history_intact]' passed (0.001 seconds).
+Test Suite 'AutomaticReconciliationTests' passed at 2026-09-08 14:29:26.954.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.009 (0.015) seconds
+Test Suite 'BreakAlarmRegressionTests' started at 2026-09-08 14:29:26.954.
+Test Case '-[GoalflowMacTests.BreakAlarmRegressionTests test_expired_ticks_and_restores_only_notify_once_and_dismissal_stops]' started.
+Test Case '-[GoalflowMacTests.BreakAlarmRegressionTests test_expired_ticks_and_restores_only_notify_once_and_dismissal_stops]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.BreakAlarmRegressionTests test_open_break_does_not_alarm_and_stop_cancels_output]' started.
+Test Case '-[GoalflowMacTests.BreakAlarmRegressionTests test_open_break_does_not_alarm_and_stop_cancels_output]' passed (0.001 seconds).
+Test Suite 'BreakAlarmRegressionTests' passed at 2026-09-08 14:29:26.956.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'BreakReturnTests' started at 2026-09-08 14:29:26.956.
+Test Case '-[GoalflowMacTests.BreakReturnTests test_break_does_not_bleed_into_focus]' started.
+Test Case '-[GoalflowMacTests.BreakReturnTests test_break_does_not_bleed_into_focus]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.BreakReturnTests test_pause_before_break_freeze]' started.
+Test Case '-[GoalflowMacTests.BreakReturnTests test_pause_before_break_freeze]' passed (0.001 seconds).
+Test Suite 'BreakReturnTests' passed at 2026-09-08 14:29:26.958.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'BreakSessionStoreTests' started at 2026-09-08 14:29:26.958.
+Test Case '-[GoalflowMacTests.BreakSessionStoreTests test_corrupt_break_state_is_not_treated_as_no_break]' started.
+Test Case '-[GoalflowMacTests.BreakSessionStoreTests test_corrupt_break_state_is_not_treated_as_no_break]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.BreakSessionStoreTests test_file_persists_and_clears]' started.
+Test Case '-[GoalflowMacTests.BreakSessionStoreTests test_file_persists_and_clears]' passed (0.004 seconds).
+Test Case '-[GoalflowMacTests.BreakSessionStoreTests test_open_ended_persists]' started.
+Test Case '-[GoalflowMacTests.BreakSessionStoreTests test_open_ended_persists]' passed (0.001 seconds).
+Test Suite 'BreakSessionStoreTests' passed at 2026-09-08 14:29:26.967.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.008 (0.008) seconds
+Test Suite 'BreakStateTests' started at 2026-09-08 14:29:26.967.
+Test Case '-[GoalflowMacTests.BreakStateTests test_durations]' started.
+Test Case '-[GoalflowMacTests.BreakStateTests test_durations]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.BreakStateTests test_open_ended_never_expired]' started.
+Test Case '-[GoalflowMacTests.BreakStateTests test_open_ended_never_expired]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.BreakStateTests test_remaining_and_expired]' started.
+Test Case '-[GoalflowMacTests.BreakStateTests test_remaining_and_expired]' passed (0.001 seconds).
+Test Suite 'BreakStateTests' passed at 2026-09-08 14:29:26.971.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.004) seconds
+Test Suite 'BreakTimerTests' started at 2026-09-08 14:29:26.971.
+Test Case '-[GoalflowMacTests.BreakTimerTests test_break_open_elapsed]' started.
+Test Case '-[GoalflowMacTests.BreakTimerTests test_break_open_elapsed]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.BreakTimerTests test_break_timer_counts]' started.
+Test Case '-[GoalflowMacTests.BreakTimerTests test_break_timer_counts]' passed (0.001 seconds).
+Test Suite 'BreakTimerTests' passed at 2026-09-08 14:29:26.972.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'BuildStagingTests' started at 2026-09-08 14:29:26.973.
+Test Case '-[GoalflowMacTests.BuildStagingTests test_added_record]' started.
+Test Case '-[GoalflowMacTests.BuildStagingTests test_added_record]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.BuildStagingTests test_deleted_record]' started.
+Test Case '-[GoalflowMacTests.BuildStagingTests test_deleted_record]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.BuildStagingTests test_noop_when_equal]' started.
+Test Case '-[GoalflowMacTests.BuildStagingTests test_noop_when_equal]' passed (0.005 seconds).
+Test Case '-[GoalflowMacTests.BuildStagingTests test_per_record_diff_creates_mutation]' started.
+Test Case '-[GoalflowMacTests.BuildStagingTests test_per_record_diff_creates_mutation]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.BuildStagingTests test_singleton_store]' started.
+Test Case '-[GoalflowMacTests.BuildStagingTests test_singleton_store]' passed (0.001 seconds).
+Test Suite 'BuildStagingTests' passed at 2026-09-08 14:29:26.982.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.008 (0.009) seconds
+Test Suite 'CalendarCollisionTests' started at 2026-09-08 14:29:26.982.
+Test Case '-[GoalflowMacTests.CalendarCollisionTests test_mock_collision_overlap]' started.
+Test Case '-[GoalflowMacTests.CalendarCollisionTests test_mock_collision_overlap]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CalendarCollisionTests test_month_precision_returns_nil]' started.
+Test Case '-[GoalflowMacTests.CalendarCollisionTests test_month_precision_returns_nil]' passed (0.003 seconds).
+Test Case '-[GoalflowMacTests.CalendarCollisionTests test_no_collision_when_no_time_match]' started.
+Test Case '-[GoalflowMacTests.CalendarCollisionTests test_no_collision_when_no_time_match]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CalendarCollisionTests test_no_scheduledTime_returns_nil]' started.
+Test Case '-[GoalflowMacTests.CalendarCollisionTests test_no_scheduledTime_returns_nil]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CalendarCollisionTests test_request_access_mock_returns]' started.
+Test Case '-[GoalflowMacTests.CalendarCollisionTests test_request_access_mock_returns]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CalendarCollisionTests test_task_interval_computation]' started.
+Test Case '-[GoalflowMacTests.CalendarCollisionTests test_task_interval_computation]' passed (0.001 seconds).
+Test Suite 'CalendarCollisionTests' passed at 2026-09-08 14:29:26.992.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.008 (0.009) seconds
+Test Suite 'CaptureParserTests' started at 2026-09-08 14:29:26.992.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_cleanTitle_collapse]' started.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_cleanTitle_collapse]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CaptureParserTests test_date_day]' started.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_date_day]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CaptureParserTests test_date_month_current_not_assigned]' started.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_date_month_current_not_assigned]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CaptureParserTests test_date_month_future]' started.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_date_month_future]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CaptureParserTests test_duration_h_combo]' started.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_duration_h_combo]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CaptureParserTests test_duration_m]' started.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_duration_m]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CaptureParserTests test_duration_natural_language]' started.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_duration_natural_language]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CaptureParserTests test_frog_and_quickie]' started.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_frog_and_quickie]' passed (0.003 seconds).
+Test Case '-[GoalflowMacTests.CaptureParserTests test_hashtag_extraction]' started.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_hashtag_extraction]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CaptureParserTests test_month_with_time_drops_time]' started.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_month_with_time_drops_time]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CaptureParserTests test_scheduledTime]' started.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_scheduledTime]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CaptureParserTests test_title_empty_results_in_empty_clean]' started.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_title_empty_results_in_empty_clean]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CaptureParserTests test_url_extraction]' started.
+Test Case '-[GoalflowMacTests.CaptureParserTests test_url_extraction]' passed (0.001 seconds).
+Test Suite 'CaptureParserTests' passed at 2026-09-08 14:29:27.012.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.017 (0.020) seconds
+Test Suite 'CaptureServiceTests' started at 2026-09-08 14:29:27.012.
+Test Case '-[GoalflowMacTests.CaptureServiceTests test_add_persists_before_next_and_no_resurrection]' started.
+Test Case '-[GoalflowMacTests.CaptureServiceTests test_add_persists_before_next_and_no_resurrection]' passed (0.009 seconds).
+Test Case '-[GoalflowMacTests.CaptureServiceTests test_month_future_and_time_validation]' started.
+Test Case '-[GoalflowMacTests.CaptureServiceTests test_month_future_and_time_validation]' passed (0.008 seconds).
+Test Case '-[GoalflowMacTests.CaptureServiceTests test_no_unscheduled_rejects_empty_title]' started.
+Test Case '-[GoalflowMacTests.CaptureServiceTests test_no_unscheduled_rejects_empty_title]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CaptureServiceTests test_plannedOrder_tail]' started.
+Test Case '-[GoalflowMacTests.CaptureServiceTests test_plannedOrder_tail]' passed (0.021 seconds).
+Test Case '-[GoalflowMacTests.CaptureServiceTests test_scheduledTime_only_with_day]' started.
+Test Case '-[GoalflowMacTests.CaptureServiceTests test_scheduledTime_only_with_day]' passed (0.008 seconds).
+Test Case '-[GoalflowMacTests.CaptureServiceTests test_url_captured_to_notes_and_tags_preserved]' started.
+Test Case '-[GoalflowMacTests.CaptureServiceTests test_url_captured_to_notes_and_tags_preserved]' passed (0.008 seconds).
+Test Suite 'CaptureServiceTests' passed at 2026-09-08 14:29:27.069.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.055 (0.057) seconds
+Test Suite 'CaptureViewModelTests' started at 2026-09-08 14:29:27.069.
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_create_add_via_picker]' started.
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_create_add_via_picker]' passed (0.010 seconds).
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_empty_title_fails]' started.
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_empty_title_fails]' passed (0.003 seconds).
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_month_future_via_picker]' started.
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_month_future_via_picker]' passed (0.009 seconds).
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_needsDate_factory_default]' started.
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_needsDate_factory_default]' passed (0.003 seconds).
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_notes_toggle_and_url]' started.
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_notes_toggle_and_url]' passed (0.009 seconds).
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_privacy_blank]' started.
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_privacy_blank]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_with_parsed_date_canSubmit]' started.
+Test Case '-[GoalflowMacTests.CaptureViewModelTests test_with_parsed_date_canSubmit]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.CaptureViewModelTests testCapturePanelCanReceiveKeyboardFocus]' started.
+Test Case '-[GoalflowMacTests.CaptureViewModelTests testCapturePanelCanReceiveKeyboardFocus]' passed (0.004 seconds).
+Test Case '-[GoalflowMacTests.CaptureViewModelTests testCommandReturnFocusesNotesEditor]' started.
+Test Case '-[GoalflowMacTests.CaptureViewModelTests testCommandReturnFocusesNotesEditor]' passed (0.572 seconds).
+Test Case '-[GoalflowMacTests.CaptureViewModelTests testConfirmedPickerDateSurvivesClosingPicker]' started.
+Test Case '-[GoalflowMacTests.CaptureViewModelTests testConfirmedPickerDateSurvivesClosingPicker]' passed (0.021 seconds).
+Test Suite 'CaptureViewModelTests' passed at 2026-09-08 14:29:27.707.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.635 (0.638) seconds
+Test Suite 'CausalFocusTests' started at 2026-09-08 14:29:27.707.
+Test Case '-[GoalflowMacTests.CausalFocusTests testInvalidBaselineRemainsInspectable]' started.
+Test Case '-[GoalflowMacTests.CausalFocusTests testInvalidBaselineRemainsInspectable]' passed (0.003 seconds).
+Test Case '-[GoalflowMacTests.CausalFocusTests testSharedCausalFocusFixtures]' started.
+Test Case '-[GoalflowMacTests.CausalFocusTests testSharedCausalFocusFixtures]' passed (0.045 seconds).
+Test Suite 'CausalFocusTests' passed at 2026-09-08 14:29:27.756.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.048 (0.049) seconds
+Test Suite 'ChaosTests' started at 2026-09-08 14:29:27.756.
+Test Case '-[GoalflowMacTests.ChaosTests test_chaos_20_sequences]' started.
+Test Case '-[GoalflowMacTests.ChaosTests test_chaos_20_sequences]' passed (0.005 seconds).
+Test Suite 'ChaosTests' passed at 2026-09-08 14:29:27.762.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'CompletionHoldTests' started at 2026-09-08 14:29:27.762.
+Test Case '-[GoalflowMacTests.CompletionHoldTests test_frog_requires_3s]' started.
+Test Case '-[GoalflowMacTests.CompletionHoldTests test_frog_requires_3s]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CompletionHoldTests test_hold_cancel_before_threshold]' started.
+Test Case '-[GoalflowMacTests.CompletionHoldTests test_hold_cancel_before_threshold]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CompletionHoldTests test_hold_progress_and_completion]' started.
+Test Case '-[GoalflowMacTests.CompletionHoldTests test_hold_progress_and_completion]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.CompletionHoldTests test_ordinary_1s_frog_3s]' started.
+Test Case '-[GoalflowMacTests.CompletionHoldTests test_ordinary_1s_frog_3s]' passed (0.001 seconds).
+Test Suite 'CompletionHoldTests' passed at 2026-09-08 14:29:27.766.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+Test Suite 'CounterLedgerTests' started at 2026-09-08 14:29:27.766.
+Test Case '-[GoalflowMacTests.CounterLedgerTests testSharedCounterFixturesInEitherOrder]' started.
+Test Case '-[GoalflowMacTests.CounterLedgerTests testSharedCounterFixturesInEitherOrder]' passed (0.030 seconds).
+Test Suite 'CounterLedgerTests' passed at 2026-09-08 14:29:27.797.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.030 (0.030) seconds
+Test Suite 'EmailOtpAuthTests' started at 2026-09-08 14:29:27.797.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_captcha_policy_requires_an_explicit_server_boolean]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_captcha_policy_requires_an_explicit_server_boolean]' passed (0.007 seconds).
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_cross_user_telegram_link_callback_preserves_original_session]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_cross_user_telegram_link_callback_preserves_original_session]' passed (0.004 seconds).
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_email_preflight_with_no_captcha_defers_to_server_policy]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_email_preflight_with_no_captcha_defers_to_server_policy]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_lost_activation_ack_retries_without_reusing_email_code]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_lost_activation_ack_retries_without_reusing_email_code]' passed (0.003 seconds).
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_lost_telegram_activation_ack_resumes_without_reusing_pkce_code]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_lost_telegram_activation_ack_resumes_without_reusing_pkce_code]' passed (0.003 seconds).
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_mfa_required_response_does_not_erase_valid_session]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_mfa_required_response_does_not_erase_valid_session]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_missing_captcha_server_rejection_does_not_create_pending_authority]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_missing_captcha_server_rejection_does_not_create_pending_authority]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_preexisting_session_never_bypasses_typed_email_code_verification]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_preexisting_session_never_bypasses_typed_email_code_verification]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_sync_mfa_response_preserves_session_and_can_resume]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_sync_mfa_response_preserves_session_and_can_resume]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_sync_other_authorization_errors_still_clear_session]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_sync_other_authorization_errors_still_clear_session]' passed (0.003 seconds).
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_telegram_activation_is_bound_and_verified_before_session_becomes_usable]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_telegram_activation_is_bound_and_verified_before_session_becomes_usable]' passed (0.003 seconds).
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_telegram_link_authorization_is_authenticated_and_user_bound]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_telegram_link_authorization_is_authenticated_and_user_bound]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_telegram_sign_in_uses_supabase_pkce_without_legacy_widget_parameters]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_telegram_sign_in_uses_supabase_pkce_without_legacy_widget_parameters]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_typed_code_activates_before_keychain_session_becomes_usable]' started.
+Test Case '-[GoalflowMacTests.EmailOtpAuthTests test_typed_code_activates_before_keychain_session_becomes_usable]' passed (0.002 seconds).
+Test Suite 'EmailOtpAuthTests' passed at 2026-09-08 14:29:27.836.
+	 Executed 14 tests, with 0 failures (0 unexpected) in 0.036 (0.040) seconds
+Test Suite 'ExecutionStatePauseTests' started at 2026-09-08 14:29:27.837.
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_clock_skew_clamped]' started.
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_clock_skew_clamped]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_extend_caps_1440]' started.
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_extend_caps_1440]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_extend_increases_planned]' started.
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_extend_increases_planned]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_extend_while_paused_stays_paused]' started.
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_extend_while_paused_stays_paused]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_overtime_counts_separately]' started.
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_overtime_counts_separately]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_pause_freezes_remaining]' started.
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_pause_freezes_remaining]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_pause_idempotent_guard]' started.
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_pause_idempotent_guard]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_pause_resume_10_cycles_additive]' started.
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_pause_resume_10_cycles_additive]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_resume_adds_pause_interval]' started.
+Test Case '-[GoalflowMacTests.ExecutionStatePauseTests test_resume_adds_pause_interval]' passed (0.001 seconds).
+Test Suite 'ExecutionStatePauseTests' passed at 2026-09-08 14:29:27.844.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.006 (0.008) seconds
+Test Suite 'ExecutionStateTests' started at 2026-09-08 14:29:27.845.
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_action_creates_active]' started.
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_action_creates_active]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_idle_returns_planned]' started.
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_idle_returns_planned]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_legacy_active_migration_shifts_pause_accumulator_without_double_count]' started.
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_legacy_active_migration_shifts_pause_accumulator_without_double_count]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_legacy_paused_migration_preserves_original_pause_and_elapsed]' started.
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_legacy_paused_migration_preserves_original_pause_and_elapsed]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_monotonic_derivation_not_decrement]' started.
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_monotonic_derivation_not_decrement]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_relaunch_recovery]' started.
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_relaunch_recovery]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_remaining_init_full]' started.
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_remaining_init_full]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_shared_active_record_reanchor_preserves_elapsed_once]' started.
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_shared_active_record_reanchor_preserves_elapsed_once]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_shared_paused_record_retains_owner_pause_elapsed]' started.
+Test Case '-[GoalflowMacTests.ExecutionStateTests test_shared_paused_record_retains_owner_pause_elapsed]' passed (0.001 seconds).
+Test Suite 'ExecutionStateTests' passed at 2026-09-08 14:29:27.857.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.007 (0.012) seconds
+Test Suite 'ExecutionTimerTests' started at 2026-09-08 14:29:27.857.
+Test Case '-[GoalflowMacTests.ExecutionTimerTests test_relaunch_within_1s_tolerance]' started.
+Test Case '-[GoalflowMacTests.ExecutionTimerTests test_relaunch_within_1s_tolerance]' passed (0.003 seconds).
+Test Case '-[GoalflowMacTests.ExecutionTimerTests test_timer_derives_from_reference]' started.
+Test Case '-[GoalflowMacTests.ExecutionTimerTests test_timer_derives_from_reference]' passed (0.001 seconds).
+Test Suite 'ExecutionTimerTests' passed at 2026-09-08 14:29:27.861.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.004 (0.005) seconds
+Test Suite 'FileFocusSessionStoreTests' started at 2026-09-08 14:29:27.862.
+Test Case '-[GoalflowMacTests.FileFocusSessionStoreTests test_composite_double_write]' started.
+Test Case '-[GoalflowMacTests.FileFocusSessionStoreTests test_composite_double_write]' passed (0.004 seconds).
+Test Case '-[GoalflowMacTests.FileFocusSessionStoreTests test_composite_migrates_from_wal]' started.
+Test Case '-[GoalflowMacTests.FileFocusSessionStoreTests test_composite_migrates_from_wal]' passed (0.004 seconds).
+Test Case '-[GoalflowMacTests.FileFocusSessionStoreTests test_composite_repairs_corrupt_file_from_valid_mirror]' started.
+Test Case '-[GoalflowMacTests.FileFocusSessionStoreTests test_composite_repairs_corrupt_file_from_valid_mirror]' passed (0.004 seconds).
+Test Case '-[GoalflowMacTests.FileFocusSessionStoreTests test_composite_surfaces_two_corrupt_replicas]' started.
+Test Case '-[GoalflowMacTests.FileFocusSessionStoreTests test_composite_surfaces_two_corrupt_replicas]' passed (0.004 seconds).
+Test Case '-[GoalflowMacTests.FileFocusSessionStoreTests test_file_persists_and_recovers]' started.
+Test Case '-[GoalflowMacTests.FileFocusSessionStoreTests test_file_persists_and_recovers]' passed (0.002 seconds).
+Test Suite 'FileFocusSessionStoreTests' passed at 2026-09-08 14:29:27.880.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.017 (0.018) seconds
+Test Suite 'FlowStateTests' started at 2026-09-08 14:29:27.880.
+Test Case '-[GoalflowMacTests.FlowStateTests test_corrupt_extra_json_blocks_completion_without_changing_identity]' started.
+Test Case '-[GoalflowMacTests.FlowStateTests test_corrupt_extra_json_blocks_completion_without_changing_identity]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.FlowStateTests test_flowState_allCases]' started.
+Test Case '-[GoalflowMacTests.FlowStateTests test_flowState_allCases]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.FlowStateTests test_withCompleted_preserves_extraJson]' started.
+Test Case '-[GoalflowMacTests.FlowStateTests test_withCompleted_preserves_extraJson]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.FlowStateTests test_withFlowState_merges]' started.
+Test Case '-[GoalflowMacTests.FlowStateTests test_withFlowState_merges]' passed (0.001 seconds).
+Test Suite 'FlowStateTests' passed at 2026-09-08 14:29:27.885.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.004 (0.005) seconds
+Test Suite 'FocusSessionStoreTests' started at 2026-09-08 14:29:27.885.
+Test Case '-[GoalflowMacTests.FocusSessionStoreTests test_clear_idempotent]' started.
+Test Case '-[GoalflowMacTests.FocusSessionStoreTests test_clear_idempotent]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.FocusSessionStoreTests test_overwrite_updates]' started.
+Test Case '-[GoalflowMacTests.FocusSessionStoreTests test_overwrite_updates]' passed (0.003 seconds).
+Test Case '-[GoalflowMacTests.FocusSessionStoreTests test_persists_and_recovers]' started.
+Test Case '-[GoalflowMacTests.FocusSessionStoreTests test_persists_and_recovers]' passed (0.002 seconds).
+Test Suite 'FocusSessionStoreTests' passed at 2026-09-08 14:29:27.893.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.007 (0.008) seconds
+Test Suite 'HardeningTests' started at 2026-09-08 14:29:27.893.
+Test Case '-[GoalflowMacTests.HardeningTests test_a11y_labels_exist]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_a11y_labels_exist]' passed (0.007 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_access_token_claim_parser_preserves_durable_identity]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_access_token_claim_parser_preserves_durable_identity]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_app_icon_exists]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_app_icon_exists]' passed (0.010 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_auth_callback_requires_exact_custom_url]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_auth_callback_requires_exact_custom_url]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_cloud_configuration_accepts_https_and_publishable_key]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_cloud_configuration_accepts_https_and_publishable_key]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_cloud_configuration_allows_only_anon_legacy_jwt]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_cloud_configuration_allows_only_anon_legacy_jwt]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_cloud_configuration_fails_closed_without_values]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_cloud_configuration_fails_closed_without_values]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_cloud_configuration_rejects_server_secret_and_insecure_origin]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_cloud_configuration_rejects_server_secret_and_insecure_origin]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_entitlements_file_exists_and_contains_keys]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_entitlements_file_exists_and_contains_keys]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_pkce_challenge_matches_rfc7636_vector]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_pkce_challenge_matches_rfc7636_vector]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_privacy_manifest_exists]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_privacy_manifest_exists]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_store_bridge_all_shared_stores]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_store_bridge_all_shared_stores]' passed (0.016 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_store_bridge_deletes_singleton_replica]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_store_bridge_deletes_singleton_replica]' passed (0.011 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_store_bridge_normalizes_browser_task_shape_for_native_use]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_store_bridge_normalizes_browser_task_shape_for_native_use]' passed (0.006 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_store_bridge_rejects_malformed_task_before_write]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_store_bridge_rejects_malformed_task_before_write]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_su_feed_url_exists]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_su_feed_url_exists]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_sync_does_not_retry_permanent_validation_status]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_sync_does_not_retry_permanent_validation_status]' passed (0.005 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_sync_engine_lock_serializes]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_sync_engine_lock_serializes]' passed (0.019 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_sync_rejects_fractional_pull_cursor_without_advancing]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_sync_rejects_fractional_pull_cursor_without_advancing]' passed (0.004 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_sync_retries_timeout_without_changing_operation_identity]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_sync_retries_timeout_without_changing_operation_identity]' passed (0.007 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_sync_retries_transient_status_with_capped_backoff]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_sync_retries_transient_status_with_capped_backoff]' passed (0.008 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_timing_safe_state_comparison_requires_exact_bytes]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_timing_safe_state_comparison_requires_exact_bytes]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.HardeningTests test_version_bump]' started.
+Test Case '-[GoalflowMacTests.HardeningTests test_version_bump]' passed (0.001 seconds).
+Test Suite 'HardeningTests' passed at 2026-09-08 14:29:28.003.
+	 Executed 23 tests, with 0 failures (0 unexpected) in 0.104 (0.109) seconds
+Test Suite 'HostedCrossClientSyncTests' started at 2026-09-08 14:29:28.003.
+Test Case '-[GoalflowMacTests.HostedCrossClientSyncTests testProductionTransportEditsAndroidRecord]' started.
+/Users/schober/Projects/TSurfing/macos-native/GoalflowMacTests/SyncTests.swift:1185: -[GoalflowMacTests.HostedCrossClientSyncTests testProductionTransportEditsAndroidRecord] : Test skipped - The live transport proof runs only inside the explicit staging cross-client gate.
+Test Case '-[GoalflowMacTests.HostedCrossClientSyncTests testProductionTransportEditsAndroidRecord]' skipped (0.001 seconds).
+Test Suite 'HostedCrossClientSyncTests' passed at 2026-09-08 14:29:28.005.
+	 Executed 1 test, with 1 test skipped and 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'LocalBreakdownTests' started at 2026-09-08 14:29:28.005.
+Test Case '-[GoalflowMacTests.LocalBreakdownTests test_breakdown_closes_parent_and_creates_children]' started.
+Test Case '-[GoalflowMacTests.LocalBreakdownTests test_breakdown_closes_parent_and_creates_children]' passed (0.014 seconds).
+Test Case '-[GoalflowMacTests.LocalBreakdownTests test_breakdown_fails_empty]' started.
+Test Case '-[GoalflowMacTests.LocalBreakdownTests test_breakdown_fails_empty]' passed (0.006 seconds).
+Test Case '-[GoalflowMacTests.LocalBreakdownTests test_breakdown_fails_too_many]' started.
+Test Case '-[GoalflowMacTests.LocalBreakdownTests test_breakdown_fails_too_many]' passed (0.006 seconds).
+Test Case '-[GoalflowMacTests.LocalBreakdownTests test_breakdown_parent_not_open_fails]' started.
+Test Case '-[GoalflowMacTests.LocalBreakdownTests test_breakdown_parent_not_open_fails]' passed (0.007 seconds).
+Test Case '-[GoalflowMacTests.LocalBreakdownTests test_breakdown_preserves_plan_when_matching]' started.
+Test Case '-[GoalflowMacTests.LocalBreakdownTests test_breakdown_preserves_plan_when_matching]' passed (0.026 seconds).
+Test Case '-[GoalflowMacTests.LocalBreakdownTests test_suggest_stub_returns_empty]' started.
+2026-09-08 14:29:28.069413+0100 Tsurfing[4522:3632620] [NSCGS] Ignoring request to entangle context after pre-commit
+2026-09-08 14:29:28.069470+0100 Tsurfing[4522:3632620] [NSCGS] Ignoring request to entangle context after pre-commit
+2026-09-08 14:29:28.069477+0100 Tsurfing[4522:3632620] [NSCGS] Ignoring request to entangle context after pre-commit
+2026-09-08 14:29:28.069523+0100 Tsurfing[4522:3632620] [NSCGS] Entangling fence requested after pre-commit
+2026-09-08 14:29:28.075473+0100 Tsurfing[4522:3632620] [API] cannot add handler to 2 from 2 - dropping
+2026-09-08 14:29:28.076575+0100 Tsurfing[4522:3632620] [NSCGS] Warning: Invalid attempt to open a new transaction during CA commit. This is likely to break AppKit transactional behavior. Break on NSCGSTransactionCreatedDuringCommitError to debug.
+Test Case '-[GoalflowMacTests.LocalBreakdownTests test_suggest_stub_returns_empty]' passed (0.030 seconds).
+Test Suite 'LocalBreakdownTests' passed at 2026-09-08 14:29:28.096.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.090 (0.091) seconds
+Test Suite 'MonotonicClockTests' started at 2026-09-08 14:29:28.096.
+Test Case '-[GoalflowMacTests.MonotonicClockTests test_wall_vs_monotonic_2h_within_2s]' started.
+Test Case '-[GoalflowMacTests.MonotonicClockTests test_wall_vs_monotonic_2h_within_2s]' passed (0.001 seconds).
+Test Suite 'MonotonicClockTests' passed at 2026-09-08 14:29:28.097.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'NaturalCaptureScheduleTests' started at 2026-09-08 14:29:28.097.
+Test Case '-[GoalflowMacTests.NaturalCaptureScheduleTests testCalendarPhrases]' started.
+Test Case '-[GoalflowMacTests.NaturalCaptureScheduleTests testCalendarPhrases]' passed (0.008 seconds).
+Test Case '-[GoalflowMacTests.NaturalCaptureScheduleTests testOrdinaryWordsRemainTitleText]' started.
+Test Case '-[GoalflowMacTests.NaturalCaptureScheduleTests testOrdinaryWordsRemainTitleText]' passed (0.003 seconds).
+Test Suite 'NaturalCaptureScheduleTests' passed at 2026-09-08 14:29:28.109.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.011 (0.012) seconds
+Test Suite 'PlanningGateTests' started at 2026-09-08 14:29:28.110.
+Test Case '-[GoalflowMacTests.PlanningGateTests test_confirmed_day_accepts_changed_order_and_new_tasks]' started.
+Test Case '-[GoalflowMacTests.PlanningGateTests test_confirmed_day_accepts_changed_order_and_new_tasks]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.PlanningGateTests test_empty_when_no_tasks]' started.
+Test Case '-[GoalflowMacTests.PlanningGateTests test_empty_when_no_tasks]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.PlanningGateTests test_month_future_not_blocking]' started.
+Test Case '-[GoalflowMacTests.PlanningGateTests test_month_future_not_blocking]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.PlanningGateTests test_monthly_required_blocks]' started.
+Test Case '-[GoalflowMacTests.PlanningGateTests test_monthly_required_blocks]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.PlanningGateTests test_overdue_triggers_daily_required]' started.
+Test Case '-[GoalflowMacTests.PlanningGateTests test_overdue_triggers_daily_required]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.PlanningGateTests test_queue_without_plan_requires_daily]' started.
+Test Case '-[GoalflowMacTests.PlanningGateTests test_queue_without_plan_requires_daily]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.PlanningGateTests test_ready_ignores_completed]' started.
+Test Case '-[GoalflowMacTests.PlanningGateTests test_ready_ignores_completed]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.PlanningGateTests test_ready_when_plan_matches]' started.
+Test Case '-[GoalflowMacTests.PlanningGateTests test_ready_when_plan_matches]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.PlanningGateTests testInvalidNumericPlanConfirmationsAreRejected]' started.
+Test Case '-[GoalflowMacTests.PlanningGateTests testInvalidNumericPlanConfirmationsAreRejected]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.PlanningGateTests testNativeDailyPlanIsoConfirmationStillDecodes]' started.
+Test Case '-[GoalflowMacTests.PlanningGateTests testNativeDailyPlanIsoConfirmationStillDecodes]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.PlanningGateTests testWebDailyPlanMillisecondsAreAcceptedWithoutRewritingWireData]' started.
+Test Case '-[GoalflowMacTests.PlanningGateTests testWebDailyPlanMillisecondsAreAcceptedWithoutRewritingWireData]' passed (0.001 seconds).
+Test Suite 'PlanningGateTests' passed at 2026-09-08 14:29:28.123.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.011 (0.013) seconds
+Test Suite 'ReadyOutboxTests' started at 2026-09-08 14:29:28.123.
+Test Case '-[GoalflowMacTests.ReadyOutboxTests test_dependency_gate]' started.
+Test Case '-[GoalflowMacTests.ReadyOutboxTests test_dependency_gate]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ReadyOutboxTests test_one_per_entity]' started.
+Test Case '-[GoalflowMacTests.ReadyOutboxTests test_one_per_entity]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ReadyOutboxTests test_sort_version_then_id]' started.
+Test Case '-[GoalflowMacTests.ReadyOutboxTests test_sort_version_then_id]' passed (0.001 seconds).
+Test Suite 'ReadyOutboxTests' passed at 2026-09-08 14:29:28.126.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'RealtimeWakeupTests' started at 2026-09-08 14:29:28.126.
+Test Case '-[GoalflowMacTests.RealtimeWakeupTests test_adapter_catches_up_on_join_and_wakeup_then_rotates_token_without_broadcast]' started.
+Test Case '-[GoalflowMacTests.RealtimeWakeupTests test_adapter_catches_up_on_join_and_wakeup_then_rotates_token_without_broadcast]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.RealtimeWakeupTests test_codec_accepts_only_exact_topic_and_wakeup_event]' started.
+Test Case '-[GoalflowMacTests.RealtimeWakeupTests test_codec_accepts_only_exact_topic_and_wakeup_event]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.RealtimeWakeupTests test_endpoint_backoff_heartbeat_and_foreground_fallback_are_bounded]' started.
+Test Case '-[GoalflowMacTests.RealtimeWakeupTests test_endpoint_backoff_heartbeat_and_foreground_fallback_are_bounded]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.RealtimeWakeupTests test_private_join_is_bound_to_immutable_uuid_and_has_no_write_subscription]' started.
+Test Case '-[GoalflowMacTests.RealtimeWakeupTests test_private_join_is_bound_to_immutable_uuid_and_has_no_write_subscription]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.RealtimeWakeupTests test_token_refreshed_during_join_is_applied_before_first_catchup]' started.
+Test Case '-[GoalflowMacTests.RealtimeWakeupTests test_token_refreshed_during_join_is_applied_before_first_catchup]' passed (0.001 seconds).
+Test Suite 'RealtimeWakeupTests' passed at 2026-09-08 14:29:28.133.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'RecordedClockAudioTests' started at 2026-09-08 14:29:28.133.
+Test Case '-[GoalflowMacTests.RecordedClockAudioTests test_installed_bundle_contains_distinct_decodable_tick_and_tock]' started.
+Test Case '-[GoalflowMacTests.RecordedClockAudioTests test_installed_bundle_contains_distinct_decodable_tick_and_tock]' passed (0.021 seconds).
+Test Suite 'RecordedClockAudioTests' passed at 2026-09-08 14:29:28.154.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.021 (0.021) seconds
+Test Suite 'SchedulingBridgeTests' started at 2026-09-08 14:29:28.154.
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_assertSchedule_day_invalid]' started.
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_assertSchedule_day_invalid]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_assertSchedule_day_valid]' started.
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_assertSchedule_day_valid]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_assertSchedule_month_current_requires_day]' started.
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_assertSchedule_month_current_requires_day]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_assertSchedule_month_future_valid]' started.
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_assertSchedule_month_future_valid]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_assertSchedule_month_invalid_time]' started.
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_assertSchedule_month_invalid_time]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_assertSchedule_time_format_invalid]' started.
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_assertSchedule_time_format_invalid]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_isRealDay_andMonth]' started.
+Test Case '-[GoalflowMacTests.SchedulingBridgeTests test_isRealDay_andMonth]' passed (0.001 seconds).
+Test Suite 'SchedulingBridgeTests' passed at 2026-09-08 14:29:28.160.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.005 (0.006) seconds
+Test Suite 'SchedulingTests' started at 2026-09-08 14:29:28.160.
+Test Case '-[GoalflowMacTests.SchedulingTests test_plannedOrder_determines_tiebreak]' started.
+Test Case '-[GoalflowMacTests.SchedulingTests test_plannedOrder_determines_tiebreak]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.SchedulingTests test_queue_ordering_frog_before_ordinary]' started.
+Test Case '-[GoalflowMacTests.SchedulingTests test_queue_ordering_frog_before_ordinary]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.SchedulingTests test_today_queue_filters]' started.
+Test Case '-[GoalflowMacTests.SchedulingTests test_today_queue_filters]' passed (0.001 seconds).
+Test Suite 'SchedulingTests' passed at 2026-09-08 14:29:28.163.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'ServerConflictTests' started at 2026-09-08 14:29:28.163.
+Test Case '-[GoalflowMacTests.ServerConflictTests test_cloud_resolution_without_exact_ack_preserves_local_and_cloud_sides]' started.
+Test Case '-[GoalflowMacTests.ServerConflictTests test_cloud_resolution_without_exact_ack_preserves_local_and_cloud_sides]' passed (0.011 seconds).
+Test Case '-[GoalflowMacTests.ServerConflictTests test_focus_completion_recovers_task_notes_and_terminal_state_as_one_action]' started.
+Test Case '-[GoalflowMacTests.ServerConflictTests test_focus_completion_recovers_task_notes_and_terminal_state_as_one_action]' passed (0.049 seconds).
+Test Case '-[GoalflowMacTests.ServerConflictTests test_server_conflict_replay_cannot_change_preserved_local_data]' started.
+Test Case '-[GoalflowMacTests.ServerConflictTests test_server_conflict_replay_cannot_change_preserved_local_data]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.ServerConflictTests test_snake_case_server_conflict_imports_both_sides]' started.
+Test Case '-[GoalflowMacTests.ServerConflictTests test_snake_case_server_conflict_imports_both_sides]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.ServerConflictTests test_staging_focus_action_commits_tracking_and_outbox_before_return]' started.
+Test Case '-[GoalflowMacTests.ServerConflictTests test_staging_focus_action_commits_tracking_and_outbox_before_return]' passed (0.056 seconds).
+Test Case '-[GoalflowMacTests.ServerConflictTests test_sync_imports_postgresql_only_conflict_before_success]' started.
+Test Case '-[GoalflowMacTests.ServerConflictTests test_sync_imports_postgresql_only_conflict_before_success]' passed (0.016 seconds).
+Test Suite 'ServerConflictTests' passed at 2026-09-08 14:29:28.301.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.135 (0.137) seconds
+Test Suite 'StableJsonTests' started at 2026-09-08 14:29:28.301.
+Test Case '-[GoalflowMacTests.StableJsonTests test_any_codable_preserves_integer_and_boolean_types]' started.
+Test Case '-[GoalflowMacTests.StableJsonTests test_any_codable_preserves_integer_and_boolean_types]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.StableJsonTests test_any_codable_preserves_nested_null_across_repeated_round_trips]' started.
+Test Case '-[GoalflowMacTests.StableJsonTests test_any_codable_preserves_nested_null_across_repeated_round_trips]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.StableJsonTests test_nested_sorts]' started.
+Test Case '-[GoalflowMacTests.StableJsonTests test_nested_sorts]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.StableJsonTests test_nil_and_array]' started.
+Test Case '-[GoalflowMacTests.StableJsonTests test_nil_and_array]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.StableJsonTests test_sorts_keys]' started.
+Test Case '-[GoalflowMacTests.StableJsonTests test_sorts_keys]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.StableJsonTests testParsedPrimitiveNumbersDoNotBecomeBooleans]' started.
+Test Case '-[GoalflowMacTests.StableJsonTests testParsedPrimitiveNumbersDoNotBecomeBooleans]' passed (0.001 seconds).
+Test Suite 'StableJsonTests' passed at 2026-09-08 14:29:28.307.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.004 (0.006) seconds
+Test Suite 'SyncEnvelopeTests' started at 2026-09-08 14:29:28.307.
+Test Case '-[GoalflowMacTests.SyncEnvelopeTests testActualUTF8EnvelopePreservesRequests]' started.
+Test Case '-[GoalflowMacTests.SyncEnvelopeTests testActualUTF8EnvelopePreservesRequests]' passed (0.012 seconds).
+Test Case '-[GoalflowMacTests.SyncEnvelopeTests testSharedReconciliationStagingManifestAndReceipts]' started.
+Test Case '-[GoalflowMacTests.SyncEnvelopeTests testSharedReconciliationStagingManifestAndReceipts]' passed (0.012 seconds).
+Test Suite 'SyncEnvelopeTests' passed at 2026-09-08 14:29:28.332.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.024 (0.025) seconds
+Test Suite 'SyncMetaTests' started at 2026-09-08 14:29:28.332.
+Test Case '-[GoalflowMacTests.SyncMetaTests test_corrupt_meta_never_becomes_an_empty_outbox]' started.
+Test Case '-[GoalflowMacTests.SyncMetaTests test_corrupt_meta_never_becomes_an_empty_outbox]' passed (0.002 seconds).
+Test Case '-[GoalflowMacTests.SyncMetaTests test_damaged_local_file_repairs_from_valid_mirror]' started.
+Test Case '-[GoalflowMacTests.SyncMetaTests test_damaged_local_file_repairs_from_valid_mirror]' passed (0.007 seconds).
+Test Case '-[GoalflowMacTests.SyncMetaTests test_empty_meta]' started.
+Test Case '-[GoalflowMacTests.SyncMetaTests test_empty_meta]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.SyncMetaTests test_goal_stores_stage_every_durable_field]' started.
+Test Case '-[GoalflowMacTests.SyncMetaTests test_goal_stores_stage_every_durable_field]' passed (0.010 seconds).
+Test Case '-[GoalflowMacTests.SyncMetaTests test_local_task_and_outbox_commit_together]' started.
+Test Case '-[GoalflowMacTests.SyncMetaTests test_local_task_and_outbox_commit_together]' passed (0.061 seconds).
+Test Case '-[GoalflowMacTests.SyncMetaTests test_normalize_duplicate_mutation_throws]' started.
+Test Case '-[GoalflowMacTests.SyncMetaTests test_normalize_duplicate_mutation_throws]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.SyncMetaTests test_normalize_schema_mismatch_throws]' started.
+Test Case '-[GoalflowMacTests.SyncMetaTests test_normalize_schema_mismatch_throws]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.SyncMetaTests test_pending_local_commit_recovers_after_interrupted_write]' started.
+Test Case '-[GoalflowMacTests.SyncMetaTests test_pending_local_commit_recovers_after_interrupted_write]' passed (0.010 seconds).
+Test Case '-[GoalflowMacTests.SyncMetaTests test_schema_two_migrates_without_discarding_outbox]' started.
+Test Case '-[GoalflowMacTests.SyncMetaTests test_schema_two_migrates_without_discarding_outbox]' passed (0.004 seconds).
+Test Case '-[GoalflowMacTests.SyncMetaTests test_two_damaged_local_replicas_never_become_empty]' started.
+Test Case '-[GoalflowMacTests.SyncMetaTests test_two_damaged_local_replicas_never_become_empty]' passed (0.008 seconds).
+Test Case '-[GoalflowMacTests.SyncMetaTests test_workspace_binding_is_immutable]' started.
+Test Case '-[GoalflowMacTests.SyncMetaTests test_workspace_binding_is_immutable]' passed (0.003 seconds).
+Test Suite 'SyncMetaTests' passed at 2026-09-08 14:29:28.441.
+	 Executed 11 tests, with 0 failures (0 unexpected) in 0.107 (0.110) seconds
+Test Suite 'TaskCompletionPersistenceTests' started at 2026-09-08 14:29:28.442.
+Test Case '-[GoalflowMacTests.TaskCompletionPersistenceTests test_complete_only_open]' started.
+Test Case '-[GoalflowMacTests.TaskCompletionPersistenceTests test_complete_only_open]' passed (0.016 seconds).
+Test Case '-[GoalflowMacTests.TaskCompletionPersistenceTests test_complete_persists_before_next]' started.
+Test Case '-[GoalflowMacTests.TaskCompletionPersistenceTests test_complete_persists_before_next]' passed (0.023 seconds).
+Test Case '-[GoalflowMacTests.TaskCompletionPersistenceTests test_no_resurrection_after_reload]' started.
+Test Case '-[GoalflowMacTests.TaskCompletionPersistenceTests test_no_resurrection_after_reload]' passed (0.023 seconds).
+Test Suite 'TaskCompletionPersistenceTests' passed at 2026-09-08 14:29:28.504.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.061 (0.062) seconds
+Test Suite 'TaskWireAdapterTests' started at 2026-09-08 14:29:28.504.
+Test Case '-[GoalflowMacTests.TaskWireAdapterTests test_ambiguous_boolean_does_not_become_a_completion]' started.
+Test Case '-[GoalflowMacTests.TaskWireAdapterTests test_ambiguous_boolean_does_not_become_a_completion]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.TaskWireAdapterTests test_browser_task_payload_round_trips_without_losing_shared_or_unknown_fields]' started.
+Test Case '-[GoalflowMacTests.TaskWireAdapterTests test_browser_task_payload_round_trips_without_losing_shared_or_unknown_fields]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.TaskWireAdapterTests test_web_and_android_terminal_removal_flags_remain_out_of_the_queue]' started.
+Test Case '-[GoalflowMacTests.TaskWireAdapterTests test_web_and_android_terminal_removal_flags_remain_out_of_the_queue]' passed (0.007 seconds).
+Test Suite 'TaskWireAdapterTests' passed at 2026-09-08 14:29:28.514.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.009 (0.010) seconds
+Test Suite 'TwoDeviceTests' started at 2026-09-08 14:29:28.514.
+Test Case '-[GoalflowMacTests.TwoDeviceTests test_completed_never_resurrects]' started.
+Test Case '-[GoalflowMacTests.TwoDeviceTests test_completed_never_resurrects]' passed (0.001 seconds).
+Test Case '-[GoalflowMacTests.TwoDeviceTests test_conflict_keep_local_vs_cloud]' started.
+Test Case '-[GoalflowMacTests.TwoDeviceTests test_conflict_keep_local_vs_cloud]' passed (0.001 seconds).
+Test Suite 'TwoDeviceTests' passed at 2026-09-08 14:29:28.516.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'GoalflowMacTests.xctest' passed at 2026-09-08 14:29:28.516.
+	 Executed 226 tests, with 1 test skipped and 0 failures (0 unexpected) in 1.541 (1.620) seconds
+Test Suite 'All tests' passed at 2026-09-08 14:29:28.516.
+	 Executed 226 tests, with 1 test skipped and 0 failures (0 unexpected) in 1.541 (1.622) seconds
+2026-09-08 14:29:28.816 xcodebuild[4108:3622292] [MT] IDETestOperationsObserverDebug: 6.324 elapsed -- Testing started completed.
+2026-09-08 14:29:28.817 xcodebuild[4108:3622292] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-09-08 14:29:28.817 xcodebuild[4108:3622292] [MT] IDETestOperationsObserverDebug: 6.324 sec, +6.324 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/s2-a1-macos/Logs/Test/Test-GoalflowMac-2026.09.08_14-28-37-+0100.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started

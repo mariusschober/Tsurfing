@@ -1,0 +1,266 @@
+
+> tsurfing@0.4.0-beta.1 verify:release
+> npm run lint && npm test && npm run build && npm run verify:server && npm run verify:maintenance && npm run verify:client-secrets && npm run verify:client-artifacts
+
+
+> tsurfing@0.4.0-beta.1 lint
+> tsc --noEmit
+
+
+> tsurfing@0.4.0-beta.1 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.10 [39m[90m/Users/schober/Projects/TSurfing[39m
+
+ [32m✓[39m services/backupCrypto.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 476[2mms[22m[39m
+ [32m✓[39m services/causalBusinessStorage.test.ts [2m([22m[2m20 tests[22m[2m)[22m[33m 596[2mms[22m[39m
+ [32m✓[39m services/causalHistory.test.ts [2m([22m[2m7 tests[22m[2m)[22m[33m 823[2mms[22m[39m
+ [32m✓[39m services/storage.causal.test.ts [2m([22m[2m15 tests[22m[2m)[22m[33m 423[2mms[22m[39m
+macOS bundle key gate failed: a current server-only Supabase key reached the application bundle
+ [32m✓[39m services/causalCompletionCoordinator.test.ts [2m([22m[2m16 tests[22m[2m)[22m[33m 935[2mms[22m[39m
+ [32m✓[39m services/cloudSync.causal.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 943[2mms[22m[39m
+ [32m✓[39m services/causalCompletionProjection.test.ts [2m([22m[2m18 tests[22m[2m)[22m[33m 1103[2mms[22m[39m
+ [32m✓[39m services/causalBusinessBackup.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 440[2mms[22m[39m
+ [32m✓[39m services/cloudSync.adversarial.test.ts [2m([22m[2m22 tests[22m[2m)[22m[33m 1154[2mms[22m[39m
+     [33m[2m✓[22m[39m drains valid multibyte notes within the actual JSON body limit without changing receipts [33m 396[2mms[22m[39m
+macOS bundle key gate failed: the configured legacy JWT is not an anonymous client key
+ [32m✓[39m services/causalEnrollment.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 258[2mms[22m[39m
+ [32m✓[39m services/storage.s1.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 121[2mms[22m[39m
+ [32m✓[39m services/storage.test.ts [2m([22m[2m35 tests[22m[2m)[22m[32m 289[2mms[22m[39m
+ [32m✓[39m services/causalHistoryProtocol.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 205[2mms[22m[39m
+ [32m✓[39m services/causalReceipts.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 112[2mms[22m[39m
+macOS bundle key gate failed: the configured key is neither publishable nor a legacy JWT
+ [32m✓[39m services/causalProjection.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 180[2mms[22m[39m
+ [32m✓[39m server/routes/sync.reconciliation.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 194[2mms[22m[39m
+ [32m✓[39m services/storage.s1-completion.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 135[2mms[22m[39m
+ [32m✓[39m server/reconciliationStaging.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+macOS bundle key gate failed: the public key could not be read from the application Info.plist
+ [32m✓[39m tests/macos-bundle-key-gate.test.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 2097[2mms[22m[39m
+     [33m[2m✓[22m[39m accepts only client-safe current and legacy keys [33m 970[2mms[22m[39m
+     [33m[2m✓[22m[39m rejects current and legacy server credentials [33m 883[2mms[22m[39m
+ [32m✓[39m services/causalRestore.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 162[2mms[22m[39m
+ [32m✓[39m services/causalPlanningCoordinator.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 117[2mms[22m[39m
+[90mstderr[2m | services/storage.s1-fallback.test.ts[2m > [22m[2mS1 F: unavailable atomic storage[2m > [22m[2mkeeps cursor and exact offline WAL when optional mirror fails=false
+[22m[39m[Storage] IndexedDB is unavailable. Local WAL remains authoritative. Error: synthetic IndexedDB unavailable
+    at FDBFactory.<anonymous> [90m(/Users/schober/Projects/TSurfing/[39mservices/storage.s1-fallback.test.ts:19:79[90m)[39m
+    at FDBFactory.open [90m(file:///Users/schober/Projects/TSurfing/[39mnode_modules/[4m@vitest[24m/spy/dist/index.js:332:34[90m)[39m
+    at openDB [90m(file:///Users/schober/Projects/TSurfing/[39mnode_modules/[4midb[24m/build/index.js:168:31[90m)[39m
+    at openAndMigrate [90m(/Users/schober/Projects/TSurfing/[39mservices/storage.ts:425:20[90m)[39m
+    at getDB [90m(/Users/schober/Projects/TSurfing/[39mservices/storage.ts:460:17[90m)[39m
+    at recoverFallbackState [90m(/Users/schober/Projects/TSurfing/[39mservices/storage.ts:730:20[90m)[39m
+    at [90m/Users/schober/Projects/TSurfing/[39mservices/storage.ts:1398:13
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+[90mstderr[2m | services/storage.s1-fallback.test.ts[2m > [22m[2mS1 F: unavailable atomic storage[2m > [22m[2mkeeps cursor and exact offline WAL when optional mirror fails=true
+[22m[39m[Storage] IndexedDB is unavailable. Local WAL remains authoritative. Error: synthetic IndexedDB unavailable
+    at FDBFactory.<anonymous> [90m(/Users/schober/Projects/TSurfing/[39mservices/storage.s1-fallback.test.ts:19:79[90m)[39m
+    at FDBFactory.open [90m(file:///Users/schober/Projects/TSurfing/[39mnode_modules/[4m@vitest[24m/spy/dist/index.js:332:34[90m)[39m
+    at openDB [90m(file:///Users/schober/Projects/TSurfing/[39mnode_modules/[4midb[24m/build/index.js:168:31[90m)[39m
+    at openAndMigrate [90m(/Users/schober/Projects/TSurfing/[39mservices/storage.ts:425:20[90m)[39m
+    at getDB [90m(/Users/schober/Projects/TSurfing/[39mservices/storage.ts:460:17[90m)[39m
+    at recoverFallbackState [90m(/Users/schober/Projects/TSurfing/[39mservices/storage.ts:730:20[90m)[39m
+    at [90m/Users/schober/Projects/TSurfing/[39mservices/storage.ts:1398:13
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+
+ [32m✓[39m services/storage.s1-fallback.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 105[2mms[22m[39m
+ [32m✓[39m services/syncEnvelope.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 95[2mms[22m[39m
+ [32m✓[39m src/domain/scheduling.property.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 108[2mms[22m[39m
+ [32m✓[39m server/routes/telegramAuth.secure.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+[90mstderr[2m | server/app.test.ts[2m > [22m[2mpublic server boundary[2m > [22m[2mreturns a safe 400 response for malformed JSON
+[22m[39m{"timestamp":"2026-09-08T11:23:13.443Z","level":"error","event":"http.unhandled_error","requestId":"e74310f2-75b0-46a8-a4f4-c9d9bf9ee858","category":"SyntaxError"}
+
+[90mstderr[2m | server/app.test.ts[2m > [22m[2mpublic server boundary[2m > [22m[2menforces the tighter Telegram body limit with a safe public error
+[22m[39m{"timestamp":"2026-09-08T11:23:13.453Z","level":"error","event":"http.unhandled_error","requestId":"c0f34282-28e6-47b6-b51c-03c5261844e8","category":"PayloadTooLargeError"}
+
+ [32m✓[39m server/app.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 144[2mms[22m[39m
+ [32m✓[39m services/causalRescheduleCoordinator.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 113[2mms[22m[39m
+ [32m✓[39m tests/golden-backup.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 125[2mms[22m[39m
+ [32m✓[39m services/causalCompletionProtocol.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 95[2mms[22m[39m
+ [32m✓[39m services/reconciliationStaging.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 145[2mms[22m[39m
+ [32m✓[39m server/routes/telegram.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 165[2mms[22m[39m
+ [32m✓[39m server/routes/emailAuth.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 203[2mms[22m[39m
+ [32m✓[39m services/syncProtocol.property.test.ts [2m([22m[2m30 tests[22m[2m)[22m[32m 84[2mms[22m[39m
+ [32m✓[39m services/causalCounterCoordinator.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m✓[39m services/causalFocusCoordinator.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m services/causalCounterDayCoordinator.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+ [32m✓[39m server/conflictPages.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+ [32m✓[39m hooks/p1_2.debounce.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m server/auth.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 96[2mms[22m[39m
+ [32m✓[39m services/authService.telegramOAuth.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 54[2mms[22m[39m
+ [32m✓[39m server/routes/account.telegram.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 108[2mms[22m[39m
+ [32m✓[39m services/authService.emailOtp.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32m✓[39m server/telegram/bot.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+ [32m✓[39m services/causalStorage.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m services/causalBackup.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+ [32m✓[39m services/causalTransport.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m src/domain/taskCompletion.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m services/cloudSync.retry.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+ [32m✓[39m server/routes/adminInvites.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 61[2mms[22m[39m
+ [32m✓[39m server/telegram/deployment.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m services/authService.timeout.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+ [32m✓[39m utils/dateUtils.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m server/backups.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m server/turnstile.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m docs/operations/reliability/connection-regression.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m server/telegram/queue.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m docs/operations/reliability/s1-review-regression.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m src/domain/scheduling.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m server/causalActions.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m server/telegram/capture.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m utils/naturalSchedule.test.ts [2m([22m[2m19 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m services/authService.logout.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m services/causalReplayFixtures.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+ [32m✓[39m server/telegram/miniWakeRelay.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m src/domain/causalFocus.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m tests/planning-overdue.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m server/routes/sync.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+ [32m✓[39m server/config.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m services/syncProtocol.tranche2e.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m services/causalCutoverProtocol.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m services/causalReceiptFixtures.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m✓[39m src/domain/counterLedger.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m services/syncReconciliation.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m server/maintenanceTask.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m server/telegram/miniAppAuth.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m server/readiness.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/client-secret-build-gate.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m src/domain/focusSession.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m tests/railway-iac.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+ [32m✓[39m services/conflictPages.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m services/cloudSync.wakeup.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m tests/android-internal-beta-workflow.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/restore-operation-gate.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/android-upgrade-runtime-contract.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m server/telegram/pending.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m tests/active-handover.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m tests/hosted-browser-gate.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/auth-bootstrap-order.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/release-workflow.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m tests/hosted-cross-client-gate.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/android-robolectric-repository.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m tests/android-signing-config.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m tests/migration-runner-gate.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m services/authService.session.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/firebase-retirement.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/auth-session-identity.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m server/telegram/forward.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m services/authService.secure.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m services/authService.accountBinding.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m server/taskReconciliation.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m services/syncCanonicalIdentity.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/dependency-audit-gate.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m tests/macos-ci-artifact.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m tests/package-dmg.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m server/routes/telegramMini.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 8119[2mms[22m[39m
+     [33m[2m✓[22m[39m streams only empty wake events after exact-origin cookie authentication [33m 4012[2mms[22m[39m
+     [33m[2m✓[22m[39m enforces a per-user wake connection limit [33m 4008[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m105 passed[39m[22m[90m (105)[39m
+[2m      Tests [22m [1m[32m719 passed[39m[22m[90m (719)[39m
+[2m   Start at [22m 12:23:10
+[2m   Duration [22m 8.93s[2m (transform 3.64s, setup 0ms, import 10.84s, tests 21.72s, environment 6ms)[22m
+
+
+> tsurfing@0.4.0-beta.1 build
+> npm run build:client && npm run build:mini && npm run build:server && npm run verify:client-secrets && npm run verify:client-artifacts
+
+
+> tsurfing@0.4.0-beta.1 build:client
+> vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 383 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/client/manifest.webmanifest                                    1.04 kB
+dist/client/index.html                                              1.27 kB │ gzip:   0.57 kB
+dist/client/assets/inter-vietnamese-wght-normal-CBcvBZtf.woff2     10.25 kB
+dist/client/assets/inter-greek-ext-wght-normal-DlzME5K_.woff2      11.23 kB
+dist/client/assets/inter-cyrillic-wght-normal-DqGufNeO.woff2       18.75 kB
+dist/client/assets/inter-greek-wght-normal-CkhJZR-_.woff2          19.00 kB
+dist/client/assets/inter-cyrillic-ext-wght-normal-BOeWTOD4.woff2   25.96 kB
+dist/client/assets/inter-latin-wght-normal-Dx4kXJAl.woff2          48.26 kB
+dist/client/assets/inter-latin-ext-wght-normal-DO1Apj_S.woff2      85.07 kB
+dist/client/assets/vendor-CJjU_8H4.css                              2.03 kB │ gzip:   0.60 kB
+dist/client/assets/index-CapweFxC.css                             118.30 kB │ gzip:  17.30 kB
+dist/client/assets/GamificationView-TdA-hvFg.js                    22.94 kB │ gzip:   4.54 kB
+dist/client/assets/SettingsModal-DBBb9Yf2.js                       25.63 kB │ gzip:   5.47 kB
+dist/client/assets/StatsView-DN5Vd_Ie.js                           38.57 kB │ gzip:   7.66 kB
+dist/client/assets/drag-and-drop-DE_GFD0B.js                       95.64 kB │ gzip:  29.81 kB
+dist/client/assets/GoalsView-CeSsT2LB.js                          107.61 kB │ gzip:  16.71 kB
+dist/client/assets/vendor-DuMSJhSS.js                             232.08 kB │ gzip:  67.52 kB
+dist/client/assets/react-ChIBbzMz.js                              340.70 kB │ gzip: 104.19 kB
+dist/client/assets/index-Ck_5BBHm.js                              659.84 kB │ gzip: 143.32 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 2.67s
+
+PWA v1.3.0
+mode      generateSW
+precache  18 entries (1606.07 KiB)
+files generated
+  dist/client/sw.js
+  dist/client/workbox-2cde83c0.js
+
+> tsurfing@0.4.0-beta.1 build:mini
+> vite build --config vite.mini.config.ts
+
+vite v6.4.3 building for production...
+transforming...
+✓ 27 modules transformed.
+rendering chunks...
+computing gzip size...
+../dist/mini/index.html                   0.54 kB │ gzip:  0.32 kB
+../dist/mini/assets/index-Bf3Wux0j.css    1.25 kB │ gzip:  0.60 kB
+../dist/mini/assets/index-CUE6mK-W.js   152.60 kB │ gzip: 49.36 kB
+✓ built in 550ms
+
+> tsurfing@0.4.0-beta.1 build:server
+> esbuild server/index.ts server/maintenance.ts --bundle --platform=node --format=esm --packages=external --outdir=dist/server --out-extension:.js=.mjs
+
+
+  dist/server/index.mjs        208.0kb
+  dist/server/maintenance.mjs   18.6kb
+
+⚡ Done in 18ms
+
+> tsurfing@0.4.0-beta.1 verify:client-secrets
+> node scripts/scan-client-secrets.mjs
+
+Client secret scan passed across 30 built files.
+
+> tsurfing@0.4.0-beta.1 verify:client-artifacts
+> node scripts/verify-client-artifacts.mjs
+
+{"status":"PASS","manifest":{"name":"Tsurfing","short_name":"Tsurfing","display":"standalone","start_url":"/","scope":"/"},"requiredIcons":2,"telegramMiniApp":"secure-cookie-and-wake-relay","javascriptFiles":11,"testBackdoors":"absent"}
+
+> tsurfing@0.4.0-beta.1 verify:server
+> node scripts/verify-production.mjs
+
+{"level":"error","event":"server.production_configuration_invalid","problems":["supabase_url_missing","supabase_public_key_missing","supabase_server_key_missing","owner_user_id_missing"]}
+{"level":"info","event":"server.started","host":"127.0.0.1","port":54173,"environment":"production"}
+{"timestamp":"2026-09-08T11:23:25.530Z","level":"info","event":"http.request","requestId":"ba14b306-1007-4dd3-a31e-3946fbf7a6d3","method":"GET","path":"/api/v1/health/live","status":200,"durationMs":10}
+{"timestamp":"2026-09-08T11:23:25.539Z","level":"info","event":"http.request","requestId":"8f588a3c-9bd4-4972-b678-f8e7b74300d9","method":"GET","path":"/api/v1/health/ready","status":503,"durationMs":1}
+{"timestamp":"2026-09-08T11:23:25.541Z","level":"info","event":"http.request","requestId":"a677808b-9eff-460c-ab04-2e69c2ff97b2","method":"GET","path":"/api/v1/health","status":503,"durationMs":0}
+{"status":"ok","contract":"production-fails-closed"}
+{"level":"info","event":"server.stopping","signal":"SIGTERM"}
+
+> tsurfing@0.4.0-beta.1 verify:maintenance
+> node scripts/verify-maintenance.mjs
+
+{"status":"ok","contract":"maintenance-fails-closed"}
+
+> tsurfing@0.4.0-beta.1 verify:client-secrets
+> node scripts/scan-client-secrets.mjs
+
+Client secret scan passed across 30 built files.
+
+> tsurfing@0.4.0-beta.1 verify:client-artifacts
+> node scripts/verify-client-artifacts.mjs
+
+{"status":"PASS","manifest":{"name":"Tsurfing","short_name":"Tsurfing","display":"standalone","start_url":"/","scope":"/"},"requiredIcons":2,"telegramMiniApp":"secure-cookie-and-wake-relay","javascriptFiles":11,"testBackdoors":"absent"}

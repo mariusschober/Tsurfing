@@ -245,6 +245,7 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
   const completedTaskIds = useRef(new Set<string>());
   const causalMode = useRef(false);
   const completionRetries = useRef(new Map<string, Parameters<typeof storageService.admitFocusCompletion>[1]>());
+  const taskCompletionRetries = useRef(new Map<string, string>());
 
   // --- Initialization (Hydration) ---
   useEffect(() => {
@@ -1019,6 +1020,31 @@ export const useGoalflow = (userKey: string, legacyUserKey = userKey) => {
       }
       return storageService.admitFocusCompletion(USER_KEY, capture).then(result => {
         if (!result.admission.outcome.accepted) throw new Error('The focus session changed before completion. Your final notes remain available; review the task and retry.');
+        completedTaskIds.current.add(taskId);
+        if (!result.duplicate && result.admission.leveledUp) setJustLeveledUp(true);
+        if (!result.duplicate && result.admission.dayComplete) setGamificationEvent({ type: 'reward', amount: 50, message: 'Day Complete!' });
+        return true;
+      }).catch(error => {
+        window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: { userKey: USER_KEY,
+          state: 'error', localFailure: true, message: error instanceof Error ? error.message : 'Completion could not be saved. Your notes remain available to retry.' } }));
+        return false;
+      });
+    }
+    if (causalMode.current) {
+      validateCompletionDetails({ day: getTodayYYYYMMDD(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        ...(actualDuration === undefined ? {} : { actualDuration }), ...(flowState === undefined ? {} : { flowState }),
+        ...(finalDescription === undefined ? {} : { finalDescription }) });
+      const fingerprint = 'task:' + JSON.stringify([USER_KEY, taskId, actualDuration, flowState, finalDescription]);
+      let actionId = taskCompletionRetries.current.get(fingerprint);
+      if (typeof actionId !== 'string') {
+        actionId = crypto.randomUUID();
+        taskCompletionRetries.current.set(fingerprint, actionId);
+      }
+      return storageService.admitTaskCompletion(USER_KEY, { taskId, actionId,
+        details: { day: getTodayYYYYMMDD(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          ...(actualDuration === undefined ? {} : { actualDuration }), ...(flowState === undefined ? {} : { flowState }),
+          ...(finalDescription === undefined ? {} : { finalDescription }) },
+        capturedAt: new Date().toISOString() }).then(result => {
         completedTaskIds.current.add(taskId);
         if (!result.duplicate && result.admission.leveledUp) setJustLeveledUp(true);
         if (!result.duplicate && result.admission.dayComplete) setGamificationEvent({ type: 'reward', amount: 50, message: 'Day Complete!' });

@@ -38,6 +38,7 @@ import { admitLocalFocusControl, type LocalFocusControl, type FocusAccountState 
 import { admitLocalCounterDay, type CounterDayAccountState } from './causalCounterDayCoordinator';
 import { parseCounterDayCommand } from './causalProtocol';
 import { admitLocalCompletionControl, type CompletionControlIntent } from './causalCompletionCoordinator';
+import { admitLocalTaskCompletion, type TaskCompletionIntent } from './causalTaskCompletion';
 
 const BASE_DB_NAME = 'GoalflowDB';
 const ACTIVE_DB_KEY = 'goalflow_active_database_v2';
@@ -1213,6 +1214,23 @@ export const storageService = {
     // A post-commit read failure must not report the saved completion as failed.
     publishCommit(userKey, 0, [STORES.TRACKING, ...result.admission.members.map(member => member.entityType)], name);
     if (!result.duplicate) announceLocalChange(STORES.TRACKING, userKey, undefined);
+    return result;
+  },
+
+  async admitTaskCompletion(userKey: string, input: {
+    taskId: string; actionId: string; details: TaskCompletionIntent['details']; capturedAt: string;
+  }) {
+    const captured = structuredClone(input), deviceId = readDeviceId(), name = activeDatabaseName();
+    const intent: TaskCompletionIntent = { ...captured, schemaVersion: 1, accountId: userKey, actorId: deviceId, deviceId };
+    if (intent.accountId !== userKey) throw new DurableStorageError('The completion belongs to another account.');
+    await storageService.flushPendingLocalChanges(userKey);
+    const db = await getDB();
+    if (!db || db.name !== name || !db.objectStoreNames.contains(CAUSAL_STORE)
+      || !await db.get(CAUSAL_STORE, userKey)) throw new DurableStorageError('Task completion requires the prepared causal account.');
+    const result = await admitLocalTaskCompletion(name, intent);
+    // This is a wake-up hint only; subscribers read the committed generation.
+    publishCommit(userKey, 0, ['tasks', ...result.admission.transactions.map(member => member.storeName)], name);
+    if (!result.duplicate) announceLocalChange(STORES.TASKS, userKey, undefined);
     return result;
   },
 

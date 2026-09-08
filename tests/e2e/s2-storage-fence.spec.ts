@@ -526,3 +526,50 @@ test('a new UUID account hydrates behind an existing fence and captures offline 
   expect(Object.keys(result.state.focusOutbox)).toHaveLength(1);
   expect(result.prior.values).toEqual(before.values); expect(result.prior.meta).toEqual(before.meta);
 });
+
+test('rendered non-focus completion admits two task completions atomically on a fenced account', async ({ page }) => {
+  await load(page);
+  const account = crypto.randomUUID();
+  await page.evaluate(async account => {
+    const api = window as any;
+    const name = 's2-task-completion-' + crypto.randomUUID();
+    localStorage.setItem('goalflow_active_database_v2', name);
+    const tracking = { date: '2026-09-08', planViewCount: 1, dailyPostponeCount: 0 };
+    await api.__s1Storage.set('tracking', account, tracking, 'cloud');
+    await api.__s1Storage.set('tasks', account, [
+      { id: 'overdue-one', title: 'Synthetic overdue one', completed: false, dateAssigned: '2026-09-01' },
+      { id: 'overdue-two', title: 'Synthetic overdue two', completed: false, dateAssigned: '2026-09-01' },
+    ], 'cloud');
+    await api.__s1Storage.flushPendingLocalChanges(account);
+    api.__s1Unmount();
+    (await api.__s1Fence(name)).close();
+    const db = await api.__s2FenceBusiness(name);
+    const state = await db.get('causal_actions', account), t = state.trackingValue;
+    state.counterBaselines = { [t.date]: { schemaVersion: 1, baselineId: crypto.randomUUID(), accountId: account,
+      day: t.date, counts: { planViewCount: t.planViewCount, dailyPostponeCount: t.dailyPostponeCount }, evidenceIds: [] } };
+    await db.put('causal_actions', state); db.close();
+    api.__s1RenderAccount(account);
+  }, account);
+  await page.getByRole('button', { name: 'Plan', exact: true }).click();
+  const open = page.getByRole('button', { name: "Open today's plan", exact: true });
+  try { await open.waitFor({ state: 'visible', timeout: 3000 }); await open.click(); } catch (_) {}
+  const complete = page.getByRole('button', { name: 'Mark complete', exact: true });
+  await expect(complete).toHaveCount(2);
+  await complete.nth(0).click();
+  await complete.nth(1).click();
+  await expect(page.getByRole('button', { name: 'Mark complete', exact: true })).toHaveCount(0);
+  const result = await page.evaluate(async account => {
+    const api = window as any; const snapshot = await api.__s1Storage.readCommittedSnapshot(account);
+    const name = localStorage.getItem('goalflow_active_database_v2') || 'GoalflowDB';
+    const db = await api.__s1Fence(name); const state = await db.get('causal_actions', account); db.close();
+    return { snapshot, state };
+  }, account);
+  expect(result.snapshot.values.tasks.every((t: any) => t.completed)).toBe(true);
+  expect(Object.values(result.snapshot.values.stats as any).map((s: any) => s.tasksCompleted)).toEqual([2]);
+  expect(result.snapshot.values.task_events).toHaveLength(2);
+  expect(Object.keys(result.state.taskCompletionAdmissions)).toHaveLength(2);
+  expect(Object.keys(result.state.actionIdentities ?? {}).filter(id => result.state.actionIdentities[id].kind === 'task-completion')).toHaveLength(2);
+  expect(result.snapshot.meta.outbox.length).toBeGreaterThan(0);
+  expect(Object.keys(result.snapshot.meta.localState?.blocked ?? {})).toHaveLength(0);
+  expect(result.snapshot.causal).toBeTruthy();
+});
