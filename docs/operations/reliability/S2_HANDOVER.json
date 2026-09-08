@@ -3,7 +3,7 @@
   "status": "BLOCKED",
   "acceptanceReason": "Implementation continues. Web automatic enrollment and fresh-account server initialization are locally verified. Divergent legacy reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
-  "finalCommit": "1037020629840bd6b69f7912bd855c49399dd078",
+  "finalCommit": "c2199ea05874ea2dae5b88b373fe34d9f639b0b0",
   "prerequisites": [
     {
       "stageId": "S1",
@@ -3227,6 +3227,75 @@
         "sha256": "64324b575212bd3c4573e721a5b8c68eb697d9f162602a9459016b96336215c8",
         "kind": "unsigned production-debug APK; not installed"
       }
+    },
+    {
+      "commit": "c2199ea05874ea2dae5b88b373fe34d9f639b0b0",
+      "baselineCommit": "0c5538972c5e54f18d855a39d16efcd112de4378",
+      "scope": "Authenticated bounded native action passes through production NativeSyncEngine",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalRequestStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeCausalActionSync.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeCausalTransport.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeSyncEngine.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/sync/NativeCausalActionSyncTest.kt"
+      ],
+      "findingIds": [
+        "S2-NATIVE-ACTION-LOOP"
+      ],
+      "commands": [
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": {
+            "passed": 190,
+            "failed": 0,
+            "skipped": 1
+          },
+          "skipped": "hostedBrowserRecordConvergesThroughProductionTransport"
+        },
+        {
+          "command": "env VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "tests": {
+            "passed": 719,
+            "failed": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "command": "npm run verify:room-hashes && npm run verify:identifiers && git diff --check",
+          "exitCode": 0,
+          "checked": [
+            9,
+            24
+          ]
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Explicit synchronizeCausalActions entrypoint only. Original admission order and saved bytes are retained. Up to 50 sends per pass; moreReady reports eligible remaining work, not the absence of pending reviews. No ordinary queue or cursor changes.",
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-action-loop-android.log",
+          "sha256": "a22b5ade2ab1e81b9e81ef386a4c104fcbbb6f370f467315476d7a26387a4add"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-action-loop-release.log",
+          "sha256": "6371d38677a81ecc71d7a62653efdca6eea33c24bcf69b90e50cfa138eff9a2c"
+        }
+      ],
+      "testIdentity": "Six production-engine/Robolectric Room tests with synthetic server replies, including lost responses and in-flight logout. Not live PostgreSQL or device acceptance.",
+      "blockers": [
+        "Native atomic completion member application and completion admission remain incomplete.",
+        "Normal scheduler and UI activation remain incomplete.",
+        "macOS causal integration, divergent legacy recovery and comprehensive cross-client acceptance remain incomplete."
+      ],
+      "permittedNextStage": "Continue S2; S3 blocked",
+      "buildArtifact": {
+        "path": "android-native/app/build/outputs/apk/production/debug/app-production-debug.apk",
+        "sha256": "1b258497dfc741847089e127162d138a750006a07072553f71fa21416007bc23",
+        "kind": "unsigned production-debug APK; not installed"
+      }
     }
   ],
   "findings": [
@@ -3253,6 +3322,10 @@
     {
       "id": "S2-NATIVE-APPLIED-RECEIPTS",
       "disposition": "Requests are saved before transport. Exact accepted receipts retire a command only when represented in applied history. Future receipts remain pending, rejected receipts remain pending, and downloaded response recovery retains original request bytes."
+    },
+    {
+      "id": "S2-NATIVE-ACTION-LOOP",
+      "disposition": "Authenticated production engine now orchestrates evidence download/application, durable request capture, send, receipt capture and verified application in bounded passes. Rejected receipts remain pending and are not resent; independent eligible actions proceed."
     }
   ],
   "migrations": [

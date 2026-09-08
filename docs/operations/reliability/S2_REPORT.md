@@ -2,7 +2,7 @@
 
 Stage acceptance: **BLOCKED — implementation continues. S3 is not permitted.**
 
-Latest tested source: `1037020629840bd6b69f7912bd855c49399dd078`. Native atomic projection application and exact applied-receipt retirement: **PASS_LOCAL** (184 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release verification passed). Native action-loop/UI activation, atomic completion members, macOS and legacy recovery remain incomplete. S3 remains blocked.
+Latest tested source: `c2199ea05874ea2dae5b88b373fe34d9f639b0b0`. Authenticated native action passes: **PASS_LOCAL** (190 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release verification passed). Native atomic completion and normal UI/scheduler activation, macOS and legacy recovery remain incomplete. S3 remains blocked.
 
 S1's tested commit `09245261b6174ec878f0296ca61682c603f54304` is integrated.
 S1.2 correction `262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d` is integrated;
@@ -681,3 +681,12 @@ The request journal saves immutable wire bytes before transport. Receipt capture
 Eleven Room regression tests cover deduplication, actual-parent admission after stale overlay, encrypted evidence retention, failed mirror rollback, accepted-completion deferral, unknown-day establishment, task deletion, future receipt retention, lost-response recovery, rejected receipt immutability and late proof retirement. Full native verification exited 0: 184 passed, one hosted test skipped; lint and production-debug build passed. Full repository release verification exited 0: 719 passed. Room hashes 9, identifiers 24 and diff checks passed. Logs: `evidence/s2-native-projection-android.log`, `evidence/s2-native-projection-release.log`; APK checksum is in the JSON handover.
 
 The new repository application entrypoint remains explicit. Authenticated action-loop integration and UI activation remain outstanding. Accepted completion history fails before any projection write until its native task/notes/effect members can be applied atomically. This checkpoint is not full S2 acceptance, hosted proof or installed-app proof.
+
+
+## Native action-loop checkpoint `c2199ea05874ea2dae5b88b373fe34d9f639b0b0`
+
+The explicit `synchronizeCausalActions` entrypoint uses the existing synchronization mutex, authenticated account verification and before/after-request session checks. Each pass downloads and applies verified history, selects an eligible action in original admission order, persists its exact request, sends it through the validated transport, retains its receipt and applies the resulting history before selecting the next action. A pass sends at most 50 actions and reports whether eligible work remains. Pending reviews and rejected receipts remain retained.
+
+Six production-engine/Room tests with a synthetic backend prove bounded resumption, both counter equations, exact pre-commit retry bytes, history recovery after lost responses, day establishment before increments, serial +300/+120 focus extension parents, in-flight session rejection and non-looping rejected actions alongside independent counters. Full native command in the JSON handover exited 0: 190 passed, one hosted test skipped; lint/debug build passed. `env VERIFY_PORT=54173 npm run verify:release` exited 0 with 719 passed tests. Room hashes 9, identifiers 24 and diff checks passed. Evidence: `evidence/s2-native-action-loop-android.log`, `evidence/s2-native-action-loop-release.log`; build checksum in JSON.
+
+This entrypoint is not connected to normal UI/scheduler activation. Native atomic completion member application/admission, macOS integration, divergent recovery and complete acceptance remain unfinished. No deployment, installation or live test writes occurred.
