@@ -51,6 +51,9 @@ export function parseCausalCompletion(accountId: string, input: unknown): Causal
 /** Existing member receipts keep their exact payload/device/version/timestamp
  * contract. The outer receipt separately binds the complete logical action. */
 export function assertCausalCompletionReceipt(accountId: string, operation: CausalCompletionOperation, value: unknown): Record<string, any> {
+  // This exported boundary is also used with restored evidence. Do not rely on
+  // a transport caller having checked the operation's authenticated scope.
+  parseCausalCompletion(accountId, operation);
   const fail = () => { throw new Error('Synchronization did not prove the complete atomic focus receipt.'); };
   if (!object(value) || value.schemaVersion !== 2 || value.epoch !== operation.epoch || !integer.min(1).safeParse(value.projectionRevision).success
     || stableJson(value.operation) !== stableJson(operation) || typeof value.accepted !== 'boolean' || !object(value.outcome)
@@ -66,14 +69,17 @@ export function assertCausalCompletionReceipt(accountId: string, operation: Caus
   const focus = normalizeFocusSession(record.payload.focusSession);
   if (!focus || focus.phase !== 'completed' || focus.sessionId !== operation.command.sessionId || focus.taskId !== operation.command.taskId
     || value.changes.length !== operation.changes.length) return fail();
+  let previousVersion = 0;
   for (let index = 0; index < operation.changes.length; index++) {
     const change = operation.changes[index], result = value.changes[index], item = result?.record;
     if (!object(result) || result.mutationId !== change.mutationId || result.accepted !== true
-      || !integer.min(1).safeParse(result.serverVersion).success || result.replayMismatch === true || result.serverMissing === true || result.conflictId !== undefined
+      || !integer.min(1).safeParse(result.serverVersion).success || result.serverVersion <= previousVersion || result.serverVersion >= record.server_version
+      || result.replayMismatch === true || result.serverMissing === true || result.conflictId !== undefined
       || !object(item) || item.user_id !== accountId || item.entity_type !== change.entityType || item.entity_id !== change.entityId
       || item.device_id !== change.deviceId || item.version !== change.version || item.server_version !== result.serverVersion
       || stableJson(item.payload) !== stableJson(change.payload) || item.deleted_at !== null
       || typeof item.updated_at !== 'string' || Date.parse(item.updated_at) !== Date.parse(change.updatedAt)) return fail();
+    previousVersion = result.serverVersion;
   }
   return value;
 }

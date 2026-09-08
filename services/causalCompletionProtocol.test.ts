@@ -50,6 +50,33 @@ it('accepts audited focus rejection only when no member was applied', () => {
   f.receipt.changes = [{}]; expect(() => assertCausalCompletionReceipt(f.accountId, f.operation, f.receipt)).toThrow();
 });
 
+it('requires ordered member publication before the final tracking record', () => {
+  const f = fixture();
+  const second = { ...structuredClone(f.operation.changes[0]), mutationId: crypto.randomUUID(), entityType: 'stats', entityId: 'singleton', payload: { tasksCompleted: 1 } };
+  f.operation.changes.push(second);
+  f.receipt.record.server_version = 12;
+  f.receipt.changes.push({ mutationId: second.mutationId, accepted: true, serverVersion: 10,
+    record: { ...structuredClone(f.receipt.changes[0].record), entity_type: 'stats', entity_id: 'singleton', server_version: 10, payload: second.payload } });
+  expect(assertCausalCompletionReceipt(f.accountId, f.operation, f.receipt)).toBe(f.receipt);
+  // Sequence gaps are valid; equality, reverse order, and publication at or
+  // after the tracking fence cannot prove this transaction's member writes.
+  for (const version of [7, 8, 12, 13]) {
+    const receipt = structuredClone(f.receipt);
+    receipt.changes[1].serverVersion = version;
+    receipt.changes[1].record.server_version = version;
+    expect(() => assertCausalCompletionReceipt(f.accountId, f.operation, receipt)).toThrow();
+  }
+});
+
+it('validates restored operation scope even when a rejected receipt has no members', () => {
+  const f = fixture();
+  f.operation.command.accountId = crypto.randomUUID();
+  f.receipt.accepted = false;
+  f.receipt.outcome = { accepted: false, code: 'STALE_TARGET', revision: null };
+  f.receipt.changes = [];
+  expect(() => assertCausalCompletionReceipt(f.accountId, f.operation, f.receipt)).toThrow();
+});
+
 it('rejects two distinct completion events within one logical completion', () => {
   const f = fixture();
   for (let i = 0; i < 2; i++) {
