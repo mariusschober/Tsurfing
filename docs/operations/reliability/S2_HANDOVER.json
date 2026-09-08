@@ -3663,6 +3663,134 @@
         "macOS integration",
         "Cross-client acceptance"
       ]
+    },
+    {
+      "id": "web-task-completion",
+      "sourceCommit": "8d7420ea92e25eef3ca62158e438e095b72ed44a",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "services/causalTaskCompletion.ts",
+        "services/causalTaskCompletion.test.ts",
+        "services/storage.ts",
+        "hooks/useGoalflow.ts",
+        "tests/browser/s1Harness.ts",
+        "tests/e2e/s2-storage-fence.spec.ts"
+      ],
+      "verification": [
+        {
+          "command": "npm run lint",
+          "exitCode": 0
+        },
+        {
+          "command": "npx vitest run services/causalTaskCompletion.test.ts",
+          "exitCode": 0,
+          "tests": 5,
+          "passed": 5
+        },
+        {
+          "command": "VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "passed": 724,
+          "files": 106
+        },
+        {
+          "command": "npm run test:s1:storage (x3)",
+          "exitCode": 0,
+          "passed": 38,
+          "files": 5
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0,
+          "checked": 24
+        },
+        {
+          "command": "npm run verify:migrations",
+          "exitCode": 0,
+          "migrations": 32
+        },
+        {
+          "command": "npm run verify:migration-hashes",
+          "exitCode": 0,
+          "migrations": 32
+        },
+        {
+          "command": "npm run verify:room-hashes",
+          "exitCode": 0,
+          "schemas": 9
+        },
+        {
+          "command": "npm run test:migrations:postgres (empty + upgrade)",
+          "exitCode": 0
+        },
+        {
+          "command": "android-native gradle testProductionDebugUnitTest lintProductionDebug assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": 220,
+          "passed": 219,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "xcodebuild test GoalflowMac Debug platform=macOS CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0,
+          "tests": 226,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "npx playwright test --config playwright.s1.config.ts",
+          "exitCode": 0,
+          "passed": 42
+        },
+        {
+          "command": "npx playwright test --config playwright.s2.config.ts",
+          "exitCode": 0,
+          "passed": 26
+        },
+        {
+          "command": "npm run test:e2e",
+          "exitCode": 0,
+          "passed": 92
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-task-completion-release.log",
+          "sha256": "ad78172741a14578f0617ddb398a3a71f6ac8b092a4ef84bab343d68bfd0a6cc"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-task-completion-postgres.log",
+          "sha256": "bea25f67a75a60ff2081b165e758e5272c4057cee9ab35c80cdaf2fea695837c"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-task-completion-android.log",
+          "sha256": "da54bd4b38a3849faa590a1eb0c05261838597b7c2da2ad9c0e4553dea55df42"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-task-completion-macos.log",
+          "sha256": "98ca64ad697f1fe675aea5dcffe454b95e1970bc9ff3f6f20b9a63f5bf0f8203"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-task-completion-s1-browser.log",
+          "sha256": "6e3f23cfaa685d21f0c4830dbd193efb4f6276d3c3ec7ef4d91efb8fce792f9f"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-task-completion-s2-browser.log",
+          "sha256": "c75762ba1ed50bb6c38bbc3d286d86d32d94532572158cef6b20c7e17cb4b5b0"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-task-completion-e2e.log",
+          "sha256": "5309dbb389b13a1385e827176fe057da6fbed09c2db1dd981ae768fda2035aa9"
+        }
+      ],
+      "compatibility": "No schema, migration, identifier, wire or receipt-contract change. Focus-completion v2 path untouched. Unfenced legacy completion path unchanged. Ordinary receipt/conflict handling unchanged.",
+      "remaining": [
+        "Native UI admission/enrollment activation",
+        "Rejected/conflicting completion and legacy ambiguity recovery",
+        "macOS causal integration",
+        "Cross-client acceptance"
+      ]
     }
   ],
   "findings": [

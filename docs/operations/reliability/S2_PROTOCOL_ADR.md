@@ -231,7 +231,13 @@ Rendering consumes committed snapshots rather than applying an asynchronous hand
 
 The checkout dialog retains its original task, observed focus identity and final notes. Its first completion attempt fixes duration, action identity and day/timezone attribution; retrying the same details reuses that capture. The local completion coordinator resolves the target epoch inside its transaction, retains the original UI control, and applies terminal focus together with task notes/status and effects. No old epoch or UI snapshot is saved as a new parent.
 
-The full UI callback chain awaits durable admission before closing checkout, offering a break, sounding success or celebrating. A failed write leaves checkout and its original notes available; a second click cannot enqueue a concurrent duplicate while the first call is pending. Rendering remains owned by committed storage subscriptions. Non-focus task completion retains the existing ordinary path; its cross-client concurrency boundary remains part of the outstanding integration review rather than being claimed as causal completion evidence.
+The full UI callback chain awaits durable admission before closing checkout, offering a break, sounding success or celebrating. A failed write leaves checkout and its original notes available; a second click cannot enqueue a concurrent duplicate while the first call is pending. Rendering remains owned by committed storage subscriptions.
+
+### Web task-only completion admission
+
+Fenced Web completion without an active focus session captures only the account, task, action UUID, day/timezone attribution and optional duration/flow/notes intent. Inside one IndexedDB transaction the coordinator reads the current task, statistics, goal, habit, progress and event collections, derives effects with the shared `deriveTaskCompletion` boundary, and commits collections, ordinary compatible mutations, journal evidence and generation together. Concurrent completions therefore compose from current state instead of racing a stale React snapshot; retries reuse the original admission; an already-completed task fails closed.
+
+Members travel the exact existing ordinary receipt contract with `dependsOnMutationId` chains, not v2 completion receipts; v2 member reservations and pull-page pausing remain exclusive to focus completions. No schema, migration, identifier, wire or receipt change is introduced, and unfenced accounts keep the existing grouped-WAL path. Native task-completion admission, rejected/conflicting completion recovery and mixed-version acceptance remain open S2 work.
 
 ### Web reschedule business admission
 
@@ -249,7 +255,7 @@ The existing rule is preserved: the observed sixth visit warns; later observed v
 
 When a baseline is unknown, the visit and its frontier remain durable with `WAITING_BASELINE`; yesterday's displayed count is never used. Downloaded causal history supplies the verified baseline and settles pending effects, in local admission order, in the same transaction as history application and the progress mutation. A failed history write rolls back both the penalty and its marker. Settings changes after capture do not reinterpret the original mode. Retries never apply an `APPLIED` effect again. The private frontier and transaction evidence must remain in backups; no history pruning is introduced.
 
-The rendered warning states six visits and reflects whether penalties are enabled. This integration leaves the existing ordinary progress receipt contract intact and does not activate rollout. Native command integration, network scheduling/enrollment, non-focus completion concurrency and full recovery/mixed-version acceptance remain open S2 work.
+The rendered warning states six visits and reflects whether penalties are enabled. This integration leaves the existing ordinary progress receipt contract intact and does not activate rollout. Native command integration, network scheduling/enrollment, rejected/conflicting completion recovery and full recovery/mixed-version acceptance remain open S2 work.
 
 ### Account initialization after the database-wide fence
 
