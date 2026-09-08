@@ -1,3 +1,4 @@
+import { CausalTransportError } from './causalTransport';
 import {
   authenticatedFetchForUser,
   SessionAccountMismatchError,
@@ -120,7 +121,8 @@ export const isPermanentSyncFailure = (error: unknown): boolean =>
   || error instanceof SyncMutationTooLargeError
   || error instanceof ResponseTooLargeError
   || error instanceof DurableStorageError
-  || error instanceof SessionAccountMismatchError;
+  || error instanceof SessionAccountMismatchError
+  || (error instanceof CausalTransportError && !error.retryable);
 
 const emit = (userKey: string, state: SyncState, meta: SyncMeta, message?: string): void => {
   window.dispatchEvent(new CustomEvent('goalflow:sync-state', {
@@ -243,30 +245,39 @@ export const synchronizeCloudOnce = async (
   if (!dependencies.isOnline()) return meta;
   const ownDeviceId = dependencies.deviceId();
 
-  while (true) {
-    const batch = await storageService.preparePushBatch(userKey, 50);
-    if (!batch.length) break;
-    const upload = await prepareStagedBody(JSON.stringify({ mutations: batch.map(wireMutation) }));
-    for (const chunk of upload.chunks) {
-      const staged = await fetchSyncWithRetry('/api/v1/sync/conflicts/stage', {
-        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(chunk)
+  const drainOrdinary = async () => {
+    while (true) {
+      const batch = await storageService.preparePushBatch(userKey, 50);
+      if (!batch.length) break;
+      const upload = await prepareStagedBody(JSON.stringify({ mutations: batch.map(wireMutation) }));
+      for (const chunk of upload.chunks) {
+        const staged = await fetchSyncWithRetry('/api/v1/sync/conflicts/stage', {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(chunk)
+        }, dependencies);
+        verifyReconciliationChunkAck(chunk, await parseJson<unknown>(staged, 'Upload will resume. Your original change remains saved.'));
+      }
+      const response = await fetchSyncWithRetry(upload.manifest ? '/api/v1/sync/push-staged' : '/api/v1/sync/push', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: upload.manifest ? JSON.stringify(upload.manifest) : upload.body
       }, dependencies);
-      verifyReconciliationChunkAck(chunk, await parseJson<unknown>(staged, 'Upload will resume. Your original change remains saved.'));
+      const body = await parseJson<{ results?: PushResult[] }>(response, 'Sync push failed. Local changes remain pending.');
+      if (!Array.isArray(body.results)) throw new SyncProtocolError('Sync push response was invalid. Local changes remain pending.');
+      try {
+        meta = await storageService.commitPushResults(userKey, batch, body.results);
+      } catch (error) {
+        throw new SyncProtocolError(error instanceof Error ? error.message : 'Sync receipts were invalid. Local changes remain pending.');
+      }
     }
-    const response = await fetchSyncWithRetry(upload.manifest ? '/api/v1/sync/push-staged' : '/api/v1/sync/push', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: upload.manifest ? JSON.stringify(upload.manifest) : upload.body
-    }, dependencies);
-    const body = await parseJson<{ results?: PushResult[] }>(response, 'Sync push failed. Local changes remain pending.');
-    if (!Array.isArray(body.results)) throw new SyncProtocolError('Sync push response was invalid. Local changes remain pending.');
-    try {
-      meta = await storageService.commitPushResults(userKey, batch, body.results);
-    } catch (error) {
-      throw new SyncProtocolError(error instanceof Error ? error.message : 'Sync receipts were invalid. Local changes remain pending.');
-    }
-  }
+  };
+  await drainOrdinary();
+  const synchronizeCausal = () => storageService.synchronizeCausalQueues(userKey, {
+    authenticatedFetch: dependencies.fetch, signal: dependencies.signal, timeoutMs: dependencies.requestTimeoutMs
+  }, drainOrdinary);
+  let causal = await synchronizeCausal();
+  if (causal && !causal.ready) throw new SyncProtocolError(`Causal synchronization requires ${causal.reason === 'ENROLLMENT_REQUIRED' ? 'account enrollment' : 'projection recovery'}. Saved actions remain retained.`);
 
+  let projectionRetries = 0;
   let hasMore = true;
   while (hasMore) {
     meta = normalizeSyncMeta(await storageService.get(STORES.SYNC, userKey));
@@ -291,7 +302,20 @@ export const synchronizeCloudOnce = async (
     }
     const highestRecord = body.records.reduce((highest, record) => Math.max(highest, Number(record.serverVersion) || 0), cursorBefore);
     if (nextCursor !== highestRecord) throw new SyncProtocolError('Sync pull cursor would skip or discard remote information.');
-    const applied = await storageService.applyRemotePage(userKey, body.records, nextCursor, ownDeviceId);
+    let applied;
+    try {
+      applied = await storageService.applyRemotePage(userKey, body.records, nextCursor, ownDeviceId);
+    } catch (error) {
+      if (!causal || !(error instanceof DurableStorageError) || error.code !== 'CAUSAL_COMMAND_REQUIRED') throw error;
+      // The transaction retained its cursor. A peer command or a local admission
+      // can race the pull; verify history and drain intent before fetching again.
+      // Never install an unverified protected snapshot to make the cursor move.
+      if (++projectionRetries > 3) throw new Error('Tracking changed during synchronization. Saved actions and cursor are retained for retry.');
+      causal = await synchronizeCausal();
+      if (!causal?.ready) throw new SyncProtocolError('Causal projection recovery is required. Saved actions remain retained.');
+      continue;
+    }
+    projectionRetries = 0;
     meta = applied.meta;
     hasMore = body.hasMore;
   }
@@ -322,7 +346,8 @@ export const synchronizeCloudOnce = async (
     meta = await storageService.commitAutomaticReconciliation(userKey, candidate, reply);
   }
 
-  meta = await storageService.markSyncSuccessful(userKey);
+  if (!causal?.pending) meta = await storageService.markSyncSuccessful(userKey);
+  else meta = normalizeSyncMeta(await storageService.get(STORES.SYNC, userKey));
   return meta;
 };
 
@@ -436,7 +461,8 @@ export const startCloudSync = (userKey: string): (() => void) => {
           if (stopped) return;
           await ensureLocalDataSeeded();
           const meta = await synchronizeCloudOnce(userKey, lifecycleDependencies, { seedLocalData: false });
-          const state: SyncState = Object.keys(meta.localState?.blocked ?? {}).length ? 'error' : meta.conflicts.length ? 'conflict' : meta.outbox.length ? 'saved-locally' : 'synced';
+          const local = await storageService.readCommittedSnapshot(userKey);
+          const state: SyncState = Object.keys(meta.localState?.blocked ?? {}).length ? 'error' : meta.conflicts.length ? 'conflict' : meta.outbox.length || local.pendingCount ? 'saved-locally' : 'synced';
           emit(userKey, state, meta);
           channel?.postMessage({
             type: 'complete', state, lastSuccessfulSync: meta.lastSuccessfulSync,
@@ -459,9 +485,9 @@ export const startCloudSync = (userKey: string): (() => void) => {
         if (stopped && (error instanceof DOMException || lifecycleController.signal.aborted)) return;
         if (isPermanentSyncFailure(error)) {
           blockedByPermanentError = true;
-          if (error instanceof SyncHttpError && error.status === 401) {
+          if ((error instanceof SyncHttpError || error instanceof CausalTransportError) && error.status === 401) {
             window.dispatchEvent(new CustomEvent('goalflow:session-rejected', {
-              detail: { status: error.status, code: error.code }
+              detail: { status: error.status, code: error instanceof SyncHttpError ? error.code : 'causal_http_error' }
             }));
           }
         }

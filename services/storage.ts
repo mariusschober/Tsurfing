@@ -1,3 +1,5 @@
+import { synchronizeCausalQueues } from './causalSync';
+import type { HistoryRuntime } from './causalHistory';
 import { admitLocalPlanningVisit, type PlanningVisitIntent } from './causalPlanningCoordinator';
 import { admitLocalReschedule, type RescheduleIntent } from './causalRescheduleCoordinator';
 import { openDB, IDBPDatabase, type IDBPTransaction } from 'idb';
@@ -1146,6 +1148,14 @@ export const storageService = {
       pendingCount: causalPending + pending.length + Object.keys(meta.localState?.blocked ?? {}).length + [...DATA_STORES, STORES.SYNC].filter(store => { const raw = window.localStorage.getItem(fallbackKey(store, userKey)); return raw !== null && !meta.localState?.fallbackCopies?.[store]?.includes(raw); }).length, walRevision: stableJson(captured) };
   },
 
+  async synchronizeCausalQueues(userKey: string, runtime: HistoryRuntime, drainOrdinary: () => Promise<void>) {
+    const db = await getDB();
+    if (!db?.objectStoreNames.contains(CAUSAL_STORE)) return null;
+    const name = db.name;
+    return synchronizeCausalQueues(name, userKey, runtime, drainOrdinary,
+      () => publishCommit(userKey, 0, DATA_STORES, name));
+  },
+
   async admitFocusControl(userKey: string, input: Omit<LocalFocusControl, 'actorId'>) {
     const control: LocalFocusControl = { ...structuredClone(input), actorId: readDeviceId() };
     const name = activeDatabaseName();
@@ -1156,6 +1166,7 @@ export const storageService = {
       || !await db.get(CAUSAL_STORE, userKey)) throw new DurableStorageError('The focus control requires the prepared causal account.');
     const result = await admitLocalFocusControl(name, control);
     publishCommit(userKey, result.generation, [STORES.TRACKING], name);
+    if (!result.duplicate) announceLocalChange(STORES.TRACKING, userKey, undefined);
     return result;
   },
 
@@ -1169,6 +1180,7 @@ export const storageService = {
       || !await db.get(CAUSAL_STORE, userKey)) throw new DurableStorageError('Planning requires the prepared causal account.');
     const result = await admitLocalPlanningVisit(name, intent);
     publishCommit(userKey, result.generation, [STORES.TRACKING, STORES.PROGRESS], name);
+    if (!result.duplicate) announceLocalChange(STORES.TRACKING, userKey, undefined);
     return result;
   },
 
@@ -1182,6 +1194,7 @@ export const storageService = {
       || !await db.get(CAUSAL_STORE, userKey)) throw new DurableStorageError('Rescheduling requires the prepared causal account.');
     const result = await admitLocalReschedule(name, intent);
     publishCommit(userKey, result.generation, [STORES.TASKS, STORES.TRACKING], name);
+    if (!result.duplicate) announceLocalChange(STORES.TRACKING, userKey, undefined);
     return result;
   },
 
@@ -1199,6 +1212,7 @@ export const storageService = {
     // This is a wake-up hint only; subscribers read the committed generation.
     // A post-commit read failure must not report the saved completion as failed.
     publishCommit(userKey, 0, [STORES.TRACKING, ...result.admission.members.map(member => member.entityType)], name);
+    if (!result.duplicate) announceLocalChange(STORES.TRACKING, userKey, undefined);
     return result;
   },
 
@@ -1558,6 +1572,7 @@ export const storageService = {
           await admitLocalCounterDay(db.name, { schemaVersion: 1, actionId: randomUuid(), accountId: userKey,
             actorId: readDeviceId(), kind: 'select', day: today, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             capturedAt: new Date().toISOString() });
+          announceLocalChange(STORES.TRACKING, userKey, undefined);
         }
         const snapshot = await storageService.readCommittedSnapshot(userKey);
         publishCommit(userKey, snapshot.meta, [STORES.TRACKING]);

@@ -92,7 +92,7 @@ type State = CausalEnrollmentState & CausalReceiptState & FocusAccountState & Co
   causalProjectionReviewHistory?: Record<string, string[]>;
 };
 
-function orderedPendingFocus(state: State, receipts: Record<string, unknown>) {
+export function orderedPendingFocus(state: State, receipts: Record<string, unknown>) {
   const commands = new Map<string, FocusCommand>();
   for (const [id, command] of Object.entries(state.focusOutbox ?? {})) {
     if (!same(state.focusAdmissions?.[id]?.command, command)) throw new Error('A pending focus command has no exact admission.');
