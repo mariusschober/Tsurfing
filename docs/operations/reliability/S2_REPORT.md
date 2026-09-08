@@ -500,3 +500,12 @@ Iteration evidence is retained. One unit assertion initially compared local atte
 Validation: `npm run verify:release`, exit 0, 645 tests in 99 files plus production builds and artifact checks. Focused day/receipt/projection tests: exit 0, 18 tests. The first release attempt was interrupted after loopback binding failed with sandbox EPERM; the permitted rerun passed. Initial type checking required the existing multi-store IndexedDB transaction typing. A recovery-test fixture initially changed shared references together; replacing only the pending entry correctly tested substitution and passed. Sanitized final logs and hashes are in the JSON checkpoint.
 
 This is a dormant journal building block. Pending day selection projection, dependent offline increments, UI wiring, enrollment and synchronization orchestration remain unfinished, along with native and recovery acceptance. No SQL migration, native installation, live configuration or deployment. Overall S2 remains **BLOCKED** for acceptance; S3 is not permitted.
+
+
+## Offline day and counter checkpoint
+
+`69c9126b968c9b3a7997ab137d98d425d27df5a9`: **PASS_LOCAL**. Established days project locally in the same transaction as selection admission. Unknown days retain the last provable date/counts and an explicit waiting status. Counter actions can be captured against a durably admitted unknown day, but first transport waits for its baseline. Complete history installs verified baseline evidence and merges the pending actions once. Pending selection order excludes older actions already superseded by a newer represented local selection; their evidence is retained.
+
+Full release checks passed: 649 tests in 99 files, type checking and production builds. Real Chromium/WebKit storage tests passed 14/14, including reload and retry of an unknown-day increment without a guessed zero. A final production build and artifact scan passed after adding the test-only harness entrypoint. Commands, sanitized logs and checksums are in the JSON checkpoint. No failed checks occurred in this checkpoint.
+
+Active application wiring, atomic business-counter actions, ordered transport/enrollment, native integration and recovery acceptance remain unfinished. No SQL or native changes, installation, live configuration or deployment. S2 acceptance remains **BLOCKED**; S3 remains prohibited.

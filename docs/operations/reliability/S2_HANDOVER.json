@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Dormant Web day intents now have durable admission and exact receipt/history handling. Typed UI, offline dependent counters and day projection, enrollment, causal sync orchestration, native integration and recovery remain incomplete.",
+  "acceptanceReason": "Implementation continues. Offline Web day selection and waiting counter intents pass local and browser checks. Active UI/business-action integration, enrollment, causal scheduling, native integration and recovery remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -1962,6 +1962,63 @@
         "Day admission preserves intent only; no speculative baseline or local selection projection.",
         "Typed UI, dependent offline increments, enrollment, native integration and sync orchestration remain incomplete.",
         "No native, PostgreSQL or browser rerun for this dormant Web journal checkpoint. No deployment or installation."
+      ]
+    },
+    {
+      "commit": "69c9126b968c9b3a7997ab137d98d425d27df5a9",
+      "scope": "Offline day projection and pending counter admission",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "docs/operations/reliability/S2_PROTOCOL_ADR.md",
+        "services/causalCounterCoordinator.test.ts",
+        "services/causalCounterCoordinator.ts",
+        "services/causalCounterDayCoordinator.test.ts",
+        "services/causalCounterDayCoordinator.ts",
+        "services/causalProjection.test.ts",
+        "services/causalProjection.ts",
+        "services/causalReceipts.ts",
+        "tests/browser/s1Harness.ts",
+        "tests/e2e/s2-storage-fence.spec.ts"
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 649,
+          "testFiles": 99
+        },
+        {
+          "command": "S1_INCLUDE_EXISTING=1 npx playwright test --config playwright.s1.config.ts s2-storage-fence.spec.ts",
+          "exitCode": 0,
+          "tests": 14,
+          "platforms": [
+            "Chromium",
+            "WebKit"
+          ]
+        },
+        {
+          "command": "npm run lint && npm run build",
+          "exitCode": 0
+        }
+      ],
+      "evidence": [
+        {
+          "path": "evidence/s2-offline-day-release.log",
+          "sha256": "58f08d8e52cb7b813c9c97f808afad939bead0ab199a709411482c9e27349d4e"
+        },
+        {
+          "path": "evidence/s2-offline-day-browser.log",
+          "sha256": "479f056540d08b8565195e31c16e003e6b29e410ecb8a4b0e5a907e55abb2563"
+        },
+        {
+          "path": "evidence/s2-offline-day-production-build.log",
+          "sha256": "f1fc0b7e81528b63b09ff6fc141dc63f160c73e4cc2907887628126deabd5a95"
+        }
+      ],
+      "limitations": [
+        "Dormant Web primitives; active UI/business-action integration and scheduling remain.",
+        "Unknown baseline requires verified history; no speculative zero or historical correction.",
+        "No SQL/native changes or native rerun; no installation or deployment."
       ]
     }
   ],
