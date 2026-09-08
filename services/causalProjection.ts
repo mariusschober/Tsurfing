@@ -1,5 +1,6 @@
 import { settlePlanningVisits, validatePlanningEvidence, type PlanningAccountState } from './causalPlanningCoordinator';
 import { bindCanonicalBaseline, validateBaselineBindings } from './causalBaselineBinding';
+import { bindLocalInitializationHistory } from './causalInitialization';
 import { causalBusinessTransactionStores, readCausalBusiness, writeCausalBusiness } from './causalBusinessStorage';
 import { openDB, type IDBPDatabase } from 'idb';
 import { applyFocusCommand, initialFocusJournal, type FocusCommand } from '../src/domain/causalFocus';
@@ -212,7 +213,9 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
         assertCompletionCapturesMaterialized(accountId, meta!);
       }
       const cutover = JSON.parse(history.entries['0'].body).receipt.record.payload;
-      if (!state.cutover.trackingPresent || !record(state.cutover.trackingValue)
+      if (!state.cutover.trackingPresent && state.localInitialization) {
+        bindLocalInitializationHistory(accountId, state);
+      } else if (!state.cutover.trackingPresent || !record(state.cutover.trackingValue)
         || !same(protectedTracking(state.cutover.trackingValue), protectedTracking(cutover))) {
         throw new Error('The preserved local cutover differs from server evidence. Explicit legacy recovery is required.');
       }

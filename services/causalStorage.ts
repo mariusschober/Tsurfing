@@ -1,5 +1,6 @@
 import { openDB, type IDBPDatabase, type IDBPTransaction } from 'idb';
 import { validateBaselineBindings, type BaselineBinding } from './causalBaselineBinding';
+import { validateLocalInitialization } from './causalInitialization';
 
 /** Private authority, deliberately absent from the legacy sync/backup store list. */
 export const CAUSAL_STORE = 'causal_actions';
@@ -127,5 +128,6 @@ export async function readCausalAccount(
     throw new Error('The causal account journal is damaged. Its data remains preserved.');
   }
   if (state?.counterBaselineBindings !== undefined) validateBaselineBindings(String(accountKey), state);
+  if (state) validateLocalInitialization(String(accountKey), state);
   return state;
 }

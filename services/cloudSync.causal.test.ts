@@ -12,7 +12,7 @@ import { causalHistoryHash } from './causalHistoryProtocol';
 import { emptySyncMeta, normalizeSyncMeta } from './syncProtocol';
 afterEach(() => { vi.unstubAllGlobals(); });
 
-async function fixture(enrolled = true) {
+async function fixture(enrolled = true, emptyLocal = false) {
   const accountId = crypto.randomUUID(), sessionId = crypto.randomUUID(), name = 's2-cloud-' + crypto.randomUUID();
   let epoch = crypto.randomUUID();
   const values = new Map<string, string>([['goalflow_active_database_v2', name]]);
@@ -24,10 +24,14 @@ async function fixture(enrolled = true) {
     startedAt: '2026-09-08T09:00:00.000Z', updatedAt: '2026-09-08T09:00:00.000Z', elapsedSeconds: 0, pausedAt: null, endedAt: null } };
   const baseline = { schemaVersion: 1 as const, baselineId: epoch, accountId, day: tracking.date, counts: { planViewCount: 27, dailyPostponeCount: 3 }, evidenceIds: [epoch] };
   const db = await openDB(name, 1, { upgrade(db) { for (const store of Object.values(STORES)) db.createObjectStore(store); } });
-  await db.put('tracking', tracking, accountId); await db.put('tasks', [{ id: 'task', title: 'Synthetic', completed: false }], accountId);
+  if (!emptyLocal) await db.put('tracking', tracking, accountId);
+  if (!emptyLocal) await db.put('tasks', [{ id: 'task', title: 'Synthetic', completed: false }], accountId);
   const initialMeta = emptySyncMeta();
   if (!enrolled) initialMeta.versions['tracking:singleton'] = { local: 1, server: 1 };
-  await db.put('sync', initialMeta, accountId); db.close(); (await fenceLegacyTracking(name)).close();
+  if (!emptyLocal) await db.put('sync', initialMeta, accountId);
+  db.close(); (await fenceLegacyTracking(name)).close();
+  if (emptyLocal) await storageService.initializeIfAbsent('tracking', accountId,
+    { date: tracking.date, planViewCount: 0, dailyPostponeCount: 0, focusSession: null, localDefault: 'retained' });
   const record = (payload: unknown, revision: number) => ({ user_id: accountId, entity_type: 'tracking', entity_id: 'singleton',
     version: revision + 1, server_version: revision + 1, device_id: 'causal-v2', updated_at: '2026-09-08T10:00:00.000Z', deleted_at: null, payload });
   const receipts: any[] = [{ schemaVersion: 2, epoch, projectionRevision: 0, baseline,
@@ -67,11 +71,16 @@ async function fixture(enrolled = true) {
       if (operation.type === 'counter') {
         events.push(command); const counts = projectCounters(baseline, events); serverTracking = { ...serverTracking, ...counts };
         outcome = { accepted: true, code: 'APPLIED', day: command.day, counts };
+      } else if (operation.type === 'counterDay') {
+        expect(command.day).toBe(baseline.day);
+        outcome = undefined;
       } else {
         const result = applyFocusCommand(journal, command); journal = result.journal; outcome = result.outcome;
         serverTracking = { ...serverTracking, focusSession: journal.sessions[journal.currentSessionId!].projection };
       }
-      const receipt = { schemaVersion: 2, epoch, operation, projectionRevision: receipts.length, accepted: true, outcome, record: record(structuredClone(serverTracking), receipts.length) };
+      const receipt = { schemaVersion: 2, epoch, operation, projectionRevision: receipts.length, accepted: true,
+        ...(operation.type === 'counterDay' ? { baseline, counts: projectCounters(baseline, events) } : { outcome }),
+        record: record(structuredClone(serverTracking), receipts.length) };
       receipts.push(receipt);
       if (loseResponse) { loseResponse = false; throw new TypeError('Synthetic lost receipt'); }
       return Response.json(receipt);
@@ -93,6 +102,37 @@ async function fixture(enrolled = true) {
     peerIncrement: () => fetch('/api/v1/sync/actions', { method: 'POST', body: JSON.stringify({ schemaVersion: 2, epoch, type: 'counter',
       command: { ...event, actionId: crypto.randomUUID(), actorId: 'peer' } }) }).then(() => undefined), lose: () => { loseResponse = true; } };
 }
+
+it('joins enrolled history from preserved local absence before sending a queued increment', async () => {
+  const f = await fixture(true, true);
+  await admitLocalCounter(f.name, f.event);
+  const db = await openDB(f.name), before = await db.get(CAUSAL_STORE, f.accountId);
+  expect(before.counterBaselines).toBeUndefined();
+  const meta = await f.run(), after = await db.get(CAUSAL_STORE, f.accountId);
+  expect(after.cutover).toEqual(before.cutover);
+  expect(after.localInitialization).toEqual(before.localInitialization);
+  expect(after.localInitializationHistory.body).toBe(after.causalHistory.entries['0'].body);
+  expect(after.localInitialization.trackingValue.localDefault).toBe('retained');
+  expect(after.trackingValue).toMatchObject({ planViewCount: 28, dailyPostponeCount: 3, unknown: 'retained', focusSession: f.tracking.focusSession });
+  expect(after.counterEvents[f.event.actionId]).toEqual(f.event);
+  expect(after.counterOutbox).toEqual({}); expect(after.counterDayOutbox).toEqual({});
+  expect(meta.cursor).toBe(3);
+  await f.run(); expect(f.requests).toHaveLength(2);
+  db.close();
+});
+
+it.each(['counts', 'day', 'absence'])('rejects inconsistent local initialization evidence (%s)', async field => {
+  const f = await fixture(true, true), db = await openDB(f.name);
+  const damaged = await db.get(CAUSAL_STORE, f.accountId);
+  if (field === 'counts') damaged.localInitialization.trackingValue.planViewCount = 1;
+  if (field === 'day') damaged.localInitialization.trackingValue.date = '2026-09-09';
+  if (field === 'absence') damaged.cutover.trackingPresent = true;
+  await db.put(CAUSAL_STORE, damaged);
+  await expect(f.run()).rejects.toThrow(/initial/i);
+  expect(await db.get(CAUSAL_STORE, f.accountId)).toEqual(damaged);
+  expect(f.requests).toHaveLength(0);
+  db.close();
+});
 
 it.each([false, true])('enrolls the preserved baseline before sending a pending increment (lost response: %s)', async lost => {
   const f = await fixture(false);
