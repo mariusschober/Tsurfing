@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Web atomic completion admission and exact receipt/dependency handling are verified locally; downloaded completion application, native causal journals, recovery and active rollout remain incomplete.",
+  "acceptanceReason": "Implementation continues. Web completion admission, exact receipt retirement, history download and atomic application are verified locally; active Web coordination, native integration, recovery and mixed-version activation remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -1518,6 +1518,121 @@
         "Native causal journals and completion integration",
         "Legacy and nonempty-restore recovery",
         "Mixed-version activation"
+      ],
+      "permittedNextStage": null
+    },
+    {
+      "commit": "f3fa120c106c14dfe58315c67e8f57c44a1fb41c",
+      "scope": "Atomic Web completion history application and durable recovery reviews",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "scripts/test-s2-completion-api-postgres.ts",
+        "services/causalCompletionCoordinator.test.ts",
+        "services/causalCompletionCoordinator.ts",
+        "services/causalCompletionProjection.test.ts",
+        "services/causalCompletionProjection.ts",
+        "services/causalCompletionProtocol.test.ts",
+        "services/causalCompletionProtocol.ts",
+        "services/causalProjection.ts",
+        "services/storage.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-COMPLETION-HISTORY-APPLICATION",
+          "disposition": "Implemented atomic task/effect/focus application, including parent-ordered pending commands"
+        },
+        {
+          "id": "S2-COMPLETION-APPLICATION-RECOVERY",
+          "disposition": "Conflicting/unversioned local data retained with durable review; explicit resolution remains required"
+        },
+        {
+          "id": "S2-COMPLETION-APPLICATION-RESTORE",
+          "disposition": "Schema-5 restore validates application proofs and exact history bodies"
+        },
+        {
+          "id": "S2-COMPLETION-MEMBER-BASE-ORDER",
+          "disposition": "Accepted member publication must be newer than its submitted base"
+        }
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "testsPassed": 597,
+          "testFilesPassed": 95,
+          "log": "docs/operations/reliability/evidence/s2-completion-application-release.log"
+        },
+        {
+          "command": "PATH=/opt/homebrew/opt/postgresql@17/bin:$PATH PGHOST=127.0.0.1 PGPORT=55437 PGUSER=schober npm run test:migrations:postgres",
+          "exitCode": 0,
+          "paths": [
+            "empty",
+            "upgrade"
+          ],
+          "consumerHistoryChunks": 5,
+          "consumerApplication": "All six effects and terminal focus; replay unchanged; ordinary cursor unchanged",
+          "hostedPostgREST": "NOT_MEASURED",
+          "log": "docs/operations/reliability/evidence/s2-completion-application-postgres.log"
+        },
+        {
+          "command": "npx vitest run services/causalCompletionProjection.test.ts services/causalCompletionCoordinator.test.ts services/causalProjection.test.ts services/causalRestore.test.ts services/causalCompletionProtocol.test.ts",
+          "exitCode": 0,
+          "testsPassed": 47,
+          "testFilesPassed": 5
+        }
+      ],
+      "failedAttempts": [
+        {
+          "command": "npx vitest run services/causalProjection.test.ts services/causalCompletionCoordinator.test.ts",
+          "exitCode": 1,
+          "testsFailed": 1,
+          "testsPassed": 18,
+          "reason": "Existing refusal-gate expectation superseded by verified atomic pending-completion replay; updated to assert preservation"
+        }
+      ],
+      "migrations": [],
+      "nativeChecks": "NOT_RERUN_NO_NATIVE_SOURCE_CHANGE",
+      "browserRendering": "NOT_MEASURED",
+      "compatibility": "Dormant Web library paths; active coordinator and old-JavaScript business-store fence still required. Ordinary cursor remains authoritative and unchanged by completion application.",
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-completion-application-existing.log",
+          "sha256": "79b4a3946d89d36e2145965c90e422d4802b6bad439ac3418241fbd0627a6074"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-completion-application-integration-final.log",
+          "sha256": "b935921806d154c20b43658d539e1f12d2334b578d488222f69c8e05d793628e"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-completion-application-integration.log",
+          "sha256": "060563cc835a17b47c320b8cde2dc12726733c765e99c7411fbffd89b5289822"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-completion-application-lint-final.log",
+          "sha256": "e90ee48ea12d3a4c3b7a3b27a3894b3cf36c40b2d5d29e5bd6efc2dafbd309e5"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-completion-application-lint.log",
+          "sha256": "e90ee48ea12d3a4c3b7a3b27a3894b3cf36c40b2d5d29e5bd6efc2dafbd309e5"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-completion-application-postgres.log",
+          "sha256": "170fb688bf8f595f6a2ea9044e3e6bd7aee73d7545f2f54b302a2413865af21c"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-completion-application-release.log",
+          "sha256": "a66a453f8b814f4dbb2d6484bceacf74c4a342c8bb47c2fd8f55c03b01409b95"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-completion-application-unit.log",
+          "sha256": "1c26102a788d67880826de25a0e075cc3c141abd33b6fc587727a1c73e09a9b8"
+        }
+      ],
+      "blockers": [
+        "Active Web UI/storage/sync coordination and old-tab business-store fence",
+        "Native causal journals, transport and completion integration",
+        "Legacy and nonempty-restore recovery actions",
+        "Mixed-version activation and final platform acceptance"
       ],
       "permittedNextStage": null
     }

@@ -1,0 +1,39 @@
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+ ❯ services/causalCompletionCoordinator.test.ts (13 tests | 1 failed) 382ms
+   × does not let the earlier history-only applier revive active focus over an admitted completion 12ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  services/causalCompletionCoordinator.test.ts > does not let the earlier history-only applier revive active focus over an admitted completion
+AssertionError: promise resolved "{ blocked: false, …(3) }" instead of rejecting
+
+- Expected
++ Received
+
+- Error {
+-   "message": "rejected promise",
++ {
++   "blocked": false,
++   "duplicate": false,
++   "generation": 2,
++   "reviews": {},
+  }
+
+ ❯ services/causalCompletionCoordinator.test.ts:278:65
+    276|   const db = await openDB(f.name); await db.put(CAUSAL_STORE, state); …
+    277|   const before = await f.read();
+    278|   await expect(applyDownloadedCausalHistory(f.name, f.accountId)).reje…
+       |                                                                 ^
+    279|   expect(await f.read()).toEqual(before);
+    280| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 18 passed (19)
+   Start at  04:03:09
+   Duration  758ms (transform 383ms, setup 0ms, import 544ms, tests 436ms, environment 0ms)
+

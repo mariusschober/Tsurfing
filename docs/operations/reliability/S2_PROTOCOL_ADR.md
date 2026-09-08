@@ -188,3 +188,13 @@ Ordinary sync metadata reserves each pending completion member's local version. 
 Admission enforces both 3 MiB per member and the complete 4 MiB UTF-8 envelope, reserving maximum safe server-version digits. A failed final IndexedDB write rolls back business effects, terminal focus and journal together. Receipt commit archives all evidence and releases only exact matching reservations; it never applies historical snapshots or advances the ordinary pull cursor. Schema-5 export/restore retains and validates this dependency structure.
 
 This coordinator is dormant. The history-only applier refuses pending or downloaded completion actions until atomic task/effect history application exists. Current-code reservations do not replace the required old-tab business-store fence. Activation must first provide the complete history/application path, native counterparts and preserved legacy recovery.
+
+## Atomic completion history application
+
+The Web history applier now replays versioned completion transitions and installs their task/effect records together with focus. The same transaction retains exact local acknowledgments and application preimages, updates per-entity versions, and advances local generation; it never advances the ordinary pull cursor. Each application refers to an immutable history revision/hash, and restore validates those references and bodies.
+
+Incoming full server receipts do not require intermediate record snapshots when a replica has no pending local edit. Empty replicas can hydrate the supplied members; unversioned nonempty local records require recovery review. Locally admitted completions keep their already-derived effects and later edits. Only an original matching attempted request permits local receipt retirement; peer history alone does not invent attempted bytes.
+
+Pending focus/completion commands replay in explicit parent order using original target identities. Completion preimages prove task eligibility for commands preceding a locally pending completion. Conflicting local completions or overlapping edits cause the entire projection transaction to abort; a separate durable review records the horizon and reason, retaining all original data and requests. Review history survives subsequent successful application.
+
+This removes the former unconditional completion-history refusal. Active Web coordination, old-tab business-store fencing, native integration and explicit recovery remain prerequisites for mixed-version activation.
