@@ -1,0 +1,38 @@
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+Running 28 tests using 2 workers
+
+  ✓   1 [chromium] › tests/e2e/s2-storage-fence.spec.ts:9:1 › current storage retains a pre-cutover tracking capture for review without guessing its counter (549ms)
+  ✓   3 [chromium] › tests/e2e/s2-storage-fence.spec.ts:47:1 › an uncooperative older connection delays cutover; its final committed write is preserved (374ms)
+  ✓   4 [chromium] › tests/e2e/s2-storage-fence.spec.ts:82:1 › causal local admission serializes real browser transactions and preserves an action across rollback (214ms)
+  ✓   2 [webkit] › tests/e2e/s2-storage-fence.spec.ts:9:1 › current storage retains a pre-cutover tracking capture for review without guessing its counter (1.2s)
+  ✓   5 [chromium] › tests/e2e/s2-storage-fence.spec.ts:125:1 › counter and focus admissions share one authority across concurrent browser transactions (212ms)
+  ✓   7 [chromium] › tests/e2e/s2-storage-fence.spec.ts:160:1 › business authority survives legacy deletes and restores a pending completion without changing its request (508ms)
+  ✓   6 [webkit] › tests/e2e/s2-storage-fence.spec.ts:47:1 › an uncooperative older connection delays cutover; its final committed write is preserved (798ms)
+  ✓   8 [chromium] › tests/e2e/s2-storage-fence.spec.ts:217:1 › business upgrade waits for an older tab and preserves its last committed note edit (368ms)
+  ✓   9 [webkit] › tests/e2e/s2-storage-fence.spec.ts:82:1 › causal local admission serializes real browser transactions and preserves an action across rollback (464ms)
+  ✓  10 [chromium] › tests/e2e/s2-storage-fence.spec.ts:248:1 › offline day intent and unprojected increments survive a real browser restart (247ms)
+  ✓  11 [webkit] › tests/e2e/s2-storage-fence.spec.ts:125:1 › counter and focus admissions share one authority across concurrent browser transactions (420ms)
+  ✓  12 [chromium] › tests/e2e/s2-storage-fence.spec.ts:313:1 › the rendered focus controls use causal admission after an existing account is fenced (2.7s)
+  ✓  13 [webkit] › tests/e2e/s2-storage-fence.spec.ts:160:1 › business authority survives legacy deletes and restores a pending completion without changing its request (2.7s)
+  ✓  15 [webkit] › tests/e2e/s2-storage-fence.spec.ts:217:1 › business upgrade waits for an older tab and preserves its last committed note edit (945ms)
+  ✓  16 [webkit] › tests/e2e/s2-storage-fence.spec.ts:248:1 › offline day intent and unprojected increments survive a real browser restart (507ms)
+  ✓  14 [chromium] › tests/e2e/s2-storage-fence.spec.ts:336:1 › failed rendered completion keeps checkout and notes, then retries the same atomic action (2.3s)
+  ✓  18 [chromium] › tests/e2e/s2-storage-fence.spec.ts:390:1 › rendered rescheduling retains a failed choice and retries one task-counter admission (1.3s)
+  ✓  17 [webkit] › tests/e2e/s2-storage-fence.spec.ts:313:1 › the rendered focus controls use causal admission after an existing account is fenced (1.9s)
+  ✓  19 [chromium] › tests/e2e/s2-storage-fence.spec.ts:445:1 › rendered planning visits warn on six and retry a failed seventh penalty exactly once (1.8s)
+  ✓  20 [webkit] › tests/e2e/s2-storage-fence.spec.ts:336:1 › failed rendered completion keeps checkout and notes, then retries the same atomic action (2.7s)
+  ✓  21 [chromium] › tests/e2e/s2-storage-fence.spec.ts:497:1 › a new UUID account hydrates behind an existing fence and captures offline planning and focus (2.1s)
+  ✓  22 [webkit] › tests/e2e/s2-storage-fence.spec.ts:390:1 › rendered rescheduling retains a failed choice and retries one task-counter admission (1.9s)
+  ✓  24 [webkit] › tests/e2e/s2-storage-fence.spec.ts:445:1 › rendered planning visits warn on six and retry a failed seventh penalty exactly once (2.5s)
+  ✓  23 [chromium] › tests/e2e/s2-storage-fence.spec.ts:530:1 › rendered non-focus completion admits two task completions atomically on a fenced account (3.9s)
+  ✓  26 [chromium] › tests/e2e/s2-storage-fence.spec.ts:577:1 › rendered rejected completions dismiss with reservations released and audit retained (1.4s)
+  ✓  25 [webkit] › tests/e2e/s2-storage-fence.spec.ts:497:1 › a new UUID account hydrates behind an existing fence and captures offline planning and focus (2.4s)
+  ✓  27 [webkit] › tests/e2e/s2-storage-fence.spec.ts:530:1 › rendered non-focus completion admits two task completions atomically on a fenced account (11.8s)
+  ✓  28 [webkit] › tests/e2e/s2-storage-fence.spec.ts:577:1 › rendered rejected completions dismiss with reservations released and audit retained (1.7s)
+
+  28 passed (37.7s)

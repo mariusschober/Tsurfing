@@ -4033,6 +4033,122 @@
         "macOS causal integration",
         "Cross-client acceptance"
       ]
+    },
+    {
+      "id": "recovery-review-listing",
+      "sourceCommit": "a58a9230a651f64b7c49bb04a0d5da702875d8de",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "components/SyncStatus.tsx",
+        "services/storage.recovery.test.ts",
+        "services/storage.ts",
+        "tests/e2e/s2-storage-fence.spec.ts"
+      ],
+      "verification": [
+        {
+          "command": "VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "passed": 732,
+          "files": 108
+        },
+        {
+          "command": "npm run test:s1:storage (x3)",
+          "exitCode": 0,
+          "passed": 38,
+          "files": 5
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0,
+          "checked": 24
+        },
+        {
+          "command": "npm run verify:migrations",
+          "exitCode": 0,
+          "migrations": 32
+        },
+        {
+          "command": "npm run verify:migration-hashes",
+          "exitCode": 0,
+          "migrations": 32
+        },
+        {
+          "command": "npm run verify:room-hashes",
+          "exitCode": 0,
+          "schemas": 9
+        },
+        {
+          "command": "npm run test:migrations:postgres (empty + upgrade)",
+          "exitCode": 0
+        },
+        {
+          "command": "android-native gradle testProductionDebugUnitTest lintProductionDebug assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": 231,
+          "passed": 230,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "xcodebuild test GoalflowMac Debug platform=macOS CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0,
+          "tests": 226,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "npx playwright test --config playwright.s1.config.ts",
+          "exitCode": 0,
+          "passed": 44
+        },
+        {
+          "command": "npx playwright test --config playwright.s2.config.ts",
+          "exitCode": 0,
+          "passed": 28
+        },
+        {
+          "command": "npm run test:e2e",
+          "exitCode": 0,
+          "passed": 96
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-review-list-release.log",
+          "sha256": "0dda1e4da12b66b044b33f7bacd8c9f1f753dff4654aa189d4921cd6dcd36476"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-review-list-postgres.log",
+          "sha256": "bea25f67a75a60ff2081b165e758e5272c4057cee9ab35c80cdaf2fea695837c"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-review-list-android.log",
+          "sha256": "c221b831d2fc4721515e93867e013bb7e97c8ff4f0a979ab8778a07265614997"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-review-list-macos.log",
+          "sha256": "8bf5520da6177f516d87cd19a5de7b6641f2e1468c344d352e95914336650f63"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-review-list-s1browser.log",
+          "sha256": "c72ef8f702675291ede8fbaf2da1b72d3523cc3338c884cf0888c909f6f45a6a"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-review-list-s2browser.log",
+          "sha256": "a497c633cb863d83c1efeab90d59818b2657a63065d1310e83815ba2abf5d883"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-review-list-e2e.log",
+          "sha256": "2a9fdad3b3437061d290e79a2ec70bacc134d49cdbb927cca443c48f77a2447e"
+        }
+      ],
+      "compatibility": "Read-only listing addition; no schema, migration, identifier, wire or receipt-contract change.",
+      "remaining": [
+        "Divergent legacy ambiguity import",
+        "Nonempty-restore reconciliation",
+        "macOS causal integration",
+        "Cross-client acceptance"
+      ]
     }
   ],
   "findings": [

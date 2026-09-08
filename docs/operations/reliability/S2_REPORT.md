@@ -789,3 +789,11 @@ Unblocking staging proof requires existing explicit authorization for that targe
 Validation: full native gate exit 0 — 231 tests, 0 failures, one hosted-transport skip; lint and debug APK build passed. Web release verification exit 0 (731 tests, 108 files; no Web sources changed). Both PostgreSQL matrices passed. macOS: 226 tests, one hosted skip, 0 failures. Identifiers 24, migration hashes 32, Room hashes 9 passed. New coverage: repository composition/idempotency/fail-closed tests and a ViewModel routing test (legacy vs causal vs error paths).
 
 Remaining: rejected/conflicting native completion recovery UI, divergent legacy ambiguity import, nonempty-restore reconciliation, macOS causal integration and full cross-client acceptance. S2 remains incomplete and S3 is not permitted. No migration, deployment, installation or live data writes occurred.
+
+## Recovery review listing checkpoint
+
+`a58a9230a651f64b7c49bb04a0d5da702875d8de`: **PASS_LOCAL**. The status panel now lists rejected causal completions alongside blocked reviews through one read-only `listRecoveryReviews` listing, with two-tap confirm dismissal per rejected completion that releases its reservations and refreshes optimistically with the same in-flight read invalidation. A new Chromium/WebKit journey drives a rejected focus completion on a fenced enrolled account through the real panel: reservations release, the admission/request/rejected receipt stay as audit, and the completed task projection is untouched.
+
+Validation: `npm run verify:release` exit 0, 732 tests in 108 files. `test:s1:storage` 38 passed ×3. S1 browser 44 passed; S2 browser 28 passed (14 journeys × Chromium/WebKit); full E2E 96 passed. Both PostgreSQL matrices passed. Android: 231 tests, 0 failures, one hosted skip; lint/debug build passed. macOS: 226 tests, one hosted skip, 0 failures. Identifiers 24, migrations 32, migration hashes 32, Room hashes 9 passed.
+
+Remaining: divergent legacy ambiguity import, nonempty-restore reconciliation, macOS causal integration and full cross-client acceptance. S2 remains incomplete and S3 is not permitted. No migration, deployment, installation or live data writes occurred.
