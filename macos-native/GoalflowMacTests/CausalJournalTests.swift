@@ -192,11 +192,85 @@ final class CausalFocusAdmissionTests: XCTestCase {
         let id = UUID().uuidString.lowercased()
         let store = try CausalJournalStore(accountId: id, directory: dir, defaults: defaults)
         _ = try store.prepare(tracking: ["date": "2026-09-08", "planViewCount": 0, "dailyPostponeCount": 0])
+        _ = try store.admitCounterDay(causalDayIntent(UUID().uuidString.lowercased(), kind: "establish"), actorId: "test")
         let clash = UUID().uuidString.lowercased()
-        var seeded = try XCTUnwrap(store.load())
-        seeded.counterAdmissions[clash] = AnyCodable(["event": ["actionId": clash]])
-        try store.save(seeded)
+        _ = try store.admitCounter(["actionId": clash, "day": "2026-09-08", "timeZone": "Atlantic/Canary",
+            "counter": "planViewCount", "delta": 1, "capturedAt": "2026-09-08T10:00:00.000Z"], actorId: "test")
         XCTAssertThrowsError(try store.admitFocus(intent(session: UUID().uuidString.lowercased(), kind: "start", duration: 600, id: clash)) { _ in true })
-        XCTAssertEqual(try store.load()?.generation, 0)
+        XCTAssertEqual(try store.load()?.generation, 2)
+    }
+}
+
+private func causalDayIntent(_ id: String, kind: String, day: String = "2026-09-08") -> [String: Any] {
+    ["actionId": id, "kind": kind, "day": day, "timeZone": "Atlantic/Canary", "capturedAt": "2026-09-08T10:00:00.000Z"]
+}
+
+private func causalCounterEvent(_ id: String, counter: String = "planViewCount", day: String = "2026-09-08", delta: Int = 1) -> [String: Any] {
+    ["actionId": id, "day": day, "timeZone": "Atlantic/Canary", "counter": counter, "delta": delta,
+     "capturedAt": "2026-09-08T10:00:00.000Z"] as [String: Any]
+}
+
+final class CausalCounterAdmissionTests: XCTestCase {
+    private func isolated() throws -> (URL, UserDefaults) {
+        let suite = "goalflow.causal.counter.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        addTeardownBlock {
+            defaults.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        return (dir, defaults)
+    }
+
+    private func prepared() throws -> (CausalJournalStore, String) {
+        let (dir, defaults) = try isolated()
+        let id = UUID().uuidString.lowercased()
+        let store = try CausalJournalStore(accountId: id, directory: dir, defaults: defaults)
+        _ = try store.prepare(tracking: ["date": "2026-09-08", "planViewCount": 27, "dailyPostponeCount": 3])
+        return (store, id)
+    }
+
+    func testEstablishAndIncrementsComposeWithIdempotentRetries() throws {
+        let (store, _) = try prepared()
+        let established = try store.admitCounterDay(causalDayIntent(UUID().uuidString.lowercased(), kind: "establish"), actorId: "test")
+        XCTAssertFalse(established.duplicate)
+        XCTAssertEqual(established.outcome["baselinePending"] as? Bool, false)
+        let first = try store.admitCounter(causalCounterEvent(UUID().uuidString.lowercased()), actorId: "test")
+        XCTAssertEqual((first.outcome["baselinePending"] as? Bool), false)
+        XCTAssertEqual(first.tracking?["planViewCount"] as? Int, 28)
+        XCTAssertEqual(first.tracking?["dailyPostponeCount"] as? Int, 3)
+        let second = try store.admitCounter(causalCounterEvent(UUID().uuidString.lowercased(), counter: "dailyPostponeCount"), actorId: "test")
+        XCTAssertEqual(second.tracking?["planViewCount"] as? Int, 28)
+        XCTAssertEqual(second.tracking?["dailyPostponeCount"] as? Int, 4)
+        XCTAssertEqual(second.generation, 3)
+        let reloaded = try XCTUnwrap(store.load())
+        XCTAssertEqual(reloaded.generation, 3)
+    }
+
+    func testUnknownDayRetainsWithoutProjectingYesterday() throws {
+        let (store, _) = try prepared()
+        _ = try store.admitCounterDay(causalDayIntent(UUID().uuidString.lowercased(), kind: "establish"), actorId: "test")
+        let pending = try store.admitCounter(causalCounterEvent(UUID().uuidString.lowercased(), day: "2026-09-09"), actorId: "test")
+        XCTAssertEqual(pending.outcome["baselinePending"] as? Bool, true)
+        XCTAssertNil(pending.tracking)
+        let tracking = try XCTUnwrap(store.load()?.trackingValue?.value as? [String: Any])
+        XCTAssertEqual(tracking["date"] as? String, "2026-09-08")
+        XCTAssertEqual(tracking["planViewCount"] as? Int, 27)
+    }
+
+    func testInvalidEventsAndDoubleEstablishFailClosed() throws {
+        let (store, _) = try prepared()
+        let before = try XCTUnwrap(store.load())
+        let badDay = causalDayIntent(UUID().uuidString.lowercased(), kind: "establish")
+        var tampered = badDay.merging(["day": "09-08"]) { _, new in new }
+        XCTAssertThrowsError(try store.admitCounterDay(tampered, actorId: "test"))
+        XCTAssertThrowsError(try store.admitCounter(causalCounterEvent(UUID().uuidString.lowercased(), counter: "frogs"), actorId: "test"))
+        XCTAssertThrowsError(try store.admitCounter(causalCounterEvent(UUID().uuidString.lowercased(), day: "2026-09-08", delta: 0), actorId: "test"))
+        XCTAssertEqual(try store.load(), before)
+        _ = try store.admitCounterDay(causalDayIntent(UUID().uuidString.lowercased(), kind: "establish"), actorId: "test")
+        let settled = try XCTUnwrap(store.load())
+        XCTAssertThrowsError(try store.admitCounterDay(causalDayIntent(UUID().uuidString.lowercased(), kind: "establish"), actorId: "test"))
+        XCTAssertEqual(try store.load(), settled)
     }
 }

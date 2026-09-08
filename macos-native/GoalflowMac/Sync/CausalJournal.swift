@@ -87,24 +87,70 @@ final class CausalJournalStore: @unchecked Sendable {
             }
             admissions.append((sequence, id, command))
         }
-        admissions.sort { $0.sequence < $1.sequence }
-        // Every generation unit is exactly one focus admission until counter
-        // admissions join this sequence in a later slice.
+        var counterEvents: [(sequence: Int, event: [String: Any])] = []
+        for (id, raw) in state.counterAdmissions {
+            guard let entry = raw.value as? [String: Any],
+                  let sequence = entry["sequence"] as? Int, sequence >= 1,
+                  let event = entry["event"] as? [String: Any],
+                  event["actionId"] as? String == id else {
+                throw SyncError.corruptStorage("A counter admission is damaged. Nothing was discarded; recovery requires operator review.")
+            }
+            counterEvents.append((sequence, event))
+        }
+        var dayCommands: [(sequence: Int, id: String, command: [String: Any])] = []
+        for (id, raw) in state.counterDayAdmissions {
+            guard let entry = raw.value as? [String: Any],
+                  let sequence = entry["sequence"] as? Int, sequence >= 1,
+                  let command = entry["command"] as? [String: Any],
+                  command["actionId"] as? String == id else {
+                throw SyncError.corruptStorage("A day admission is damaged. Nothing was discarded; recovery requires operator review.")
+            }
+            dayCommands.append((sequence, id, command))
+        }
+        let usedSequences = (admissions.map(\.sequence) + counterEvents.map(\.sequence) + dayCommands.map(\.sequence)).sorted()
+        // One shared generation sequence across admission kinds.
         let expectedSequence: [Int] = state.generation == 0 ? [] : Array(1...state.generation)
-        guard admissions.map(\.sequence) == expectedSequence else {
+        guard usedSequences == expectedSequence else {
             throw SyncError.corruptStorage("The causal admission sequence is incomplete. Nothing was discarded; recovery requires operator review.")
         }
         let cutover = state.cutoverTracking?.value as? [String: Any]
         var replay = try initialFocusJournal(accountId: state.accountId, baseline: cutover?["focusSession"])
+        admissions.sort { $0.sequence < $1.sequence }
         for admission in admissions {
             replay = try CausalFocus.apply(replay, command: admission.command).journal
         }
         guard stableJson(focus) == stableJson(replay) else {
             throw SyncError.corruptStorage("The causal focus journal differs from its admissions. Nothing was discarded; recovery requires operator review.")
         }
-        if admissions.isEmpty {
+        // Project counters per established day and require the current
+        // tracking day to match. Days without a baseline stay retained.
+        var baselines: [String: [String: Any]] = [:]
+        for raw in state.counterBaselines.values {
+            guard let baseline = raw.value as? [String: Any],
+                  let day = baseline["day"] as? String else {
+                throw SyncError.corruptStorage("A counter baseline is damaged. Nothing was discarded; recovery requires operator review.")
+            }
+            baselines[day] = baseline
+        }
+        var eventsByDay: [String: [[String: Any]]] = [:]
+        for event in counterEvents.sorted(by: { $0.sequence < $1.sequence }).map(\.event) {
+            guard let day = event["day"] as? String else {
+                throw SyncError.corruptStorage("A counter admission is damaged. Nothing was discarded; recovery requires operator review.")
+            }
+            eventsByDay[day, default: []].append(event)
+        }
+        if let tracking = state.trackingValue?.value as? [String: Any],
+           let date = tracking["date"] as? String,
+           let baseline = baselines[date] {
+            let projected = try CounterLedger.project(baseline: baseline, events: eventsByDay[date] ?? [])
+            guard (projected["planViewCount"] as? Int) == (tracking["planViewCount"] as? Int),
+                  (projected["dailyPostponeCount"] as? Int) == (tracking["dailyPostponeCount"] as? Int) else {
+                throw SyncError.corruptStorage("Retained causal counters differ from their evidence. Nothing was discarded; recovery requires operator review.")
+            }
+        }
+        if admissions.isEmpty && counterEvents.isEmpty && dayCommands.isEmpty {
             // Before any admission, the projection is exactly the preserved
-            // cutover. Counter-level replay validation arrives with admission.
+            // cutover.
             guard stableJson(state.trackingValue?.value) == stableJson(state.cutoverTracking?.value) else {
                 throw SyncError.corruptStorage("Retained causal tracking differs from its cutover evidence. Nothing was discarded; recovery requires operator review.")
             }
@@ -276,6 +322,190 @@ final class CausalJournalStore: @unchecked Sendable {
                 throw SyncError.corruptStorage("The admitted focus projection is damaged. Nothing was admitted.")
             }
             return FocusAdmission(tracking: tracking, outcome: reply.outcome, duplicate: false, generation: generation)
+        }
+    }
+
+    struct CounterDayAdmission {
+        let outcome: [String: Any]
+        let duplicate: Bool
+        let generation: Int
+    }
+
+    struct CounterAdmission {
+        let tracking: [String: Any]?
+        let outcome: [String: Any]
+        let duplicate: Bool
+        let generation: Int
+    }
+
+    private static let counters = ["planViewCount", "dailyPostponeCount"]
+
+    private static func validateDayCommand(_ command: [String: Any], accountId: String) throws {
+        guard ActionJSON.integer(command["schemaVersion"]) == 1,
+              ActionJSON.identity(command["actionId"]), command["accountId"] as? String == accountId,
+              let actor = command["actorId"] as? String, (1...240).contains(actor.utf16.count),
+              let kind = command["kind"] as? String, ["establish", "select"].contains(kind),
+              ActionJSON.day(command["day"]),
+              let zone = command["timeZone"] as? String,
+              zone.range(of: "^[A-Za-z0-9_+./-]{1,128}$", options: .regularExpression) != nil,
+              ActionJSON.instant(command["capturedAt"]) else {
+            throw SyncError.validation("The day intent is invalid. Nothing was admitted.")
+        }
+    }
+
+    private static func validateCounterEvent(_ event: [String: Any], accountId: String) throws {
+        guard ActionJSON.integer(event["schemaVersion"]) == 1,
+              ActionJSON.identity(event["actionId"]), event["accountId"] as? String == accountId,
+              let actor = event["actorId"] as? String, (1...240).contains(actor.utf16.count),
+              ActionJSON.day(event["day"]),
+              let zone = event["timeZone"] as? String,
+              zone.range(of: "^[A-Za-z0-9_+./-]{1,128}$", options: .regularExpression) != nil,
+              let counter = event["counter"] as? String, counters.contains(counter),
+              let delta = ActionJSON.integer(event["delta"]), delta != 0,
+              ActionJSON.instant(event["capturedAt"]),
+              event["businessActionId"] == nil || event["businessActionId"] is NSNull || ActionJSON.identity(event["businessActionId"]),
+              (event["correctionOf"] == nil || event["correctionOf"] is NSNull ? delta == 1 : ActionJSON.identity(event["correctionOf"])) else {
+            throw SyncError.validation("The counter event is invalid. Nothing was admitted.")
+        }
+    }
+
+    /// Admits a day selection. `establish` records the current tracking
+    /// counts as the day baseline; a second baseline for the same day fails
+    /// closed. `select` records intent without projecting: verified history
+    /// settles unknown days in a later slice.
+    func admitCounterDay(_ command: [String: Any], actorId: String) throws -> CounterDayAdmission {
+        try Self.withLock {
+            guard var state = try loadWithoutValidation() else {
+                throw SyncError.validation("Causal account preparation is required. Nothing was admitted.")
+            }
+            try Self.validate(state)
+            guard state.accountId == accountId,
+                  var intent = command as? [String: Any],
+                  let actionId = intent["actionId"] as? String, ActionJSON.identity(actionId),
+                  let kind = intent["kind"] as? String else {
+                throw SyncError.validation("The day intent is invalid. Nothing was admitted.")
+            }
+            intent["accountId"] = state.accountId
+            intent["actorId"] = actorId
+            intent["schemaVersion"] = 1
+            try Self.validateDayCommand(intent, accountId: state.accountId)
+            let day = intent["day"] as! String
+            if let prior = state.counterDayAdmissions[actionId]?.value as? [String: Any] {
+                guard let priorCommand = prior["command"] as? [String: Any],
+                      stableJson(priorCommand) == stableJson(intent) else {
+                    throw SyncError.validation("The day action identity has different intent. Nothing was admitted.")
+                }
+                return CounterDayAdmission(
+                    outcome: ["accepted": true, "baselinePending": state.counterBaselines[day] == nil] as [String: Any],
+                    duplicate: true, generation: state.generation)
+            }
+            for map in [state.focusAdmissions, state.counterAdmissions, state.taskCompletionAdmissions] {
+                if map[actionId] != nil {
+                    throw SyncError.validation("The day action identity is already in use. Nothing was admitted.")
+                }
+            }
+            if kind == "establish" {
+                guard state.counterBaselines[day] == nil else {
+                    throw SyncError.validation("The day baseline is already established. Nothing was admitted.")
+                }
+                guard let tracking = state.trackingValue?.value as? [String: Any] else {
+                    throw SyncError.validation("Day establishment requires retained tracking. Nothing was admitted.")
+                }
+                let counts: [String: Any] = [
+                    "planViewCount": (tracking["planViewCount"] as? Int) ?? 0,
+                    "dailyPostponeCount": (tracking["dailyPostponeCount"] as? Int) ?? 0
+                ]
+                state.counterBaselines[day] = AnyCodable([
+                    "schemaVersion": 1, "baselineId": actionId, "accountId": state.accountId,
+                    "day": day, "counts": counts, "evidenceIds": []
+                ] as [String: Any])
+            }
+            let generation = state.generation + 1
+            guard generation <= ActionJSON.maxSafeInteger else {
+                throw SyncError.validation("Local causal generation exhausted. Nothing was admitted.")
+            }
+            state.counterDayAdmissions[actionId] = AnyCodable(["command": intent, "sequence": generation])
+            state.counterDayOutbox[actionId] = AnyCodable(intent)
+            state.generation = generation
+            try save(state)
+            return CounterDayAdmission(
+                outcome: ["accepted": true, "baselinePending": state.counterBaselines[day] == nil] as [String: Any],
+                duplicate: false, generation: generation)
+        }
+    }
+
+    /// Admits one counter increment. With an established baseline the counts
+    /// project atomically; otherwise the event is retained with
+    /// `baselinePending` and no invented zero baseline.
+    func admitCounter(_ event: [String: Any], actorId: String) throws -> CounterAdmission {
+        try Self.withLock {
+            guard var state = try loadWithoutValidation() else {
+                throw SyncError.validation("Causal account preparation is required. Nothing was admitted.")
+            }
+            try Self.validate(state)
+            guard state.accountId == accountId,
+                  var delta = event as? [String: Any],
+                  let actionId = delta["actionId"] as? String, ActionJSON.identity(actionId) else {
+                throw SyncError.validation("The counter event is invalid. Nothing was admitted.")
+            }
+            delta["accountId"] = state.accountId
+            delta["actorId"] = actorId
+            delta["schemaVersion"] = 1
+            if delta["businessActionId"] == nil { delta["businessActionId"] = NSNull() }
+            if delta["correctionOf"] == nil { delta["correctionOf"] = NSNull() }
+            try Self.validateCounterEvent(delta, accountId: state.accountId)
+            let day = delta["day"] as! String
+            if let prior = state.counterAdmissions[actionId]?.value as? [String: Any] {
+                guard let priorEvent = prior["event"] as? [String: Any],
+                      stableJson(priorEvent) == stableJson(delta) else {
+                    throw SyncError.validation("The counter action identity has different intent. Nothing was admitted.")
+                }
+                var tracking: [String: Any]? = nil
+                if state.counterBaselines[day] != nil {
+                    tracking = state.trackingValue?.value as? [String: Any]
+                }
+                return CounterAdmission(tracking: tracking,
+                    outcome: ["accepted": true, "baselinePending": state.counterBaselines[day] == nil] as [String: Any],
+                    duplicate: true, generation: state.generation)
+            }
+            for map in [state.focusAdmissions, state.counterDayAdmissions, state.taskCompletionAdmissions] {
+                if map[actionId] != nil {
+                    throw SyncError.validation("The counter action identity is already in use. Nothing was admitted.")
+                }
+            }
+            let generation = state.generation + 1
+            guard generation <= ActionJSON.maxSafeInteger else {
+                throw SyncError.validation("Local causal generation exhausted. Nothing was admitted.")
+            }
+            state.counterAdmissions[actionId] = AnyCodable(["event": delta, "sequence": generation])
+            state.counterOutbox[actionId] = AnyCodable(delta)
+            var tracking: [String: Any]? = nil
+            if let baseline = state.counterBaselines[day]?.value as? [String: Any] {
+                var dayEvents: [[String: Any]] = []
+                for raw in state.counterAdmissions.values {
+                    guard let entry = raw.value as? [String: Any],
+                          let sequence = entry["sequence"] as? Int,
+                          let candidate = entry["event"] as? [String: Any],
+                          candidate["day"] as? String == day else { continue }
+                    dayEvents.append(["sequence": sequence, "event": candidate])
+                }
+                dayEvents.sort { ($0["sequence"] as! Int) < ($1["sequence"] as! Int) }
+                let projected = try CounterLedger.project(baseline: baseline, events: dayEvents.map { $0["event"]! })
+                guard var current = state.trackingValue?.value as? [String: Any],
+                      let plans = projected["planViewCount"] as? Int,
+                      let postpones = projected["dailyPostponeCount"] as? Int else {
+                    throw SyncError.corruptStorage("Retained causal tracking is missing. Nothing was admitted.")
+                }
+                current["planViewCount"] = plans
+                current["dailyPostponeCount"] = postpones
+                state.trackingValue = AnyCodable(current)
+                tracking = current
+            }
+            state.generation = generation
+            try save(state)
+            return CounterAdmission(tracking: tracking,
+                outcome: ["accepted": true, "baselinePending": state.counterBaselines[day] == nil] as [String: Any],
+                duplicate: false, generation: generation)
         }
     }
 
