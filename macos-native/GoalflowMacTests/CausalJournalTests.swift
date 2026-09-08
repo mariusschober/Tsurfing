@@ -113,3 +113,90 @@ final class CausalJournalTests: XCTestCase {
         XCTAssertEqual(journal["currentSessionId"] as? String, "11111111-1111-4111-8111-111111111111")
     }
 }
+
+final class CausalFocusAdmissionTests: XCTestCase {
+    private func isolated() throws -> (URL, UserDefaults) {
+        let suite = "goalflow.causal.admit.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        addTeardownBlock {
+            defaults.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: dir)
+        }
+        return (dir, defaults)
+    }
+
+    private func store() throws -> (CausalJournalStore, String) {
+        let (dir, defaults) = try isolated()
+        let id = UUID().uuidString.lowercased()
+        let store = try CausalJournalStore(accountId: id, directory: dir, defaults: defaults)
+        _ = try store.prepare(tracking: ["date": "2026-09-08", "planViewCount": 27, "dailyPostponeCount": 3])
+        return (store, id)
+    }
+
+    private func intent(session: String, kind: String, task: String = "task", duration: Int? = nil, id: String = UUID().uuidString.lowercased()) -> [String: Any] {
+        ["actionId": id, "kind": kind, "sessionId": session, "taskId": task,
+         "capturedAt": "2026-09-08T10:00:00.000Z", "durationSeconds": duration as Any? ?? NSNull(),
+         "actorId": "test"]
+    }
+
+    func testStartPauseExtendStopComposeWithDuplicatesAndStaleRejection() throws {
+        let (store, _) = try store()
+        let session = UUID().uuidString.lowercased()
+        let started = try store.admitFocus(intent(session: session, kind: "start", duration: 600)) { _ in true }
+        XCTAssertFalse(started.duplicate)
+        XCTAssertEqual((started.outcome["accepted"] as? Bool), true)
+        XCTAssertEqual(((started.tracking["focusSession"] as? [String: Any])?["plannedDurationSeconds"] as? Int), 600)
+        XCTAssertEqual(started.generation, 1)
+        let extended = try store.admitFocus(intent(session: session, kind: "extend", duration: 300)) { _ in true }
+        XCTAssertEqual(((extended.tracking["focusSession"] as? [String: Any])?["plannedDurationSeconds"] as? Int), 900)
+        let paused = try store.admitFocus(intent(session: session, kind: "pause")) { _ in true }
+        XCTAssertEqual((paused.tracking["focusSession"] as? [String: Any])?["phase"] as? String, "paused")
+        let stale = try store.admitFocus(intent(session: session, kind: "pause", task: "other-task")) { _ in true }
+        XCTAssertEqual((stale.outcome["accepted"] as? Bool), false)
+        let stopped = try store.admitFocus(intent(session: session, kind: "stop")) { _ in true }
+        XCTAssertEqual((stopped.tracking["focusSession"] as? [String: Any])?["phase"] as? String, "stopped")
+        let terminal = try store.admitFocus(intent(session: session, kind: "stop")) { _ in true }
+        XCTAssertEqual((terminal.outcome["accepted"] as? Bool), false)
+        let reloaded = try XCTUnwrap(store.load())
+        XCTAssertEqual(reloaded.generation, 6)
+    }
+
+    func testDuplicateRetryReturnsStoredOutcomeWithoutNewEffects() throws {
+        let (store, _) = try store()
+        let session = UUID().uuidString.lowercased()
+        let id = UUID().uuidString.lowercased()
+        let first = try store.admitFocus(intent(session: session, kind: "start", duration: 600, id: id)) { _ in true }
+        let second = try store.admitFocus(intent(session: session, kind: "start", duration: 600, id: id)) { _ in true }
+        XCTAssertTrue(second.duplicate)
+        XCTAssertEqual(second.generation, first.generation)
+        XCTAssertEqual(second.tracking["focusSession"] as? [String: Any] as NSDictionary?,
+            first.tracking["focusSession"] as? [String: Any] as NSDictionary?)
+        let reloaded = try XCTUnwrap(store.load())
+        XCTAssertEqual(reloaded.generation, 1)
+    }
+
+    func testClosedTaskMalformedAndCompleteIntentsFailClosed() throws {
+        let (store, _) = try store()
+        let session = UUID().uuidString.lowercased()
+        let before = try XCTUnwrap(store.load())
+        XCTAssertThrowsError(try store.admitFocus(intent(session: session, kind: "start", duration: 600)) { _ in false })
+        XCTAssertThrowsError(try store.admitFocus(intent(session: session, kind: "complete")) { _ in true })
+        XCTAssertThrowsError(try store.admitFocus(["kind": "start"]) { _ in true })
+        XCTAssertEqual(try store.load(), before)
+    }
+
+    func testCrossKindIdentityCollisionFailsClosed() throws {
+        let (dir, defaults) = try isolated()
+        let id = UUID().uuidString.lowercased()
+        let store = try CausalJournalStore(accountId: id, directory: dir, defaults: defaults)
+        _ = try store.prepare(tracking: ["date": "2026-09-08", "planViewCount": 0, "dailyPostponeCount": 0])
+        let clash = UUID().uuidString.lowercased()
+        var seeded = try XCTUnwrap(store.load())
+        seeded.counterAdmissions[clash] = AnyCodable(["event": ["actionId": clash]])
+        try store.save(seeded)
+        XCTAssertThrowsError(try store.admitFocus(intent(session: UUID().uuidString.lowercased(), kind: "start", duration: 600, id: clash)) { _ in true })
+        XCTAssertEqual(try store.load()?.generation, 0)
+    }
+}
