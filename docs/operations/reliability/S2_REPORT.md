@@ -509,3 +509,14 @@ This is a dormant journal building block. Pending day selection projection, depe
 Full release checks passed: 649 tests in 99 files, type checking and production builds. Real Chromium/WebKit storage tests passed 14/14, including reload and retry of an unknown-day increment without a guessed zero. A final production build and artifact scan passed after adding the test-only harness entrypoint. Commands, sanitized logs and checksums are in the JSON checkpoint. No failed checks occurred in this checkpoint.
 
 Active application wiring, atomic business-counter actions, ordered transport/enrollment, native integration and recovery acceptance remain unfinished. No SQL or native changes, installation, live configuration or deployment. S2 acceptance remains **BLOCKED**; S3 remains prohibited.
+
+
+## Rendered Web focus-control checkpoint
+
+`55302ad63ce0e242fc9c8d232a029ccb7500e9b9`: **PASS_LOCAL**. Existing fenced accounts now route rendered start/pause/resume/stop/add-time controls through the causal coordinator. The timer passes its observed target explicitly; the transaction derives epoch and actual parent and retains the original control in the immutable command. Rapid paused add-time controls apply both extensions, with one explicit resume. Delayed handlers never repaint their old result over committed state. Causal queues participate in pending status, and fenced day hydration uses the retained day command instead of a scalar reset. Legacy accounts retain their existing callback path.
+
+The real interaction test found the decorative timer SVG intercepting Edit Duration clicks. The SVG now ignores pointer events. The test clicks the actual timer and add-time controls after synthetic account cutover, verifies the same focus identity, a +300 extension, causal outbox entries and unchanged ordinary tracking queue.
+
+Validation: final `npm run verify:release` exit 0, 653 tests in 99 files; combined S1/S2 real Chromium/WebKit journeys exit 0, 58 tests; final production build/artifact scans exit 0. Initial browser attempts failed first on omitted fixture fence ordering, then on the actual SVG click obstruction; both are recorded and corrected. Sanitized logs/hashes are in the JSON checkpoint.
+
+This does not activate cutover or complete S2. Completion and counter business-effect UI paths, enrollment, causal network scheduling, native integration, recovery and mixed-version acceptance remain. No SQL/native source change, PostgreSQL/native rerun, installation, live configuration or deployment. S2 acceptance remains **BLOCKED**, with no permitted S3 handoff.

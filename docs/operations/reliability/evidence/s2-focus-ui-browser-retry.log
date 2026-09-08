@@ -1,0 +1,123 @@
+[WebServer] (node:69933) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:69952) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:69981) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 2 workers
+
+(node:69983) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:69984) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [chromium] › tests/e2e/s2-storage-fence.spec.ts:283:1 › the rendered focus controls use causal admission after an existing account is fenced (11.7s)
+  ✘  1 [webkit] › tests/e2e/s2-storage-fence.spec.ts:283:1 › the rendered focus controls use causal admission after an existing account is fenced (12.5s)
+
+
+  1) [chromium] › tests/e2e/s2-storage-fence.spec.ts:283:1 › the rendered focus controls use causal admission after an existing account is fenced 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for getByTitle('Edit Duration')
+        - locator resolved to <button title="Edit Duration" class="focus:outline-none transition-transform active:scale-95 mb-6">…</button>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <circle r="158" cx="190" cy="190" stroke="#6366f1" stroke-width="12" fill="transparent" stroke-dashoffset="0" stroke-linecap="round" stroke-dasharray="992.7432785343747" class="transition-all duration-1000 ease-linear"></circle> from <svg viewBox="0 0 380 380" class="w-full h-full transform -rotate-90 relative z-10 overflow-visible">…</svg> subtree intercepts pointer events
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <circle r="158" cx="190" cy="190" stroke="#6366f1" stroke-width="12" fill="transparent" stroke-dashoffset="0" stroke-linecap="round" stroke-dasharray="992.7432785343747" class="transition-all duration-1000 ease-linear"></circle> from <svg viewBox="0 0 380 380" class="w-full h-full transform -rotate-90 relative z-10 overflow-visible">…</svg> subtree intercepts pointer events
+        - retrying click action
+          - waiting 100ms
+        19 × waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <circle r="158" cx="190" cy="190" stroke="#6366f1" stroke-width="12" fill="transparent" stroke-dashoffset="0" stroke-linecap="round" stroke-dasharray="992.7432785343747" class="transition-all duration-1000 ease-linear"></circle> from <svg viewBox="0 0 380 380" class="w-full h-full transform -rotate-90 relative z-10 overflow-visible">…</svg> subtree intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+
+
+      310 |   await page.getByTitle('Pause Timer (Space)').click();
+      311 |   await expect(page.getByTitle('Start Focus (Space)')).toBeVisible();
+    > 312 |   await page.getByTitle('Edit Duration').click();
+          |                                          ^
+      313 |   await page.getByRole('button', { name: '+5m', exact: true }).click();
+      314 |   await expect(page.getByTitle('Pause Timer (Space)')).toBeVisible();
+      315 |   const after = await page.evaluate(async account => {
+        at /Users/schober/Projects/TSurfing/tests/e2e/s2-storage-fence.spec.ts:312:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-the-rende-02289--existing-account-is-fenced-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-the-rende-02289--existing-account-is-fenced-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s2-storage-fence-the-rende-02289--existing-account-is-fenced-chromium/error-context.md
+
+  2) [webkit] › tests/e2e/s2-storage-fence.spec.ts:283:1 › the rendered focus controls use causal admission after an existing account is fenced 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for getByTitle('Edit Duration')
+        - locator resolved to <button title="Edit Duration" class="focus:outline-none transition-transform active:scale-95 mb-6">…</button>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <circle r="158" cx="190" cy="190" stroke="#6366f1" stroke-width="12" fill="transparent" stroke-dashoffset="0" stroke-linecap="round" stroke-dasharray="992.7432785343747" class="transition-all duration-1000 ease-linear"></circle> from <svg viewBox="0 0 380 380" class="w-full h-full transform -rotate-90 relative z-10 overflow-visible">…</svg> subtree intercepts pointer events
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is visible, enabled and stable
+          - scrolling into view if needed
+          - done scrolling
+          - <circle r="158" cx="190" cy="190" stroke="#6366f1" stroke-width="12" fill="transparent" stroke-dashoffset="0" stroke-linecap="round" stroke-dasharray="992.7432785343747" class="transition-all duration-1000 ease-linear"></circle> from <svg viewBox="0 0 380 380" class="w-full h-full transform -rotate-90 relative z-10 overflow-visible">…</svg> subtree intercepts pointer events
+        - retrying click action
+          - waiting 100ms
+        19 × waiting for element to be visible, enabled and stable
+           - element is visible, enabled and stable
+           - scrolling into view if needed
+           - done scrolling
+           - <circle r="158" cx="190" cy="190" stroke="#6366f1" stroke-width="12" fill="transparent" stroke-dashoffset="0" stroke-linecap="round" stroke-dasharray="992.7432785343747" class="transition-all duration-1000 ease-linear"></circle> from <svg viewBox="0 0 380 380" class="w-full h-full transform -rotate-90 relative z-10 overflow-visible">…</svg> subtree intercepts pointer events
+         - retrying click action
+           - waiting 500ms
+
+
+      310 |   await page.getByTitle('Pause Timer (Space)').click();
+      311 |   await expect(page.getByTitle('Start Focus (Space)')).toBeVisible();
+    > 312 |   await page.getByTitle('Edit Duration').click();
+          |                                          ^
+      313 |   await page.getByRole('button', { name: '+5m', exact: true }).click();
+      314 |   await expect(page.getByTitle('Pause Timer (Space)')).toBeVisible();
+      315 |   const after = await page.evaluate(async account => {
+        at /Users/schober/Projects/TSurfing/tests/e2e/s2-storage-fence.spec.ts:312:42
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-the-rende-02289--existing-account-is-fenced-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-the-rende-02289--existing-account-is-fenced-webkit/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s2-storage-fence-the-rende-02289--existing-account-is-fenced-webkit/error-context.md
+
+  2 failed
+    [chromium] › tests/e2e/s2-storage-fence.spec.ts:283:1 › the rendered focus controls use causal admission after an existing account is fenced 
+    [webkit] › tests/e2e/s2-storage-fence.spec.ts:283:1 › the rendered focus controls use causal admission after an existing account is fenced 

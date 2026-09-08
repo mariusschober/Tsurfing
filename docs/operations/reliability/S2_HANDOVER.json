@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Offline Web day selection and waiting counter intents pass local and browser checks. Active UI/business-action integration, enrollment, causal scheduling, native integration and recovery remain incomplete.",
+  "acceptanceReason": "Implementation continues. Offline Web day handling and rendered focus-control admission pass local and browser checks. Completion/counter business effects, enrollment, causal scheduling, native integration and recovery remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -2019,6 +2019,93 @@
         "Dormant Web primitives; active UI/business-action integration and scheduling remain.",
         "Unknown baseline requires verified history; no speculative zero or historical correction.",
         "No SQL/native changes or native rerun; no installation or deployment."
+      ]
+    },
+    {
+      "commit": "55302ad63ce0e242fc9c8d232a029ccb7500e9b9",
+      "scope": "Rendered Web focus controls use causal admission on fenced accounts",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "components/CurrentView.tsx",
+        "docs/operations/reliability/S2_PROTOCOL_ADR.md",
+        "hooks/useFocusTimer.ts",
+        "hooks/useGoalflow.ts",
+        "services/causalFocusCoordinator.test.ts",
+        "services/causalFocusCoordinator.ts",
+        "services/storage.causal.test.ts",
+        "services/storage.ts",
+        "tests/e2e/s2-storage-fence.spec.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-WEB-FOCUS-CONTROLS",
+          "disposition": "Fixed locally: captured target, transactional command derivation, committed rendering and pending status."
+        },
+        {
+          "id": "S2-TIMER-CLICK-OBSTRUCTION",
+          "disposition": "Fixed: decorative timer SVG no longer intercepts Edit Duration clicks."
+        }
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 653,
+          "testFiles": 99
+        },
+        {
+          "command": "S1_INCLUDE_EXISTING=1 npx playwright test --config playwright.s1.config.ts s1-local-storage.spec.ts s2-storage-fence.spec.ts",
+          "exitCode": 0,
+          "tests": 58,
+          "platforms": [
+            "Chromium",
+            "WebKit"
+          ]
+        },
+        {
+          "command": "npm run build",
+          "exitCode": 0
+        }
+      ],
+      "evidence": [
+        {
+          "path": "evidence/s2-focus-ui-focused.log",
+          "sha256": "fa64a8a0bc9b5b44bfbf09d61908fbeb54e92979d3e58d7adcd2a3e4950e3e47"
+        },
+        {
+          "path": "evidence/s2-focus-ui-browser.log",
+          "sha256": "47e35c93a83ce032dc737fd361f37ae6d2debe917395819adb103764d395c4cc"
+        },
+        {
+          "path": "evidence/s2-focus-ui-browser-retry.log",
+          "sha256": "9bd75c349b077111477fac606df8544e0ca0d4598cef9fa5216760cefa5406c1"
+        },
+        {
+          "path": "evidence/s2-focus-ui-browser-final.log",
+          "sha256": "d7b297a9d1689608779cc060aa8701a1dee29fe6798ae636d6c9ae82d89d33dc"
+        },
+        {
+          "path": "evidence/s2-focus-ui-release-final.log",
+          "sha256": "13358101255e896347538779bccbcc7c48e02c2808771a707b1242e4d15ca473"
+        },
+        {
+          "path": "evidence/s2-focus-ui-browser-combined-final.log",
+          "sha256": "b6cf035e68dd395936199a16ad20ee54a433df04857a2bece9bf353b5e24c0c3"
+        },
+        {
+          "path": "evidence/s2-focus-ui-production-build-final.log",
+          "sha256": "7f7f6c9dda9c4b91bc25a2540ab05780c532d940de6739d8bfc1e6ab31474616"
+        }
+      ],
+      "failedAttempts": [
+        "Initial rendered test: 2 failed because the fixture omitted tracking-before-business fence setup.",
+        "Next rendered test: 2 failed because the decorative timer SVG intercepted actual Edit Duration clicks; fixed in product source."
+      ],
+      "limitations": [
+        "No automatic cutover, server enrollment, native installation or deployment.",
+        "Completion and counter business effects still use their existing UI paths and require integration.",
+        "Causal network scheduling, native journals/transport, legacy recovery and mixed-version acceptance remain incomplete.",
+        "No PostgreSQL/native rerun for these Web-only changes."
       ]
     }
   ],

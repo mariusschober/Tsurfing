@@ -1,0 +1,71 @@
+[WebServer] (node:69755) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+[WebServer] (node:69770) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] (node:69797) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 2 workers
+
+(node:69802) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:69803) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › tests/e2e/s2-storage-fence.spec.ts:283:1 › the rendered focus controls use causal admission after an existing account is fenced (1.6s)
+  ✘  2 [webkit] › tests/e2e/s2-storage-fence.spec.ts:283:1 › the rendered focus controls use causal admission after an existing account is fenced (3.7s)
+
+
+  1) [chromium] › tests/e2e/s2-storage-fence.spec.ts:283:1 › the rendered focus controls use causal admission after an existing account is fenced 
+
+    Error: page.evaluate: Error: Tracking authority must be established before the business fence.
+        at _o (http://127.0.0.1:4175/assets/index-Dem5FbAs.js:2:49068)
+        at Ba (http://127.0.0.1:4175/assets/index-Dem5FbAs.js:2:49701)
+        at async eval (eval at evaluate (:311:30), <anonymous>:8:16)
+        at async <anonymous>:337:30
+        at _o (http://127.0.0.1:4175/assets/index-Dem5FbAs.js:2:49068)
+        at Ba (http://127.0.0.1:4175/assets/index-Dem5FbAs.js:2:49701)
+        at async eval (eval at evaluate (:311:30), <anonymous>:8:16)
+        at async <anonymous>:337:30
+        at /Users/schober/Projects/TSurfing/tests/e2e/s2-storage-fence.spec.ts:298:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-the-rende-02289--existing-account-is-fenced-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-the-rende-02289--existing-account-is-fenced-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s2-storage-fence-the-rende-02289--existing-account-is-fenced-chromium/error-context.md
+
+  2) [webkit] › tests/e2e/s2-storage-fence.spec.ts:283:1 › the rendered focus controls use causal admission after an existing account is fenced 
+
+    Error: page.evaluate: Error: Tracking authority must be established before the business fence.
+
+      296 |   await page.getByTitle('Start Focus (Space)').click();
+      297 |   await expect(page.getByTitle('Pause Timer (Space)')).toBeVisible();
+    > 298 |   const before = await page.evaluate(async account => {
+          |                             ^
+      299 |     const api = window as any; await api.__s1Storage.flushPendingLocalChanges(account);
+      300 |     const tracking = await api.__s1Storage.get('tracking', account);
+      301 |     const meta = await api.__s1Storage.get('sync', account);
+        at /Users/schober/Projects/TSurfing/tests/e2e/s2-storage-fence.spec.ts:298:29
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-the-rende-02289--existing-account-is-fenced-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/s2-storage-fence-the-rende-02289--existing-account-is-fenced-webkit/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/s2-storage-fence-the-rende-02289--existing-account-is-fenced-webkit/error-context.md
+
+  2 failed
+    [chromium] › tests/e2e/s2-storage-fence.spec.ts:283:1 › the rendered focus controls use causal admission after an existing account is fenced 
+    [webkit] › tests/e2e/s2-storage-fence.spec.ts:283:1 › the rendered focus controls use causal admission after an existing account is fenced 
