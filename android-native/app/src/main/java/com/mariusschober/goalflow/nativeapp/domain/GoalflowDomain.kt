@@ -250,9 +250,7 @@ fun planningGate(
     }
     val queue = buildTodayQueue(tasks, today)
     val queueIds = queue.map { it.id }
-    val planIds = plan?.takeIf { it.localDate == today }?.taskIds.orEmpty()
-        .filter { queueIds.contains(it) }
-    val matches = planIds.size == queueIds.size && planIds == queueIds
+    val matches = plan?.localDate == today
     if (overdue.isNotEmpty() || (queue.isNotEmpty() && !matches)) {
         return PlanningGate.DailyPlanningRequired(today, overdue.map { it.id }, queueIds)
     }

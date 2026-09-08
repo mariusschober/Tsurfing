@@ -1,5 +1,9 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  focusSessionElapsedSeconds,
+  focusSessionRemainingSeconds,
+  type FocusSessionRecord
+} from '../src/domain/focusSession';
 
 type TimerType = 'countdown' | 'stopwatch';
 
@@ -7,206 +11,196 @@ interface TimerSettings {
   taskDurationInMinutes?: number;
   onExpire?: () => void;
   taskId?: string;
+  /** Breaks retain their short-lived local timer until the break flow lands in the shared session model. */
+  sharedSession?: boolean;
+  focusSession?: FocusSessionRecord | null;
+  onStart?: (taskId: string, plannedDurationSeconds: number) => void;
+  onPause?: () => void;
+  onResume?: () => void;
+  onStop?: () => void;
+  onExtend?: (deltaSeconds: number) => void;
 }
 
-const STORAGE_KEY = 'goalflow_timer_state';
-
-interface PersistedState {
+interface LocalTimerState {
   taskId: string | undefined;
   startTime: number;
-  pausedAt: number | null; // If null, it's running. If set, it's paused.
-  elapsedBeforePause: number; // Accumulator for previous segments
+  pausedAt: number | null;
+  elapsedBeforePause: number;
   isActive: boolean;
   hasExpired: boolean;
 }
 
+const initialLocalState = (taskId: string | undefined): LocalTimerState => ({
+  taskId,
+  startTime: Date.now(),
+  pausedAt: Date.now(),
+  elapsedBeforePause: 0,
+  isActive: false,
+  hasExpired: false
+});
+
+/**
+ * Renders a timer from the shared action record. The ticker only advances a
+ * local display clock; it never writes a durable value. A small local mode is
+ * retained for the existing break overlay, whose parent flow owns migration.
+ */
 export const useFocusTimer = (settings: TimerSettings) => {
-  const { taskDurationInMinutes, onExpire, taskId } = settings;
-  const timerType: TimerType = typeof taskDurationInMinutes === 'number' && taskDurationInMinutes > 0 ? 'countdown' : 'stopwatch';
+  const {
+    taskDurationInMinutes,
+    onExpire,
+    taskId,
+    sharedSession = true,
+    focusSession,
+    onStart,
+    onPause,
+    onResume,
+    onStop,
+    onExtend
+  } = settings;
+  const timerType: TimerType = typeof taskDurationInMinutes === 'number' && taskDurationInMinutes > 0
+    ? 'countdown'
+    : 'stopwatch';
+  const plannedDurationSeconds = Math.max(60, Math.round((taskDurationInMinutes || 25) * 60));
+  const [localState, setLocalState] = useState<LocalTimerState>(() => initialLocalState(taskId));
+  const [nowMillis, setNowMillis] = useState(() => Date.now());
+  const expiryNotifiedRef = useRef<string | null>(null);
 
-  // --- State Initialization from Storage or Defaults ---
-  const [timerState, setTimerState] = useState<PersistedState>(() => {
-    if (typeof window === 'undefined') {
-        return { taskId, startTime: 0, pausedAt: Date.now(), elapsedBeforePause: 0, isActive: false, hasExpired: false };
+  const activeSession = sharedSession ? focusSession ?? null : null;
+  const matchingSession = activeSession?.taskId === taskId ? activeSession : null;
+  const sharedElapsedSeconds = matchingSession ? focusSessionElapsedSeconds(matchingSession, new Date(nowMillis)) : 0;
+  const sharedRemainingSeconds = matchingSession
+    ? focusSessionRemainingSeconds(matchingSession, new Date(nowMillis))
+    : plannedDurationSeconds;
+  const localElapsedSeconds = localState.elapsedBeforePause + (!localState.pausedAt
+    ? Math.max(0, Math.floor((nowMillis - localState.startTime) / 1_000))
+    : 0);
+  const elapsedSeconds = sharedSession ? sharedElapsedSeconds : localElapsedSeconds;
+  const isActive = sharedSession ? matchingSession?.phase === 'active' : localState.isActive && !localState.pausedAt;
+  const hasExpired = sharedSession
+    ? Boolean(matchingSession?.phase === 'active' && sharedRemainingSeconds <= 0)
+    : localState.hasExpired;
+  const displaySeconds = timerType === 'countdown'
+    ? Math.max(0, sharedSession ? sharedRemainingSeconds : plannedDurationSeconds - localElapsedSeconds)
+    : Math.max(0, elapsedSeconds);
+
+  // The timer's clock is intentionally ephemeral. A passive client may show
+  // overtime but cannot publish pause, stop, or completion at expiry.
+  useEffect(() => {
+    if (!isActive) {
+      setNowMillis(Date.now());
+      return undefined;
     }
-    
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed: PersistedState = JSON.parse(saved);
-        // Only restore if it matches the current task (or if no task ID was provided previously)
-        if (parsed.taskId === taskId) {
-            // If it was running (pausedAt is null), we need to check if we missed the expiry
-            return parsed;
-        }
-      }
-    } catch (e) {
-      console.error("Failed to load timer state", e);
-    }
-    
-    // Default: Paused at 0
-    return { 
-        taskId, 
-        startTime: Date.now(), 
-        pausedAt: Date.now(), 
-        elapsedBeforePause: 0, 
+    const tick = window.setInterval(() => setNowMillis(Date.now()), 250);
+    return () => window.clearInterval(tick);
+  }, [isActive]);
+
+  useEffect(() => {
+    if (!sharedSession || !matchingSession || !hasExpired || timerType !== 'countdown') return;
+    if (expiryNotifiedRef.current === matchingSession.sessionId) return;
+    expiryNotifiedRef.current = matchingSession.sessionId;
+    onExpire?.();
+  }, [sharedSession, matchingSession, hasExpired, timerType, onExpire]);
+
+  useEffect(() => {
+    if (!sharedSession && localState.isActive && timerType === 'countdown'
+      && taskDurationInMinutes && localElapsedSeconds >= taskDurationInMinutes * 60
+      && !localState.hasExpired) {
+      setLocalState(previous => ({
+        ...previous,
         isActive: false,
-        hasExpired: false 
-    };
-  });
-
-  const [displaySeconds, setDisplaySeconds] = useState(0);
-  const intervalRef = useRef<number | null>(null);
-
-  // --- Persist State Effect ---
-  useEffect(() => {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(timerState));
-  }, [timerState]);
-
-  // --- Reset if Task Changes ---
-  useEffect(() => {
-      // Reset if taskId changes (including becoming undefined when task is completed)
-      if (timerState.taskId !== taskId) {
-          setTimerState({
-              taskId,
-              startTime: Date.now(),
-              pausedAt: Date.now(),
-              elapsedBeforePause: 0,
-              isActive: false, // Ensure timer stops
-              hasExpired: false
-          });
-      }
-  }, [taskId, timerState.taskId]);
-
-  // --- Calculation Helper ---
-  const calculateElapsed = useCallback(() => {
-      const now = Date.now();
-      let currentSession = 0;
-      
-      if (!timerState.pausedAt) {
-          // Timer is running
-          currentSession = Math.floor((now - timerState.startTime) / 1000);
-      }
-      
-      return timerState.elapsedBeforePause + currentSession;
-  }, [timerState.startTime, timerState.pausedAt, timerState.elapsedBeforePause]);
-
-  // --- The Ticker ---
-  useEffect(() => {
-    if (timerState.isActive && !timerState.pausedAt) {
-      intervalRef.current = window.setInterval(() => {
-        const elapsed = calculateElapsed();
-        
-        // Expiry Check for Countdown
-        if (timerType === 'countdown' && taskDurationInMinutes) {
-            const totalSeconds = taskDurationInMinutes * 60;
-            const remaining = totalSeconds - elapsed;
-            
-            setDisplaySeconds(Math.max(0, remaining));
-
-            if (remaining <= 0 && !timerState.hasExpired) {
-                // Expired!
-                setTimerState(prev => ({ ...prev, hasExpired: true, isActive: false, pausedAt: Date.now(), elapsedBeforePause: elapsed }));
-                if (onExpire) onExpire();
-            }
-        } else {
-            // Stopwatch
-            setDisplaySeconds(Math.max(0, elapsed));
-        }
-      }, 250); // Update UI 4 times a second for smoothness, logic is based on Delta time so speed doesn't matter
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      
-      // Update display one last time to static value
-      const elapsed = calculateElapsed();
-      if (timerType === 'countdown' && taskDurationInMinutes) {
-          setDisplaySeconds(Math.max(0, (taskDurationInMinutes * 60) - elapsed));
-      } else {
-          setDisplaySeconds(Math.max(0, elapsed));
-      }
+        pausedAt: Date.now(),
+        elapsedBeforePause: localElapsedSeconds,
+        hasExpired: true
+      }));
+      onExpire?.();
     }
+  }, [sharedSession, localState.isActive, localState.hasExpired, timerType, taskDurationInMinutes, localElapsedSeconds, onExpire]);
 
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [timerState.isActive, timerState.pausedAt, timerState.startTime, timerState.elapsedBeforePause, timerType, taskDurationInMinutes, onExpire, calculateElapsed]);
-
-
-  // --- Controls ---
+  useEffect(() => {
+    if (localState.taskId !== taskId) setLocalState(initialLocalState(taskId));
+  }, [localState.taskId, taskId]);
 
   const toggleTimer = useCallback(() => {
-    setTimerState(prev => {
-        const now = Date.now();
-        if (prev.isActive) {
-            // PAUSE
-            const sessionDuration = Math.floor((now - prev.startTime) / 1000);
-            return {
-                ...prev,
-                isActive: false,
-                pausedAt: now,
-                elapsedBeforePause: prev.elapsedBeforePause + sessionDuration
-            };
-        } else {
-            // RESUME
-            return {
-                ...prev,
-                isActive: true,
-                pausedAt: null,
-                startTime: now // Reset start time to now, elapsed is stored in accumulator
-            };
-        }
+    if (sharedSession) {
+      if (!taskId) return;
+      if (activeSession && activeSession.taskId !== taskId
+        && (activeSession.phase === 'active' || activeSession.phase === 'paused')) return;
+      if (!matchingSession || matchingSession.phase === 'stopped' || matchingSession.phase === 'completed') {
+        onStart?.(taskId, plannedDurationSeconds);
+      } else if (matchingSession.phase === 'active') {
+        onPause?.();
+      } else if (matchingSession.phase === 'paused') {
+        onResume?.();
+      }
+      return;
+    }
+    setLocalState(previous => {
+      const now = Date.now();
+      if (previous.isActive && !previous.pausedAt) {
+        return {
+          ...previous,
+          isActive: false,
+          pausedAt: now,
+          elapsedBeforePause: previous.elapsedBeforePause + Math.max(0, Math.floor((now - previous.startTime) / 1_000))
+        };
+      }
+      return { ...previous, isActive: true, pausedAt: null, startTime: now, hasExpired: false };
     });
-  }, []);
+  }, [sharedSession, taskId, activeSession, matchingSession, plannedDurationSeconds, onStart, onPause, onResume]);
 
   const pause = useCallback(() => {
-      setTimerState(prev => {
-          if (!prev.isActive) return prev;
-          const now = Date.now();
-          const sessionDuration = Math.floor((now - prev.startTime) / 1000);
-          return {
-              ...prev,
-              isActive: false,
-              pausedAt: now,
-              elapsedBeforePause: prev.elapsedBeforePause + sessionDuration
-          };
-      });
-  }, []);
+    if (sharedSession) onPause?.();
+    else setLocalState(previous => {
+      if (!previous.isActive || previous.pausedAt) return previous;
+      const now = Date.now();
+      return {
+        ...previous,
+        isActive: false,
+        pausedAt: now,
+        elapsedBeforePause: previous.elapsedBeforePause + Math.max(0, Math.floor((now - previous.startTime) / 1_000))
+      };
+    });
+  }, [sharedSession, onPause]);
+
+  const resume = useCallback(() => {
+    if (sharedSession) onResume?.();
+    else toggleTimer();
+  }, [sharedSession, onResume, toggleTimer]);
 
   const resetTimer = useCallback(() => {
-      setTimerState({
-          taskId,
-          startTime: Date.now(),
-          pausedAt: Date.now(),
-          elapsedBeforePause: 0,
-          isActive: false,
-          hasExpired: false
-      });
-  }, [taskId]);
+    if (sharedSession) {
+      onStop?.();
+      return;
+    }
+    setLocalState(initialLocalState(taskId));
+  }, [sharedSession, onStop, taskId]);
 
   const addTime = useCallback((minutes: number) => {
-      setTimerState(prev => {
-          // Removing time from "elapsed" effectively adds time to the countdown
-          const secondsToRemove = minutes * 60;
-          return {
-              ...prev,
-              elapsedBeforePause: prev.elapsedBeforePause - secondsToRemove,
-              hasExpired: false, // Reset expiry if we added time
-              isActive: true, // Auto resume
-              pausedAt: null,
-              startTime: Date.now()
-          };
-      });
-  }, []);
+    const deltaSeconds = Math.round(minutes * 60);
+    if (!Number.isFinite(deltaSeconds) || deltaSeconds <= 0) return;
+    if (sharedSession) {
+      onExtend?.(deltaSeconds);
+      return;
+    }
+    setLocalState(previous => ({
+      ...previous,
+      elapsedBeforePause: Math.max(0, previous.elapsedBeforePause - deltaSeconds),
+      hasExpired: false,
+      isActive: true,
+      pausedAt: null,
+      startTime: Date.now()
+    }));
+  }, [sharedSession, onExtend]);
 
   return {
     displaySeconds,
-    elapsedSeconds: calculateElapsed(), // Return total elapsed for stats
-    isActive: timerState.isActive,
-    hasExpired: timerState.hasExpired,
+    elapsedSeconds,
+    isActive: Boolean(isActive),
+    hasExpired,
     timerType,
     toggleTimer,
     pause,
-    resume: toggleTimer, // Reuse toggle for resume if needed explicitly
+    resume,
     resetTimer,
     addTime
   };

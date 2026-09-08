@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.mariusschober.goalflow',
-  appName: 'Goalflow',
+  appId: 'com.mariusschober.tsurfing',
+  appName: 'Tsurfing',
   webDir: 'dist/client'
 };
 

@@ -1,0 +1,16 @@
+{
+  "stats": {
+    "startTime": "2026-09-08T13:11:21.074Z",
+    "duration": 45535.004,
+    "expected": 38,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "suite": "npm run test:navigation",
+  "browsers": [
+    "chromium",
+    "webkit"
+  ],
+  "baseline": "cd87115f39290825d24dfb2e3d9a2257a8e7d8e3"
+}

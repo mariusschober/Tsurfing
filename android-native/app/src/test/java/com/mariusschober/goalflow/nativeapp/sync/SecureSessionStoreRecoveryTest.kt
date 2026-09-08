@@ -3,6 +3,7 @@ package com.mariusschober.goalflow.nativeapp.sync
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertNotNull
 import org.junit.Before
@@ -68,5 +69,21 @@ class SecureSessionStoreRecoveryTest {
         // Simulate wipe
         store.clear()
         assertNull(store.read())
+    }
+
+    @Test
+    fun `malformed encrypted session is preserved and reported until explicitly cleared`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val preferences = context.getSharedPreferences("goalflow-secure-session", Context.MODE_PRIVATE)
+        preferences.edit().clear().putString("encrypted_session", "malformed-ciphertext").commit()
+        val realStore = SecureSessionStore(context)
+
+        assertNull(realStore.read())
+        assertNotNull(realStore.readProblem())
+        assertEquals("malformed-ciphertext", preferences.getString("encrypted_session", null))
+
+        realStore.clear()
+        assertNull(realStore.readProblem())
+        assertNull(preferences.getString("encrypted_session", null))
     }
 }

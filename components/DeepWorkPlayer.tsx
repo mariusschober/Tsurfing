@@ -1,20 +1,30 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useId } from 'react';
 import ReactDOM from 'react-dom';
+import { Modal } from './Modal';
 import { somaFmChannels, SomaFmChannel } from '../utils/somaFmChannels';
-import { PlayIcon, Volume2Icon, VolumeXIcon, RadioIcon, ChevronDownIcon } from './Icons';
+import { Volume2Icon, VolumeXIcon, ChevronDownIcon } from './Icons';
 
-export const DeepWorkPlayer: React.FC = () => {
+interface DeepWorkPlayerProps {
+  controlsTarget?: HTMLElement | null;
+  presentation?: 'toolbar' | 'panel';
+  controlsVisible?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  fallbackFocusRef?: React.RefObject<HTMLElement>;
+}
+
+export const DeepWorkPlayer: React.FC<DeepWorkPlayerProps> = ({ controlsTarget, presentation = 'toolbar', controlsVisible = true, onOpenChange, fallbackFocusRef }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentStation, setCurrentStation] = useState<SomaFmChannel>(somaFmChannels[0]);
   const [volume, setVolume] = useState(0.5);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const pickerId = useId();
   const [error, setError] = useState<string | null>(null);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
+  const stationButtonRef = useRef<HTMLButtonElement>(null);
 
   // Initialize Audio
   useEffect(() => {
@@ -100,25 +110,13 @@ export const DeepWorkPlayer: React.FC = () => {
       setCurrentStation(station);
       playStation(station);
       setIsMenuOpen(false); 
+      if (presentation === 'panel') stationButtonRef.current?.focus({ preventScroll: true });
   };
 
-  const toggleMenu = () => {
-      if (isMenuOpen) {
-          setIsMenuOpen(false);
-      } else if (buttonRef.current) {
-          const rect = buttonRef.current.getBoundingClientRect();
-          const menuWidth = 320;
-          let left = rect.right - menuWidth;
-          
-          if (left < 10) left = 10;
-          
-          setMenuPos({
-              top: rect.bottom + 8,
-              left: left
-          });
-          setIsMenuOpen(true);
-      }
-  };
+  const toggleMenu = () => setIsMenuOpen(open => !open);
+
+  useEffect(() => { setIsMenuOpen(false); }, [presentation, controlsVisible]);
+  useEffect(() => { onOpenChange?.(presentation === 'toolbar' && isMenuOpen); }, [isMenuOpen, presentation, onOpenChange]);
 
   // Global Keyboard Shortcut (M)
   const stateRef = useRef({ isPlaying, currentStation });
@@ -132,7 +130,7 @@ export const DeepWorkPlayer: React.FC = () => {
           if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable) {
               return;
           }
-          if (e.metaKey || e.ctrlKey || e.altKey) return;
+          if (e.metaKey || e.ctrlKey || e.altKey || document.querySelector('[aria-modal="true"]')) return;
 
           if (e.key.toLowerCase() === 'm') {
               e.preventDefault();
@@ -152,123 +150,53 @@ export const DeepWorkPlayer: React.FC = () => {
       return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  return (
-    <>
-        {/* Main Player Control Group */}
-        <div ref={buttonRef} className={`flex items-center rounded-xl border transition-all duration-200 select-none shadow-sm ${
-            isPlaying 
-            ? 'bg-indigo-600 border-indigo-600 text-white shadow-indigo-200 dark:shadow-none' 
-            : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-slate-600'
-        }`}>
-            {/* Play Button */}
-            <button 
-                onClick={togglePlay}
-                className="pl-3 pr-2 py-2 flex items-center justify-center hover:opacity-80 active:scale-95 transition-transform border-r border-current/10"
-                title={isPlaying ? "Pause (M)" : "Play Focus Music (M)"}
-            >
-                {isLoading ? (
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                ) : isPlaying ? (
-                     <div className="flex items-end gap-[2px] h-3.5 w-3.5">
-                        <div className="w-1 bg-current rounded-full animate-[bounce_1s_infinite] h-full"></div>
-                        <div className="w-1 bg-current rounded-full animate-[bounce_1.2s_infinite] h-2/3"></div>
-                        <div className="w-1 bg-current rounded-full animate-[bounce_0.8s_infinite] h-1/2"></div>
-                    </div>
-                ) : (
-                    <PlayIcon className="w-4 h-4" />
-                )}
-            </button>
-
-            {/* Dropdown Toggle */}
-            <button 
-                onClick={toggleMenu}
-                className={`px-2 py-2 flex items-center justify-center hover:bg-black/5 dark:hover:bg-white/10 transition-colors rounded-r-xl ${isMenuOpen ? 'bg-black/5 dark:bg-white/10' : ''}`}
-                title="Select Station"
-            >
-                <ChevronDownIcon className="w-3.5 h-3.5" />
-            </button>
+  const stationPicker = (
+    <div className="music-picker">
+      <div className="p-4 bg-gray-50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-700">
+        <div className="flex items-start justify-between gap-2">
+          <h4 className="font-semibold text-indigo-700 dark:text-indigo-300 break-words">{currentStation.title}</h4>
+          {error && <span role="status" className="text-xs text-red-600 dark:text-red-400">{error}</span>}
         </div>
-
-        {/* Dropdown Portal */}
-        {isMenuOpen && ReactDOM.createPortal(
-            <div className="fixed inset-0 z-[9999]">
-                {/* Backdrop */}
-                <div className="absolute inset-0 cursor-default" onClick={() => setIsMenuOpen(false)}></div>
-                
-                {/* Menu */}
-                <div 
-                    className="absolute bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-600 overflow-hidden w-80 animate-scaleIn origin-top-right flex flex-col max-h-[80vh]"
-                    style={{ top: menuPos.top, left: menuPos.left }}
-                >
-                    {/* Header */}
-                    <div className="p-4 bg-gray-50/80 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-700 backdrop-blur-sm shrink-0">
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1">
-                                <RadioIcon className="w-3 h-3" /> Deep Work Radio
-                            </span>
-                            {error && <span className="text-[10px] text-red-500 font-bold bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded-full">{error}</span>}
-                        </div>
-                        <h3 className="font-heading font-bold text-indigo-600 dark:text-indigo-400 text-lg leading-tight truncate">{currentStation.title}</h3>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">{currentStation.description}</p>
-                        
-                        {/* Volume */}
-                        <div className="mt-4 flex items-center gap-3 bg-white dark:bg-slate-800 p-2 rounded-lg border border-gray-100 dark:border-slate-700 shadow-sm">
-                            <button onClick={() => setVolume(volume === 0 ? 0.5 : 0)} className="text-gray-400 hover:text-indigo-500 transition">
-                                {volume === 0 ? <VolumeXIcon className="w-4 h-4" /> : <Volume2Icon className="w-4 h-4" />}
-                            </button>
-                            <input 
-                                type="range" 
-                                min="0" 
-                                max="1" 
-                                step="0.05" 
-                                value={volume} 
-                                onChange={(e) => setVolume(parseFloat(e.target.value))}
-                                className="w-full h-1.5 bg-gray-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer accent-indigo-500"
-                            />
-                        </div>
-                    </div>
-
-                    {/* List */}
-                    <div className="overflow-y-auto custom-scrollbar p-1">
-                        {somaFmChannels.map(station => (
-                            <button
-                                key={station.id}
-                                onClick={() => selectStation(station)}
-                                className={`w-full text-left p-3 rounded-xl mb-1 transition-all flex items-center gap-3 group relative overflow-hidden ${
-                                    currentStation.id === station.id 
-                                    ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-900 dark:text-indigo-200' 
-                                    : 'hover:bg-gray-50 dark:hover:bg-slate-700/50 text-gray-700 dark:text-gray-300'
-                                }`}
-                            >
-                                <div className={`w-2 h-2 rounded-full shrink-0 transition-all ${
-                                    currentStation.id === station.id 
-                                        ? (isPlaying ? 'bg-green-500 scale-125 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-indigo-400') 
-                                        : 'bg-gray-300 dark:bg-slate-600 group-hover:bg-gray-400'
-                                }`}></div>
-                                <div className="min-w-0 flex-grow">
-                                    <p className={`text-sm font-bold truncate ${currentStation.id === station.id ? 'text-indigo-600 dark:text-indigo-300' : ''}`}>
-                                        {station.title}
-                                    </p>
-                                    <p className="text-[10px] text-gray-400 truncate opacity-80 group-hover:opacity-100">{station.description}</p>
-                                </div>
-                                {currentStation.id === station.id && isPlaying && (
-                                    <div className="absolute right-3 flex gap-0.5 items-end h-3">
-                                        <div className="w-0.5 bg-indigo-500 animate-[bounce_0.8s_infinite] h-full"></div>
-                                        <div className="w-0.5 bg-indigo-500 animate-[bounce_1.1s_infinite] h-2/3"></div>
-                                        <div className="w-0.5 bg-indigo-500 animate-[bounce_1.3s_infinite] h-full"></div>
-                                    </div>
-                                )}
-                            </button>
-                        ))}
-                    </div>
-                    
-                    <div className="p-2 bg-gray-50 dark:bg-slate-900/50 text-center border-t border-gray-100 dark:border-slate-700 text-[9px] text-gray-400">
-                        Powered by <a href="https://somafm.com" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 underline decoration-indigo-300">SomaFM</a> • Ad-free
-                    </div>
-                </div>
-            </div>,
-            document.body
-        )}
-    </>
+        <p className="mt-2 text-xs leading-relaxed text-gray-600 dark:text-gray-400">{currentStation.description}</p>
+        <div className="music-volume mt-3">
+          <button type="button" onClick={() => setVolume(volume === 0 ? 0.5 : 0)} aria-label={volume === 0 ? 'Unmute music' : 'Mute music'} className="header-control text-gray-600 dark:text-gray-300">
+            {volume === 0 ? <VolumeXIcon className="h-5 w-5" aria-hidden="true" /> : <Volume2Icon className="h-5 w-5" aria-hidden="true" />}
+          </button>
+          <label className="min-w-0 flex-1 text-xs text-gray-600 dark:text-gray-300">Volume
+            <input type="range" aria-label="Music volume" min="0" max="1" step="0.05" value={volume} onChange={e => setVolume(parseFloat(e.target.value))} className="block w-full min-h-11 accent-indigo-600" />
+          </label>
+        </div>
+      </div>
+      <div className="p-1" role="group" aria-label="Music stations">
+        {somaFmChannels.map(station => <button type="button" key={station.id} onClick={() => selectStation(station)} aria-pressed={currentStation.id === station.id}
+          className={`music-station ${currentStation.id === station.id ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700'}`}>
+          <span className={`h-2 w-2 rounded-full shrink-0 ${currentStation.id === station.id ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-slate-500'}`} aria-hidden="true" />
+          <span className="min-w-0"><span className="block font-semibold">{station.title}</span><span className="block mt-1 text-xs text-gray-500 dark:text-gray-400">{station.description}</span></span>
+        </button>)}
+      </div>
+      <p className="p-3 text-center text-xs text-gray-500 dark:text-gray-400">Powered by <a href="https://somafm.com" target="_blank" rel="noopener noreferrer" className="underline">SomaFM</a> · Ad-free</p>
+    </div>
   );
+
+  const controls = <div className="music-player">
+    <div ref={buttonRef} className={`music-player__controls ${presentation === 'panel' ? 'music-player__controls--panel' : ''} rounded-xl border ${isPlaying ? 'music-player__controls--playing bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-600 text-gray-700 dark:text-gray-300'}`}>
+      <button type="button" onClick={togglePlay} aria-label={isPlaying ? 'Pause focus music' : 'Play focus music'} title={isPlaying ? 'Pause (M)' : 'Play Focus Music (M)'} className="header-control gap-2">
+        {isLoading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden="true" /> : isPlaying ? <svg className="music-control-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.25" /><rect x="14" y="4" width="4" height="16" rx="1.25" /></svg> : <svg className="music-control-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5a1 1 0 0 1 1.52-.85l11 6.5a2.15 2.15 0 0 1 0 3.7l-11 6.5A1 1 0 0 1 7 19.5z" /></svg>}
+        {presentation === 'panel' && <span>{isPlaying ? 'Pause' : 'Play'}</span>}
+      </button>
+      <button ref={stationButtonRef} type="button" onClick={toggleMenu} aria-label="Select station" title="Select Station" aria-expanded={isMenuOpen} aria-controls={pickerId} aria-haspopup={presentation === 'toolbar' ? 'dialog' : undefined}
+        className="header-control music-player__station-toggle">
+        {presentation === 'panel' && <span className="truncate">{currentStation.title}</span>}
+        <ChevronDownIcon className="music-control-icon" strokeWidth={2.5} aria-hidden="true" />
+      </button>
+    </div>
+    {presentation === 'panel' && isMenuOpen && <div id={pickerId} className="mt-3 rounded-xl border border-gray-200 dark:border-slate-600">{stationPicker}</div>}
+  </div>;
+
+  return <>
+    {controlsVisible && (controlsTarget === undefined ? controls : controlsTarget ? ReactDOM.createPortal(controls, controlsTarget) : null)}
+    <Modal isOpen={controlsVisible && presentation === 'toolbar' && isMenuOpen} onClose={() => setIsMenuOpen(false)} title="Focus music" id={pickerId} variant="popover" anchorRef={buttonRef} returnFocusRef={stationButtonRef} fallbackFocusRef={fallbackFocusRef}>
+      {stationPicker}
+    </Modal>
+  </>;
 };

@@ -1,4 +1,5 @@
 
+import { parseNaturalSchedule } from './naturalSchedule';
 import { Session } from '../types';
 import { getTodayYYYYMMDD, getTomorrowYYYYMMDD, getNextDayOfWeek, toYYYYMMDD } from './dateUtils';
 
@@ -7,6 +8,8 @@ interface ParsedData {
   duration: number | undefined;
   hashtags: string[];
   dateAssigned: string | undefined;
+  scheduledFor?: string;
+  schedulePrecision?: 'day' | 'month';
   session: Session | undefined;
   isFrog?: boolean;
   isQuickie?: boolean;
@@ -127,7 +130,11 @@ export const parseTitleForExtras = (title: string): ParsedData => {
     }
   }
 
-  if (/\b(today|tod)\b/i.test(lowerTitle)) {
+  const natural = parseNaturalSchedule(cleanTitle);
+  if (natural.scheduledFor) {
+      dateAssigned = natural.schedulePrecision === 'month' ? `${natural.scheduledFor}-01` : natural.scheduledFor;
+      cleanTitle = natural.cleanTitle;
+  } else if (/\b(today|tod)\b/i.test(lowerTitle)) {
       dateAssigned = getTodayYYYYMMDD();
       cleanTitle = cleanTitle.replace(/\b(today|tod)\b/i, '');
   } else if (/\b(tomorrow|tmrw|tom)\b/i.test(lowerTitle)) {
@@ -154,7 +161,7 @@ export const parseTitleForExtras = (title: string): ParsedData => {
 
   cleanTitle = cleanTitle.replace(/\s+/g, ' ').trim();
 
-  return { cleanTitle, duration, hashtags, dateAssigned, session, isFrog, isQuickie };
+  return { cleanTitle, duration, hashtags, dateAssigned, scheduledFor: natural.scheduledFor, schedulePrecision: natural.schedulePrecision, session, isFrog, isQuickie };
 };
 
 export const formatDuration = (minutes: number): string => {

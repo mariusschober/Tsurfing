@@ -250,9 +250,7 @@ export const getPlanningGate = (
     && task.scheduledFor < today);
   const queue = buildTodayQueue(tasks, today);
   const plannedIds = queue.map((task) => task.id);
-  const planMatches = dailyPlan?.localDate === today
-    && dailyPlan.taskIds.filter((id) => plannedIds.includes(id)).every((id, index) => id === plannedIds[index])
-    && dailyPlan.taskIds.filter((id) => plannedIds.includes(id)).length === plannedIds.length;
+  const planMatches = dailyPlan?.localDate === today;
   if (overdue.length > 0 || (queue.length > 0 && !planMatches)) {
     return {
       state: "daily_planning_required",

@@ -80,7 +80,11 @@ class NativeAndroidSmokeTest {
             composeRule.onAllNodesWithText("Start focus session").fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithText("Start focus session").performClick()
-        composeRule.waitForIdle()
+        // Starting shared focus now commits through Room before the screen
+        // changes. Compose idleness alone does not await that IO transaction.
+        composeRule.waitUntil(10_000) {
+            composeRule.onAllNodesWithText("FOCUS SESSION").fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onNodeWithText("FOCUS SESSION").assertIsDisplayed()
         check(composeRule.onAllNodesWithText("Planning").fetchSemanticsNodes().isEmpty())
 
@@ -195,7 +199,7 @@ class NativeAndroidSmokeTest {
         val visible = checkNotNull(snapshot.currentTask)
         application.sendBroadcast(
             Intent(application, com.mariusschober.goalflow.nativeapp.widget.GoalflowWidgetProvider::class.java)
-                .setAction("com.mariusschober.goalflow.WIDGET_ACTION")
+                .setAction("com.mariusschober.tsurfing.WIDGET_ACTION")
                 .putExtra("goalflow_widget_action", "complete")
                 .putExtra("goalflow_widget_task_id", visible.id)
                 .putExtra("goalflow_widget_expected_updated_at", visible.updatedAt)

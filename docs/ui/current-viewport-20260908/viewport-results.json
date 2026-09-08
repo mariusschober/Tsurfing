@@ -1,0 +1,82 @@
+{
+  "stats": {
+    "startTime": "2026-09-08T13:15:00.477Z",
+    "duration": 14884.94,
+    "expected": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "dimensions": [
+    [
+      1920,
+      1080
+    ],
+    [
+      1558,
+      915
+    ],
+    [
+      1440,
+      900
+    ],
+    [
+      1366,
+      768
+    ],
+    [
+      1280,
+      720
+    ],
+    [
+      1024,
+      768
+    ],
+    [
+      870,
+      700
+    ],
+    [
+      768,
+      1024
+    ],
+    [
+      430,
+      932
+    ],
+    [
+      390,
+      844
+    ],
+    [
+      375,
+      667
+    ],
+    [
+      320,
+      568
+    ],
+    [
+      844,
+      390
+    ],
+    [
+      667,
+      375
+    ],
+    [
+      568,
+      320
+    ],
+    [
+      320,
+      320
+    ]
+  ],
+  "sourceSha256": {
+    "App.tsx": "e300724534220e811ba9afd42a0fe2e006e6610238a5c7e0719ac7c6c6ddab15",
+    "components/CurrentView.tsx": "1004a671dd6b8774851bfa99f2bd6f045966bd7a5e83dd83a8ecd0409126b98c",
+    "components/DeepWorkPlayer.tsx": "e9cedd32d3bc87bb47e850515ef070f0b5251411b3e730441555a3b81b66d9ab",
+    "index.css": "bb57dccb3924378b438bc1d9bf582f0c9a4fb1097c24df7334b96bae063e45b8"
+  }
+}

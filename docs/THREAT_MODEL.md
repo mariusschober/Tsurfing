@@ -40,7 +40,7 @@ The browser and Android bundle are hostile-readable environments. Only browser-s
 | Telegram webhook forgery / replay | Telegram secret-token header check; update-id deduplication; identity and user scoping; callback mutations use user-scoped filters/RPCs. |
 | Telegram prompt/input abuse | Telegram captures share the bounded scheduling parser; task/title/database constraints and HTML escaping apply; voice downloads are size/time bounded and not retained. |
 | AI prompt abuse / provider leakage | Bounded request schemas, quotas, circuit breaker, provider timeouts, response schemas, and server-only provider keys. Logs contain route/latency/category, not prompts or responses. |
-| Dependency vulnerability | `npm audit --audit-level=high` is a release gate; lockfile is committed and reviewed with dependency tooling. |
+| Dependency vulnerability | The required `dependency-audit` job scans the exact npm lockfile with the OSV Scanner action pinned to an immutable commit; a missing lockfile, scanner error, timeout, or known vulnerability fails the aggregate gate. |
 | Privacy leakage in logs | HTTP logs contain request metadata and user id only; AI logs contain metadata; backup failures log categories, not plaintext. |
 | Native local-data exposure or session theft | Native task data remains in the private app sandbox; sessions use Android Keystore-backed storage; no server secret or provider key is packaged in the native client. The custom auth scheme is fixed but device-level deep-link interception still requires an emulator/device security pass. |
 

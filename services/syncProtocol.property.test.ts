@@ -53,6 +53,7 @@ const acceptedReceipt = (mutation: SyncMutation, serverVersion: number) => ({
   record: {
     entityType: mutation.entityType,
     entityId: mutation.entityId,
+    deviceId: mutation.deviceId,
     version: mutation.version,
     serverVersion,
     payload: mutation.payload,
@@ -299,6 +300,7 @@ describe('record-level synchronization invariants', () => {
 
   it.each([
     ['entity identity', { entityId: 'different-task' }],
+    ['device identity', { deviceId: 'device-b' }],
     ['local version', { version: 99 }],
     ['server version', { serverVersion: 99 }],
     ['payload', { payload: { id: 'same', title: 'different' } }],

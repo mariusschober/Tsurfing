@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { beginOwnerTelegramLink, logoutEverywhere, supabase, telegramProvider } from '../services/authService';
+import {
+  beginTelegramLink,
+  disableTelegramBotAccess,
+  enableTelegramBotAccess,
+  getTelegramBotStatus,
+  logoutEverywhere,
+  supabase,
+  telegramProvider
+} from '../services/authService';
 
 type TotpEnrollment = {
   factorId: string;
@@ -7,26 +15,31 @@ type TotpEnrollment = {
   secret: string;
 };
 
-export const AccountSecurity: React.FC<{ userEmail: string; isOwner?: boolean }> = ({ userEmail, isOwner = false }) => {
+export const AccountSecurity: React.FC<{ userEmail: string; isOwner: boolean }> = ({ userEmail, isOwner }) => {
   const [assuranceLevel, setAssuranceLevel] = useState<string>('aal1');
   const [verifiedFactorId, setVerifiedFactorId] = useState<string | null>(null);
   const [enrollment, setEnrollment] = useState<TotpEnrollment | null>(null);
   const [code, setCode] = useState('');
   const [recoveryEmail, setRecoveryEmail] = useState(userEmail.includes('@') ? userEmail : '');
   const [telegramLinked, setTelegramLinked] = useState(false);
+  const [telegramIdentityAvailable, setTelegramIdentityAvailable] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const telegramChangeRequiresMfa = isOwner && assuranceLevel !== 'aal2';
 
   const refresh = async () => {
     if (!supabase) return;
-    const [{ data: factors }, { data: assurance }, { data: identities }] = await Promise.all([
+    const [{ data: factors }, { data: assurance }, { data: identities }, botStatus] = await Promise.all([
       supabase.auth.mfa.listFactors(),
       supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
-      supabase.auth.getUserIdentities()
+      supabase.auth.getUserIdentities(),
+      getTelegramBotStatus().catch(() => null)
     ]);
     setVerifiedFactorId(factors?.totp.find(factor => factor.status === 'verified')?.id || null);
     setAssuranceLevel(assurance?.currentLevel || 'aal1');
-    setTelegramLinked(Boolean(identities?.identities.some(identity => identity.provider === telegramProvider || identity.provider.includes('telegram'))));
+    const providerId = telegramProvider.replace(/^custom:/, '');
+    setTelegramIdentityAvailable(Boolean(identities?.identities.some(identity => identity.provider === telegramProvider || identity.provider === providerId)));
+    setTelegramLinked(botStatus?.linked === true);
   };
 
   useEffect(() => {
@@ -38,7 +51,7 @@ export const AccountSecurity: React.FC<{ userEmail: string; isOwner?: boolean }>
     setBusy(true);
     setMessage(null);
     try {
-      const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Goalflow' });
+      const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Tsurfing' });
       if (error) throw error;
       setEnrollment({ factorId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret });
     } catch (error) {
@@ -91,11 +104,30 @@ export const AccountSecurity: React.FC<{ userEmail: string; isOwner?: boolean }>
     setBusy(true);
     setMessage(null);
     try {
-      await beginOwnerTelegramLink();
+      if (telegramIdentityAvailable) {
+        if (!await enableTelegramBotAccess()) return;
+        await refresh();
+        setMessage('Telegram bot access is active.');
+        setBusy(false);
+      } else {
+        await beginTelegramLink();
+      }
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Telegram could not be linked.');
       setBusy(false);
     }
+  };
+
+  const unlinkTelegram = async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      await disableTelegramBotAccess();
+      setTelegramLinked(false);
+      setMessage('Telegram bot and Mini App access was revoked. Your login identity remains available.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Telegram access could not be revoked.');
+    } finally { setBusy(false); }
   };
 
   const signOutEverywhere = async () => {
@@ -125,16 +157,17 @@ export const AccountSecurity: React.FC<{ userEmail: string; isOwner?: boolean }>
         </div>
       </div>
 
-      {isOwner && <div className="border-t border-gray-200 pt-5 dark:border-slate-700">
+      {import.meta.env.VITE_TELEGRAM_ENABLED === 'true' && <div className="border-t border-gray-200 pt-5 dark:border-slate-700">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-base font-bold text-gray-900 dark:text-white">Telegram & bot</h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Link the owner identity so the same account can sign in and use bot capture.</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Link this account to use the bot and Mini App.{isOwner ? ' Owner changes require two-factor authentication.' : ''}</p>
           </div>
           <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${telegramLinked ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' : 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-gray-300'}`}>{telegramLinked ? 'Linked' : 'Not linked'}</span>
         </div>
-        {!telegramLinked && <button type="button" onClick={linkTelegram} disabled={busy || assuranceLevel !== 'aal2'} className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50">Link Telegram</button>}
-        {!telegramLinked && assuranceLevel !== 'aal2' && <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Verify your authenticator in this session before linking Telegram.</p>}
+        {!telegramLinked && <button type="button" onClick={linkTelegram} disabled={busy || telegramChangeRequiresMfa} className="mt-3 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50">Link Telegram</button>}
+        {telegramLinked && <button type="button" onClick={() => void unlinkTelegram()} disabled={busy || telegramChangeRequiresMfa} className="mt-3 rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-400">Disconnect bot access</button>}
+        {telegramChangeRequiresMfa && <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">Verify your authenticator in this session before changing Telegram access.</p>}
       </div>}
 
       <div className="border-t border-gray-200 pt-5 dark:border-slate-700">
@@ -164,7 +197,7 @@ export const AccountSecurity: React.FC<{ userEmail: string; isOwner?: boolean }>
       {message && <p role="status" className="text-sm text-indigo-700 dark:text-indigo-300">{message}</p>}
       <div className="border-t border-gray-200 pt-5 dark:border-slate-700">
         <h3 className="text-base font-bold text-gray-900 dark:text-white">Active sessions</h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Revoke refresh tokens on every device. Goalflow also rejects their existing access tokens immediately.</p>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Revoke refresh tokens on every device. Tsurfing also rejects their existing access tokens immediately.</p>
         <button type="button" onClick={() => void signOutEverywhere()} disabled={busy} className="mt-3 rounded-lg border border-red-200 px-4 py-2 text-sm font-bold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-400 dark:hover:bg-red-900/20">Sign out all devices</button>
       </div>
       <div className="border-t border-gray-200 pt-5 dark:border-slate-700">

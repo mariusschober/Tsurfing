@@ -19,7 +19,7 @@ export const TestAccessGate: React.FC<{ onUnlock: () => void }> = ({ onUnlock })
     <main className="min-h-screen bg-[#F7F8FA] flex items-center justify-center p-4 font-sans">
       <section className="w-full max-w-md bg-white border border-[#E4E7EC] rounded-xl p-8 shadow-sm">
         <div className="mb-8"><Logo /></div>
-        <h1 className="text-3xl font-semibold text-[#111827]">Goalflow Test</h1>
+        <h1 className="text-3xl font-semibold text-[#111827]">Tsurfing Test</h1>
         <p className="mt-2 text-[#667085]">This is an isolated local test build. It does not use production authentication or cloud data.</p>
         <form onSubmit={submit} className="mt-8 space-y-3">
           <label className="block text-sm font-medium text-[#344054]" htmlFor="test-code">Test code</label>

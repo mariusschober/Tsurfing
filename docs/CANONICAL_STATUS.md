@@ -65,7 +65,9 @@
 
 - **JANK 11%** — device `T807D_EEA` `dumpsys gfxinfo` 9 frames 1 janky 11.11% (target <5% 30ms), GPU 3–4ms — P1 debounces improved but residual. Documented as risk, not blocking.
 - **Hosted CI for canonical candidate not yet green** — reconciliation PR must be green before promotion; `33364369992` was failure pre-hardening. New workflows address gitleaks/fetch-depth, signing partial-fail, web-release, etc., but need hosted verification.
-- **PG 16 live execution** — static checks PASS, but live PG upgrade/variant matrix needs hosted `migrations` job with `postgres:16` (will run on PR).
+- **PG 16 live execution** — the hosted `migrations` job starts the GitHub
+  runner's preinstalled PostgreSQL only after asserting major version 16. This
+  avoids an unrelated Docker Hub pull while preserving the exact-version gate.
 - **Android emulator journey** — local `assembleProductionDebugAndroidTest` compiled, but `connectedProductionDebugAndroidTest` requires hosted `reactivecircus/android-emulator-runner` (api 30, atd, x86, pixel_2).
 - **Staging identities / RLS** — real account/RLS isolation remains `NOT RUN` until staging Supabase identities exist (intentionally skipped, not faked).
 - **Telegram/macOS/Chrome integration** — Stage 7 PRs not yet opened; must preserve identifiers, fail closed on auth, disable cloud writes until quarantine, etc.

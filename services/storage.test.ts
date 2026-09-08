@@ -1,4 +1,6 @@
 import 'fake-indexeddb/auto';
+import { openDB } from 'idb';
+import { reconciliationCandidate } from './syncProtocol';
 import { describe, expect, it } from 'vitest';
 import {
   mergeBackupCollection,
@@ -77,6 +79,163 @@ describe('backup merge behavior', () => {
 });
 
 describe('durable storage failure boundaries', () => {
+  it('keeps a shared focus session while legacy tracking counters are staged', async () => {
+    installBrowserStorage();
+    const key = `tracking-focus-merge-${crypto.randomUUID()}`;
+    const focusSession = {
+      schemaVersion: 1,
+      sessionId: '11111111-1111-4111-8111-111111111111',
+      taskId: 'task-focus',
+      phase: 'active',
+      plannedDurationSeconds: 1_800,
+      startedAt: '2026-09-07T10:00:00.000Z',
+      elapsedSeconds: 0,
+      pausedAt: null,
+      endedAt: null,
+      updatedAt: '2026-09-07T10:00:00.000Z'
+    };
+    const previous = { date: '2026-09-07', planViewCount: 1, dailyPostponeCount: 0, focusSession };
+    const legacyNext = { date: '2026-09-07', planViewCount: 2, dailyPostponeCount: 0 };
+    await storageService.set(STORES.TRACKING, key, previous, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, previous, legacyNext);
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual({ ...legacyNext, focusSession });
+    await storageService.flushPendingLocalChanges(key);
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual({ ...legacyNext, focusSession });
+  });
+
+  it('does not let an explicit null legacy write erase a local focus session', async () => {
+    installBrowserStorage();
+    const key = `tracking-focus-null-${crypto.randomUUID()}`;
+    const focusSession = {
+      schemaVersion: 1,
+      sessionId: '22222222-2222-4222-8222-222222222222',
+      taskId: 'task-focus',
+      phase: 'completed',
+      plannedDurationSeconds: 1_800,
+      startedAt: '2026-09-07T10:00:00.000Z',
+      elapsedSeconds: 1_800,
+      pausedAt: null,
+      endedAt: '2026-09-07T10:30:00.000Z',
+      updatedAt: '2026-09-07T10:30:00.000Z'
+    };
+    const previous = { date: '2026-09-07', planViewCount: 1, dailyPostponeCount: 0, focusSession };
+    const legacyNext = { date: '2026-09-07', planViewCount: 2, dailyPostponeCount: 0, focusSession: null };
+    await storageService.set(STORES.TRACKING, key, previous, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, previous, legacyNext);
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual({ ...legacyNext, focusSession });
+  });
+
+  it('recovers a new-day counter chain left behind before the daily reset was persisted', async () => {
+    installBrowserStorage();
+    const key = `tracking-rollover-${crypto.randomUUID()}`;
+    const today = { date: '2026-09-07', planViewCount: 0, dailyPostponeCount: 0 };
+    await storageService.set(STORES.TRACKING, key,
+      { date: '2026-09-05', planViewCount: 7, dailyPostponeCount: 0 }, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, today, { ...today, planViewCount: 1 });
+    storageService.stageLocalValue(STORES.TRACKING, key, { ...today, planViewCount: 1 }, { ...today, planViewCount: 2 });
+    const meta = await storageService.flushPendingLocalChanges(key);
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual({ ...today, planViewCount: 2 });
+    expect(meta.outbox).toHaveLength(2);
+    expect(meta.outbox.map(item => item.payload)).toEqual([
+      { ...today, planViewCount: 1 }, { ...today, planViewCount: 2 }
+    ]);
+    expect((await storageService.flushPendingLocalChanges(key)).outbox).toEqual(meta.outbox);
+  });
+
+  it.each([
+    { date: '2026-09-07', planViewCount: 7, dailyPostponeCount: 0 },
+    { date: '2026-09-08', planViewCount: 7, dailyPostponeCount: 0 },
+    { date: '2026-09-05', planViewCount: 7, dailyPostponeCount: 0, extra: 'preserve' }
+  ])('does not treat unrelated tracking differences as a daily reset: %j', async (saved) => {
+    installBrowserStorage();
+    const key = `tracking-rollover-denial-${crypto.randomUUID()}`;
+    const previous = { date: '2026-09-07', planViewCount: 0, dailyPostponeCount: 0 };
+    await storageService.set(STORES.TRACKING, key, saved, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, previous, { ...previous, planViewCount: 1 });
+    await expect(storageService.flushPendingLocalChanges(key)).rejects.toThrow(/Neither version was overwritten/);
+  });
+
+  it('recovers pending tracking when the server reordered identical object fields', async () => {
+    installBrowserStorage();
+    const key = `tracking-key-order-${crypto.randomUUID()}`;
+    const previous = { date: '2026-09-07', planViewCount: 1, dailyPostponeCount: 0 };
+    const next = { ...previous, planViewCount: 2 };
+    await storageService.set(STORES.TRACKING, key,
+      { dailyPostponeCount: 0, planViewCount: 1, date: '2026-09-07' }, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, previous, next);
+    const meta = await storageService.flushPendingLocalChanges(key);
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual(next);
+    expect(meta.outbox).toHaveLength(1);
+    expect(meta.outbox[0].payload).toEqual(next);
+    const repeated = await storageService.flushPendingLocalChanges(key);
+    expect(repeated.outbox).toEqual(meta.outbox);
+  });
+
+  it('still preserves a genuinely divergent tracking record and its pending write', async () => {
+    const local = installBrowserStorage();
+    const key = `tracking-divergence-${crypto.randomUUID()}`;
+    await storageService.set(STORES.TRACKING, key, { planViewCount: 7 }, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, { planViewCount: 1 }, { planViewCount: 2 });
+    const before = Array.from({ length: local.length }, (_, i) => local.key(i))
+      .filter(k => k?.startsWith('goalflow_wal_v2_')).map(k => local.getItem(k!));
+    await expect(storageService.flushPendingLocalChanges(key)).rejects.toThrow(/Neither version was overwritten/);
+    expect(Array.from({ length: local.length }, (_, i) => local.key(i))
+      .filter(k => k?.startsWith('goalflow_wal_v2_')).map(k => local.getItem(k!))).toEqual(before);
+  });
+
+  it('recovers two plan-view WALs while retaining completed focus and immutable mutation payloads', async () => {
+    const local = installBrowserStorage();
+    const key = `tracking-counter-focus-${crypto.randomUUID()}`;
+    const active = {
+      schemaVersion: 1, sessionId: '33333333-3333-4333-8333-333333333333', taskId: 'task-focus',
+      phase: 'active', plannedDurationSeconds: 1500, startedAt: '2026-09-07T13:15:12.705Z',
+      elapsedSeconds: 469, pausedAt: null, endedAt: null, updatedAt: '2026-09-07T13:15:12.705Z'
+    };
+    const completed = { ...active, phase: 'completed', elapsedSeconds: 1030,
+      endedAt: '2026-09-07T13:24:33.708Z', updatedAt: '2026-09-07T13:24:33.708Z' };
+    const before = { date: '2026-09-07', planViewCount: 27, dailyPostponeCount: 0, focusSession: active };
+    const current = { ...before, focusSession: completed };
+    await storageService.set(STORES.TRACKING, key, current, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, before, { ...before, planViewCount: 28 });
+    storageService.stageLocalValue(STORES.TRACKING, key, current, { ...current, planViewCount: 28 });
+    const wal = Array.from({ length: local.length }, (_, i) => local.key(i))
+      .filter(k => k?.startsWith('goalflow_wal_v2_'))
+      .map(k => JSON.parse(local.getItem(k!)!));
+    const changes = wal.flatMap(t => t.changes);
+    const meta = await storageService.flushPendingLocalChanges(key);
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual({ ...current, planViewCount: 28 });
+    for (const change of changes) {
+      expect(meta.outbox.find(m => m.mutationId === change.mutationId)).toMatchObject(change);
+    }
+    expect(meta.outbox).toHaveLength(2);
+    // A leftover WAL replay after the first commit must preserve the original
+    // attempted request payload, while keeping the recovered completed timer.
+    for (const transaction of wal) local.setItem(`goalflow_wal_v2_${key}_${transaction.id}`, JSON.stringify(transaction));
+    const batch = await storageService.preparePushBatch(key);
+    expect(batch).toHaveLength(1);
+    expect(batch[0]).toEqual(meta.outbox[0]);
+    for (const transaction of wal) local.setItem(`goalflow_wal_v2_${key}_${transaction.id}`, JSON.stringify(transaction));
+    const retried = await storageService.flushPendingLocalChanges(key);
+    for (const change of changes) expect(retried.outbox.find(m => m.mutationId === change.mutationId)).toMatchObject(change);
+    expect(retried.outbox[0].attemptedAt).toBeDefined();
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual({ ...current, planViewCount: 28 });
+  });
+
+  it('retains both copies when same-day counters have genuinely diverged', async () => {
+    const local = installBrowserStorage();
+    const key = `tracking-counter-conflict-${crypto.randomUUID()}`;
+    const previous = { date: '2026-09-07', planViewCount: 27, dailyPostponeCount: 0 };
+    await storageService.set(STORES.TRACKING, key, { ...previous, planViewCount: 30 }, 'cloud');
+    storageService.stageLocalValue(STORES.TRACKING, key, previous, { ...previous, planViewCount: 28 });
+    const pendingKey = Array.from({ length: local.length }, (_, i) => local.key(i)).find(k => k?.startsWith('goalflow_wal_v2_'))!;
+    const pending = local.getItem(pendingKey);
+    await expect(storageService.flushPendingLocalChanges(key)).rejects.toThrow(/Neither version was overwritten/);
+    expect(local.getItem(pendingKey)).toBe(pending);
+    const database = await openDB('GoalflowDB');
+    expect(await database.get(STORES.TRACKING, key)).toEqual({ ...previous, planViewCount: 30 });
+    database.close();
+  });
+
   it('recovers every store in a grouped UI mutation after a simulated process kill', async () => {
     installBrowserStorage();
     const key = `storage-group-kill-${crypto.randomUUID()}`;
@@ -152,21 +311,51 @@ describe('durable storage failure boundaries', () => {
     expect(meta.outbox[0]).toMatchObject({ entityId: 'offline', payload: offline[0] });
   });
 
-  it('does not replay a WAL over a divergent recovered version of the same task', async () => {
+  it('preserves divergent WAL edits for automatic reconciliation without blocking reload', async () => {
     const localStorage = installBrowserStorage();
     const key = `storage-wal-conflict-${crypto.randomUUID()}`;
     const recovered = [{ id: 'same', title: 'Recovered version' }];
-    const believedPrevious = [{ id: 'same', title: 'Earlier version' }];
+    const previous = [{ id: 'same', title: 'Earlier version' }];
     const offline = [{ id: 'same', title: 'Offline version' }];
+    const latest = [{ id: 'same', title: 'Second offline edit' }];
     await storageService.set(STORES.TASKS, key, recovered, 'cloud');
-    storageService.stageLocalValue(STORES.TASKS, key, believedPrevious, offline);
-
-    await expect(storageService.flushPendingLocalChanges(key)).rejects.toThrow(/Neither was overwritten/i);
-    const walKeys = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
-      .filter((candidate): candidate is string => Boolean(candidate?.startsWith('goalflow_wal_v2_')));
-    expect(walKeys.length).toBeGreaterThan(0);
-    walKeys.forEach(candidate => localStorage.removeItem(candidate));
+    storageService.stageLocalValue(STORES.TASKS, key, previous, offline);
+    storageService.stageLocalValue(STORES.TASKS, key, offline, latest);
+    const originals = Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
+      .filter((candidate): candidate is string => Boolean(candidate?.startsWith('goalflow_wal_v2_')))
+      .flatMap(candidate => JSON.parse(localStorage.getItem(candidate)!).changes);
+    const meta = await storageService.flushPendingLocalChanges(key);
     expect(await storageService.get(STORES.TASKS, key)).toEqual(recovered);
+    expect(meta.outbox).toEqual([]);
+    expect(meta.conflicts).toHaveLength(1);
+    expect(meta.conflicts[0].serverPayload).toEqual(recovered[0]);
+    expect(meta.conflicts[0].localHistory).toHaveLength(2);
+    for (const change of originals) expect(meta.conflicts[0].localHistory).toContainEqual(expect.objectContaining({
+      mutationId: change.mutationId, payload: change.payload, updatedAt: change.updatedAt, deletedAt: change.deletedAt
+    }));
+    expect(await storageService.flushPendingLocalChanges(key)).toEqual(meta);
+    const candidate = reconciliationCandidate(meta.conflicts[0]);
+    await storageService.commitAutomaticReconciliation(key, candidate, {
+      reconciled: true, receiptId: crypto.randomUUID(), candidate, serverMissing: false,
+      record: { entity_type: 'tasks', entity_id: 'same', payload: recovered[0], device_id: 'cloud',
+        version: 5, server_version: 5, updated_at: new Date().toISOString(), deleted_at: null }
+    });
+    expect((await storageService.flushPendingLocalChanges(key)).conflicts).toEqual([]);
+    expect(await storageService.get(STORES.TASKS, key)).toEqual(recovered);
+  });
+
+  it('hands a divergent normal save to automatic reconciliation atomically', async () => {
+    installBrowserStorage();
+    const key = `storage-save-conflict-${crypto.randomUUID()}`;
+    const recovered = [{ id: 'same', title: 'Cloud' }];
+    const offline = [{ id: 'same', title: 'Local' }];
+    await storageService.set(STORES.TASKS, key, recovered, 'cloud');
+    storageService.stageLocalValue(STORES.TASKS, key, [{ id: 'same', title: 'Old' }], offline);
+    await storageService.set(STORES.TASKS, key, offline);
+    expect(await storageService.get(STORES.TASKS, key)).toEqual(recovered);
+    const meta = await storageService.flushPendingLocalChanges(key);
+    expect(meta.conflicts[0].localPayload).toEqual(offline[0]);
+    expect(meta.outbox).toEqual([]);
   });
 
   it('atomically recovers durable fallback data after an IndexedDB restart', async () => {
@@ -311,7 +500,7 @@ describe('durable storage failure boundaries', () => {
     await storageService.set(STORES.TASKS, targetKey, [{ id: 'target', title: 'must survive' }], 'cloud');
     const backup = await storageService.exportBackup(sourceKey);
 
-    await expect(storageService.importBackup(targetKey, backup, 'replace')).rejects.toThrow('different Goalflow account');
+    await expect(storageService.importBackup(targetKey, backup, 'replace')).rejects.toThrow('different Tsurfing account');
     expect(await storageService.get(STORES.TASKS, targetKey)).toEqual([{ id: 'target', title: 'must survive' }]);
   });
 

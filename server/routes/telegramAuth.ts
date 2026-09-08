@@ -9,36 +9,42 @@ import { createUserVerifierClient } from "../supabase";
 import { verifyTurnstile } from "../turnstile";
 
 const hash = (value: string): string => crypto.createHash("sha256").update(value).digest("hex");
-const codeChallengePattern = /^[A-Za-z0-9_-]{43,128}$/;
-const statePattern = /^[A-Za-z0-9_-]{16,128}$/;
 const preflightBody = z.object({
   code: z.string().trim().min(6).max(128),
-  captchaToken: z.string().max(4096).default(''),
-  state: z.string().regex(statePattern).optional(),
-  codeChallenge: z.string().regex(codeChallengePattern).optional(),
-  codeChallengeMethod: z.enum(["S256", "plain"]).optional()
-});
+  captchaToken: z.string().max(4096).default('')
+}).strict();
 const activateBody = z.object({
-  attemptToken: z.string().min(32).max(256),
-  oauthState: z.string().regex(statePattern).optional()
-});
+  attemptToken: z.string().regex(/^[A-Za-z0-9_-]{43}$/)
+}).strict();
 
 export const telegramIdentity = (user: User, providerId: string) => {
-  const identity = user.identities?.find((item) =>
-    item.provider === providerId || item.provider.toLowerCase().includes("telegram"));
-  const data = { ...user.user_metadata, ...(identity?.identity_data ?? {}) } as Record<string, unknown>;
-  const rawId = data.telegram_user_id ?? data.id ?? data.sub ?? identity?.id;
-  const match = String(rawId ?? "").match(/\d+/);
-  if (!match) return undefined;
+  const acceptedProviderIds = new Set([providerId, providerId.replace(/^custom:/, "")]);
+  const identity = user.identities?.find(item => acceptedProviderIds.has(item.provider));
+  if (!identity) return undefined;
+  const data = (identity.identity_data ?? {}) as Record<string, unknown>;
+  // OIDC sub is an opaque login subject, not the Telegram Bot API user ID.
+  // Supabase retains the signed profile id under custom_claims when allowlisted.
+  const customClaims = data.custom_claims && typeof data.custom_claims === "object"
+    && !Array.isArray(data.custom_claims) ? data.custom_claims as Record<string, unknown> : {};
+  const rawId = Object.hasOwn(customClaims, "id") ? customClaims.id : data.telegram_user_id ?? data.id;
+  if (typeof rawId !== "string" && typeof rawId !== "number") return undefined;
+  const textId = String(rawId ?? "");
+  if (!/^\d{1,16}$/.test(textId)) return undefined;
+  const id = Number(textId);
+  if (!Number.isSafeInteger(id) || id <= 0) return undefined;
   return {
-    id: Number(match[0]),
+    id,
     username: String(data.username ?? data.preferred_username ?? "")
   };
 };
 
-export const createTelegramAuthRouter = (config: AppConfig, admin?: SupabaseClient) => {
+export const createTelegramAuthRouter = (
+  config: AppConfig,
+  admin?: SupabaseClient,
+  verifierOverride?: SupabaseClient
+) => {
   const router = Router();
-  const verifier = createUserVerifierClient(config);
+  const verifier = verifierOverride ?? createUserVerifierClient(config);
   router.use(rateLimit({ windowMs: 60_000, limit: 12, standardHeaders: "draft-8", legacyHeaders: false }));
 
   router.post("/telegram/preflight", async (request, response) => {
@@ -60,22 +66,16 @@ export const createTelegramAuthRouter = (config: AppConfig, admin?: SupabaseClie
         return;
       }
       const token = crypto.randomBytes(32).toString("base64url");
-      const stateHash = input.state ? hash(input.state) : null;
       const { error: insertError } = await admin.from("telegram_auth_attempts").insert({
         token_hash: hash(token),
         invite_id: invite.id,
-        oauth_state_hash: stateHash,
-        code_challenge: input.codeChallenge ?? null,
-        code_challenge_method: input.codeChallengeMethod ?? null,
         expires_at: new Date(Date.now() + 10 * 60_000).toISOString()
       });
       if (insertError) throw insertError;
       response.json({
         attemptToken: token,
         provider: config.TELEGRAM_OIDC_PROVIDER_ID,
-        expiresInSeconds: 600,
-        state: input.state ?? null,
-        codeChallenge: input.codeChallenge ?? null
+        expiresInSeconds: 600
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -110,7 +110,7 @@ export const createTelegramAuthRouter = (config: AppConfig, admin?: SupabaseClie
         target_telegram_user_id: identity.id,
         target_telegram_username: identity.username,
         target_email: data.user.email ?? "",
-        target_oauth_state: input.oauthState ?? null
+        target_oauth_state: null
       });
       if (activateError) throw activateError;
       if (!activated) {

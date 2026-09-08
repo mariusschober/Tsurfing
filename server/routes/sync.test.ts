@@ -1,6 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, it, vi } from 'vitest';
-import { applySyncMutationsSequentially, assertDurableReceipt, syncMutationSchema } from './sync';
+import {
+  applySyncMutationsSequentially,
+  assertDurableReceipt,
+  canonicalSyncTimestamp,
+  createSyncProtocolGuard,
+  resolveCloudConflictRecord,
+  syncMutationSchema
+} from './sync';
 
 const mutation = {
   mutationId: '11111111-1111-4111-8111-111111111111',
@@ -20,6 +27,7 @@ const receipt = () => ({
   record: {
     entity_type: mutation.entityType,
     entity_id: mutation.entityId,
+    device_id: mutation.deviceId,
     version: mutation.version,
     server_version: 7,
     payload: mutation.payload,
@@ -29,6 +37,30 @@ const receipt = () => ({
 });
 
 describe('sync API durable acceptance boundary', () => {
+  it('verifies the immutable protocol once and retries a failed first check', async () => {
+    const rpc = vi.fn()
+      .mockResolvedValueOnce({ data: null, error: new Error('temporarily unavailable') })
+      .mockResolvedValue({ data: 3, error: null });
+    const requireProtocol = createSyncProtocolGuard({ rpc } as unknown as SupabaseClient);
+
+    await expect(requireProtocol()).rejects.toThrow(/protocol is not installed/i);
+    await requireProtocol();
+    await requireProtocol();
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it('canonicalizes PostgREST UTC timestamps without losing fractional precision', () => {
+    expect(canonicalSyncTimestamp('2026-09-05T00:25:06.813+00:00'))
+      .toBe('2026-09-05T00:25:06.813Z');
+    expect(canonicalSyncTimestamp('2026-09-05T00:25:06.813456+00:00'))
+      .toBe('2026-09-05T00:25:06.813456Z');
+    expect(canonicalSyncTimestamp('2026-09-05T00:25:06.42+00:00'))
+      .toBe('2026-09-05T00:25:06.420Z');
+    expect(canonicalSyncTimestamp('2026-09-05T00:25:06+00:00'))
+      .toBe('2026-09-05T00:25:06.000Z');
+    expect(() => canonicalSyncTimestamp('not-a-timestamp')).toThrow(/invalid timestamp/i);
+  });
+
   it('admits native task-event records to the protocol-v3 transport', () => {
     expect(syncMutationSchema.parse({
       ...mutation,
@@ -51,6 +83,7 @@ describe('sync API durable acceptance boundary', () => {
 
   it.each([
     ['entity identity', { entity_id: 'task-2' }],
+    ['device identity', { device_id: 'device-b' }],
     ['local version', { version: 2 }],
     ['server version', { server_version: 8 }],
     ['payload', { payload: { id: 'task-1', title: 'wrong' } }],
@@ -86,6 +119,7 @@ describe('sync API durable acceptance boundary', () => {
           record: {
             entity_type: input.target_entity_type,
             entity_id: entityId,
+            device_id: input.target_device_id,
             version: input.target_version,
             server_version: order.length,
             payload: input.target_payload,
@@ -126,5 +160,47 @@ describe('sync API durable acceptance boundary', () => {
     await expect(applySyncMutationsSequentially(database, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', mutations))
       .rejects.toThrow('database unavailable');
     expect(rpc).toHaveBeenCalledTimes(1);
+  });
+
+  it('acknowledges only the exact user-owned conflict row', async () => {
+    const conflictId = '22222222-2222-4222-8222-222222222222';
+    const mutationId = '33333333-3333-4333-8333-333333333333';
+    const chain: any = {};
+    chain.update = vi.fn(() => chain);
+    chain.eq = vi.fn(() => chain);
+    chain.select = vi.fn(() => chain);
+    chain.maybeSingle = vi.fn(async () => ({
+      error: null,
+      data: { id: conflictId, mutation_id: mutationId, resolved_at: '2026-09-03T00:00:00.000Z' }
+    }));
+    const database = { from: vi.fn(() => chain) } as unknown as SupabaseClient;
+
+    await expect(resolveCloudConflictRecord(
+      database,
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      conflictId,
+      mutationId
+    )).resolves.toEqual({ resolved: true, conflictId, mutationId });
+    expect(chain.eq.mock.calls).toEqual([
+      ['user_id', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'],
+      ['id', conflictId],
+      ['mutation_id', mutationId]
+    ]);
+  });
+
+  it('does not acknowledge a conflict update that matched no row', async () => {
+    const chain: any = {};
+    chain.update = vi.fn(() => chain);
+    chain.eq = vi.fn(() => chain);
+    chain.select = vi.fn(() => chain);
+    chain.maybeSingle = vi.fn(async () => ({ error: null, data: null }));
+    const database = { from: vi.fn(() => chain) } as unknown as SupabaseClient;
+
+    await expect(resolveCloudConflictRecord(
+      database,
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      '22222222-2222-4222-8222-222222222222',
+      '33333333-3333-4333-8333-333333333333'
+    )).resolves.toBeNull();
   });
 });

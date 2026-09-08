@@ -1,6 +1,6 @@
 # Native Android client
 
-Goalflow has two Android delivery targets:
+Tsurfing has two Android delivery targets:
 
 - `android-native/` is the native Kotlin + Jetpack Compose client described by
   the Android UX plan. It uses Room for product state, DataStore for UI
@@ -11,7 +11,7 @@ Goalflow has two Android delivery targets:
   client changes.
 
 The native client does not use a WebView for its main experience. It preserves
-the existing Goalflow vocabulary and rules: Current executes one deterministic
+the existing Tsurfing vocabulary and rules: Current executes one deterministic
 commitment, Planning confirms the order, monthly work needs an exact day,
 frogs retain their anti-avoidance constraints, and local actions do not wait
 for cloud services.
@@ -28,20 +28,21 @@ The current native client includes:
 - Planning with overdue/month conversion, move buttons, long-press reorder,
   local undo, and the explicit daily-plan gate;
 - task editing, frogs, habits, Goals, True North, background thought, Insights,
-  circadian check-in, encrypted backup/restore, sign-in, and sync conflict
-  choices.
+  circadian check-in, encrypted backup/restore, typed email-code or Telegram
+  sign-in, explicit Telegram linking, and sync conflict choices.
 
-AI and Telegram remain optional web/server capabilities. Native Room preserves
-web-owned collections it does not edit, so using the native client does not
-silently discard those records.
+AI remains optional. Telegram is compile-time disabled until its environment's
+custom OIDC provider is proven. Native Room preserves web-owned collections it
+does not edit, so using the native client does not silently discard those
+records.
 
 ## Build variants
 
 | Variant | Application ID | Label | Purpose |
 | --- | --- | --- | --- |
-| `productionDebug` | `com.mariusschober.goalflow.dev` | Goalflow | Local/debug production-auth path |
-| `productionRelease` | `com.mariusschober.goalflow` | Goalflow | Unsigned release assembly |
-| `sandboxDebug` | `com.mariusschober.goalflow.sandbox.dev` | Goalflow Test | Isolated local test build; entry code `123456` |
+| `productionDebug` | `com.mariusschober.tsurfing.dev` | Tsurfing | Local/debug production-auth path |
+| `productionRelease` | `com.mariusschober.tsurfing` | Tsurfing | Signed only with complete explicit release credentials; ordinary CI compiles it unsigned with `-PgoalflowSkipSigning=true` |
+| `sandboxDebug` | `com.mariusschober.tsurfing.sandbox.dev` | Tsurfing Test | Isolated local test build; entry code `123456` |
 
 The sandbox gate is compile-time flavor configuration. It is not present in
 the production flavor, and sandbox data is isolated by the separate package
@@ -55,12 +56,20 @@ line or the developer's untracked Gradle properties file:
 goalflowApiOrigin=https://api.example.test
 goalflowSupabaseUrl=https://project-ref.supabase.co
 goalflowSupabasePublishableKey=sb_publishable_example
+goalflowTelegramEnabled=false
+goalflowTelegramOidcProviderId=custom:telegram
 ```
 
 Only the Supabase publishable key belongs in the APK. A Supabase secret or
 service-role key must never be supplied to Gradle. Supabase Auth must allow the
-exact native redirect `goalflow://auth/callback` in the matching staging or
-production project.
+native redirect `tsurfing://auth/callback` and the narrowly scoped
+`tsurfing://auth/callback?state=*` pattern in the matching staging or production
+project. Telegram requests append a random, locally verified state value; the
+bare URL alone does not allow that callback. Keep the callback scheme, host, and
+path fixed. When Telegram is enabled, the provider identifier must use
+the `custom:` prefix. Supabase owns provider OAuth state and PKCE; the native
+client retains only its one-use verifier and callback nonce in encrypted local
+storage.
 
 ## Local commands
 
@@ -91,7 +100,9 @@ android-native/app/build/outputs/apk/sandbox/debug/
 ```
 
 The native Gradle wrapper, JVM 21 alignment, Room migrations, and test-only
-JSON runtime are committed. Production release signing material is not.
+JSON runtime are committed. Production release signing material is not. When a
+release job supplies a base64 keystore, Gradle decodes it into a unique
+owner-readable temporary file and requires deletion at build completion.
 
 ## Reliability boundaries
 
@@ -101,14 +112,18 @@ the UI never waits for it. Push acknowledgements and pull cursors are accepted
 only after exact payload/version checks. Conflicts retain both sides until the
 user chooses explicitly.
 
-Native email sign-in uses Supabase's PKCE authorization-code flow: the app
-stores a verifier in encrypted preferences, sends its S256 challenge with the
-OTP request, accepts only the registered deep link and matching state, and
-exchanges the single-use code on the same device. Implicit token fragments are
-rejected. Sign-out clears the local session before revoking only that Supabase
-session, so an in-flight sync cannot continue with a detached account.
+Native email sign-in requests a server-bound attempt, verifies the typed
+six-digit code directly with Supabase, and exposes the encrypted session only
+after activation succeeds. Telegram uses Authorization Code + PKCE in the
+system browser, accepts only `tsurfing://auth/callback` with the matching local
+nonce, and validates the immutable Supabase UUID with the application server
+before exposing a session. Implicit token fragments are rejected. Link failures
+cannot replace or erase the current account. Sign-out clears the local session
+before revoking only that Supabase session, so an in-flight sync cannot continue
+with a detached account.
 
-Encrypted backups use the Goalflow AES-256-GCM/PBKDF2 envelope. Decryption,
+Encrypted backups retain the legacy Goalflow AES-256-GCM/PBKDF2 envelope for
+compatibility. Decryption,
 schema, checksum, identity, and outbox-dependency validation happen before a
 replace restore transaction. A failed restore leaves the current database
 untouched.
@@ -129,3 +144,18 @@ provided. A successful source compile or APK assembly is not presented as
 evidence for those runtime behaviors. The target app is marked `profileable`
 and includes `ProfileInstaller` so a physical-device run is ready to collect
 startup and frame data.
+
+### Email verification availability
+
+Android reads `/api/v1/auth/email/config` before enabling a new email-code
+request. Only an explicit Boolean `captchaRequired: false` permits a request
+without a verification token. An unavailable or malformed response leaves the
+request disabled with a visible retry action. When the server requires CAPTCHA,
+the hosted challenge must succeed; HTTP failures are shown in the dialog. The
+server remains responsible for enforcing its policy on every request.
+
+Owner MFA is a step-up requirement, not session revocation. A sync response of
+HTTP 403 with `error.code = mfa_required` pauses sync while retaining the AAL1
+session and pending Room mutations. Verifying the authenticator elevates that
+same account and wakes sync. HTTP 401 and other HTTP 403 responses still follow
+the existing authentication-expiry handling.

@@ -20,7 +20,19 @@ android {
                     if (!hasB64 || !hasStorePass || !hasAlias || !hasKeyPass) {
                         throw new GradleException("Partial signing configuration — all of ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD must be present together. Failing closed. Use -PgoalflowSkipSigning=true for unsigned local builds.")
                     }
-                    def decoded = new File("/tmp/goalflow.keystore")
+                    def decoded = File.createTempFile("goalflow-legacy-signing-", ".keystore")
+                    decoded.setReadable(false, false)
+                    decoded.setWritable(false, false)
+                    decoded.setExecutable(false, false)
+                    if (!decoded.setReadable(true, true) || !decoded.setWritable(true, true)) {
+                        decoded.delete()
+                        throw new GradleException("Could not restrict the temporary Android keystore to the current user.")
+                    }
+                    gradle.buildFinished {
+                        if (decoded.exists() && !decoded.delete()) {
+                            throw new GradleException("Could not remove the temporary Android keystore after the build.")
+                        }
+                    }
                     decoded.bytes = java.util.Base64.getDecoder().decode(b64)
                     storeFile decoded
                     storePassword hasStorePass
@@ -54,11 +66,11 @@ android {
         }
     }
     defaultConfig {
-        applicationId "com.mariusschober.goalflow"
+        applicationId "com.mariusschober.tsurfing"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 3
-        versionName "0.3.0-tranche3"
+        versionCode 4
+        versionName "0.4.0-beta.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -75,10 +87,10 @@ android {
             dimension "environment"
             applicationIdSuffix ".test"
             versionNameSuffix "-test"
-            resValue "string", "app_name", "Goalflow Test"
-            resValue "string", "title_activity_main", "Goalflow Test"
-            resValue "string", "package_name", "com.mariusschober.goalflow.test"
-            resValue "string", "custom_url_scheme", "com.mariusschober.goalflow.test"
+            resValue "string", "app_name", "Tsurfing Test"
+            resValue "string", "title_activity_main", "Tsurfing Test"
+            resValue "string", "package_name", "com.mariusschober.tsurfing.test"
+            resValue "string", "custom_url_scheme", "com.mariusschober.tsurfing.test"
         }
     }
     buildTypes {
@@ -111,12 +123,3 @@ dependencies {
 }
 
 apply from: 'capacitor.build.gradle'
-
-try {
-    def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
-        apply plugin: 'com.google.gms.google-services'
-    }
-} catch(Exception e) {
-    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
-}

@@ -1,8 +1,13 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { fetchSyncWithRetry, synchronizeCloudOnce, type CloudSyncDependencies } from './cloudSync';
+import {
+  fetchSyncWithRetry,
+  resolveLocalConflict,
+  synchronizeCloudOnce,
+  type CloudSyncDependencies
+} from './cloudSync';
 import { storageService, STORES } from './storage';
-import { normalizeSyncMeta } from './syncProtocol';
+import { emptySyncMeta, normalizeSyncMeta } from './syncProtocol';
 
 class TestLocalStorage {
   private values = new Map<string, string>();
@@ -30,6 +35,7 @@ class DurableFakeServer {
   readonly receipts: Map<string, { request: string; result: Record<string, unknown> }>;
   readonly conflicts: Array<Record<string, unknown>>;
   sequence: { value: number };
+  readonly reconciliations: Array<{ candidate: any; previousCloud?: ServerRecord }> = [];
   failBeforeCommit = false;
   failAfterCommit = false;
   return401 = false;
@@ -77,6 +83,29 @@ class DurableFakeServer {
         nextCursor: records.at(-1)?.serverVersion ?? cursor,
         hasMore: false
       });
+    }
+    if (path.endsWith('/sync/conflicts/reconcile')) {
+      const candidate = JSON.parse(String(init?.body));
+      const key = `${candidate.entityType}:${candidate.entityId}`;
+      const previousCloud = this.records.get(key);
+      this.reconciliations.push({ candidate, previousCloud });
+      const latest = [...candidate.localHistory].sort((a: any, b: any) => b.version - a.version)[0];
+      if (latest && (!previousCloud || Date.parse(latest.updatedAt) > Date.parse(previousCloud.updatedAt))) {
+        this.records.set(key, {
+          entityType: candidate.entityType, entityId: candidate.entityId, deviceId: 'server-auto-reconcile',
+          version: Math.max(latest.version, (previousCloud?.version ?? 0) + 1), serverVersion: ++this.sequence.value,
+          payload: latest.payload, updatedAt: latest.updatedAt, deletedAt: latest.deletedAt
+        });
+      }
+      const record = this.records.get(key);
+      const index = this.conflicts.findIndex(item => item.id === candidate.conflictId);
+      if (index >= 0) this.conflicts.splice(index, 1);
+      return Response.json({ reconciled: true, receiptId: crypto.randomUUID(), candidate,
+        serverMissing: !record, record: record ? {
+          entity_type: record.entityType, entity_id: record.entityId, device_id: record.deviceId,
+          version: record.version, server_version: record.serverVersion, payload: record.payload,
+          updated_at: record.updatedAt, deleted_at: record.deletedAt
+        } : null });
     }
     if (path.endsWith('/sync/conflicts')) return Response.json({ conflicts: this.conflicts });
     return new Response(null, { status: 404 });
@@ -272,6 +301,84 @@ describe('adversarial cloud synchronization', () => {
     expect(await storageService.get(STORES.TASK_EVENTS, key)).toEqual([event]);
   });
 
+  it('rejects a pull record without its durable timestamp before advancing the cursor', async () => {
+    const key = `missing-pull-timestamp-${crypto.randomUUID()}`;
+    const invalidDependencies: CloudSyncDependencies = {
+      ...dependencies(new DurableFakeServer()),
+      fetch: async input => {
+        const path = String(input);
+        if (path.includes('/sync/pull')) {
+          return Response.json({
+            records: [{
+              entityType: 'tasks', entityId: 'remote-task', version: 1, serverVersion: 1,
+              deviceId: 'device-b', payload: task('not durable', 'remote-task'), deletedAt: null
+            }],
+            nextCursor: 1,
+            hasMore: false
+          });
+        }
+        if (path.endsWith('/sync/conflicts')) return Response.json({ conflicts: [] });
+        return new Response(null, { status: 404 });
+      }
+    };
+
+    await expect(synchronizeCloudOnce(key, invalidDependencies)).rejects.toThrow(/cursor was not advanced/i);
+    expect(normalizeSyncMeta(await storageService.get(STORES.SYNC, key)).cursor).toBe(0);
+    expect(await storageService.get(STORES.TASKS, key)).toBeUndefined();
+  });
+
+  it('preserves both conflict sides when the server acknowledges a different row', async () => {
+    const key = `conflict-ack-mismatch-${crypto.randomUUID()}`;
+    const conflictId = '99999999-9999-4999-8999-999999999999';
+    const mutationId = '88888888-8888-4888-8888-888888888888';
+    const localTask = task('local choice', 'conflicted-task');
+    const cloudTask = task('cloud choice', 'conflicted-task');
+    const meta = emptySyncMeta();
+    meta.conflicts = [{
+      id: conflictId,
+      kind: 'push-rejected',
+      entityType: 'tasks',
+      entityId: 'conflicted-task',
+      mutationId,
+      localPayload: localTask,
+      localDeletedAt: null,
+      localHistory: [{
+        mutationId,
+        payload: localTask,
+        deletedAt: null,
+        updatedAt: '2026-08-27T00:00:00.000Z',
+        version: 1
+      }],
+      serverPayload: cloudTask,
+      serverMissing: false,
+      serverDeletedAt: null,
+      serverVersion: 2,
+      createdAt: '2026-08-27T00:00:01.000Z',
+      status: 'unresolved'
+    }];
+    await storageService.set(STORES.SYNC, key, meta, 'cloud');
+    await storageService.set(STORES.TASKS, key, [localTask], 'cloud');
+    let submitted: Record<string, unknown> | undefined;
+    const mismatchDependencies: CloudSyncDependencies = {
+      ...dependencies(new DurableFakeServer()),
+      fetch: async (_input, init) => {
+        submitted = JSON.parse(String(init?.body));
+        return Response.json({
+          resolved: true,
+          conflictId: '77777777-7777-4777-8777-777777777777',
+          mutationId
+        });
+      }
+    };
+
+    await expect(resolveLocalConflict(key, conflictId, 'cloud', mismatchDependencies))
+      .rejects.toThrow(/exact conflict/i);
+    expect(submitted).toEqual({ conflictId, mutationId, choice: 'cloud' });
+    expect(normalizeSyncMeta(await storageService.get(STORES.SYNC, key)).conflicts)
+      .toHaveLength(1);
+    expect(await storageService.get(STORES.TASKS, key)).toEqual([localTask]);
+  });
+
   it('rejects duplicated acknowledgement bodies without removing the outbox', async () => {
     const key = `duplicate-response-${crypto.randomUUID()}`;
     const server = new DurableFakeServer();
@@ -307,7 +414,7 @@ describe('adversarial cloud synchronization', () => {
     expect(server.records.size).toBe(0);
   });
 
-  it('durably hydrates a PostgreSQL-only conflict on a clean client', async () => {
+  it('automatically reconciles a PostgreSQL-only conflict on a clean client', async () => {
     const key = `server-conflict-${crypto.randomUUID()}`;
     const server = new DurableFakeServer();
     server.conflicts.push({
@@ -326,17 +433,18 @@ describe('adversarial cloud synchronization', () => {
       created_at: '2026-08-27T00:00:00.000Z'
     });
 
+    server.sequence.value = 12;
+    server.records.set('tasks:valuable-task', { entityType: 'tasks', entityId: 'valuable-task',
+      deviceId: 'cloud', version: 6, serverVersion: 12, updatedAt: '2026-08-25T00:00:00Z', deletedAt: null,
+      payload: task('restored version', 'valuable-task') });
     const first = await synchronizeCloudOnce(key, dependencies(server));
-    expect(first.conflicts).toHaveLength(1);
-    expect(first.conflicts[0]).toMatchObject({
-      localPayload: expect.objectContaining({ title: 'newer pre-restore version' }),
-      serverPayload: expect.objectContaining({ title: 'restored version' }),
-      serverVersion: 12
-    });
-    expect(normalizeSyncMeta(await storageService.get(STORES.SYNC, key)).conflicts).toHaveLength(1);
-
+    expect(first.conflicts).toHaveLength(0);
+    expect(await storageService.get(STORES.TASKS, key)).toEqual([task('newer pre-restore version', 'valuable-task')]);
+    expect(server.reconciliations[0].candidate.localHistory[0].payload.title).toBe('newer pre-restore version');
+    expect(server.reconciliations[0].previousCloud?.payload).toMatchObject({ title: 'restored version' });
     const retry = await synchronizeCloudOnce(key, dependencies(server));
-    expect(retry.conflicts).toHaveLength(1);
+    expect(retry.conflicts).toHaveLength(0);
+    expect(server.reconciliations).toHaveLength(1);
   });
 
   it('preserves a create then completion before the first sync and deduplicates a repeated tap', async () => {
@@ -379,7 +487,7 @@ describe('adversarial cloud synchronization', () => {
     expect((await storageService.get<any[]>(STORES.TASKS, keyB))?.map(item => item.id).sort()).toEqual(['task-a', 'task-b']);
   });
 
-  it('preserves both same-task versions when devices complete and reschedule concurrently', async () => {
+  it('automatically converges concurrent changes by edit time while preserving both in the audit', async () => {
     const keyA = `same-a-${crypto.randomUUID()}`;
     const keyB = `same-b-${crypto.randomUUID()}`;
     const server = new DurableFakeServer();
@@ -391,27 +499,27 @@ describe('adversarial cloud synchronization', () => {
     const completed = task('shared', 'task-1', {
       completed: true,
       lifecycleStatus: 'completed',
-      completedAt: 2_000
+      completedAt: 2_000, updatedAt: 2_000
     });
     const rescheduled = task('shared', 'task-1', {
       scheduledFor: '2026-08-29',
       dateAssigned: '2026-08-29',
-      updatedAt: 3
+      updatedAt: 3_000
     });
-    storageService.stageLocalValue(STORES.TASKS, keyA, [initial], [completed]);
-    storageService.stageLocalValue(STORES.TASKS, keyB, [initial], [rescheduled]);
+    storageService.stageLocalValue(STORES.TASKS, keyA, [initial], [completed], true);
+    storageService.stageLocalValue(STORES.TASKS, keyB, [initial], [rescheduled], true);
     await synchronizeCloudOnce(keyA, dependencies(server, 'device-a'));
     const metaB = await synchronizeCloudOnce(keyB, dependencies(server, 'device-b'));
 
-    expect(metaB.conflicts).toHaveLength(1);
+    expect(metaB.conflicts).toHaveLength(0);
     expect(metaB.outbox).toHaveLength(0);
-    expect(metaB.conflicts[0].localPayload).toMatchObject({ scheduledFor: '2026-08-29' });
-    expect(metaB.conflicts[0].serverPayload).toMatchObject({ completed: true });
+    expect(server.reconciliations[0].candidate.localHistory[0].payload).toMatchObject({ scheduledFor: '2026-08-29' });
+    expect(server.reconciliations[0].previousCloud?.payload).toMatchObject({ completed: true });
     expect(await storageService.get(STORES.TASKS, keyB)).toEqual([rescheduled]);
-    expect(server.records.get('tasks:task-1')?.payload).toMatchObject({ completed: true });
+    expect(server.records.get('tasks:task-1')?.payload).toMatchObject({ scheduledFor: '2026-08-29' });
   });
 
-  it('turns a stale edit after a tombstone into a recoverable conflict instead of resurrection', async () => {
+  it('automatically keeps a newer cloud deletion and archives the stale local edit', async () => {
     const keyA = `delete-a-${crypto.randomUUID()}`;
     const keyB = `delete-b-${crypto.randomUUID()}`;
     const server = new DurableFakeServer();
@@ -422,14 +530,14 @@ describe('adversarial cloud synchronization', () => {
 
     storageService.stageLocalValue(STORES.TASKS, keyA, [initial], []);
     const staleEdit = task('stale edit', 'task-1', { updatedAt: 4 });
-    storageService.stageLocalValue(STORES.TASKS, keyB, [initial], [staleEdit]);
+    storageService.stageLocalValue(STORES.TASKS, keyB, [initial], [staleEdit], true);
     await synchronizeCloudOnce(keyA, dependencies(server, 'device-a'));
     const metaB = await synchronizeCloudOnce(keyB, dependencies(server, 'device-b'));
 
-    expect(metaB.conflicts).toHaveLength(1);
-    expect(metaB.conflicts[0].localPayload).toMatchObject({ title: 'stale edit' });
-    expect(metaB.conflicts[0].serverDeletedAt).not.toBeNull();
-    expect(await storageService.get(STORES.TASKS, keyB)).toEqual([staleEdit]);
+    expect(metaB.conflicts).toHaveLength(0);
+    expect(server.reconciliations[0].candidate.localHistory[0].payload).toMatchObject({ title: 'stale edit' });
+    expect(server.reconciliations[0].previousCloud?.deletedAt).not.toBeNull();
+    expect(await storageService.get(STORES.TASKS, keyB)).toEqual([]);
     expect(server.records.get('tasks:task-1')?.deletedAt).not.toBeNull();
   });
 });

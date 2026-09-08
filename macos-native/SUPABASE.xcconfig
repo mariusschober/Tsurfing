@@ -1,0 +1,9 @@
+// Public build settings only. Supply these through an ignored local xcconfig
+// or xcodebuild arguments. Never place sb_secret_/service-role credentials in
+// this file or any distributable target.
+SUPABASE_URL =
+SUPABASE_PUBLISHABLE_KEY =
+API_ORIGIN =
+GOALFLOW_ENVIRONMENT = unconfigured
+TELEGRAM_ENABLED = false
+TELEGRAM_OIDC_PROVIDER_ID = custom:telegram

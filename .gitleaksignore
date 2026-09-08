@@ -2,3 +2,8 @@
 # lineage. These are exact finding fingerprints, not rule or path exclusions.
 04aa5b4d97de0f626bd824c6b1c51c651cc14a1d:server/telegram/bot.adversarial.test.ts:generic-api-key:90
 bb5c7af0908dde92913795cd149a1c3ab6e3df06:server/telegram/bot.test.ts:generic-api-key:139
+
+# Retired Firebase client key in the deleted upheld-flow-201513 project.
+# Evidence: docs/security/HISTORICAL_CREDENTIAL_ACTIONS.md. This is the exact
+# historical finding only; the rule, path, and every other commit remain scanned.
+84bd036ba25d825b5fae36cb780842d9221ed097:firebase-applet-config.json:gcp-api-key:4

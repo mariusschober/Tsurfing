@@ -84,7 +84,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `goalflow_${new Date().toISOString().split('T')[0]}.goalflow-backup`;
+            link.download = `tsurfing_${new Date().toISOString().split('T')[0]}.tsurfing-backup`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -166,7 +166,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
                     </section>}
 
                     {activeSection === 'modules' && <section className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-slate-600 dark:bg-slate-700/50">
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Full Goalflow</h2>
+                        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Full Tsurfing</h2>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Every original experience is enabled for the free beta. The core workflow stays Current, Plan, Habits, Goals, and Insights.</p>
                         <div className="mt-4 grid gap-2 sm:grid-cols-2">
                             {['Timer & Pomodoro', 'Focus music', 'Circadian planning', 'Gamification', 'True North', 'Reality Navigator', 'Transurfing', 'AI workflows'].map(module => <div key={module} className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-bold text-gray-700 dark:border-slate-600 dark:bg-slate-800 dark:text-gray-200">{module}</div>)}
@@ -182,7 +182,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
                             <div>
                                 <h3 className="text-lg font-bold text-gray-800 dark:text-white">AI Features</h3>
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-sm">
-                                    Send only the selected task or goal text to the configured AI provider for breakdown, actionability review, visualization, and coaching. Goalflow never sends your complete database.
+                                    Send only the selected task or goal text to the configured AI provider for breakdown, actionability review, visualization, and coaching. Tsurfing never sends your complete database.
                                 </p>
                              </div>
                         </div>
@@ -202,7 +202,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
                     {activeSection === 'sync' && <div className="bg-gray-50 dark:bg-slate-700/50 p-4 rounded-xl border border-gray-100 dark:border-slate-600">
                         <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">Back up & Data Portability</h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                            Exports are encrypted in your browser. Your password is never stored and cannot be recovered by Goalflow.
+                            Exports are encrypted in your browser. Your password is never stored and cannot be recovered by Tsurfing.
                         </p>
                         <label className="mb-4 block">
                             <span className="mb-1 block text-sm font-bold text-gray-700 dark:text-gray-200">Backup password</span>
@@ -240,7 +240,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={handleImportFile}
-                                accept=".goalflow-backup,.json,application/json"
+                                accept=".tsurfing-backup,.goalflow-backup,.json,application/json"
                                 className="hidden"
                             />
                         </div>
@@ -361,12 +361,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, s
 
                     {activeSection === 'appearance' && <section className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-slate-600 dark:bg-slate-700/50">
                         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Appearance</h2>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Goalflow uses Inter Variable, neutral surfaces, and a restrained indigo accent. Use the header control to switch light and dark appearance.</p>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Tsurfing uses Inter Variable, neutral surfaces, and a restrained indigo accent. Use the header control to switch light and dark appearance.</p>
                     </section>}
                 </div>
                 
                 <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700 text-center">
-                    <p className="text-xs text-gray-400">Goalflow private beta v0.1.0</p>
+                    <p className="text-xs text-gray-400">Tsurfing personal beta v0.4.0-beta.1</p>
                 </div>
             </div>
         </Modal>

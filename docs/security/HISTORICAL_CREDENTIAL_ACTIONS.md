@@ -5,7 +5,7 @@ place to paste credentials. Record only non-secret identifiers and hashes.
 
 ## Historical Firebase / Google API key
 
-**Status: OWNER ACTION REQUIRED. Do not ignore this finding yet.**
+**Status: RETIRED BY PROJECT DELETION; EXACT FINDING ACKNOWLEDGED.**
 
 Forensic evidence:
 
@@ -17,33 +17,40 @@ Forensic evidence:
 - The value is therefore treated as a real Firebase client API key. Firebase
   client keys are not equivalent to a server credential, but an unrestricted
   key can still be abused for enabled Google APIs or quota consumption.
-- Full-history Gitleaks intentionally continues to fail on the exact historical
-  finding. No broad rule/path allowlist and no history rewrite has been added.
+- The owner confirmed on 2026-09-04 that the Firebase project was deleted and
+  no longer exists. The current candidate contains no Firebase configuration or
+  code. A local calculation produced only the SHA-256 fingerprint recorded
+  below; the key itself was neither printed nor transmitted.
+- `.gitleaksignore` acknowledges only the exact commit/path/rule/line finding.
+  No broad rule/path allowlist and no history rewrite has been added. Future
+  Firebase/GCP-shaped findings still fail the gate.
 
-Required owner action in the Google Cloud/Firebase console:
+Completed owner action and verification boundary:
 
-1. Locate the API key belonging to project `upheld-flow-201513` without copying
-   it into an issue, commit, chat, or CI log.
-2. If Goalflow no longer uses that Firebase project, delete/revoke the key and
-   disable unused APIs. If it is still required, rotate it when exposure or
-   usage is uncertain, restrict it to the exact required APIs, and add the
-   narrowest valid application/referrer restrictions.
-3. Review recent key usage and quotas for unexpected traffic.
-4. Record below the action date, operator, disposition, restriction scope, and
-   a one-way fingerprint only. Never record the key itself.
-5. Only after that evidence exists, add the one exact Gitleaks finding
-   fingerprint to `.gitleaksignore` with a reference to this ledger and rerun
-   the complete-history scan.
+1. Owner Marius Schober reported that project `upheld-flow-201513` was deleted
+   and no longer exists. Tsurfing has no current dependency on that project.
+2. The candidate tree was checked for tracked Firebase and Google Services
+   files; none exists. The historical file was deleted in commit `7fa5a17`.
+3. A one-way key fingerprint was computed locally from the historical commit.
+   The execution environment declined a proposed read-only Google API probe
+   because it would transmit the historical key; that independent probe was not
+   attempted again and is not claimed as evidence.
+4. Because the project has been deleted, there are no allowed APIs,
+   application restrictions, live quotas, or retained Firebase resources for
+   Tsurfing. A pre-deletion usage report was not supplied and cannot be inferred.
+5. The exact Gitleaks finding fingerprint is now acknowledged. Hosted
+   complete-history scanning remains the authority that the acknowledgement is
+   exact and no additional finding is hidden.
 
 Completion record:
 
 ```text
-Date: NOT COMPLETED
-Operator: NOT RECORDED
-Disposition (revoked / rotated / restricted): NOT RECORDED
-Allowed APIs / application restrictions: NOT RECORDED
-One-way key fingerprint: NOT RECORDED
-Usage review result: NOT RECORDED
+Date: 2026-09-04 (owner confirmation date; original console deletion timestamp unavailable)
+Operator: Marius Schober (owner attestation); Codex (local tree and fingerprint verification)
+Disposition (revoked / rotated / restricted): Firebase project upheld-flow-201513 deleted; historical client key retired
+Allowed APIs / application restrictions: None; deleted project
+One-way key fingerprint: sha256:e0cb8e2e8d8953b9c1df5cd6b481e134025678d8ed5be49c963d55530bb54913
+Usage review result: No pre-deletion usage report supplied; owner confirms project no longer exists; no credential-bearing API probe performed
 ```
 
 ## Synthetic Telegram fixtures
@@ -59,11 +66,23 @@ The remaining two `generic-api-key` findings originate only from hard-coded
   `server/telegram/bot.test.ts`, line 139.
 
 They are test-only invented strings, are not present in the canonical tree,
-and cannot authenticate to a Telegram bot or deployed Goalflow service. Their
+and cannot authenticate to a Telegram bot or deployed Tsurfing service. Their
 two exact Gitleaks fingerprints are listed in `.gitleaksignore`; the Telegram
 rule, file paths, commits, and other findings remain scanned. When Telegram is
 ported, fixtures must use conspicuously synthetic low-entropy construction so
 new commits do not require additional ignores.
+
+## Historical Android test signer
+
+**Status: RETIRED TEST-ONLY IDENTITY; DO NOT REUSE FOR BETA.**
+
+A password-like value for a temporary Android test keystore appeared in the
+current copy of a historical readiness snapshot and has been redacted. A
+complete filename audit across all refs found no tracked `.keystore`, `.jks`,
+`.p12`, `.pem`, or private-key file, so the value alone cannot sign an APK. It
+is nevertheless not acceptable beta signing material. The internal beta must
+use an externally retained key, and its expected certificate SHA-256 fingerprint
+must be configured independently before the signed-artifact workflow runs.
 
 ## History-rewrite decision
 

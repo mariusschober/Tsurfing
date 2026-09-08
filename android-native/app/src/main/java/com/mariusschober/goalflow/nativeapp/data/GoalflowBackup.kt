@@ -130,7 +130,7 @@ object GoalflowBackup {
             cipher.init(Cipher.DECRYPT_MODE, deriveKey(password, salt, iterations), GCMParameterSpec(128, iv))
             val envelopePayload = JSONObject(String(cipher.doFinal(ciphertext), StandardCharsets.UTF_8))
             val schemaVersion = envelopePayload.optInt("schemaVersion", 1)
-            if (schemaVersion !in 1..SCHEMA_VERSION) throw BackupFormatException("This backup was created by a newer Goalflow version.")
+            if (schemaVersion !in 1..SCHEMA_VERSION) throw BackupFormatException("This backup was created by a newer Tsurfing version.")
             if (schemaVersion >= 3) {
                 runCatching { Instant.parse(envelopePayload.getString("exportedAt")) }
                     .getOrElse { throw BackupFormatException("Backup export timestamp is invalid or missing.") }

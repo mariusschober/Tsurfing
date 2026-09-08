@@ -1,3 +1,4 @@
+import { parseNaturalSchedule } from '../utils/naturalSchedule';
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { PlusIcon, BrainCircuit, TrophyIcon, AxeIcon, TrashIcon, ShieldIcon, CalendarIcon } from './Icons';
@@ -124,6 +125,15 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, initialData, goals
       }
   }, [isAiEnabled]);
 
+  useEffect(() => {
+      const detected = parseNaturalSchedule(title);
+      if (detected.scheduledFor) {
+          setSchedulePrecision(detected.schedulePrecision!);
+          if (detected.schedulePrecision === 'month') setScheduledMonth(detected.scheduledFor);
+          else setDateAssigned(detected.scheduledFor);
+      }
+  }, [title]);
+
   const isEditing = !!initialData;
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -154,7 +164,10 @@ export const TaskForm: React.FC<TaskFormProps> = ({ onSubmit, initialData, goals
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!parseNaturalSchedule(title).cleanTitle.trim()) {
+        setSubmissionError('A task needs an actionable title.');
+        return;
+    }
 
     const targetSchedule = schedulePrecision === 'day' ? dateAssigned : scheduledMonth;
     const originalSchedule = initialData?.scheduledFor || initialData?.dateAssigned;

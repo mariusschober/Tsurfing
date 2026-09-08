@@ -1,15 +1,16 @@
 {
-  "package": "com.mariusschober.goalflow",
-  "versionCode": 3,
-  "versionName": "0.3.0-tranche3",
+  "status": "UNRELEASED",
+  "package": "com.mariusschober.tsurfing",
+  "versionCode": 4,
+  "versionName": "0.4.0-beta.1",
   "minSdk": 26,
   "targetSdk": 35,
-  "gitSha": "6885df57dd4c49d68206798125c895474cb0a935",
-  "buildId": "20260831T062818Z-local",
-  "apkSha256": "7fdf7e1b9fdaa1f8ae2eae94c9549326ec9ab212ee47949be2a8b2afd763f69a",
-  "aabSha256": "0e559b7c5d9977e3e443fa24276293090e3ff12940fc07fa23547acd43e3cef4",
-  "certSha256": "061e051e6e2d8f72bd99cc8ded13e1dc65490819fde5c31261b18e6e644aaae0",
-  "apkSize": 2279035,
-  "aabSize": 4738045,
-  "buildTime": "2026-08-31T06:28:18Z"
+  "gitSha": null,
+  "buildId": null,
+  "apkSha256": null,
+  "aabSha256": null,
+  "certSha256": null,
+  "apkSize": null,
+  "aabSize": null,
+  "buildTime": null
 }

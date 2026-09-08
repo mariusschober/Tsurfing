@@ -1,0 +1,393 @@
+{
+  "baseline": "6f750a712f253754bfac840d8edc5d846b360b7d",
+  "originalImplementation": "3727aae4444f6815363b04a4a32a1fabf50e2b80",
+  "stats": {
+    "startTime": "2026-09-08T01:36:26.392Z",
+    "duration": 42797.957,
+    "expected": 30,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "tests": [
+    {
+      "title": "tap navigation, inline stations, theme and account actions",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 931
+        }
+      ]
+    },
+    {
+      "title": "tap navigation, inline stations, theme and account actions",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 1503
+        }
+      ]
+    },
+    {
+      "title": "light: all 15 widths fit with labelled navigation, targets and unclipped panels",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 4121
+        }
+      ]
+    },
+    {
+      "title": "dark: all 15 widths fit with labelled navigation, targets and unclipped panels",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 3078
+        }
+      ]
+    },
+    {
+      "title": "keyboard containment, dismissal, Search and Settings transfer and restore focus",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 804
+        }
+      ]
+    },
+    {
+      "title": "open panels reflow during rotation and dismiss when their header layout changes",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 581
+        }
+      ]
+    },
+    {
+      "title": "radio playback, station and volume survive Menu, resizing and the hidden header",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 976
+        }
+      ]
+    },
+    {
+      "title": "short landscapes, long text, enlarged text and reduced motion keep panels usable",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 1339
+        }
+      ]
+    },
+    {
+      "title": "primary destinations, Insights/Done and overdue navigation restrictions remain intact",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 863
+        }
+      ]
+    },
+    {
+      "title": "Plan and Current share mode; cancelling check-in and using Manual retain existing behavior",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 655
+        }
+      ]
+    },
+    {
+      "title": "opening Menu and crossing breakpoints preserve the active task and focus session",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 1459
+        }
+      ]
+    },
+    {
+      "title": "light: all 15 widths fit with labelled navigation, targets and unclipped panels",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 7472
+        }
+      ]
+    },
+    {
+      "title": "dark: all 15 widths fit with labelled navigation, targets and unclipped panels",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 5881
+        }
+      ]
+    },
+    {
+      "title": "keyboard containment, dismissal, Search and Settings transfer and restore focus",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 1394
+        }
+      ]
+    },
+    {
+      "title": "open panels reflow during rotation and dismiss when their header layout changes",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 1197
+        }
+      ]
+    },
+    {
+      "title": "radio playback, station and volume survive Menu, resizing and the hidden header",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 3176
+        }
+      ]
+    },
+    {
+      "title": "short landscapes, long text, enlarged text and reduced motion keep panels usable",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 2584
+        }
+      ]
+    },
+    {
+      "title": "primary destinations, Insights/Done and overdue navigation restrictions remain intact",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 2241
+        }
+      ]
+    },
+    {
+      "title": "Plan and Current share mode; cancelling check-in and using Manual retain existing behavior",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 1456
+        }
+      ]
+    },
+    {
+      "title": "opening Menu and crossing breakpoints preserve the active task and focus session",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 2413
+        }
+      ]
+    },
+    {
+      "title": "capture, schedule, reorder, confirm, complete, and reload persist exactly",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 2508
+        }
+      ]
+    },
+    {
+      "title": "service worker controls the app and supported offline behavior is durable",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 623
+        }
+      ]
+    },
+    {
+      "title": "saved tasks are isolated between browser profiles",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 1292
+        }
+      ]
+    },
+    {
+      "title": "manifest, service worker, and required icons are served",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 440
+        }
+      ]
+    },
+    {
+      "title": "capture, schedule, reorder, confirm, complete, and reload persist exactly",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 3296
+        }
+      ]
+    },
+    {
+      "title": "service worker controls the app and supported offline behavior is durable",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 1823
+        }
+      ]
+    },
+    {
+      "title": "saved tasks are isolated between browser profiles",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 2532
+        }
+      ]
+    },
+    {
+      "title": "manifest, service worker, and required icons are served",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 887
+        }
+      ]
+    },
+    {
+      "title": "natural-language capture previews and persists month planning",
+      "project": "chromium",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 1013
+        }
+      ]
+    },
+    {
+      "title": "natural-language capture previews and persists month planning",
+      "project": "webkit",
+      "status": "expected",
+      "results": [
+        {
+          "status": "passed",
+          "retry": 0,
+          "durationMs": 2060
+        }
+      ]
+    }
+  ],
+  "sourceSha256": {
+    "App.tsx": "fcc36dc5929c469d9ab39a4f64260d65d104499015fedd5fbe3bf6135158d237",
+    "components/AppHeader.tsx": "45a0f4872377acf9ded62c83cc61a2658de72a66ec77b7cf6c6ad58a388662c5",
+    "components/DeepWorkPlayer.tsx": "7f1a25de36afe6057a1b22175dd87c09d0efd30d76bef5c652bbfd972ba9b28a",
+    "components/Logo.tsx": "a98221de31d6001ca921a47edde0754822aa3d8d950b5be3679ca71996f9fb55",
+    "components/Modal.tsx": "818e76cdcdeb10b5ae0d6896942f7ac1b033226aefb95706e804a849bf4b7a13",
+    "components/ModeSelector.tsx": "9636c72a3810be01c545145bcb5771afb244634e80962377a5729c374555b2a8",
+    "components/PlanningView.tsx": "9bba7f39d13a5174d2b97529d8ecbddcf43da0f2bdfa5ad1bf570bdd7b747293",
+    "components/SyncStatus.tsx": "192b4a78b1df8215a3a5108a0d5170f0f2bac912bedb31800f79e82474bbfdce",
+    "index.css": "2c923ba08307eb9bc9e267fedc9be08e512eceb1bf767db48e8658ff99262bae",
+    "index.tsx": "b0742a923a01945dce143949d9619c1d2d9883e837a431081b0d9bc9620e86de",
+    "tests/browser/navigationHarness.ts": "23f7bf7051eda824e3adcfa716d5c5149f417d6958f8a28aa24dbe977cf70cef",
+    "tests/e2e/navigation-responsive.spec.ts": "1529a29f4ec613472dbfd415bec08bbce72f705f9000b1e6820c859a9dc268ac",
+    "playwright.navigation.config.ts": "18ef94dd6001e1ecf20e937e3e8d72c351aeb7921a18b5bca15530896c56e31a"
+  },
+  "unitTests": {
+    "files": 65,
+    "passed": 388
+  }
+}

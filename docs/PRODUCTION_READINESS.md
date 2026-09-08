@@ -115,7 +115,7 @@ Local gates are green at `27eacbb`; hosted matrix `api [26,30,33,35]` and Tranch
 
 **Status:** Tranche 3A-C green locally, 3D-F green on device T807D_EEA (ZXKRS4VKGQ8PWGEQ, Android 16, api 36). Tranche 3 gate requires signed artifacts + clean-install + upgrade + owner-device. Local evidence below; hosted CI pending (billing).
 
-- **Signing:** `android-native/app/build.gradle:34` and `android/app/build.gradle:12` now `signingConfigs.release` guarded by `ANDROID_KEYSTORE_BASE64`/`gradle.properties` (`/tmp/goalflow-release.keystore`, `goalflow123`, `CN=Goalflow`), `buildTypes.release.signingConfig = signingConfigs.release`, `enableV1/V2 true`. `android-native/scripts/test-signing.sh` `apksigner verify --print-certs` shows `CN=Goalflow` `SHA-256 061e051e6e2d8f72bd99cc8ded13e1dc65490819fde5c31261b18e6e644aaae0` (not debug). **Evidence:** `apksigner verify v2 true, CN=Goalflow` on `app-production-release.apk` 2.0M and `app-production-release.aab` 4.3M.
+- **Signing:** `android-native/app/build.gradle:34` and `android/app/build.gradle:12` used a temporary historical test signer. Its password-like test value has been removed from the current tree, and that signer is not authorized for beta use. The current release path requires externally retained `ANDROID_KEYSTORE_*` values and an independently recorded expected certificate fingerprint.
 
 - **AAB:** `./android-native/gradlew -p android-native bundleProductionRelease` `BUILD SUCCESSFUL` `app-production-release.aab` 4.3M (`android-native/app/build/outputs/bundle/productionRelease/`), `bundletool validate` implicit. **Evidence:** `ls -lh .../bundle/productionRelease/*.aab` 4.3M.
 

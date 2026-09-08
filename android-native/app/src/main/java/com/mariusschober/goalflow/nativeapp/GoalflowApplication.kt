@@ -7,6 +7,7 @@ import com.mariusschober.goalflow.nativeapp.data.GoalflowFocusSessionStore
 import com.mariusschober.goalflow.nativeapp.data.GoalflowRepository
 import com.mariusschober.goalflow.nativeapp.sync.NativeSyncEngine
 import com.mariusschober.goalflow.nativeapp.sync.NativeConfig
+import com.mariusschober.goalflow.nativeapp.sync.NativeForegroundSyncCoordinator
 import com.mariusschober.goalflow.nativeapp.sync.NativeSyncScheduler
 import com.mariusschober.goalflow.nativeapp.sync.SecureSessionStore
 import com.mariusschober.goalflow.nativeapp.widget.GoalflowWidgetUpdater
@@ -35,6 +36,7 @@ class GoalflowApplication : Application() {
             deviceId = deviceId,
             onMutation = {
                 runCatching { NativeSyncScheduler.schedule(this) }
+                runCatching { foregroundSyncCoordinator.requestSync() }
                 GoalflowWidgetUpdater.refresh(this)
             },
             syncBindingProvider = {
@@ -47,6 +49,9 @@ class GoalflowApplication : Application() {
         )
     }
     val syncEngine: NativeSyncEngine by lazy { NativeSyncEngine(repository, sessionStore) }
+    val foregroundSyncCoordinator: NativeForegroundSyncCoordinator by lazy {
+        NativeForegroundSyncCoordinator(this, syncEngine, sessionStore)
+    }
 
     override fun onCreate() {
         super.onCreate()

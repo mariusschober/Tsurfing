@@ -51,7 +51,7 @@ export const MfaGate: React.FC<{
     try {
       const { data, error: enrollmentError } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
-        friendlyName: 'Goalflow owner'
+        friendlyName: 'Tsurfing owner'
       });
       if (enrollmentError) throw enrollmentError;
       setEnrollment({ factorId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret });
@@ -96,7 +96,7 @@ export const MfaGate: React.FC<{
         </h1>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           {needsEnrollment
-            ? 'Owner administration requires a verified authenticator before Goalflow data can be opened.'
+            ? 'Owner administration requires a verified authenticator before Tsurfing data can be opened.'
             : 'Open your authenticator app and enter the current six-digit code.'}
         </p>
 

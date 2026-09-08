@@ -23,6 +23,7 @@ class NativeSyncWorkerPolicyTest {
 
     @Test
     fun `authentication and protocol failures never retry forever`() {
+        assertEquals(NativeSyncFailureDisposition.STOP, nativeSyncFailureDisposition(NativeSyncMfaRequired(), 0))
         assertEquals(
             NativeSyncFailureDisposition.STOP,
             nativeSyncFailureDisposition(AuthenticationExpiredDuringSync(), runAttemptCount = 0)

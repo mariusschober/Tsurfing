@@ -28,10 +28,35 @@ begin
   cross join (values ('anon'), ('authenticated')) client_role(role_name)
   where namespace_row.nspname = 'public'
     and table_row.relkind in ('r', 'p')
+    and not (
+      client_role.role_name = 'authenticated'
+      and table_row.relname = 'sync_wakeup_state'
+    )
     and has_table_privilege(client_role.role_name, table_row.oid, 'SELECT,INSERT,UPDATE,DELETE')
   limit 1;
   if client_table_privilege is not null then
     raise exception 'Client role retains direct application-table privileges: %', client_table_privilege;
+  end if;
+  if has_table_privilege('anon', 'public.sync_wakeup_state', 'SELECT')
+    or has_table_privilege('anon', 'public.sync_wakeup_state', 'INSERT')
+    or has_table_privilege('anon', 'public.sync_wakeup_state', 'UPDATE')
+    or has_table_privilege('anon', 'public.sync_wakeup_state', 'DELETE') then
+    raise exception 'Anonymous clients can access sync wake-up state';
+  end if;
+  if not has_table_privilege('authenticated', 'public.sync_wakeup_state', 'SELECT')
+    or has_table_privilege('authenticated', 'public.sync_wakeup_state', 'INSERT')
+    or has_table_privilege('authenticated', 'public.sync_wakeup_state', 'UPDATE')
+    or has_table_privilege('authenticated', 'public.sync_wakeup_state', 'DELETE') then
+    raise exception 'Authenticated sync wake-up grants are not read-only';
+  end if;
+  if not (
+    select table_row.relrowsecurity and table_row.relforcerowsecurity
+    from pg_catalog.pg_class table_row
+    join pg_catalog.pg_namespace namespace_row on namespace_row.oid = table_row.relnamespace
+    where namespace_row.nspname = 'public'
+      and table_row.relname = 'sync_wakeup_state'
+  ) then
+    raise exception 'Sync wake-up state does not force RLS';
   end if;
   if exists (
     select 1

@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Goalflow data contains private commitments. Only the explicit
+    <!-- Tsurfing data contains private commitments. Only the explicit
          encrypted in-app backup flow may export it. -->
     <application
         android:name=".GoalflowApplication"
@@ -29,7 +30,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
-                    android:scheme="goalflow"
+                    android:scheme="tsurfing"
                     android:host="auth"
                     android:path="/callback" />
             </intent-filter>
@@ -39,7 +40,7 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.mariusschober.goalflow.CAPTURE" />
+                <action android:name="com.mariusschober.tsurfing.CAPTURE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>

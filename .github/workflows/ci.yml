@@ -2,14 +2,37 @@ name: Beta Gate
 
 on:
   push:
-    branches: [main, develop, goalflow-production, "reconcile/**", "integration/**"]
+    branches: [main, develop, goalflow-production, "reconcile/**", "integration/**", "feat/**", "fix/**", "chore/**"]
   pull_request:
     branches: [main, develop, goalflow-production, "reconcile/**", "integration/**"]
 
 permissions:
   contents: read
 
+# Keep the newest candidate authoritative without cancelling work on another
+# branch or pull request. A cancelled superseded run is never release evidence;
+# the latest commit must still complete every required job.
+concurrency:
+  group: beta-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  dependency-audit:
+    name: dependency-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Scan exact npm lockfile with OSV
+        uses: google/osv-scanner-action/osv-scanner-action@baa4139e56d6312335d899e6ba045fa16d1d3d0b # v2.5.1
+        with:
+          scan-args: |-
+            --lockfile=package-lock.json
+            --allow-no-lockfiles=false
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -30,7 +53,6 @@ jobs:
       - run: node scripts/verify-migration-hashes.mjs
       - run: node scripts/verify-room-schema-hashes.mjs
       - run: node scripts/check-durable-identifiers.mjs
-      - run: npm audit --audit-level=high
       - name: Verify production startup
         run: npm run verify:server
       - name: Verify one-shot maintenance fails closed
@@ -52,25 +74,32 @@ jobs:
           GITLEAKS_ENABLE_COMMENTS: false
       - name: Scan complete history and candidate tree
         run: |
+          set -euo pipefail
           echo "Scanning complete Git history and candidate HEAD $(git rev-parse HEAD)"
-          gitleaks git --config .gitleaks.toml --redact --verbose --log-opts="--all" .
-          gitleaks dir --config .gitleaks.toml --redact --verbose .
+          history_status=0
+          tree_status=0
+          gitleaks git --config .gitleaks.toml --redact --verbose --log-opts="--all" . || history_status=$?
+          gitleaks dir --config .gitleaks.toml --redact --verbose . || tree_status=$?
+          if [ "$history_status" -ne 0 ] || [ "$tree_status" -ne 0 ]; then
+            echo "Secret scan failed: history_status=$history_status tree_status=$tree_status" >&2
+            exit 1
+          fi
 
   migrations:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17@sha256:67f41722b7a8cbdb868a44a4995c846eddfdc2973bccb291ce937dce88ad5675
         env:
           POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
+          --health-cmd pg_isready
+          --health-interval 10s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 5
     env:
       PGHOST: 127.0.0.1
       PGPORT: 5432
@@ -85,6 +114,15 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Verify PostgreSQL 17 service
+        run: |
+          set -euo pipefail
+          server_major="$(psql --tuples-only --no-align --command='show server_version_num' | cut -c1-2)"
+          [ "$server_major" = "17" ] || {
+            echo "The migration gate requires PostgreSQL 17; service reported major $server_major." >&2
+            exit 1
+          }
+          pg_isready --host="$PGHOST" --port="$PGPORT" --username="$PGUSER"
       - run: npm ci
       - run: npm run verify:migrations
       - run: node scripts/verify-migration-hashes.mjs
@@ -119,6 +157,7 @@ jobs:
       # but must not publish an artifact that can be mistaken for an authorized release.
       - name: Compile production release (unsigned, no secrets required)
         run: |
+          set -euo pipefail
           cd android
           ./gradlew assembleProductionRelease -PgoalflowSkipSigning=true
           apk="$(find app/build/outputs/apk/production/release -name '*-unsigned.apk' -print -quit)"
@@ -133,14 +172,14 @@ jobs:
       - name: Upload production debug APK (TEST-ONLY, not a release)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: goalflow-production-debug-apk-TEST-ONLY
+          name: tsurfing-production-debug-apk-TEST-ONLY
           path: android/app/build/outputs/apk/production/debug/app-production-debug.apk
           if-no-files-found: error
 
   native-android:
     needs: verify
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -159,7 +198,7 @@ jobs:
           key: ${{ runner.os }}-gradle-native-${{ hashFiles('android-native/**/*.gradle*', 'android-native/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-native-
-      - run: chmod +x android-native/gradlew android-native/scripts/diagnose-apk.sh android-native/scripts/test-apk-path-handoff.sh android-native/scripts/test-public-key-gate.sh android-native/scripts/test-room-schema-assets.sh android-native/scripts/verify-signing-strict.sh
+      - run: chmod +x android-native/gradlew android-native/scripts/diagnose-apk.sh android-native/scripts/run-emulator-gate.sh android-native/scripts/run-instrumentation-apk.sh android-native/scripts/test-apk-path-handoff.sh android-native/scripts/test-installed-app-launch.sh android-native/scripts/test-instrumentation-apk-runner.sh android-native/scripts/test-instrumentation-target.sh android-native/scripts/test-public-key-gate.sh android-native/scripts/test-room-schema-assets.sh android-native/scripts/verify-installed-app-launch.sh android-native/scripts/verify-instrumentation-target.sh android-native/scripts/verify-signing-strict.sh
       - name: Prove release signing checks fail closed
         run: bash android-native/scripts/test-signing-gate.sh
       - name: Prove Android rejects Supabase server secrets
@@ -168,6 +207,12 @@ jobs:
         run: bash android-native/scripts/test-diagnose-apk.sh
       - name: Run APK path handoff regression test
         run: sh android-native/scripts/test-apk-path-handoff.sh
+      - name: Run installed instrumentation target regression test
+        run: sh android-native/scripts/test-instrumentation-target.sh
+      - name: Run installed app launch regression test
+        run: sh android-native/scripts/test-installed-app-launch.sh
+      - name: Run instrumentation APK runner regression test
+        run: sh android-native/scripts/test-instrumentation-apk-runner.sh
       - name: Run Room schema asset regression test
         run: sh android-native/scripts/test-room-schema-assets.sh
       - name: Verify Room schema hashes
@@ -186,6 +231,7 @@ jobs:
       # Compile production release unsigned; ordinary CI must not require signing secrets
       - name: Compile native production release (unsigned, no secrets)
         run: |
+          set -euo pipefail
           ./android-native/gradlew -p android-native assembleProductionRelease -PgoalflowSkipSigning=true
           apk="$(find android-native/app/build/outputs/apk/production/release -name '*-unsigned.apk' -print -quit)"
           [ -n "$apk" ] && [ -f "$apk" ] || { echo "Unsigned native production release APK was not produced." >&2; exit 1; }
@@ -197,21 +243,52 @@ jobs:
           fi
           echo "Unsigned native production release compiled and verified: $apk"
       - run: ./android-native/gradlew -p android-native assembleSandboxDebug
+      - name: Build preserved v2 schema upgrade fixture under Tsurfing package (TEST-ONLY)
+        run: |
+          set -euo pipefail
+          old_source="$RUNNER_TEMP/goalflow-native-v2-source"
+          expected_old_commit="02e7280fb4162e6ac9436638f29e69acf9dcb1fb"
+          git worktree add --detach "$old_source" "$expected_old_commit"
+          [ "$(git -C "$old_source" rev-parse HEAD)" = "$expected_old_commit" ] || {
+            echo "Preserved v2 worktree is not at the required commit." >&2
+            exit 1
+          }
+          old_build="$old_source/android-native/app/build.gradle"
+          sed -i 's/applicationId "com.mariusschober.goalflow"/applicationId "com.mariusschober.tsurfing"/' "$old_build"
+          grep -Fq 'applicationId "com.mariusschober.tsurfing"' "$old_build" || {
+            echo "The historical v2 schema fixture was not rebound to the Tsurfing package." >&2
+            exit 1
+          }
+          fixture_dir="$old_source/android-native/app/src/androidTest/java/com/mariusschober/goalflow/nativeapp/data"
+          mkdir -p "$fixture_dir"
+          cp android-native/upgrade-fixtures/PriorInstallUpgradeSeedTest.kt "$fixture_dir/"
+          "$old_source/android-native/gradlew" -p "$old_source/android-native" \
+            assembleProductionDebug assembleProductionDebugAndroidTest
+          old_apk="$(find "$old_source/android-native/app/build/outputs/apk/production/debug" \
+            -type f -name '*.apk' -print -quit)"
+          old_test_apk="$(find "$old_source/android-native/app/build/outputs/apk/androidTest/production/debug" \
+            -type f -name '*.apk' -print -quit)"
+          [ -n "$old_apk" ] && [ -f "$old_apk" ] || { echo "Preserved v2 APK was not produced." >&2; exit 1; }
+          [ -n "$old_test_apk" ] && [ -f "$old_test_apk" ] || { echo "Preserved v2 seed test APK was not produced." >&2; exit 1; }
+          echo "GOALFLOW_UPGRADE_FROM_APK=$old_apk" >> "$GITHUB_ENV"
+          echo "GOALFLOW_UPGRADE_SEED_TEST_APK=$old_test_apk" >> "$GITHUB_ENV"
       - name: Upload native Room schemas
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: goalflow-native-room-schemas
+          name: tsurfing-native-room-schemas
           path: android-native/app/schemas
           if-no-files-found: error
       - name: Diagnose native production debug APK bytes (TEST-ONLY)
         env:
           GOALFLOW_APK_LABEL: TEST-ONLY
         run: |
+          set -euo pipefail
           apk="$(find "$GITHUB_WORKSPACE/android-native/app/build/outputs/apk/production/debug" -name '*.apk' -print -quit)"
           [ -n "$apk" ] && [ -f "$apk" ] || { echo "Production debug APK was not found before diagnostic." >&2; exit 1; }
           android-native/scripts/diagnose-apk.sh "$apk"
       - name: Reclaim runner disk for emulator
         run: |
+          ./android-native/gradlew -p android-native --stop
           sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/powershell
           sudo rm -rf /usr/local/lib/android/sdk/ndk /usr/local/lib/android/sdk/cmake
           sudo rm -rf /usr/local/lib/android/sdk/system-images/*
@@ -229,19 +306,24 @@ jobs:
           heap-size: 512M
           disable-animations: true
           working-directory: ${{ github.workspace }}
-          script: |
-            sleep 45
-            apk="android-native/app/build/outputs/apk/production/debug/app-production-debug.apk"; [ -n "$apk" ] && [ -f "$apk" ] || { echo "Production debug APK path handoff is invalid inside emulator action." >&2; exit 1; }; GOALFLOW_APK_LABEL=TEST-ONLY GOALFLOW_ALLOW_TEST_APP_DATA_ERASE=1 DIAGNOSE_APK_INSTALL=1 android-native/scripts/diagnose-apk.sh "$apk" && ./android-native/gradlew -p android-native :app:connectedProductionDebugAndroidTest
+          script: GOALFLOW_ALLOW_TEST_APP_DATA_ERASE=1 android-native/scripts/run-emulator-gate.sh
+      - name: Upload native launch diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-launch-diagnostics
+          path: android-native/build/launch-diagnostics
+          if-no-files-found: warn
       - name: Upload native production debug APK (TEST-ONLY, not a release)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: goalflow-native-production-debug-apk-TEST-ONLY
+          name: tsurfing-native-production-debug-apk-TEST-ONLY
           path: android-native/app/build/outputs/apk/production/debug/*.apk
           if-no-files-found: error
       - name: Upload native sandbox debug APK
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: goalflow-native-sandbox-debug-apk-TEST-ONLY
+          name: tsurfing-native-sandbox-debug-apk-TEST-ONLY
           path: android-native/app/build/outputs/apk/sandbox/debug/*.apk
           if-no-files-found: error
 
@@ -264,6 +346,7 @@ jobs:
       - run: npm run verify:migrations
       - run: node scripts/verify-migration-hashes.mjs
       - run: npm run build:client
+      - run: npm run build:mini
       - run: npm run build:server
       - name: Verify production startup
         run: npm run verify:server
@@ -271,7 +354,6 @@ jobs:
         run: npm run verify:maintenance
       - run: npm run verify:client-secrets
       - run: npm run verify:client-artifacts
-      - run: npm audit --audit-level=high
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium webkit
       - name: Run Playwright web-critical journeys (chromium + webkit)
@@ -298,19 +380,514 @@ jobs:
           path: test-results
           if-no-files-found: ignore
 
+  macos:
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify macOS public configuration
+        run: macos-native/scripts/verify-public-config.sh
+      - name: Validate macOS property lists
+        run: |
+          plutil -lint macos-native/GoalflowMac/Resources/Info.plist
+          plutil -lint macos-native/GoalflowMac/Resources/PrivacyInfo.xcprivacy
+      - name: Parse XcodeGen project specification
+        run: ruby -e 'require "yaml"; abort unless YAML.parse_file("macos-native/project.yml")'
+      - name: Verify checked-in Xcode source membership
+        run: bash macos-native/scripts/verify-project-sources.sh
+      - name: Record Xcode toolchain
+        run: |
+          xcodebuild -version
+          xcodebuild -project macos-native/GoalflowMac.xcodeproj -list
+      - name: Run macOS unit tests
+        run: |
+          xcodebuild test \
+            -project macos-native/GoalflowMac.xcodeproj \
+            -scheme GoalflowMac \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/goalflow-macos-tests" \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Build ad-hoc signed macOS beta candidate
+        run: |
+          set -euo pipefail
+          xcodebuild clean build \
+            -project macos-native/GoalflowMac.xcodeproj \
+            -scheme GoalflowMac \
+            -configuration Release \
+            -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/goalflow-macos-release" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY=- \
+            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGNING_REQUIRED=YES
+          app="$RUNNER_TEMP/goalflow-macos-release/Build/Products/Release/Tsurfing.app"
+          [ -d "$app" ] || { echo "macOS application bundle was not produced." >&2; exit 1; }
+          codesign --verify --deep --strict "$app"
+          macos-native/scripts/verify-built-app-key.sh "$app"
+          archive="$RUNNER_TEMP/tsurfing-macos-ad-hoc-beta.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "$archive"
+          (
+            cd "$RUNNER_TEMP"
+            shasum -a 256 tsurfing-macos-ad-hoc-beta.zip > tsurfing-macos-ad-hoc-beta.zip.sha256
+            shasum -a 256 --check tsurfing-macos-ad-hoc-beta.zip.sha256
+          )
+          checked_out_commit="$(git rev-parse HEAD)"
+          printf 'commit=%s\nsigning=ad-hoc\nnotarization=not-requested\n' "$checked_out_commit" \
+            > "$RUNNER_TEMP/tsurfing-macos-ad-hoc-beta.provenance.txt"
+      - name: Upload ad-hoc signed macOS beta candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: tsurfing-macos-ad-hoc-beta
+          path: |
+            ${{ runner.temp }}/tsurfing-macos-ad-hoc-beta.zip
+            ${{ runner.temp }}/tsurfing-macos-ad-hoc-beta.zip.sha256
+            ${{ runner.temp }}/tsurfing-macos-ad-hoc-beta.provenance.txt
+          if-no-files-found: error
+      - name: Upload macOS result bundles on failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: macos-test-results
+          path: ${{ runner.temp }}/goalflow-macos-tests/Logs/Test
+          if-no-files-found: ignore
+
+  hosted-staging:
+    name: hosted-staging
+    needs: [verify, migrations]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CANDIDATE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+      GOALFLOW_EXPECTED_RELEASE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      GOALFLOW_HOSTED_TEST_CONFIRM: staging
+      GOALFLOW_STAGING_APP_ORIGIN: ${{ secrets.GOALFLOW_STAGING_APP_ORIGIN }}
+      GOALFLOW_STAGING_SUPABASE_URL: ${{ secrets.GOALFLOW_STAGING_SUPABASE_URL }}
+      GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY }}
+      GOALFLOW_STAGING_USER_A_EMAIL: ${{ secrets.GOALFLOW_STAGING_USER_A_EMAIL }}
+      GOALFLOW_STAGING_USER_A_PASSWORD: ${{ secrets.GOALFLOW_STAGING_USER_A_PASSWORD }}
+      GOALFLOW_STAGING_USER_A_ID: ${{ secrets.GOALFLOW_STAGING_USER_A_ID }}
+      GOALFLOW_STAGING_USER_B_EMAIL: ${{ secrets.GOALFLOW_STAGING_USER_B_EMAIL }}
+      GOALFLOW_STAGING_USER_B_PASSWORD: ${{ secrets.GOALFLOW_STAGING_USER_B_PASSWORD }}
+      GOALFLOW_STAGING_USER_B_ID: ${{ secrets.GOALFLOW_STAGING_USER_B_ID }}
+    steps:
+      - name: Require complete staging configuration on release candidates
+        id: preflight
+        run: |
+          set -euo pipefail
+          names=(
+            GOALFLOW_STAGING_APP_ORIGIN
+            GOALFLOW_STAGING_SUPABASE_URL
+            GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY
+            GOALFLOW_STAGING_USER_A_EMAIL
+            GOALFLOW_STAGING_USER_A_PASSWORD
+            GOALFLOW_STAGING_USER_A_ID
+            GOALFLOW_STAGING_USER_B_EMAIL
+            GOALFLOW_STAGING_USER_B_PASSWORD
+            GOALFLOW_STAGING_USER_B_ID
+          )
+          missing=0
+          for name in "${names[@]}"; do
+            if [ -z "${!name:-}" ]; then missing=$((missing + 1)); fi
+          done
+          if [ "$missing" -gt 0 ] && [ "$missing" -lt "${#names[@]}" ]; then
+            echo "Hosted staging configuration is partial; refusing to skip or run ambiguously." >&2
+            exit 1
+          fi
+          if [ "$missing" -eq "${#names[@]}" ]; then
+            case "$CANDIDATE_REF" in
+              main|develop|integration/*)
+                echo "Hosted staging configuration is mandatory for $CANDIDATE_REF." >&2
+                exit 1
+                ;;
+              *)
+                echo "run=false" >> "$GITHUB_OUTPUT"
+                echo "Hosted staging is not configured for this short-lived branch."
+                exit 0
+                ;;
+            esac
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+      - if: steps.preflight.outputs.run == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - if: steps.preflight.outputs.run == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.preflight.outputs.run == 'true'
+        run: npm ci
+      - name: Prove hosted authentication, isolation, synchronization, and revocation
+        if: steps.preflight.outputs.run == 'true'
+        run: npm run test:hosted:staging
+      - name: Install hosted browser
+        if: steps.preflight.outputs.run == 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Prove hosted browser convergence and account isolation
+        if: steps.preflight.outputs.run == 'true'
+        run: npm run test:hosted:browser
+      - name: Upload redacted hosted browser diagnostics on failure
+        if: failure() && steps.preflight.outputs.run == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: hosted-browser-diagnostics
+          path: test-results
+          if-no-files-found: error
+
+  hosted-cross-client:
+    name: hosted-cross-client
+    needs: [hosted-staging, native-android, macos]
+    if: always()
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      CANDIDATE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+      GOALFLOW_HOSTED_TEST_CONFIRM: staging
+      GOALFLOW_STAGING_APP_ORIGIN: ${{ secrets.GOALFLOW_STAGING_APP_ORIGIN }}
+      GOALFLOW_STAGING_SUPABASE_URL: ${{ secrets.GOALFLOW_STAGING_SUPABASE_URL }}
+      GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY }}
+      GOALFLOW_STAGING_USER_A_EMAIL: ${{ secrets.GOALFLOW_STAGING_USER_A_EMAIL }}
+      GOALFLOW_STAGING_USER_A_PASSWORD: ${{ secrets.GOALFLOW_STAGING_USER_A_PASSWORD }}
+      GOALFLOW_STAGING_USER_A_ID: ${{ secrets.GOALFLOW_STAGING_USER_A_ID }}
+      GOALFLOW_STAGING_USER_B_EMAIL: ${{ secrets.GOALFLOW_STAGING_USER_B_EMAIL }}
+      GOALFLOW_STAGING_USER_B_PASSWORD: ${{ secrets.GOALFLOW_STAGING_USER_B_PASSWORD }}
+      GOALFLOW_STAGING_USER_B_ID: ${{ secrets.GOALFLOW_STAGING_USER_B_ID }}
+    steps:
+      - name: Require complete cross-client configuration on release candidates
+        id: preflight
+        run: |
+          set -euo pipefail
+          for result in \
+            "hosted-staging=${{ needs.hosted-staging.result }}" \
+            "native-android=${{ needs.native-android.result }}" \
+            "macos=${{ needs.macos.result }}"; do
+            case "$result" in
+              *=success) ;;
+              *) echo "Cross-client prerequisite failed: $result" >&2; exit 1 ;;
+            esac
+          done
+          names=(
+            GOALFLOW_STAGING_APP_ORIGIN
+            GOALFLOW_STAGING_SUPABASE_URL
+            GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY
+            GOALFLOW_STAGING_USER_A_EMAIL
+            GOALFLOW_STAGING_USER_A_PASSWORD
+            GOALFLOW_STAGING_USER_A_ID
+            GOALFLOW_STAGING_USER_B_EMAIL
+            GOALFLOW_STAGING_USER_B_PASSWORD
+            GOALFLOW_STAGING_USER_B_ID
+          )
+          missing=0
+          for name in "${names[@]}"; do
+            if [ -z "${!name:-}" ]; then missing=$((missing + 1)); fi
+          done
+          if [ "$missing" -gt 0 ] && [ "$missing" -lt "${#names[@]}" ]; then
+            echo "Cross-client staging configuration is partial; refusing to run ambiguously." >&2
+            exit 1
+          fi
+          if [ "$missing" -eq "${#names[@]}" ]; then
+            case "$CANDIDATE_REF" in
+              main|develop|integration/*)
+                echo "Hosted cross-client proof is mandatory for $CANDIDATE_REF." >&2
+                exit 1
+                ;;
+              *)
+                echo "run=false" >> "$GITHUB_OUTPUT"
+                echo "Hosted cross-client proof is not configured for this short-lived branch."
+                exit 0
+                ;;
+            esac
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+      - if: steps.preflight.outputs.run == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - if: steps.preflight.outputs.run == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - if: steps.preflight.outputs.run == 'true'
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Configure private cross-client handoff path
+        if: steps.preflight.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          printf 'GOALFLOW_CROSS_CLIENT_STATE_FILE=%s\n' \
+            "$RUNNER_TEMP/goalflow-cross-client-state.json" >> "$GITHUB_ENV"
+          printf 'GOALFLOW_CROSS_CLIENT_MACOS_PROOF_FILE=%s\n' \
+            "$RUNNER_TEMP/goalflow-cross-client-macos-proof.json" >> "$GITHUB_ENV"
+          printf 'GOALFLOW_CROSS_CLIENT_MACOS_CONFIG_FILE=%s\n' \
+            "/tmp/tsurfing-hosted-cross-client-macos.json" >> "$GITHUB_ENV"
+      - name: Install cross-client test dependencies
+        if: steps.preflight.outputs.run == 'true'
+        run: |
+          set -euo pipefail
+          npm ci
+          chmod +x android-native/gradlew
+          npx playwright install chromium
+      - name: Seed one durable task through the hosted browser
+        id: seed
+        if: steps.preflight.outputs.run == 'true'
+        env:
+          GOALFLOW_CROSS_CLIENT_PHASE: seed
+        run: npm run test:hosted:cross-client-browser
+      - name: Pull and edit the browser task through production Android sync
+        if: steps.preflight.outputs.run == 'true'
+        env:
+          GOALFLOW_CROSS_CLIENT_PHASE: android
+        run: |
+          set -euo pipefail
+          ./android-native/gradlew -p android-native testProductionDebugUnitTest \
+            --tests 'com.mariusschober.goalflow.nativeapp.sync.NativeSyncEngineTest.hostedBrowserRecordConvergesThroughProductionTransport' \
+            -PgoalflowApiOrigin="$GOALFLOW_STAGING_APP_ORIGIN" \
+            -PgoalflowSupabaseUrl="$GOALFLOW_STAGING_SUPABASE_URL" \
+            -PgoalflowSupabasePublishableKey="$GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY"
+      - name: Verify the Android edit through the hosted browser
+        if: steps.preflight.outputs.run == 'true'
+        env:
+          GOALFLOW_CROSS_CLIENT_PHASE: verify-android
+        run: npm run test:hosted:cross-client-browser
+      - name: Pull and edit the Android task through production macOS sync
+        if: steps.preflight.outputs.run == 'true'
+        env:
+          GOALFLOW_CROSS_CLIENT_PHASE: macos
+        run: |
+          set -euo pipefail
+          rm -f "$GOALFLOW_CROSS_CLIENT_MACOS_PROOF_FILE"
+          rm -f "$GOALFLOW_CROSS_CLIENT_MACOS_CONFIG_FILE"
+          trap 'rm -f "$GOALFLOW_CROSS_CLIENT_MACOS_CONFIG_FILE"' EXIT
+          node --input-type=module -e '
+            import { writeFileSync } from "node:fs";
+            const names = [
+              "GOALFLOW_HOSTED_TEST_CONFIRM",
+              "GOALFLOW_CROSS_CLIENT_PHASE",
+              "GOALFLOW_CROSS_CLIENT_STATE_FILE",
+              "GOALFLOW_CROSS_CLIENT_MACOS_PROOF_FILE",
+              "GOALFLOW_STAGING_APP_ORIGIN",
+              "GOALFLOW_STAGING_SUPABASE_URL",
+              "GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY",
+              "GOALFLOW_STAGING_USER_A_EMAIL",
+              "GOALFLOW_STAGING_USER_A_PASSWORD",
+              "GOALFLOW_STAGING_USER_A_ID"
+            ];
+            const environment = Object.fromEntries(names.map(name => {
+              const value = process.env[name]?.trim();
+              if (!value) throw new Error(`Missing macOS hosted setting: ${name}`);
+              return [name, value];
+            }));
+            writeFileSync(
+              process.env.GOALFLOW_CROSS_CLIENT_MACOS_CONFIG_FILE,
+              `${JSON.stringify({ schemaVersion: 1, environment })}\n`,
+              { encoding: "utf8", mode: 0o600, flag: "wx" }
+            );
+          '
+          xcodebuild test \
+            -project macos-native/GoalflowMac.xcodeproj \
+            -scheme GoalflowMac \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/goalflow-hosted-cross-client" \
+            -only-testing:GoalflowMacTests/HostedCrossClientSyncTests/testProductionTransportEditsAndroidRecord \
+            CODE_SIGNING_ALLOWED=NO
+          test -s "$GOALFLOW_CROSS_CLIENT_MACOS_PROOF_FILE"
+          PROOF_FILE="$GOALFLOW_CROSS_CLIENT_MACOS_PROOF_FILE" \
+          STATE_FILE="$GOALFLOW_CROSS_CLIENT_STATE_FILE" \
+          node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const proof = JSON.parse(readFileSync(process.env.PROOF_FILE, "utf8"));
+            const state = JSON.parse(readFileSync(process.env.STATE_FILE, "utf8"));
+            const valid = proof.schemaVersion === 1 &&
+              proof.taskId === state.taskId &&
+              proof.title === state.macosTitle &&
+              Number.isSafeInteger(proof.beforeServerVersion) &&
+              Number.isSafeInteger(proof.afterServerVersion) &&
+              proof.afterServerVersion > proof.beforeServerVersion;
+            if (!valid) throw new Error("macOS hosted proof did not demonstrate an authoritative server advancement.");
+            console.log(`macOS hosted proof: server version ${proof.beforeServerVersion} -> ${proof.afterServerVersion}`);
+          '
+      - name: Verify the macOS edit through the hosted browser
+        if: steps.preflight.outputs.run == 'true'
+        env:
+          GOALFLOW_CROSS_CLIENT_PHASE: verify-macos
+        run: npm run test:hosted:cross-client-browser
+      - name: Delete and verify the staging fixture
+        if: always() && steps.preflight.outputs.run == 'true' && steps.seed.outcome != 'skipped'
+        env:
+          GOALFLOW_CROSS_CLIENT_PHASE: cleanup
+        run: npm run test:hosted:cross-client-browser
+
+  android-internal-beta:
+    name: android-internal-beta
+    needs: [verify, dependency-audit, secrets, migrations, android, native-android, web-release, macos, hosted-staging, hosted-cross-client]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/integration/beta'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: internal-beta
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      EXPECTED_CERT_FINGERPRINT: ${{ secrets.EXPECTED_CERT_FINGERPRINT }}
+      GOALFLOW_STAGING_APP_ORIGIN: ${{ secrets.GOALFLOW_STAGING_APP_ORIGIN }}
+      GOALFLOW_STAGING_SUPABASE_URL: ${{ secrets.GOALFLOW_STAGING_SUPABASE_URL }}
+      GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Validate signing and staging configuration
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in \
+            ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD \
+            EXPECTED_CERT_FINGERPRINT GOALFLOW_STAGING_APP_ORIGIN GOALFLOW_STAGING_SUPABASE_URL \
+            GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required internal-beta secret: $name" >&2
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Internal beta configuration is incomplete." >&2
+            exit 1
+          fi
+          case "$GOALFLOW_STAGING_APP_ORIGIN" in
+            https://*) ;;
+            *) echo "The staging application origin must use HTTPS." >&2; exit 1 ;;
+          esac
+          case "$GOALFLOW_STAGING_SUPABASE_URL" in
+            https://*.supabase.co) ;;
+            *) echo "The staging Supabase URL is invalid." >&2; exit 1 ;;
+          esac
+          case "$GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY" in
+            sb_publishable_*) ;;
+            *) echo "A current Supabase publishable key is required; server and legacy keys are refused." >&2; exit 1 ;;
+          esac
+          expected="$(printf '%s' "$EXPECTED_CERT_FINGERPRINT" | tr '[:upper:]' '[:lower:]' | tr -d ':[:space:]')"
+          if ! printf '%s' "$expected" | grep -Eq '^[0-9a-f]{64}$'; then
+            echo "EXPECTED_CERT_FINGERPRINT must normalize to 64 hexadecimal characters." >&2
+            exit 1
+          fi
+      - name: Verify frozen persistence contracts
+        run: |
+          set -euo pipefail
+          node scripts/verify-migration-hashes.mjs
+          node scripts/verify-room-schema-hashes.mjs
+          node scripts/check-durable-identifiers.mjs
+      - name: Build, inspect, and checksum signed staging APK
+        run: |
+          set -euo pipefail
+          ./android-native/gradlew -p android-native assembleProductionRelease \
+            -PgoalflowApiOrigin="$GOALFLOW_STAGING_APP_ORIGIN" \
+            -PgoalflowSupabaseUrl="$GOALFLOW_STAGING_SUPABASE_URL" \
+            -PgoalflowSupabasePublishableKey="$GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY" \
+            -PgoalflowTelegramEnabled=true \
+            -PgoalflowTelegramOidcProviderId=custom:telegram
+          mapfile -t apks < <(find android-native/app/build/outputs/apk/production/release \
+            -type f -name '*.apk' -print | sort)
+          if [ "${#apks[@]}" -ne 1 ]; then
+            echo "The internal beta build must produce exactly one release APK." >&2
+            exit 1
+          fi
+          apk="${apks[0]}"
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner -perm -u+x -print | sort -V | tail -n 1)"
+          if [ -z "$apksigner" ]; then
+            echo "apksigner was not found." >&2
+            exit 1
+          fi
+          certificate_output="$(mktemp)"
+          trap 'rm -f "$certificate_output"' EXIT
+          "$apksigner" verify --verbose --print-certs "$apk" >"$certificate_output" 2>&1
+          mapfile -t signer_fingerprints < <(sed -n \
+            's/^Signer #[0-9][0-9]* certificate SHA-256 digest: //p' "$certificate_output")
+          if [ "${#signer_fingerprints[@]}" -ne 1 ]; then
+            echo "The internal beta APK must contain exactly one signer certificate." >&2
+            exit 1
+          fi
+          expected="$(printf '%s' "$EXPECTED_CERT_FINGERPRINT" | tr '[:upper:]' '[:lower:]' | tr -d ':[:space:]')"
+          actual="$(printf '%s' "${signer_fingerprints[0]}" | tr '[:upper:]' '[:lower:]' | tr -d ':[:space:]')"
+          if [ "$actual" != "$expected" ]; then
+            echo "Internal beta certificate fingerprint mismatch." >&2
+            exit 1
+          fi
+          ANDROID_EXPECT_SIGNED=1 bash android-native/scripts/verify-signing-strict.sh "$apk"
+          GOALFLOW_APK_LABEL=INTERNAL-BETA bash android-native/scripts/diagnose-apk.sh "$apk"
+          dex_strings="$(mktemp)"
+          trap 'rm -f "$certificate_output" "$dex_strings"' EXIT
+          unzip -p "$apk" 'classes*.dex' | strings >"$dex_strings"
+          for expected_public_value in \
+            "$GOALFLOW_STAGING_APP_ORIGIN" "$GOALFLOW_STAGING_SUPABASE_URL" \
+            "$GOALFLOW_STAGING_SUPABASE_PUBLISHABLE_KEY"; do
+            if ! grep -Fqx "$expected_public_value" "$dex_strings"; then
+              echo "The signed APK does not contain the exact staging public configuration." >&2
+              exit 1
+            fi
+          done
+          sha256sum "$apk" >"$apk.sha256"
+          sha256sum --check "$apk.sha256"
+          printf 'commit=%s\nbranch=integration/beta\nchannel=internal-beta\nsigning_fingerprint_sha256=%s\n' \
+            "$GITHUB_SHA" "$actual" >"$apk.provenance.txt"
+          echo "SIGNED_INTERNAL_APK=PASS"
+          echo "SIGNED_INTERNAL_APK_SHA256=$(awk '{print $1}' "$apk.sha256")"
+      - name: Upload verified internal beta APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: tsurfing-native-signed-internal-beta
+          path: |
+            android-native/app/build/outputs/apk/production/release/*.apk
+            android-native/app/build/outputs/apk/production/release/*.apk.sha256
+            android-native/app/build/outputs/apk/production/release/*.apk.provenance.txt
+          if-no-files-found: error
+          retention-days: 30
+
   beta-gate:
     name: beta-gate
-    needs: [verify, secrets, migrations, android, native-android, web-release]
+    needs: [verify, dependency-audit, secrets, migrations, android, native-android, web-release, macos, hosted-staging, hosted-cross-client, android-internal-beta]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check all required jobs succeeded
         run: |
-          echo "verify=${{ needs.verify.result }} secrets=${{ needs.secrets.result }} migrations=${{ needs.migrations.result }} android=${{ needs.android.result }} native-android=${{ needs.native-android.result }} web-release=${{ needs.web-release.result }}"
+          echo "verify=${{ needs.verify.result }} dependency-audit=${{ needs.dependency-audit.result }} secrets=${{ needs.secrets.result }} migrations=${{ needs.migrations.result }} android=${{ needs.android.result }} native-android=${{ needs.native-android.result }} web-release=${{ needs.web-release.result }} macos=${{ needs.macos.result }} hosted-staging=${{ needs.hosted-staging.result }} hosted-cross-client=${{ needs.hosted-cross-client.result }} android-internal-beta=${{ needs.android-internal-beta.result }}"
           if [ "${{ needs.verify.result }}" != "success" ]; then echo "verify failed: ${{ needs.verify.result }}" >&2; exit 1; fi
+          if [ "${{ needs.dependency-audit.result }}" != "success" ]; then echo "dependency-audit failed: ${{ needs.dependency-audit.result }}" >&2; exit 1; fi
           if [ "${{ needs.secrets.result }}" != "success" ]; then echo "secrets failed: ${{ needs.secrets.result }}" >&2; exit 1; fi
           if [ "${{ needs.migrations.result }}" != "success" ]; then echo "migrations failed: ${{ needs.migrations.result }}" >&2; exit 1; fi
           if [ "${{ needs.android.result }}" != "success" ]; then echo "android failed: ${{ needs.android.result }}" >&2; exit 1; fi
           if [ "${{ needs.native-android.result }}" != "success" ]; then echo "native-android failed: ${{ needs.native-android.result }}" >&2; exit 1; fi
           if [ "${{ needs.web-release.result }}" != "success" ]; then echo "web-release failed: ${{ needs.web-release.result }}" >&2; exit 1; fi
+          if [ "${{ needs.macos.result }}" != "success" ]; then echo "macos failed: ${{ needs.macos.result }}" >&2; exit 1; fi
+          if [ "${{ needs.hosted-staging.result }}" != "success" ]; then echo "hosted-staging failed: ${{ needs.hosted-staging.result }}" >&2; exit 1; fi
+          if [ "${{ needs.hosted-cross-client.result }}" != "success" ]; then echo "hosted-cross-client failed: ${{ needs.hosted-cross-client.result }}" >&2; exit 1; fi
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/integration/beta" ]; then
+            if [ "${{ needs.android-internal-beta.result }}" != "success" ]; then
+              echo "android-internal-beta failed: ${{ needs.android-internal-beta.result }}" >&2
+              exit 1
+            fi
+          elif [ "${{ needs.android-internal-beta.result }}" != "skipped" ]; then
+            echo "android-internal-beta unexpectedly ran outside an integration/beta push: ${{ needs.android-internal-beta.result }}" >&2
+            exit 1
+          fi
           echo "beta-gate PASS — all required jobs succeeded"

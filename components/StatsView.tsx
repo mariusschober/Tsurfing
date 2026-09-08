@@ -309,7 +309,7 @@ const AccountabilityCard: React.FC<{
         const completed = todaysTasks.filter(t => t.completed);
         const pending = todaysTasks.filter(t => !t.completed);
         
-        let report = `## 🎯 Goalflow Progress Report (${today})\n\n`;
+        let report = `## 🎯 Tsurfing Progress Report (${today})\n\n`;
         report += `Here is a summary of my progress today to keep me aligned and accountable!\n\n`;
         
         report += `### ✅ Completed Tasks (${completed.length})\n`;
@@ -335,7 +335,7 @@ const AccountabilityCard: React.FC<{
             });
         }
         
-        report += `\n*Sent with commitment via Circadian Goalflow* 💫`;
+        report += `\n*Sent with commitment via Tsurfing* 💫`;
         
         navigator.clipboard.writeText(report).then(() => {
             setCopied(true);

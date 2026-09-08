@@ -1,6 +1,8 @@
 import { openDB, IDBPDatabase } from 'idb';
 import {
   appendStagedTransactions,
+  applyAutomaticReconciliation,
+  type ReconciliationCandidate,
   applyConflictCloudValue,
   applyPushResults as transitionPushResults,
   applyRemotePage as transitionRemotePage,
@@ -11,6 +13,7 @@ import {
   normalizeSyncMeta,
   RECORD_LEVEL_STORES,
   readyOutbox,
+  stableJson,
   resolveConflictWithLocal,
   type LocalConflict,
   type PushResult,
@@ -20,6 +23,7 @@ import {
   type SyncMeta,
   type SyncMutation
 } from './syncProtocol';
+import { mergeTrackingFocusSession, normalizeFocusSession } from '../src/domain/focusSession';
 
 const BASE_DB_NAME = 'GoalflowDB';
 const ACTIVE_DB_KEY = 'goalflow_active_database_v2';
@@ -89,7 +93,7 @@ export const validateBackupCollections = (backup: unknown): Record<string, any> 
     throw new Error('The backup schema version is invalid.');
   }
   if (envelope.schemaVersion && envelope.schemaVersion > BACKUP_SCHEMA_VERSION) {
-    throw new Error('This backup was created by a newer Goalflow version.');
+    throw new Error('This backup was created by a newer Tsurfing version.');
   }
   if (Number(envelope.schemaVersion) >= 3) {
     if (typeof envelope.exportedAt !== 'string' || !Number.isFinite(Date.parse(envelope.exportedAt))) {
@@ -514,7 +518,7 @@ const mergeRestoredSyncMeta = (currentValue: unknown, incomingValue: unknown): S
   };
 };
 
-const jsonEqual = (left: unknown, right: unknown): boolean => JSON.stringify(left) === JSON.stringify(right);
+const jsonEqual = (left: unknown, right: unknown): boolean => stableJson(left) === stableJson(right);
 
 const mapRecordsForRecovery = (
   value: unknown,
@@ -534,12 +538,49 @@ const mapRecordsForRecovery = (
 
 /**
  * Replays a WAL only against the value it was based on. Independent records
- * recovered from IndexedDB are retained; a same-record divergence stops
- * without selecting either version.
+ * recovered from IndexedDB are retained; a same-record divergence enters
+ * durable automatic reconciliation when an atomic sync ledger is available.
  */
+type DailyTrackingValue = { date: string; planViewCount: number; dailyPostponeCount: number };
+const isDailyTrackingValue = (value: unknown): value is DailyTrackingValue => {
+  if (!isRecord(value) || Object.keys(value).length !== 3
+    || typeof value.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value.date)
+    || !Number.isFinite(Date.parse(value.date))
+    || new Date(value.date).toISOString().slice(0, 10) !== value.date) return false;
+  return [value.planViewCount, value.dailyPostponeCount]
+    .every(count => typeof count === 'number' && Number.isSafeInteger(count) && count >= 0);
+};
+
+// A plan-view/counter write may have captured an old focus projection before
+// a newer remote focus state arrived. Recover that independent same-day edit
+// without changing any staged mutation fingerprint. The server's focus merge
+// already prevents an old counter writer from reverting a newer session.
+const recoverTrackingCounterWrite = (current: unknown, previous: unknown, next: unknown): unknown | undefined => {
+  if (!isRecord(current) || !isRecord(previous) || !isRecord(next)) return undefined;
+  const trackingShape = (value: Record<string, unknown>): boolean => {
+    const { focusSession, ...counters } = value;
+    return isDailyTrackingValue(counters)
+      && (focusSession === undefined || focusSession === null || normalizeFocusSession(focusSession) !== null);
+  };
+  if (![current, previous, next].every(trackingShape)
+    || current.date !== previous.date || next.date !== previous.date
+    || !jsonEqual(previous.focusSession, next.focusSession)) return undefined;
+  const currentFocus = normalizeFocusSession(current.focusSession);
+  const previousFocus = normalizeFocusSession(previous.focusSession);
+  if (!jsonEqual(current.focusSession, previous.focusSession)
+    && (!currentFocus || (previousFocus && Date.parse(currentFocus.updatedAt) <= Date.parse(previousFocus.updatedAt)))) return undefined;
+  const merged = { ...current };
+  for (const key of ['planViewCount', 'dailyPostponeCount']) {
+    if (current[key] === previous[key]) merged[key] = next[key];
+    else if (next[key] !== previous[key] && current[key] !== next[key]) return undefined;
+  }
+  return merged;
+};
+
 const reconcileStagedTransactions = (
   currentValue: unknown,
-  transactions: StagedLocalTransaction[]
+  transactions: StagedLocalTransaction[],
+  meta?: SyncMeta
 ): unknown => {
   let current = currentValue;
   for (const transaction of [...transactions].sort((left, right) =>
@@ -554,6 +595,26 @@ const reconcileStagedTransactions = (
       continue;
     }
     if (jsonEqual(current, transaction.value)) continue;
+    // Older clients reset the daily counters in memory before hydrating their
+    // durable baseline. Recover only that exact, forward-date reset shape.
+    // Keep the original staged mutations/IDs; same-day divergence still fails.
+    if (transaction.storeName === STORES.TRACKING && transaction.hasPreviousValue
+      && isDailyTrackingValue(current) && isDailyTrackingValue(transaction.previousValue)
+      && isDailyTrackingValue(transaction.value)
+      && current.date < transaction.previousValue.date
+      && transaction.previousValue.date === transaction.value.date
+      && transaction.previousValue.planViewCount === 0
+      && transaction.previousValue.dailyPostponeCount === 0) {
+      current = transaction.value;
+      continue;
+    }
+    if (transaction.storeName === STORES.TRACKING && transaction.hasPreviousValue) {
+      const recovered = recoverTrackingCounterWrite(current, transaction.previousValue, transaction.value);
+      if (recovered !== undefined) {
+        current = recovered;
+        continue;
+      }
+    }
     if (!RECORD_LEVEL_STORES.has(transaction.storeName)) {
       throw new DurableStorageError(
         `Pending ${transaction.storeName} data diverged from recovered storage. Neither version was overwritten.`
@@ -575,9 +636,41 @@ const reconcileStagedTransactions = (
       const before = previousRecords?.get(change.entityId);
       const after = nextRecords.get(change.entityId);
       if (!jsonEqual(existing, before) && !jsonEqual(existing, after)) {
-        throw new DurableStorageError(
+        if (!meta) throw new DurableStorageError(
           `Pending ${transaction.storeName} record ${change.entityId} conflicts with recovered data. Neither was overwritten.`
         );
+        // Preserve the original mutation identities and timestamps in the same
+        // durable transaction as the recovered value. The server decides which
+        // edit is current; replay must never silently overwrite either copy.
+        const pending = meta.outbox.filter(item => item.entityType === change.entityType && item.entityId === change.entityId);
+        let conflict = meta.conflicts.find(item => item.entityType === change.entityType && item.entityId === change.entityId && item.status === 'unresolved');
+        if (!conflict && !pending.length) throw new DurableStorageError('Pending recovery history could not be verified.');
+        if (!conflict) {
+          const latest = [...pending].sort((a, b) => b.version - a.version)[0];
+          conflict = {
+            id: `recovery-${change.mutationId}`, kind: 'remote-vs-local',
+            entityType: change.entityType, entityId: change.entityId,
+            localPayload: latest.payload, localDeletedAt: latest.deletedAt,
+            localHistory: [], serverPayload: existing ?? null,
+            serverMissing: existing === undefined,
+            serverDeletedAt: typeof existing?.deletedAt === 'string' ? existing.deletedAt : null,
+            serverVersion: meta.versions[`${change.entityType}:${change.entityId}`]?.server ?? 0,
+            createdAt: latest.updatedAt, status: 'unresolved'
+          };
+          meta.conflicts.push(conflict);
+        }
+        for (const item of pending) {
+          if (!conflict.localHistory.some(entry => entry.mutationId === item.mutationId)) {
+            conflict.localHistory.push({ mutationId: item.mutationId, payload: item.payload,
+              deletedAt: item.deletedAt, updatedAt: item.updatedAt, version: item.version });
+          }
+        }
+        const latest = [...conflict.localHistory].sort((a, b) => b.version - a.version)[0];
+        conflict.localPayload = latest.payload;
+        conflict.localDeletedAt = latest.deletedAt;
+        // Transfer, rather than discard, every pending edit into durable history.
+        meta.outbox = meta.outbox.filter(item => item.entityType !== change.entityType || item.entityId !== change.entityId);
+        continue;
       }
       if (after === undefined) currentRecords.delete(change.entityId);
       else currentRecords.set(change.entityId, after);
@@ -628,11 +721,17 @@ const recoverFallbackState = async (userKey: string): Promise<void> => {
 };
 
 export const storageService = {
-  stageLocalValue(storeName: string, key: string, previousValue: unknown, nextValue: unknown): string | null {
+  stageLocalValue(storeName: string, key: string, previousValue: unknown, nextValue: unknown, preserveSourceTime = false): string | null {
     if (!SYNCABLE_STORES.has(storeName)) return null;
     const now = new Date().toISOString();
+    const storedValue = storeName === STORES.TRACKING
+      ? (latestWalValue(storeName, key).found ? latestWalValue(storeName, key).value : readLocalCopy(storeName, key))
+      : undefined;
+    const durableNextValue = storeName === STORES.TRACKING
+      ? mergeTrackingFocusSession(storedValue ?? previousValue, nextValue)
+      : nextValue;
     const transaction = buildStagedLocalTransaction(
-      storeName, key, previousValue, nextValue, nextWalOrder(), now, randomUuid
+      storeName, key, previousValue, durableNextValue, nextWalOrder(), now, randomUuid, preserveSourceTime
     );
     if (!transaction) return null;
     const serialized = JSON.stringify(transaction);
@@ -665,7 +764,14 @@ export const storageService = {
         change.storeName,
         key,
         change.previousValue,
-        change.nextValue,
+        change.storeName === STORES.TRACKING
+          ? mergeTrackingFocusSession(
+            (latestWalValue(change.storeName, key).found
+              ? latestWalValue(change.storeName, key).value
+              : readLocalCopy(change.storeName, key)) ?? change.previousValue,
+            change.nextValue
+          )
+          : change.nextValue,
         baseOrder + index,
         now,
         randomUuid
@@ -721,8 +827,11 @@ export const storageService = {
         try {
           if (source === 'local' && SYNCABLE_STORES.has(storeName) && pending.length === 0) {
             const previous = await tx.objectStore(storeName).get(key);
+            const durableValue = storeName === STORES.TRACKING
+              ? mergeTrackingFocusSession(previous, value)
+              : value;
             const transaction = buildStagedLocalTransaction(
-              storeName, key, previous, value, nextWalOrder(), new Date().toISOString(), randomUuid
+              storeName, key, previous, durableValue, nextWalOrder(), new Date().toISOString(), randomUuid
             );
             if (transaction) {
               const entryKey = walKey(transaction);
@@ -733,16 +842,17 @@ export const storageService = {
             }
           }
           const dataStore = tx.objectStore(storeName);
+          const nextMeta = source === 'local' && SYNCABLE_STORES.has(storeName)
+            ? appendStagedTransactions(normalizeSyncMeta(await tx.objectStore(STORES.SYNC).get(key)), pending.map(item => item.transaction), readDeviceId())
+            : undefined;
           if (source === 'local' && SYNCABLE_STORES.has(storeName)) {
             committedValue = reconcileStagedTransactions(
-              await dataStore.get(key), pending.map(item => item.transaction)
+              await dataStore.get(key), pending.map(item => item.transaction), nextMeta
             );
           }
           await dataStore.put(committedValue, key);
-          if (stores.includes(STORES.SYNC)) {
+          if (nextMeta) {
             const syncStore = tx.objectStore(STORES.SYNC);
-            const meta = normalizeSyncMeta(await syncStore.get(key));
-            const nextMeta = appendStagedTransactions(meta, pending.map(item => item.transaction), readDeviceId());
             await syncStore.put(nextMeta, key);
           }
           await tx.done;
@@ -753,8 +863,11 @@ export const storageService = {
         }
       } else {
         if (source === 'local' && SYNCABLE_STORES.has(storeName) && pending.length === 0) {
+          const durableValue = storeName === STORES.TRACKING
+            ? mergeTrackingFocusSession(readLocalCopy(storeName, key), value)
+            : value;
           const transaction = buildStagedLocalTransaction(
-            storeName, key, readLocalCopy(storeName, key), value,
+            storeName, key, readLocalCopy(storeName, key), durableValue,
             nextWalOrder(), new Date().toISOString(), randomUuid
           );
           if (transaction) {
@@ -810,7 +923,7 @@ export const storageService = {
           for (const transaction of latestByStore.values()) {
             const store = tx.objectStore(transaction.storeName);
             const reconciled = reconcileStagedTransactions(
-              await store.get(userKey), pendingByStore.get(transaction.storeName) ?? []
+              await store.get(userKey), pendingByStore.get(transaction.storeName) ?? [], nextMeta
             );
             transaction.value = reconciled;
             await store.put(reconciled, userKey);
@@ -941,6 +1054,29 @@ export const storageService = {
       if (db) await db.put(STORES.SYNC, next, userKey);
       else writeFallback(STORES.SYNC, userKey, next);
       return next;
+    });
+  },
+
+  async commitAutomaticReconciliation(userKey: string, candidate: ReconciliationCandidate, reply: unknown): Promise<SyncMeta> {
+    return queueMutation(async () => {
+      const db = await getDB();
+      if (!db) throw new DurableStorageError('Automatic sync needs durable storage. Your changes remain saved.');
+      const tx = db.transaction([candidate.entityType, STORES.SYNC], 'readwrite');
+      const store = tx.objectStore(candidate.entityType);
+      const meta = normalizeSyncMeta(await tx.objectStore(STORES.SYNC).get(userKey));
+      const transition = applyAutomaticReconciliation(meta, await store.get(userKey), candidate, reply);
+      if (transition.changed) {
+        if (transition.value === undefined) await store.delete(userKey);
+        else await store.put(transition.value, userKey);
+      }
+      await tx.objectStore(STORES.SYNC).put(transition.meta, userKey);
+      await tx.done;
+      if (transition.changed) {
+        if (transition.value === undefined) safeLocalStorageRemove(recoveryKey(candidate.entityType, userKey));
+        else writeRecovery(candidate.entityType, userKey, transition.value);
+        announceCloudChange(candidate.entityType, transition.value);
+      }
+      return transition.meta;
     });
   },
 
@@ -1077,7 +1213,7 @@ export const storageService = {
     const envelope = backup as Partial<GoalflowBackup>;
     const verifiedCollections = validateBackupCollections(backup);
     if (Number(envelope.schemaVersion) >= 4 && envelope.ownerKey !== userKey) {
-      throw new Error('This backup belongs to a different Goalflow account. Existing data is unchanged.');
+      throw new Error('This backup belongs to a different Tsurfing account. Existing data is unchanged.');
     }
     if (envelope.checksum && await checksumCollections(verifiedCollections) !== envelope.checksum.toLowerCase()) {
       throw new Error('Backup checksum validation failed. The file may be incomplete or modified.');

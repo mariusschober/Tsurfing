@@ -9,7 +9,10 @@ declare global {
   }
 }
 
-export const Turnstile: React.FC<{ onToken: (token: string) => void }> = ({ onToken }) => {
+export const Turnstile: React.FC<{ onToken: (token: string) => void; action?: string }> = ({
+  onToken,
+  action = 'beta-signup'
+}) => {
   const siteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
   const container = useRef<HTMLDivElement>(null);
 
@@ -21,7 +24,7 @@ export const Turnstile: React.FC<{ onToken: (token: string) => void }> = ({ onTo
         widgetId = window.turnstile.render(container.current, {
           sitekey: siteKey,
           theme: 'light',
-          action: 'beta-signup',
+          action,
           callback: onToken,
           'expired-callback': () => onToken(''),
           'error-callback': () => onToken('')
@@ -40,7 +43,7 @@ export const Turnstile: React.FC<{ onToken: (token: string) => void }> = ({ onTo
       document.head.appendChild(script);
     }
     return () => { if (widgetId && window.turnstile) window.turnstile.remove(widgetId); };
-  }, [onToken, siteKey]);
+  }, [action, onToken, siteKey]);
 
   if (!siteKey) return null;
   return <div ref={container} aria-label="Human verification" />;

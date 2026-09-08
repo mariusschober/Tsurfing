@@ -212,8 +212,8 @@ test.describe('web-critical — deterministic visible UI journey', () => {
     expect(manifestResponse.ok()).toBe(true);
     const manifest = await manifestResponse.json();
     expect(manifest).toMatchObject({
-      name: 'Goalflow',
-      short_name: 'Goalflow',
+      name: 'Tsurfing',
+      short_name: 'Tsurfing',
       display: 'standalone',
       start_url: '/',
       scope: '/'
@@ -228,4 +228,31 @@ test.describe('web-critical — deterministic visible UI journey', () => {
       expect(response.ok(), `${icon} should be served`).toBe(true);
     }
   });
+});
+
+test('natural-language capture previews and persists month planning', async ({ page }) => {
+  await unlockTestApp(page);
+  await page.getByTitle('Add new task (a)').click();
+  const dialog = page.getByRole('dialog', { name: 'New Task' });
+  await dialog.getByPlaceholder('What is the next action?').fill('Natural calendar check next month');
+  const expected = await page.evaluate(() => {
+    const d = new Date();
+    return `${d.getFullYear() + (d.getMonth() === 11 ? 1 : 0)}-${String(d.getMonth() === 11 ? 1 : d.getMonth() + 2).padStart(2, '0')}`;
+  });
+  await expect(dialog.locator('input[type="month"]')).toHaveValue(expected);
+  await dialog.getByRole('button', { name: 'Create Task', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect.poll(async () => page.evaluate(async () => {
+    const rows = await new Promise<unknown[]>((resolve, reject) => {
+      const request = indexedDB.open('GoalflowDB');
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const db = request.result;
+        const read = db.transaction('tasks').objectStore('tasks').getAll();
+        read.onsuccess = () => { resolve(read.result); db.close(); };
+        read.onerror = () => { reject(read.error); db.close(); };
+      };
+    });
+    return rows.flat().find((row: any) => row.title === 'Natural calendar check');
+  })).toMatchObject({ title: 'Natural calendar check', schedulePrecision: 'month', scheduledFor: expected, dateAssigned: `${expected}-01` });
 });

@@ -103,6 +103,10 @@ describe('server backup restore boundary', () => {
               events.push('object-upload');
               uploaded = bytes;
               return { error: null };
+            },
+            async download() {
+              events.push('object-readback');
+              return { data: new Blob([uploaded!]), error: null };
             }
           };
         }
@@ -117,7 +121,7 @@ describe('server backup restore boundary', () => {
       { metadataKind: 'daily', pathKind: 'pre-restore' }
     );
 
-    expect(events).toEqual(['metadata-failed', 'object-upload', 'metadata-complete']);
+    expect(events).toEqual(['metadata-failed', 'object-upload', 'object-readback', 'metadata-complete']);
     expect(inserted).toMatchObject({ status: 'failed', checksum: created.checksum, encryption_version: 2 });
     expect(created.encryptionVersion).toBe(2);
     expect(created.objectPath).toContain('/pre-restore/');
@@ -157,6 +161,49 @@ describe('server backup restore boundary', () => {
       admin,
       '00000000-0000-4000-8000-000000000001'
     )).rejects.toThrow('storage unavailable');
+    expect(statuses).toEqual(['failed']);
+  });
+
+  it('does not finalize metadata when uploaded bytes cannot be verified', async () => {
+    const statuses: unknown[] = [];
+    let uploaded: Buffer | undefined;
+    const admin = {
+      async rpc(name: string) {
+        return name === 'goalflow_backup_protocol_version'
+          ? { data: 2, error: null }
+          : { data: { tasks: [] }, error: null };
+      },
+      from() {
+        return {
+          async insert(row: Record<string, unknown>) {
+            statuses.push(row.status);
+            return { error: null };
+          },
+          update() {
+            throw new Error('metadata must not be finalized');
+          }
+        };
+      },
+      storage: {
+        from: () => ({
+          async upload(_path: string, bytes: Buffer) {
+            uploaded = bytes;
+            return { error: null };
+          },
+          async download() {
+            const corrupted = Buffer.from(uploaded!);
+            corrupted[corrupted.length - 1] ^= 1;
+            return { data: new Blob([corrupted]), error: null };
+          }
+        })
+      }
+    } as unknown as SupabaseClient;
+
+    await expect(createEncryptedBackupForUser(
+      { BACKUP_MASTER_KEY: key.toString('hex') } as AppConfig,
+      admin,
+      '00000000-0000-4000-8000-000000000001'
+    )).rejects.toThrow('did not match');
     expect(statuses).toEqual(['failed']);
   });
 
@@ -249,7 +296,7 @@ describe('server backup restore boundary', () => {
       sync_conflicts: [{ id: 'conflict-a' }],
       api_mutation_receipts: [{ mutation_id: 'receipt-a' }],
       entitlements: [row()],
-      ai_usage: [{ usage_date: '2026-09-03' }]
+      ai_usage: [{ user_id: '00000000-0000-4000-8000-000000000001', usage_date: '2026-09-03', request_count: 3 }]
     };
     const actual = {
       ...expected,
@@ -280,5 +327,76 @@ describe('server backup restore boundary', () => {
       ...base,
       tasks: [...base.tasks, { id: 'unexpected-task' }]
     })).toThrow('unexpected tasks row count');
+  });
+
+  it('allows canonical projection rebasing while rejecting changed source content', () => {
+    const base = {
+      profiles: [{ user_id: 'user-a', timezone: 'UTC' }],
+      tasks: [{ id: 'task-a', title: 'Keep me', revision: 4, sync_server_version: 10 }],
+      daily_plans: [], task_events: [], telegram_identities: [], telegram_captures: [],
+      telegram_updates: [],
+      sync_records: [{
+        entity_type: 'tasks', entity_id: 'task-a', version: 4, server_version: 10,
+        device_id: 'before-restore', updated_at: '2026-09-03T00:00:00Z',
+        payload: { title: 'Keep me' }, deleted_at: null
+      }],
+      sync_mutations: [], sync_conflicts: [], api_mutation_receipts: [],
+      entitlements: [{ user_id: 'user-a', active: true }], ai_usage: []
+    };
+    const rebased = {
+      ...base,
+      tasks: [{ ...base.tasks[0], revision: 20, sync_server_version: 30 }],
+      sync_records: [{
+        ...base.sync_records[0], version: 20, server_version: 30,
+        device_id: 'server-restore', updated_at: '2026-09-03T01:00:00Z',
+        payload: { title: 'Canonical projection after rebase' },
+        deleted_at: '2026-09-03T01:00:00Z'
+      }]
+    };
+    expect(() => verifyRestoredBackupCollections(base, rebased)).not.toThrow();
+    expect(() => verifyRestoredBackupCollections(base, {
+      ...rebased,
+      tasks: [{ ...rebased.tasks[0], title: 'Silently changed' }]
+    })).toThrow('changed tasks content');
+  });
+
+  it('keeps non-canonical sync payloads byte-strict', () => {
+    const base = {
+      profiles: [{ user_id: 'user-a' }], tasks: [], daily_plans: [], task_events: [],
+      telegram_identities: [], telegram_captures: [], telegram_updates: [],
+      sync_records: [{
+        entity_type: 'goals', entity_id: 'goal-a', version: 1, server_version: 10,
+        device_id: 'before-restore', updated_at: '2026-09-03T00:00:00Z',
+        payload: { title: 'Keep me' }, deleted_at: null
+      }],
+      sync_mutations: [], sync_conflicts: [], api_mutation_receipts: [],
+      entitlements: [{ user_id: 'user-a' }], ai_usage: []
+    };
+    expect(() => verifyRestoredBackupCollections(base, {
+      ...base,
+      sync_records: [{
+        ...base.sync_records[0], version: 20, server_version: 30,
+        device_id: 'server-restore', updated_at: '2026-09-03T01:00:00Z',
+        payload: { title: 'Silently changed' }
+      }]
+    })).toThrow('changed sync_records content');
+  });
+
+  it('allows quota growth but rejects quota rewind under the same date', () => {
+    const base = {
+      profiles: [{ user_id: 'user-a' }], tasks: [], daily_plans: [], task_events: [],
+      telegram_identities: [], telegram_captures: [], telegram_updates: [], sync_records: [],
+      sync_mutations: [], sync_conflicts: [], api_mutation_receipts: [],
+      entitlements: [{ user_id: 'user-a' }],
+      ai_usage: [{ user_id: 'user-a', usage_date: '2026-09-03', request_count: 5 }]
+    };
+    expect(() => verifyRestoredBackupCollections(base, {
+      ...base,
+      ai_usage: [{ ...base.ai_usage[0], request_count: 8 }]
+    })).not.toThrow();
+    expect(() => verifyRestoredBackupCollections(base, {
+      ...base,
+      ai_usage: [{ ...base.ai_usage[0], request_count: 4 }]
+    })).toThrow('rewound');
   });
 });

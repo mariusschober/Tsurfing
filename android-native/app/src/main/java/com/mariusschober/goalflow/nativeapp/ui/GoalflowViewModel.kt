@@ -7,6 +7,8 @@ import com.mariusschober.goalflow.nativeapp.data.GoalflowRepository
 import com.mariusschober.goalflow.nativeapp.data.HabitGenerationHealth
 import com.mariusschober.goalflow.nativeapp.data.HabitGenerationStatus
 import com.mariusschober.goalflow.nativeapp.data.NativeReorderResult
+import com.mariusschober.goalflow.nativeapp.data.NativeFocusSessionRecord
+import com.mariusschober.goalflow.nativeapp.data.NativeFocusSessionPhase
 import com.mariusschober.goalflow.nativeapp.data.SyncConflictEntity
 import com.mariusschober.goalflow.nativeapp.domain.BreakdownChild
 import com.mariusschober.goalflow.nativeapp.domain.GoalflowHabit
@@ -32,6 +34,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.time.Instant
+import org.json.JSONObject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class GoalflowViewModel(
@@ -95,6 +99,12 @@ class GoalflowViewModel(
         SharingStarted.Eagerly,
         "My world takes care of me"
     )
+
+    val focusSession: StateFlow<NativeFocusSessionRecord?> = repository.trackingStream
+        .map { payload ->
+            runCatching { NativeFocusSessionRecord.fromTrackingPayload(payload) }.getOrNull()
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val conflicts: StateFlow<List<SyncConflictEntity>> = repository.conflictStream.stateIn(
         viewModelScope,
@@ -222,6 +232,96 @@ class GoalflowViewModel(
         }
     }
 
+    fun startFocus(task: GoalflowTask, onComplete: (NativeFocusSessionRecord) -> Unit = {}) {
+        viewModelScope.launch {
+            clearError()
+            runCatching {
+                val requestedTask = repository.taskSnapshot(task.id)
+                require(requestedTask?.status == com.mariusschober.goalflow.nativeapp.domain.TaskStatus.OPEN
+                    && requestedTask.deletedAt == null) { "This commitment is no longer open." }
+                val current = repository.trackingFocusSession()
+                val currentTask = current?.let { repository.taskSnapshot(it.taskId) }
+                val currentTaskIsOpen = currentTask?.status == com.mariusschober.goalflow.nativeapp.domain.TaskStatus.OPEN
+                    && currentTask.deletedAt == null
+                // Completion or breakdown can arrive before its tracking
+                // projection. A closed task must never block the next focus.
+                if (currentTaskIsOpen && (current?.phase == NativeFocusSessionPhase.ACTIVE || current?.phase == NativeFocusSessionPhase.PAUSED)) {
+                    if (current.taskId != task.id) throw IllegalStateException("Another focus session is already open.")
+                    current
+                } else {
+                    val plannedDurationSeconds = JSONObject(task.extraJson)
+                        .optInt("duration", 25)
+                        .coerceIn(1, 1_440) * 60L
+                    repository.saveFocusSession(NativeFocusSessionRecord.start(task.id, plannedDurationSeconds))
+                    repository.trackingFocusSession()
+                        ?: throw IllegalStateException("The focus session was not confirmed locally.")
+                }
+            }.onSuccess(onComplete)
+                .onFailure { failure -> _error.value = failure.message ?: "The focus session could not start." }
+        }
+    }
+
+    fun pauseFocus(onComplete: (NativeFocusSessionRecord) -> Unit = {}) = updateFocus(
+        transform = { it.pause(Instant.now()) },
+        onComplete = onComplete,
+        failureMessage = "The focus session could not be paused."
+    )
+
+    fun resumeFocus(onComplete: (NativeFocusSessionRecord) -> Unit = {}) = updateFocus(
+        transform = { it.resume(Instant.now()) },
+        onComplete = onComplete,
+        failureMessage = "The focus session could not be resumed."
+    )
+
+    fun stopFocus(onComplete: (NativeFocusSessionRecord) -> Unit = {}) = updateFocus(
+        transform = { it.stop(Instant.now()) },
+        onComplete = onComplete,
+        failureMessage = "The focus session could not be stopped."
+    )
+
+    fun extendFocus(deltaSeconds: Long, onComplete: (NativeFocusSessionRecord) -> Unit = {}) = updateFocus(
+        transform = { it.extend(deltaSeconds, Instant.now()) },
+        onComplete = onComplete,
+        failureMessage = "The focus session could not be extended."
+    )
+
+    fun completeFocus(
+        task: GoalflowTask,
+        actualDuration: Int? = null,
+        flowState: String? = null,
+        onComplete: () -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            clearError()
+            runCatching {
+                val current = repository.trackingFocusSession()
+                if (current != null && current.taskId == task.id && current.phase != NativeFocusSessionPhase.COMPLETED) {
+                    repository.saveFocusSession(current.complete(Instant.now()))
+                }
+                repository.completeTask(task.id, actualDuration, flowState)
+            }.onSuccess { onComplete() }
+                .onFailure { failure -> _error.value = failure.message ?: "The commitment could not be completed." }
+        }
+    }
+
+    private fun updateFocus(
+        transform: (NativeFocusSessionRecord) -> NativeFocusSessionRecord,
+        onComplete: (NativeFocusSessionRecord) -> Unit,
+        failureMessage: String
+    ) {
+        viewModelScope.launch {
+            clearError()
+            runCatching {
+                val current = repository.trackingFocusSession()
+                    ?: throw IllegalStateException("No shared focus session is open.")
+                val next = transform(current)
+                repository.saveFocusSession(next)
+                next
+            }.onSuccess(onComplete)
+                .onFailure { failure -> _error.value = failure.message ?: failureMessage }
+        }
+    }
+
     fun undoCompletion(taskId: String) {
         viewModelScope.launch {
             clearError()
@@ -323,7 +423,7 @@ class GoalflowViewModel(
                 if (result.hadConfirmedPlan) repository.confirmPlan(result.localDate, result.previousIds)
             }.onSuccess {
                 _reorderUndo.value = null
-                _notice.value = "Previous order restored locally"
+                _notice.value = "Previous order restored"
             }.onFailure { failure -> _error.value = failure.message ?: "The previous order could not be restored safely." }
         }
     }
