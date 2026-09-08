@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 /private/tmp/tsurfing-deliberate-replanning
+
+
+ Test Files  2 passed (2)
+      Tests  39 passed (39)
+   Start at  21:36:47
+   Duration  1.94s (transform 590ms, setup 0ms, import 786ms, tests 1.38s, environment 0ms)
+

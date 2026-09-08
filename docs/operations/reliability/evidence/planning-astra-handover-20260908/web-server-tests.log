@@ -1,0 +1,13 @@
+
+ RUN  v4.1.10 /private/tmp/tsurfing-deliberate-replanning
+
+macOS bundle key gate failed: a current server-only Supabase key reached the application bundle
+macOS bundle key gate failed: the configured legacy JWT is not an anonymous client key
+macOS bundle key gate failed: the configured key is neither publishable nor a legacy JWT
+macOS bundle key gate failed: the public key could not be read from the application Info.plist
+
+ Test Files  112 passed (112)
+      Tests  772 passed (772)
+   Start at  21:38:19
+   Duration  9.20s (transform 4.74s, setup 0ms, import 13.56s, tests 26.09s, environment 7ms)
+
