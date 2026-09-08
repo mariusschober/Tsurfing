@@ -8,7 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		2095E9A6D2A084662BAB1DBB /* CausalFocusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6D542FCA9389FCE37DE4F6D /* CausalFocusTests.swift */; };
+		9174914637B56849F06AB839 /* CausalJournalTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D7AFFBCE9AC17FAF2ABFF6 /* CausalJournalTests.swift */; };
 		BBA1E6DCF608016219BA10AB /* CausalFocus.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5AE78AB38DBFE0AA280A7F7 /* CausalFocus.swift */; };
+		BEB9FE6085129C7DA756F358 /* CausalJournal.swift in Sources */ = {isa = PBXBuildFile; fileRef = E44C0ACCDA7F68FD0105DA56 /* CausalJournal.swift */; };
 		6985D97D4616253BE857776A /* CounterLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61749B4C0E519C0745F5661A /* CounterLedger.swift */; };
 		BA98637B425AC88CFCCF9B6D /* CounterLedgerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40E7443AB3FC9D9BD8442FC2 /* CounterLedgerTests.swift */; };
 		C10C00000000000000000012 /* CLOCK_AUDIO_LICENSE.md in Resources */ = {isa = PBXBuildFile; fileRef = C10C00000000000000000002 /* CLOCK_AUDIO_LICENSE.md */; };
@@ -101,7 +103,9 @@
 
 /* Begin PBXFileReference section */
 		A6D542FCA9389FCE37DE4F6D /* CausalFocusTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CausalFocusTests.swift; sourceTree = "<group>"; };
+		D0D7AFFBCE9AC17FAF2ABFF6 /* CausalJournalTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CausalJournalTests.swift; sourceTree = "<group>"; };
 		C5AE78AB38DBFE0AA280A7F7 /* CausalFocus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CausalFocus.swift; sourceTree = "<group>"; };
+		E44C0ACCDA7F68FD0105DA56 /* CausalJournal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CausalJournal.swift; sourceTree = "<group>"; };
 		40E7443AB3FC9D9BD8442FC2 /* CounterLedgerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterLedgerTests.swift; sourceTree = "<group>"; };
 		61749B4C0E519C0745F5661A /* CounterLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterLedger.swift; sourceTree = "<group>"; };
 		C10C00000000000000000002 /* CLOCK_AUDIO_LICENSE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLOCK_AUDIO_LICENSE.md; sourceTree = "<group>"; };
@@ -247,6 +251,7 @@
 				A314260E956300A6C382173A /* ApplyRemotePage.swift */,
 				9D11DA133D93873AC0CCF5E5 /* BuildStaging.swift */,
 				26786E4B8BE81D0946D4A057 /* DeviceIdStore.swift */,
+				E44C0ACCDA7F68FD0105DA56 /* CausalJournal.swift */,
 				857271F477F350F3B8A66FD2 /* MetaStore.swift */,
 				4417DDF2C1FF46966C8019ED /* RealtimeWakeup.swift */,
 				62261E699C6459636BB94929 /* ServerConflicts.swift */,
@@ -299,6 +304,7 @@
 				EB398F1027FB785F68950CA8 /* CaptureTests.swift */,
 				40E7443AB3FC9D9BD8442FC2 /* CounterLedgerTests.swift */,
 				A6D542FCA9389FCE37DE4F6D /* CausalFocusTests.swift */,
+				D0D7AFFBCE9AC17FAF2ABFF6 /* CausalJournalTests.swift */,
 				4E6E296D6144E2B16A2FC290 /* CaptureViewModelTests.swift */,
 				75FD4CE9AF7B05F82DC4E829 /* EmailOtpAuthTests.swift */,
 				E75593242BB50FF5FF2B90F1 /* ExecutionStateTests.swift */,
@@ -478,6 +484,7 @@
 				257D9D35C45D592E5BA3B1D8 /* CaptureTests.swift in Sources */,
 				BA98637B425AC88CFCCF9B6D /* CounterLedgerTests.swift in Sources */,
 				2095E9A6D2A084662BAB1DBB /* CausalFocusTests.swift in Sources */,
+				9174914637B56849F06AB839 /* CausalJournalTests.swift in Sources */,
 				0DFF4D3EAF7F06C09A8F8493 /* CaptureViewModelTests.swift in Sources */,
 				B36000BC49EA4E882DE39EB3 /* EmailOtpAuthTests.swift in Sources */,
 				60C71721839D479A8F1456C3 /* ExecutionStateTests.swift in Sources */,
@@ -508,6 +515,7 @@
 				94934DCF56D1DDD2DC55A505 /* BreakdownService.swift in Sources */,
 				DFF0C41F8648B45655997B21 /* BreakdownSheet.swift in Sources */,
 				C20DC5B9022B6B51395611C1 /* BuildStaging.swift in Sources */,
+				BEB9FE6085129C7DA756F358 /* CausalJournal.swift in Sources */,
 				0603D2747A0BF471F1D80B38 /* CalendarCollisionService.swift in Sources */,
 				6D30DA73D50C8EA23559A124 /* CaptureOverlayView.swift in Sources */,
 				9BAC7B5DA76027A6D8426517 /* CaptureParser.swift in Sources */,
