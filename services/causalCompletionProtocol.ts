@@ -74,6 +74,7 @@ export function assertCausalCompletionReceipt(accountId: string, operation: Caus
     const change = operation.changes[index], result = value.changes[index], item = result?.record;
     if (!object(result) || result.mutationId !== change.mutationId || result.accepted !== true
       || !integer.min(1).safeParse(result.serverVersion).success || result.serverVersion <= previousVersion || result.serverVersion >= record.server_version
+      || (change.baseServerVersion !== null && change.baseServerVersion >= result.serverVersion)
       || result.replayMismatch === true || result.serverMissing === true || result.conflictId !== undefined
       || !object(item) || item.user_id !== accountId || item.entity_type !== change.entityType || item.entity_id !== change.entityId
       || item.device_id !== change.deviceId || item.version !== change.version || item.server_version !== result.serverVersion

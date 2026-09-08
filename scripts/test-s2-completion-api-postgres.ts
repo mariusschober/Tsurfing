@@ -12,6 +12,8 @@ import { CAUSAL_STORE, fenceLegacyTracking } from '../services/causalStorage';
 import { bindCausalCapability } from '../services/causalEnrollment';
 import { admitLocalCompletion, prepareCompletionRequest, syncLocalCompletion } from '../services/causalCompletionCoordinator';
 import { emptySyncMeta } from '../services/syncProtocol';
+import { pullCausalHistory } from '../services/causalHistory';
+import { applyDownloadedCausalHistory } from '../services/causalProjection';
 
 if (!/^(goalflow_empty_|goalflow_upgrade_|s2_)/.test(process.env.PGDATABASE ?? '')) throw new Error('Disposable database required');
 const literal = (value: unknown) => "'" + JSON.stringify(value).replaceAll("'", "''") + "'::jsonb";
@@ -119,7 +121,13 @@ await admitLocalCompletion(localName, { focus: { schemaVersion: 1, accountId: we
 const saved = await prepareCompletionRequest(localName, webOwner, action);
 let interrupted = false;
 const webDatabase = { rpc: async (name: string, args: any) => {
-  assert.equal(name, 'goalflow_complete_focus_v2'); assert.equal(args.target_user_id, webOwner);
+  assert.equal(args.target_user_id, webOwner);
+  if (name === 'goalflow_causal_history_chunk_v2') {
+    assert.equal(args.target_epoch, webEpoch);
+    for (const value of [args.target_revision, args.through_revision, args.target_offset]) assert.ok(Number.isSafeInteger(value));
+    return { data: query(`set role service_role; select public.goalflow_causal_history_chunk_v2('${webOwner}','${webEpoch}',${args.target_revision},${args.through_revision},${args.target_offset})`), error: null };
+  }
+  assert.equal(name, 'goalflow_complete_focus_v2');
   return { data: query(`set role service_role; select public.goalflow_complete_focus_v2('${webOwner}',${literal(args.operation)})`), error: null };
 } } as unknown as SupabaseClient;
 const authenticatedFetch = async (url: RequestInfo | URL, init?: RequestInit) => {
@@ -142,5 +150,32 @@ for (const member of JSON.parse(saved).changes) {
 assert.equal(query(`select to_json(notes) from public.tasks where user_id='${webOwner}' and id='${webTaskId}'`) === finalNotes, true);
 assert.equal(query(`select payload->'2026-09-08'->'tasksCompleted' from public.sync_records where user_id='${webOwner}' and entity_type='stats'`), 1);
 assert.equal((await reopened.get('sync', webOwner)).cursor, meta.cursor); reopened.close();
+const consumerName = `s2-completion-consumer-${randomUUID()}`;
+const consumer = await openDB(consumerName, 1, { upgrade(db) { for (const store of [...Object.keys(collections), 'sync']) db.createObjectStore(store); } });
+for (const [store, value] of Object.entries(collections)) await consumer.put(store, value, webOwner);
+await consumer.put('sync', meta, webOwner); consumer.close();
+(await fenceLegacyTracking(consumerName)).close();
+await bindCausalCapability(consumerName, webOwner, { schemaVersion: 2, accountId: webOwner, enrolled: true, epoch: webEpoch, projectionRevision: 1, rolloutReady: false });
+const historyFetch = async (input: RequestInfo | URL) => {
+  const url = new URL(String(input), 'http://synthetic.invalid');
+  assert.equal(url.pathname, '/api/v1/sync/causal-history');
+  return Response.json(await readCausalHistoryChunk(webDatabase, webOwner, { epoch: url.searchParams.get('epoch'),
+    revision: Number(url.searchParams.get('revision')), throughRevision: Number(url.searchParams.get('throughRevision')), offset: Number(url.searchParams.get('offset')) }));
+};
+assert.equal((await pullCausalHistory(consumerName, webOwner, { authenticatedFetch: historyFetch }, 1)).complete, false);
+await assert.rejects(applyDownloadedCausalHistory(consumerName, webOwner), /retained history horizon/);
+const downloaded = await pullCausalHistory(consumerName, webOwner, { authenticatedFetch: historyFetch });
+assert.equal(downloaded.complete, true);
+assert.equal((await applyDownloadedCausalHistory(consumerName, webOwner)).blocked, false);
+const installed = await openDB(consumerName), consumerState = await installed.get(CAUSAL_STORE, webOwner);
+for (const member of JSON.parse(saved).changes) {
+  const value = await installed.get(member.entityType, webOwner);
+  assert.deepEqual(Array.isArray(value) ? value.find(item => item.id === member.entityId) : value, member.payload);
+}
+assert.equal(consumerState.trackingValue.focusSession.phase, 'completed');
+assert.equal(consumerState.trackingValue.planViewCount, 27); assert.equal(consumerState.trackingValue.dailyPostponeCount, 3);
+assert.equal((await installed.get('sync', webOwner)).cursor, meta.cursor); installed.close();
+assert.equal((await applyDownloadedCausalHistory(consumerName, webOwner)).duplicate, true);
 console.log(JSON.stringify({ status: 'PASS', engine: 'PostgreSQL', atomicVisibility: 'PASS', concurrentDuplicate: 'EXACT', publicationOrder: 'PASS', canonicalFinalNotes: 'FULL',
-  completionReceipt: 'EXACT', historyChunks: parts.length, webAdmission: 'SIX_ATOMIC_EFFECTS', responseLoss: 'EXACT_RETRY_NO_DOUBLE_AWARD', hostedPostgREST: 'NOT_MEASURED' }));
+  completionReceipt: 'EXACT', historyChunks: parts.length, webAdmission: 'SIX_ATOMIC_EFFECTS', responseLoss: 'EXACT_RETRY_NO_DOUBLE_AWARD',
+  consumerHistoryApplication: 'ALL_EFFECTS_AND_FOCUS', consumerHistoryChunks: downloaded.fetched + 1, consumerReplay: 'NO_CHANGE', hostedPostgREST: 'NOT_MEASURED' }));

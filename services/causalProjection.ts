@@ -1,4 +1,4 @@
-import { openDB } from 'idb';
+import { openDB, type IDBPDatabase } from 'idb';
 import { applyFocusCommand, initialFocusJournal, type FocusCommand } from '../src/domain/causalFocus';
 import { projectCounters, validateCounterBaseline, type CounterBaseline, type CounterDelta } from '../src/domain/counterLedger';
 import { assertCausalHistoryEntry } from './causalHistoryProtocol';
@@ -10,7 +10,10 @@ import type { CausalEnrollmentState } from './causalEnrollment';
 import type { CausalReceiptState } from './causalReceipts';
 import type { FocusAccountState, LocalFocusIntent } from './causalFocusCoordinator';
 import type { CounterAccountState } from './causalCounterCoordinator';
-import { stableJson } from './syncProtocol';
+import { normalizeSyncMeta, stableJson, type SyncMeta } from './syncProtocol';
+import { parseCausalCompletion } from './causalCompletionProtocol';
+import { assertCompletionCapturesMaterialized, validateCompletionEvidence } from './causalCompletionCoordinator';
+import { applyCompletionHistory, CompletionProjectionReview, COMPLETION_STORES, type CompletionProjectionState } from './causalCompletionProjection';
 
 const record = (value: unknown): value is Record<string, any> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const same = (a: unknown, b: unknown) => stableJson(a) === stableJson(b);
@@ -32,14 +35,20 @@ export function replayCausalHistory(accountId: string, history: SavedCausalHisto
   const baselines: Record<string, CounterBaseline> = { [first.receipt.baseline.day]: first.receipt.baseline };
   const events: Record<string, CounterDelta> = {};
   const receipts: Record<string, Record<string, any>> = {};
+  const memberIds = new Set<string>();
   for (let revision = 1; revision <= history.downloadedRevision; revision++) {
     const entry = assertCausalHistoryEntry(accountId, history.epoch, revision, JSON.parse(history.entries[String(revision)].body));
     const receipt = entry.receipt;
-    if (receipt.operation?.type === 'completion') throw new Error('Atomic completion history requires the task/effect application coordinator. All history remains retained.');
-    const operation = parseCausalOperation(accountId, receipt.operation), command = operation.command;
+    const operation = receipt.operation?.type === 'completion' ? parseCausalCompletion(accountId, receipt.operation) : parseCausalOperation(accountId, receipt.operation);
+    const command = operation.command;
     const id = command.actionId as string;
-    if (receipts[id] || id === history.epoch || Object.values(baselines).some(b => b.baselineId === id)) throw new Error('Causal history repeats an immutable action identity.');
-    if (operation.type === 'focus') {
+    if (receipts[id] || memberIds.has(id) || id === history.epoch || Object.values(baselines).some(b => b.baselineId === id)) throw new Error('Causal history repeats an immutable action identity.');
+    if (operation.type === 'completion') for (const member of operation.changes) {
+      if (receipts[member.mutationId] || memberIds.has(member.mutationId) || member.mutationId === history.epoch
+        || Object.values(baselines).some(b => b.baselineId === member.mutationId)) throw new Error('Causal history reuses a completion member identity.');
+      if (receipt.accepted) memberIds.add(member.mutationId);
+    }
+    if (operation.type === 'focus' || operation.type === 'completion') {
       const result = applyFocusCommand(focus, command as FocusCommand);
       if (!same(result.outcome, receipt.outcome)) throw new Error('Causal history contradicts its focus transition.');
       focus = result.journal;
@@ -72,7 +81,7 @@ export function replayCausalHistory(accountId: string, history: SavedCausalHisto
   return { tracking, focus, baselines, events, receipts };
 }
 
-type State = CausalEnrollmentState & CausalReceiptState & FocusAccountState & CounterAccountState & {
+type State = CausalEnrollmentState & CausalReceiptState & FocusAccountState & CounterAccountState & CompletionProjectionState & {
   causalHistory?: SavedCausalHistory;
   causalProjection?: { schemaVersion: 1; epoch: string; revision: number };
   causalProjectionPreimage?: { tracking: unknown; focus: unknown };
@@ -80,9 +89,75 @@ type State = CausalEnrollmentState & CausalReceiptState & FocusAccountState & Co
   causalProjectionReviewHistory?: Record<string, string[]>;
 };
 
+function orderedPendingFocus(state: State, receipts: Record<string, unknown>) {
+  const commands = new Map<string, FocusCommand>();
+  for (const [id, command] of Object.entries(state.focusOutbox ?? {})) {
+    if (!same(state.focusAdmissions?.[id]?.command, command)) throw new Error('A pending focus command has no exact admission.');
+    if (!receipts[id]) commands.set(id, command);
+  }
+  for (const [id, admission] of Object.entries(state.completionOutbox ?? {})) {
+    if (commands.has(id)) throw new Error('A pending completion reuses a focus action identity.');
+    if (!receipts[id]) commands.set(id, admission.command);
+  }
+  const ordered: FocusCommand[] = [], visiting = new Set<string>(), visited = new Set<string>();
+  // Iterative traversal preserves parent order without a stack-depth or total
+  // pending-history limit. Wall-clock timestamps are never ordering evidence.
+  for (const id of commands.keys()) {
+    const path: string[] = []; let current: string | null = id;
+    while (current && commands.has(current) && !visited.has(current)) {
+      if (visiting.has(current)) throw new Error('The pending focus dependency history contains a cycle.');
+      visiting.add(current); path.push(current); current = commands.get(current)!.expectedRevision;
+    }
+    while (path.length) {
+      const next = path.pop()!; visiting.delete(next); visited.add(next); ordered.push(commands.get(next)!);
+    }
+  }
+  return ordered;
+}
+
+function completionTaskPreimage(state: State, command: FocusCommand, receipts: Record<string, unknown>): unknown {
+  for (const [id, admission] of Object.entries(state.completionOutbox ?? {})) {
+    if (receipts[id] || admission.command.sessionId !== command.sessionId || admission.command.taskId !== command.taskId) continue;
+    const visited = new Set<string>(); let parent = admission.command.expectedRevision;
+    while (parent && !visited.has(parent)) {
+      if (parent === command.actionId) return admission.preimages[`tasks:${command.taskId}`];
+      visited.add(parent);
+      parent = state.focusAdmissions?.[parent]?.command.expectedRevision ?? state.completionAdmissions?.[parent]?.command.expectedRevision ?? null;
+    }
+  }
+  return undefined;
+}
+
+async function retainCompletionReview(db: IDBPDatabase, accountId: string, history: SavedCausalHistory, error: CompletionProjectionReview) {
+  const tx = db.transaction(CAUSAL_STORE, 'readwrite'); void tx.done.catch(() => undefined);
+  try {
+    const state = await tx.store.get(accountId) as State | undefined;
+    if (!state || state.schemaVersion !== 1 || state.accountKey !== accountId || !Number.isSafeInteger(state.generation) || state.generation < 0
+      || !same(state.causalHistory, history)) throw new Error('History changed before the recovery review could be retained. Retry from the saved horizon.');
+    const before = stableJson(state);
+    const proof = { epoch: history.epoch, revision: history.downloadedRevision, sha256: history.entries[String(history.downloadedRevision)].sha256,
+      actionId: error.actionId, code: error.code, ...(error.entityKey ? { entityKey: error.entityKey } : {}) };
+    state.completionApplicationReviews ??= {};
+    state.completionApplicationReviews[stableJson(proof)] = proof;
+    state.causalProjectionReviews ??= {}; state.causalProjectionReviews[error.actionId] = { code: error.code };
+    state.causalProjectionReviewHistory ??= {};
+    const codes = state.causalProjectionReviewHistory[error.actionId] ??= [];
+    if (!codes.includes(error.code)) codes.push(error.code);
+    const duplicate = before === stableJson(state);
+    if (!duplicate) {
+      if (!Number.isSafeInteger(state.generation + 1)) throw new Error('Local generation exhausted.');
+      state.generation++; await tx.store.put(state);
+    }
+    await tx.done;
+    return { blocked: true as const, duplicate, generation: state.generation, reviews: state.causalProjectionReviews };
+  } catch (failure) {
+    try { tx.abort(); } catch (_) {} try { await tx.done; } catch (_) {} throw failure;
+  }
+}
+
 /** All protected projections, exact local acknowledgments and generation move
- * together. The regular entity pull cursor and unrelated business data do not
- * move here. Pending commands keep their captured parents and identities. */
+ * together, including any completion task/effect members. The ordinary pull
+ * cursor never moves here. Pending commands retain captured parents/identities. */
 export async function applyDownloadedCausalHistory(name: string, accountId: string) {
   const db = await openDB(name);
   try {
@@ -92,18 +167,35 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
     if (!history || history.partial || history.downloadedRevision !== history.throughRevision) throw new Error('Complete the retained history horizon before applying it.');
     await validateSavedCausalHistory(accountId, history);
     const canonical = replayCausalHistory(accountId, history);
-    const tx = db.transaction([CAUSAL_STORE, 'tracking', 'tasks'], 'readwrite');
+    const tx = db.transaction([...new Set([CAUSAL_STORE, 'tracking', 'tasks', 'sync', ...COMPLETION_STORES])]
+      .filter(store => db.objectStoreNames.contains(store)), 'readwrite');
     void tx.done.catch(() => undefined);
     try {
       const state = await readCausalAccount(tx, accountId) as State | undefined;
       if (!state || !state.trackingPresent || !record(state.trackingValue) || !same(state.causalHistory, history)) throw new Error('Causal state changed; resume from retained history.');
-      if (Object.keys((state as State & { completionOutbox?: Record<string, unknown> }).completionOutbox ?? {}).length) {
-        throw new Error('Pending atomic completion requires the task/effect application coordinator. All projections remain retained.');
-      }
       const capability = assertCausalCapability(accountId, state.causalCapability);
       if (!capability.enrolled || capability.epoch !== history.epoch || capability.projectionRevision < history.downloadedRevision
         || (state.causalProjection && (state.causalProjection.epoch !== history.epoch || state.causalProjection.revision > history.downloadedRevision))) throw new Error('The causal projection epoch or revision cannot be rewound.');
       const before = stableJson(state);
+      const completions = Object.entries(canonical.receipts).filter(([, receipt]) => receipt.operation?.type === 'completion');
+      const needsCompletion = completions.length > 0 || Object.keys(state.completionAdmissions ?? {}).length > 0;
+      const values: Record<string, unknown> = {};
+      let meta: SyncMeta | undefined, rawMeta: unknown, beforeMeta: string | undefined;
+      const changedStores = new Set<string>();
+      if (needsCompletion) {
+        for (const store of COMPLETION_STORES) {
+          if (!db.objectStoreNames.contains(store)) throw new Error('Completion history requires all existing business stores before application.');
+          values[store] = await tx.objectStore(store).get(accountId);
+        }
+        rawMeta = await tx.objectStore('sync').get(accountId); meta = normalizeSyncMeta(rawMeta); beforeMeta = stableJson(meta);
+        validateCompletionEvidence(accountId, state, rawMeta, values);
+        try { assertCompletionCapturesMaterialized(accountId, meta); }
+        catch (_) { throw new CompletionProjectionReview(completions[0]?.[0] ?? Object.keys(state.completionAdmissions!)[0], 'COMPLETION_CAPTURE_REVIEW'); }
+        for (const [id, receipt] of Object.entries(state.completionReceipts ?? {})) {
+          if (receipt.projectionRevision > history.downloadedRevision) throw new Error('Download history through the newest retained completion receipt before applying it.');
+          if (!same(canonical.receipts[id], receipt)) throw new Error('Downloaded history differs from a retained completion receipt.');
+        }
+      }
       const cutover = JSON.parse(history.entries['0'].body).receipt.record.payload;
       if (!state.cutover.trackingPresent || !record(state.cutover.trackingValue)
         || !same(protectedTracking(state.cutover.trackingValue), protectedTracking(cutover))) {
@@ -134,6 +226,13 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
       state.focusAdmissions ??= {};
       const reviews: Record<string, { code: string }> = {};
       for (const [id, receipt] of Object.entries(canonical.receipts)) {
+        if (receipt.operation?.type === 'completion') {
+          const entry = history.entries[String(receipt.projectionRevision)];
+          for (const store of applyCompletionHistory(accountId, state, meta!, values, receipt,
+            { epoch: history.epoch, revision: receipt.projectionRevision, sha256: entry.sha256 })) changedStores.add(store);
+          if (!receipt.accepted) reviews[id] = { code: receipt.outcome.code };
+          continue;
+        }
         const operation = parseCausalOperation(accountId, receipt.operation);
         const command = operation.command;
         const intent = operation.type === 'focus' ? focusIntent(command as FocusCommand) : command;
@@ -180,11 +279,16 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
       const selected = state.counterBaselines[canonical.tracking.date];
       if (!selected) throw new Error('The selected counter day has no baseline.');
       let focus = canonical.focus;
-      const tasks = await tx.objectStore('tasks').get(accountId);
-      for (const [id, command] of Object.entries(state.focusOutbox ?? {})) {
-        if (canonical.receipts[id]) continue;
-        if (!same(state.focusAdmissions[id]?.command, command)) throw new Error('A pending focus command has no exact admission.');
-        const task = Array.isArray(tasks) ? tasks.filter(item => record(item) && item.id === command.taskId) : [];
+      const tasks = needsCompletion ? values.tasks : await tx.objectStore('tasks').get(accountId);
+      for (const command of orderedPendingFocus(state, canonical.receipts)) {
+        const id = command.actionId;
+        if (command.kind === 'complete') {
+          const result = applyFocusCommand(focus, command);
+          if (!result.outcome.accepted) throw new CompletionProjectionReview(id, 'COMPLETION_CAUSAL_REVIEW');
+          focus = result.journal; continue;
+        }
+        const preimage = completionTaskPreimage(state, command, canonical.receipts);
+        const task = record(preimage) ? [preimage] : Array.isArray(tasks) ? tasks.filter(item => record(item) && item.id === command.taskId) : [];
         if (task.length !== 1 || (['start', 'resume', 'extendAndResume'].includes(command.kind)
           && (task[0].completed || task[0].wontDo || task[0].deletedAt || ['completed', 'dropped', 'archived', 'broken_down'].includes(task[0].lifecycleStatus)))) {
           reviews[id] = { code: 'TASK_REVIEW_REQUIRED' }; continue;
@@ -206,16 +310,26 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
         if (!codes.includes(review.code)) codes.push(review.code);
       }
       state.causalProjectionReviews = reviews;
-      if (before === stableJson(state)) { await tx.done; return { duplicate: true, generation: state.generation, reviews }; }
+      if (before === stableJson(state) && (meta === undefined || beforeMeta === stableJson(meta))) {
+        await tx.done; return { blocked: false as const, duplicate: true, generation: state.generation, reviews };
+      }
       if (!Number.isSafeInteger(state.generation + 1)) throw new Error('Local generation exhausted.');
       state.generation++;
+      if (meta) {
+        meta.localState ??= { generation: 0, journal: {}, receipts: {} };
+        if (!Number.isSafeInteger(meta.localState.generation + 1)) throw new Error('Local generation exhausted.');
+        meta.localState.generation++;
+        for (const store of changedStores) await tx.objectStore(store).put(values[store], accountId);
+        await tx.objectStore('sync').put({ ...(record(rawMeta) ? rawMeta : {}), ...meta }, accountId);
+      }
       await tx.objectStore(CAUSAL_STORE).put(state);
       await tx.objectStore('tracking').put({ [TRACKING_KEY_PATH]: accountId, payload: next });
       await tx.done;
-      return { duplicate: false, generation: state.generation, reviews };
+      return { blocked: false as const, duplicate: false, generation: state.generation, reviews };
     } catch (error) {
       try { tx.abort(); } catch (_) {}
       try { await tx.done; } catch (_) {}
+      if (error instanceof CompletionProjectionReview) return await retainCompletionReview(db, accountId, history, error);
       throw error;
     }
   } finally { db.close(); }

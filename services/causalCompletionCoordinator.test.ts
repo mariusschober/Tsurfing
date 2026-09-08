@@ -262,7 +262,7 @@ it('chains two local completions through their shared statistics and progress re
   expect(() => validateCompletionEvidence(f.accountId, after[CAUSAL_STORE], after.sync, after)).not.toThrow();
 });
 
-it('does not let the earlier history-only applier revive active focus over an admitted completion', async () => {
+it('replays an admitted completion over earlier history without reviving active focus or losing its effects', async () => {
   const f = await fixture(), intent = f.intent(); await admitLocalCompletion(f.name, intent);
   const state = (await f.read())[CAUSAL_STORE];
   const receipt = { schemaVersion: 2, epoch: f.epoch, projectionRevision: 0,
@@ -275,6 +275,9 @@ it('does not let the earlier history-only applier revive active focus over an ad
     entries: { '0': { body, sha256: await causalHistoryHash(new TextEncoder().encode(body)) } } };
   const db = await openDB(f.name); await db.put(CAUSAL_STORE, state); db.close();
   const before = await f.read();
-  await expect(applyDownloadedCausalHistory(f.name, f.accountId)).rejects.toThrow('Pending atomic completion');
-  expect(await f.read()).toEqual(before);
+  expect((await applyDownloadedCausalHistory(f.name, f.accountId)).blocked).toBe(false);
+  const after = await f.read();
+  for (const store of ['tasks', 'stats', 'progress', 'goals', 'habits', 'task_events', 'tracking']) expect(after[store]).toEqual(before[store]);
+  expect(after[CAUSAL_STORE].completionOutbox).toEqual(before[CAUSAL_STORE].completionOutbox);
+  expect(after[CAUSAL_STORE].trackingValue.focusSession.phase).toBe('completed');
 });

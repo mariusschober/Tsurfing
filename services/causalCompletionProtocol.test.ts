@@ -77,6 +77,13 @@ it('validates restored operation scope even when a rejected receipt has no membe
   expect(() => assertCausalCompletionReceipt(f.accountId, f.operation, f.receipt)).toThrow();
 });
 
+it('requires every accepted member publication to follow its submitted base version', () => {
+  for (const base of [8, 9]) {
+    const f = fixture(); f.operation.changes[0].baseServerVersion = base;
+    expect(() => assertCausalCompletionReceipt(f.accountId, f.operation, f.receipt)).toThrow();
+  }
+});
+
 it('rejects two distinct completion events within one logical completion', () => {
   const f = fixture();
   for (let i = 0; i < 2; i++) {

@@ -1,4 +1,5 @@
 import { openDB, IDBPDatabase, type IDBPTransaction } from 'idb';
+import { validateCompletionApplicationEvidence } from './causalCompletionProjection';
 import {
   appendStagedTransactions,
   applyAutomaticReconciliation,
@@ -1597,6 +1598,7 @@ export const storageService = {
     if (Object.hasOwn(verifiedCollections, CAUSAL_STORE)) {
       if (envelope.schemaVersion !== 5 || envelope.ownerKey !== userKey || !envelope.checksum) throw new DurableStorageError('A bound schema-5 causal backup is required.');
       const evidence = readCausalBackup(userKey, verifiedCollections[CAUSAL_STORE], verifiedCollections);
+      await validateCompletionApplicationEvidence(userKey, evidence.authority);
       if (stableJson(verifiedCollections[STORES.TRACKING]) !== stableJson(evidence.authority.trackingPresent ? evidence.authority.trackingValue : undefined)
         || stableJson(verifiedCollections[STORES.SYNC]) !== stableJson(evidence.sync === undefined ? undefined : normalizeSyncMeta(evidence.sync))) {
         throw new DurableStorageError('The causal backup projections differ from their retained evidence. Nothing was restored.');

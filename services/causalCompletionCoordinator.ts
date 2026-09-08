@@ -45,7 +45,7 @@ const same = (a: unknown, b: unknown) => stableJson(a) === stableJson(b);
 const identity = (intent: CompletionIntent, entity: string) => uuidv5(`completion-v1:${intent.focus.accountId}:${entity}`, intent.focus.actionId);
 const memberMeaning = ({ baseServerVersion: _base, ...member }: Member) => member;
 
-function assertNoUnmaterializedCapture(accountId: string, meta: SyncMeta) {
+export function assertCompletionCapturesMaterialized(accountId: string, meta: SyncMeta) {
   if (typeof window === 'undefined') return;
   for (const store of [...stores, 'tracking', 'sync']) {
     const raw = window.localStorage.getItem(`goalflow_fallback_${store}_${accountId}`);
@@ -124,7 +124,7 @@ export async function admitLocalCompletion(name: string, captured: CompletionInt
     }
     const capability = assertCausalCapability(accountId, state.causalCapability);
     if (!capability.enrolled) throw new Error('Completion requires the established account epoch.');
-    assertNoUnmaterializedCapture(accountId, meta);
+    assertCompletionCapturesMaterialized(accountId, meta);
     const journal = state.focus ?? initialFocusJournal(accountId, state.trackingValue.focusSession);
     const current = journal.currentSessionId ? journal.sessions[journal.currentSessionId] : undefined;
     const command: FocusCommand = { ...intent.focus, expectedRevision: current?.revision ?? null };
@@ -209,7 +209,7 @@ function assertAdmission(state: CompletionAccountState, id: string) {
   return admission;
 }
 
-function assertRequest(admission: CompletionAdmission, operation: CausalCompletionOperation) {
+export function assertCompletionAdmissionOperation(admission: CompletionAdmission, operation: CausalCompletionOperation) {
   if (operation.epoch !== admission.epoch || !same(operation.command, admission.command)
     || !same(operation.changes.map(memberMeaning), admission.members.map(memberMeaning))) throw new Error('The saved completion differs from its durable admission.');
   for (const member of operation.changes) {
@@ -260,7 +260,7 @@ export async function prepareCompletionRequest(name: string, accountId: string, 
     const prior = state.completionRequests?.[id];
     if (prior !== undefined) {
       const operation = parseCausalCompletion(accountId, JSON.parse(prior));
-      assertRequest(admission, operation);
+      assertCompletionAdmissionOperation(admission, operation);
       if (!same(operation.changes, resolvedMembers(accountId, state, meta, admission))) throw new Error('The attempted completion has different dependency evidence.');
       return prior;
     }
@@ -287,37 +287,41 @@ export async function prepareCompletionRequest(name: string, accountId: string, 
  * reservations. Receipt snapshots never overwrite newer local projections. */
 export async function commitCompletionReceipt(name: string, accountId: string, id: string, input: unknown) {
   const receipt = structuredClone(input);
-  return run(name, accountId, async (state, meta) => {
-    const admission = assertAdmission(state, id), bytes = state.completionRequests?.[id];
-    if (!bytes) throw new Error('The original completion request is missing.');
-    const operation = parseCausalCompletion(accountId, JSON.parse(bytes));
-    assertRequest(admission, operation);
-    if (!same(operation.changes, resolvedMembers(accountId, state, meta, admission))) throw new Error('The attempted completion has different dependency evidence.');
-    const verified = assertCausalCompletionReceipt(accountId, operation, receipt);
-    const prior = state.completionReceipts?.[id];
-    if (prior) {
-      if (!same(prior, verified)) throw new Error('The original completion receipt is immutable.');
-      return { duplicate: true, accepted: prior.accepted as boolean };
-    }
-    if (!state.completionOutbox?.[id]) throw new Error('The pending completion is missing.');
-    if (verified.accepted) {
-      for (let index = 0; index < operation.changes.length; index++) {
-        const member = operation.changes[index], result = verified.changes[index];
-        const reservation = meta.localState?.completionReservations?.[member.mutationId];
-        if (!same(reservation, { actionId: id, entityType: member.entityType, entityId: member.entityId, version: member.version })) throw new Error('The completion reservation differs from its receipt.');
-        for (const later of meta.outbox) if (later.dependsOnMutationId === member.mutationId) {
-          if (later.attemptedAt) throw new Error('An attempted successor requires explicit recovery. Its request was not rewritten.');
-          later.dependsOnMutationId = undefined; later.baseServerVersion = result.serverVersion;
-        }
-        const key = syncEntityKey(member.entityType, member.entityId), version = meta.versions[key];
-        meta.versions[key] = { local: Math.max(version?.local ?? 0, member.version), server: Math.max(version?.server ?? 0, result.serverVersion) };
-        delete meta.localState!.completionReservations![member.mutationId];
+  return run(name, accountId, async (state, meta) => retainCompletionReceipt(accountId, state, meta, id, receipt));
+}
+
+/** Caller must own the transaction containing authority and sync metadata.
+ * Shared by direct responses and atomic downloaded-history application. */
+export function retainCompletionReceipt(accountId: string, state: CompletionAccountState, meta: SyncMeta, id: string, receipt: unknown) {
+  const admission = assertAdmission(state, id), bytes = state.completionRequests?.[id];
+  if (!bytes) throw new Error('The original completion request is missing.');
+  const operation = parseCausalCompletion(accountId, JSON.parse(bytes));
+  assertCompletionAdmissionOperation(admission, operation);
+  if (!same(operation.changes, resolvedMembers(accountId, state, meta, admission))) throw new Error('The attempted completion has different dependency evidence.');
+  const verified = assertCausalCompletionReceipt(accountId, operation, receipt);
+  const prior = state.completionReceipts?.[id];
+  if (prior) {
+    if (!same(prior, verified)) throw new Error('The original completion receipt is immutable.');
+    return { duplicate: true, accepted: prior.accepted as boolean };
+  }
+  if (!state.completionOutbox?.[id]) throw new Error('The pending completion is missing.');
+  if (verified.accepted) {
+    for (let index = 0; index < operation.changes.length; index++) {
+      const member = operation.changes[index], result = verified.changes[index];
+      const reservation = meta.localState?.completionReservations?.[member.mutationId];
+      if (!same(reservation, { actionId: id, entityType: member.entityType, entityId: member.entityId, version: member.version })) throw new Error('The completion reservation differs from its receipt.');
+      for (const later of meta.outbox) if (later.dependsOnMutationId === member.mutationId) {
+        if (later.attemptedAt) throw new Error('An attempted successor requires explicit recovery. Its request was not rewritten.');
+        later.dependsOnMutationId = undefined; later.baseServerVersion = result.serverVersion;
       }
-      delete state.completionOutbox![id];
+      const key = syncEntityKey(member.entityType, member.entityId), version = meta.versions[key];
+      meta.versions[key] = { local: Math.max(version?.local ?? 0, member.version), server: Math.max(version?.server ?? 0, result.serverVersion) };
+      delete meta.localState!.completionReservations![member.mutationId];
     }
-    state.completionReceipts ??= {}; state.completionReceipts[id] = verified;
-    return { duplicate: false, accepted: verified.accepted as boolean };
-  });
+    delete state.completionOutbox![id];
+  }
+  state.completionReceipts ??= {}; state.completionReceipts[id] = verified;
+  return { duplicate: false, accepted: verified.accepted as boolean };
 }
 
 export async function syncLocalCompletion(name: string, accountId: string, id: string, runtime: Parameters<typeof sendCausalCompletion>[2]) {
@@ -374,7 +378,7 @@ export function validateCompletionEvidence(accountId: string, state: CompletionA
   for (const [id, bytes] of Object.entries(state.completionRequests ?? {})) {
     if (typeof bytes !== 'string') throw new Error('The completion request evidence is invalid.');
     const admission = assertAdmission(state, id), operation = parseCausalCompletion(accountId, JSON.parse(bytes));
-    assertRequest(admission, operation);
+    assertCompletionAdmissionOperation(admission, operation);
     if (!same(operation.changes, resolvedMembers(accountId, state, meta, admission))) throw new Error('The attempted completion has different dependency evidence.');
     if (state.completionReceipts?.[id]) assertCausalCompletionReceipt(accountId, operation, state.completionReceipts[id]);
   }
