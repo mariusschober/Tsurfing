@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Web completion admission, exact receipt retirement, history download and atomic application are verified locally; active Web coordination, native integration, recovery and mixed-version activation remain incomplete.",
+  "acceptanceReason": "Implementation continues. Dormant Web completion and business-store compatibility fence pass locally; active ordinary storage, backup/recovery, Web coordination, native integration and mixed-version activation remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -1633,6 +1633,102 @@
         "Native causal journals, transport and completion integration",
         "Legacy and nonempty-restore recovery actions",
         "Mixed-version activation and final platform acceptance"
+      ],
+      "permittedNextStage": null
+    },
+    {
+      "commit": "253bc777ff0c8d40a671adda02ca76bc9275d456",
+      "scope": "Dormant Web business-store fence and causal coordinator accessors",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "config/durable-identifiers.json",
+        "scripts/check-durable-identifiers.mjs",
+        "services/causalBusinessStorage.test.ts",
+        "services/causalBusinessStorage.ts",
+        "services/causalCompletionCoordinator.test.ts",
+        "services/causalCompletionCoordinator.ts",
+        "services/causalCompletionProjection.test.ts",
+        "services/causalFocusCoordinator.ts",
+        "services/causalProjection.ts",
+        "services/storage.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-BUSINESS-FENCE",
+          "disposition": "Implemented private authority and structural old-write fence; active application and backup integration remain pending."
+        }
+      ],
+      "tests": {
+        "release": {
+          "passed": 620,
+          "files": 96,
+          "exitCode": 0
+        },
+        "focused": {
+          "passed": 51,
+          "files": 3,
+          "exitCode": 0
+        },
+        "staticMigrations": 31,
+        "migrationHashes": 31,
+        "roomHashes": 8,
+        "identifiers": 24
+      },
+      "commands": [
+        {
+          "command": "npx vitest run services/causalBusinessStorage.test.ts services/causalCompletionCoordinator.test.ts services/causalCompletionProjection.test.ts",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run lint",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:migrations",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:migration-hashes",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:room-hashes",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0
+        }
+      ],
+      "iterationFailures": [
+        "Initial lint exit 2: versionchange transaction mode absent from schema-validator type; corrected."
+      ],
+      "migrations": {
+        "sql": [],
+        "indexedDB": "Explicit dormant next-version upgrade in the existing DB; copies all accounts into causal_business and fences 14 mirrors. Atomic rollback tested."
+      },
+      "compatibility": "Supported old explicit-key writes fail; old deletes/clears cannot erase private authority. Existing export refuses fenced DB until authoritative backup support exists. No active cutover.",
+      "evidenceSha256": {
+        "evidence/s2-business-fence-focused.log": "e4767c101921f371b7865ec45cf34af627afbc1077a11f3d8f7c3d498bdce4be",
+        "evidence/s2-business-fence-lint.log": "e90ee48ea12d3a4c3b7a3b27a3894b3cf36c40b2d5d29e5bd6efc2dafbd309e5",
+        "evidence/s2-business-fence-release.log": "392fda3da5cf0165535c2c74523e6109b8e4d144f2ef8239aded919715284900",
+        "evidence/s2-business-fence-identifiers.log": "ec5eafc9e1ac1f1965c335182bab5829bf57e4853d5c2ba3f776836e06db657b"
+      },
+      "notMeasured": [
+        "Actual browser-engine migration",
+        "PostgreSQL rerun",
+        "Native rerun",
+        "Active application or mixed-version rollout"
+      ],
+      "blockers": [
+        "Active storage/backup/recovery integration",
+        "Native causal integration",
+        "Historical/nonempty restore recovery",
+        "Mixed-version rollout acceptance"
       ],
       "permittedNextStage": null
     }

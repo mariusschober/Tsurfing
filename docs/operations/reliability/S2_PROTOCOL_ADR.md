@@ -198,3 +198,8 @@ Incoming full server receipts do not require intermediate record snapshots when 
 Pending focus/completion commands replay in explicit parent order using original target identities. Completion preimages prove task eligibility for commands preceding a locally pending completion. Conflicting local completions or overlapping edits cause the entire projection transaction to abort; a separate durable review records the horizon and reason, retaining all original data and requests. Review history survives subsequent successful application.
 
 This removes the former unconditional completion-history refusal. Active Web coordination, old-tab business-store fencing, native integration and explicit recovery remain prerequisites for mixed-version activation.
+
+
+### Business authority beneath legacy store mirrors
+
+Extend the existing tracking fence to all 14 other account stores, including sync. One IndexedDB versionchange copies exact values and cutover preimages to a compound-key private store before replacing legacy out-of-line-key stores with inline-key mirrors. Keeping private authority is necessary because legacy delete/clear accepts the same account key even when put is fenced. All causal coordinators include authority in their existing transaction and use shared accessors; authority and mirrors commit together. No migration is invoked automatically. Active ordinary writers, backup/restore and account lifecycle must use this boundary before cutover is enabled. Local captures remain separate retained evidence and require explicit recovery/admission. The supported-old-code fence does not protect against arbitrary code deleting the entire database. The native storage boundary remains separate.
