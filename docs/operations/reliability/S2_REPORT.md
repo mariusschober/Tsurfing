@@ -604,3 +604,14 @@ Absent/divergent account baseline reconciliation, native integration, non-focus 
 The synthetic cloud test proves server 27/3 plus a queued local increment becomes 28/3 without changing server focus; replay sends no duplicate actions. Altered initial counts, day and absence are rejected without changing stored authority. Full release exit 0: 704 tests across 103 files, including build/artifact checks. Log and checksum are in the JSON handover.
 
 Server-absent enrollment, divergent legacy reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete. No SQL changes, native/browser reruns, installation or deployment. Overall S2 remains **BLOCKED**, with no S3 handoff.
+
+
+## Atomic server initialization checkpoint
+
+`a2b5cca0da80c7c804ad607e080d4bdb448270d9`: **PASS_LOCAL**. Fresh local accounts retain one exact initialization request before transport. The new service-only transaction selects existing canonical tracking unchanged, or creates zero defaults only when both the record and historical tracking evidence are absent. Creation and cutover commit together. Its outer receipt binds the initialization request; the nested cutover receipt keeps its existing exact-record contract. Competing attempts remain retained while verified history identifies the winning epoch.
+
+Migration `20260908065315_s2_causal_account_initialization.sql` is additive and hash-pinned; only its new filename was added to the identifier ledger. Existing migration files and legacy receipts remain unchanged. Missing historical tracking, tombstones, malformed defaults and identity collisions still require recovery. Rollout readiness remains false.
+
+Validation: full release exit 0, 711 tests in 103 files; full empty/upgrade PostgreSQL matrix exit 0; migrations, migration hashes, Room hashes and identifiers exit 0. Real PostgreSQL tests prove concurrent exact retries, rollback and committed cursor ordering. Production API validators and TypeScript history replay consume real database receipts for both new and legacy accounts. Web tests cover lost responses, failed receipt writes, backup validation and a competing initializer without duplicating a queued increment. Three sanitized logs and checksums are recorded in the JSON handover.
+
+Hosted PostgREST is **NOT MEASURED**. Divergent legacy reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete. No native/browser reruns, installation, live configuration or deployment. Overall S2 remains **BLOCKED**, with no S3 handoff.

@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Known-version Web baselines now enroll automatically with preserved audit bindings. Absent/divergent baseline reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
+  "acceptanceReason": "Implementation continues. Web automatic enrollment and fresh-account server initialization are locally verified. Divergent legacy reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -2623,6 +2623,101 @@
         "Enrolled server history only; server-absent account creation and divergent legacy reconciliation remain incomplete.",
         "Native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
         "HTTP responses are synthetic; no SQL changes, native/browser reruns, installation, live configuration or deployment."
+      ],
+      "permittedNextStage": null
+    },
+    {
+      "commit": "a2b5cca0da80c7c804ad607e080d4bdb448270d9",
+      "scope": "Atomic fresh-account server initialization and existing baseline selection",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "config/durable-identifiers.json",
+        "scripts/test-postgres-migrations.sh",
+        "scripts/test-s2-initialization-api-postgres.ts",
+        "scripts/test-s2-initialization.py",
+        "server/causalActions.ts",
+        "server/routes/sync.reconciliation.test.ts",
+        "server/routes/sync.ts",
+        "services/causalCutoverTransport.ts",
+        "services/causalInitialization.ts",
+        "services/causalInitializationProtocol.ts",
+        "services/causalServerInitialization.ts",
+        "services/causalSync.ts",
+        "services/cloudSync.causal.test.ts",
+        "supabase/migrations/20260908065315_s2_causal_account_initialization.sql",
+        "supabase/migrations/MIGRATION_SHA256_MANIFEST.json"
+      ],
+      "findings": [
+        {
+          "id": "S2-SERVER-INITIALIZATION",
+          "disposition": "New service-only transaction selects existing canonical tracking or creates zero defaults only with no historical tracking evidence. Exact outer initialization receipt retains the unchanged nested cutover receipt. Client captures request before transport and retains competing attempts."
+        }
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 711,
+          "testFiles": 103
+        },
+        {
+          "command": "env PATH=/opt/homebrew/opt/postgresql@17/bin:$PATH PGHOST=127.0.0.1 PGPORT=55437 PGUSER=schober npm run test:migrations:postgres",
+          "exitCode": 0,
+          "testBuildIdentity": "empty and upgrade disposable PostgreSQL matrices; initialization concurrency/rollback/cursor tests plus production API validators and TS history replay"
+        },
+        {
+          "command": "npm run verify:migrations",
+          "exitCode": 0,
+          "migrations": 32
+        },
+        {
+          "command": "npm run verify:migration-hashes",
+          "exitCode": 0,
+          "migrations": 32
+        },
+        {
+          "command": "npm run verify:room-hashes",
+          "exitCode": 0,
+          "schemas": 8
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0
+        },
+        {
+          "command": "git diff --check",
+          "exitCode": 0
+        }
+      ],
+      "migrations": [
+        {
+          "file": "20260908065315_s2_causal_account_initialization.sql",
+          "sha256": "e9003fb4e0e68508af96ef5ff4d100867c1f66e00a1fc0f20d03b8015937b621",
+          "compatibility": "Additive private account receipt columns and service-only SECURITY INVOKER RPC. Existing SQL files and cutover/legacy receipt schemas unchanged. Rollout readiness remains false."
+        }
+      ],
+      "evidence": [
+        {
+          "path": "evidence/s2-server-initialization-release.log",
+          "sha256": "c565a25e50c01922d19f558eb4f51ff88f86c33a016cd6e6d8d1a12c8357cf5b"
+        },
+        {
+          "path": "evidence/s2-server-initialization-postgres.log",
+          "sha256": "bea25f67a75a60ff2081b165e758e5272c4057cee9ab35c80cdaf2fea695837c"
+        },
+        {
+          "path": "evidence/s2-server-initialization-identifiers.log",
+          "sha256": "ec5eafc9e1ac1f1965c335182bab5829bf57e4853d5c2ba3f776836e06db657b"
+        }
+      ],
+      "failedAttempts": [
+        "TypeScript initially rejected optional tx.store; replaced with explicit objectStore.",
+        "Identifier verification initially failed because the additive migration was absent from the filename ledger; appended only the new filename and verified again."
+      ],
+      "limitations": [
+        "Hosted PostgREST and live migration application are not measured.",
+        "Divergent legacy reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
+        "No native/browser reruns, installation, live configuration or deployment."
       ],
       "permittedNextStage": null
     }
