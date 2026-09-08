@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+
+ Test Files  3 passed (3)
+      Tests  18 passed (18)
+   Start at  05:20:03
+   Duration  507ms (transform 310ms, setup 0ms, import 480ms, tests 122ms, environment 0ms)
+

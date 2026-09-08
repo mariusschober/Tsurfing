@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues. Schema-6 authoritative backup and ordinary Web storage pass local and browser checks; typed UI actions, day/enrollment handling, causal sync orchestration, native integration and recovery remain incomplete.",
+  "acceptanceReason": "Implementation continues. Dormant Web day intents now have durable admission and exact receipt/history handling. Typed UI, offline dependent counters and day projection, enrollment, causal sync orchestration, native integration and recovery remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -1920,6 +1920,49 @@
         "Mixed-version activation"
       ],
       "permittedNextStage": null
+    },
+    {
+      "commit": "c3ef3becf1bd0fd2a1455455df858e86dd3a576f",
+      "scope": "Dormant Web counter-day intent journal, exact receipt retirement and history compatibility",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "services/causalBackup.ts",
+        "services/causalCounterDayCoordinator.test.ts",
+        "services/causalCounterDayCoordinator.ts",
+        "services/causalProjection.test.ts",
+        "services/causalProjection.ts",
+        "services/causalProtocol.ts",
+        "services/causalReceipts.ts"
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 645,
+          "testFiles": 99
+        },
+        {
+          "command": "npx vitest run services/causalCounterDayCoordinator.test.ts services/causalProjection.test.ts services/causalReceipts.test.ts",
+          "exitCode": 0,
+          "tests": 18,
+          "testFiles": 3
+        }
+      ],
+      "evidence": [
+        {
+          "path": "evidence/s2-day-journal-focused-final.log",
+          "sha256": "fd6c93771ed6a2ac6e429fb49596f438bbcd0a599e7ea8cdda604c0290f2e717"
+        },
+        {
+          "path": "evidence/s2-day-journal-release-final.log",
+          "sha256": "123a1e64c2a788abf98a4ff230e819a73da898301a219cbdee59c3e0a07c6c92"
+        }
+      ],
+      "limitations": [
+        "Day admission preserves intent only; no speculative baseline or local selection projection.",
+        "Typed UI, dependent offline increments, enrollment, native integration and sync orchestration remain incomplete.",
+        "No native, PostgreSQL or browser rerun for this dormant Web journal checkpoint. No deployment or installation."
+      ]
     }
   ],
   "findings": [
