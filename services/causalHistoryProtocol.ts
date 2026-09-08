@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { assertCausalReceipt, parseCausalOperation } from './causalProtocol';
 import { validateCounterBaseline } from '../src/domain/counterLedger';
 import { stableJson } from './syncProtocol';
+import { assertCausalCompletionReceipt, parseCausalCompletion } from './causalCompletionProtocol';
 
 export const CAUSAL_HISTORY_CHUNK_BYTES = 49152;
 /** Per entry, not a limit on the number of retained action revisions. */
@@ -66,7 +67,11 @@ export function assertCausalHistoryEntry(accountId: string, epoch: string, revis
   if (!object(input) || input.schemaVersion !== 2 || input.accountId !== accountId || input.epoch !== epoch
     || input.revision !== revision || !integer.safeParse(revision).success || !object(input.receipt)) throw new Error('The causal history entry has a different identity.');
   if (revision === 0) assertCutoverReceipt(accountId, epoch, input.receipt);
-  else {
+  else if (input.receipt.operation?.type === 'completion') {
+    const operation = parseCausalCompletion(accountId, input.receipt.operation);
+    if (operation.epoch !== epoch || input.receipt.projectionRevision !== revision) throw new Error('The completion history has a different revision.');
+    assertCausalCompletionReceipt(accountId, operation, input.receipt);
+  } else {
     const operation = parseCausalOperation(accountId, input.receipt.operation);
     if (operation.epoch !== epoch || input.receipt.projectionRevision !== revision) throw new Error('The causal history receipt has a different revision.');
     assertCausalReceipt(accountId, operation, input.receipt);

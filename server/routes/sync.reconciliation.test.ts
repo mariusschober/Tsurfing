@@ -17,6 +17,32 @@ async function endpoint(rpc:any) {
   return `http://127.0.0.1:${(server.address() as any).port}/sync/conflicts/reconcile`;
 }
 describe('automatic sync API boundary',()=>{
+  it('binds staged completion to the authenticated owner and validates every member receipt', async () => {
+    const epoch = '33333333-3333-4333-8333-333333333333', sessionId = '44444444-4444-4444-8444-444444444444';
+    const actionId = '55555555-5555-4555-8555-555555555555';
+    const member = { mutationId: '66666666-6666-4666-8666-666666666666', deviceId: 'fixture', entityType: 'tasks', entityId: 'task', baseServerVersion: 7, version: 2,
+      payload: { id: 'task', completed: true, lifecycleStatus: 'completed', description: '🧭'.repeat(70000) }, updatedAt: '2026-09-08T00:05:00.000Z', deletedAt: null };
+    const operation = { schemaVersion: 2, epoch, type: 'completion', command: { schemaVersion: 1, accountId: owner, actorId: 'fixture', actionId,
+      kind: 'complete', sessionId, taskId: 'task', epoch: sessionId, expectedRevision: sessionId, expectedCurrentSessionId: sessionId,
+      capturedAt: '2026-09-08T00:05:00.000Z', durationSeconds: null }, changes: [member] };
+    const receipt = { schemaVersion: 2, operation, epoch, accepted: true, projectionRevision: 1, outcome: { accepted: true, code: 'APPLIED', revision: actionId },
+      record: { user_id: owner, entity_type: 'tracking', entity_id: 'singleton', version: 2, server_version: 9, device_id: 'fixture', updated_at: member.updatedAt, deleted_at: null,
+        payload: { focusSession: { schemaVersion: 1, sessionId, taskId: 'task', phase: 'completed', plannedDurationSeconds: 600, elapsedSeconds: 300,
+          startedAt: member.updatedAt, updatedAt: member.updatedAt, endedAt: member.updatedAt, pausedAt: null } } },
+      changes: [{ mutationId: member.mutationId, accepted: true, serverVersion: 8, record: { user_id: owner, entity_type: 'tasks', entity_id: 'task', device_id: member.deviceId,
+        version: member.version, server_version: 8, updated_at: member.updatedAt, deleted_at: null, payload: structuredClone(member.payload) } }] };
+    const upload = await prepareStagedBody(JSON.stringify(operation)); expect(upload.manifest).not.toBeNull();
+    const rpc = vi.fn(async (name: string) => ({ data: name === 'goalflow_read_staged_reconciliation_v1' ? operation : receipt, error: null }));
+    const url = (await endpoint(rpc)).replace('/conflicts/reconcile', '/complete-focus-staged');
+    const send = () => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(upload.manifest) });
+    const response = await send(); expect(response.status).toBe(200); expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(await response.json()).toEqual(receipt);
+    expect(rpc).toHaveBeenCalledWith('goalflow_complete_focus_v2', { target_user_id: owner, operation });
+    receipt.changes[0].record.payload.description = 'truncated';
+    expect((await send()).status).toBe(503);
+    operation.command.accountId = epoch;
+    expect((await send()).status).toBe(400);
+  });
   it('scopes history chunks to the authenticated owner and rejects invalid positions and corrupt bytes', async () => {
     const epoch = '33333333-3333-4333-8333-333333333333';
     const bytes = new TextEncoder().encode('synthetic transport');

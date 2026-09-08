@@ -57,11 +57,13 @@ for migration in \
   "${repository_root}/supabase/migrations/20260907222904_s2_staged_reconciliation.sql" \
   "${repository_root}/supabase/migrations/20260907234144_s2_counter_day_admission.sql" \
   "${repository_root}/supabase/migrations/20260908004753_s2_causal_capability_discovery.sql" \
-  "${repository_root}/supabase/migrations/20260908011224_s2_causal_history_chunks.sql"; do
+  "${repository_root}/supabase/migrations/20260908011224_s2_causal_history_chunks.sql" \
+  "${repository_root}/supabase/migrations/20260908015740_s2_atomic_focus_completion.sql"; do
   psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${migration}" >/dev/null
 done
 psql -v ON_ERROR_STOP=1 -d "${upgrade_database}" -f "${repository_root}/scripts/migration-integrity-assertions.sql" >/dev/null
 for test_database in "${empty_database}" "${upgrade_database}"; do
+  psql -v ON_ERROR_STOP=1 -d "${test_database}" -f "${repository_root}/scripts/migration-causal-completion-assertions.sql" >/dev/null
   psql -v ON_ERROR_STOP=1 -d "${test_database}" -f "${repository_root}/scripts/migration-causal-capability-assertions.sql" >/dev/null
   psql -v ON_ERROR_STOP=1 -d "${test_database}" -f "${repository_root}/scripts/migration-causal-history-assertions.sql" >/dev/null
 done
@@ -119,4 +121,8 @@ done
 
 for test_database in "${empty_database}" "${upgrade_database}"; do
   PGDATABASE="${test_database}" node --import tsx "${repository_root}/scripts/test-s2-causal-api-postgres.ts"
+done
+
+for test_database in "${empty_database}" "${upgrade_database}"; do
+  PGDATABASE="${test_database}" node --import tsx "${repository_root}/scripts/test-s2-completion-api-postgres.ts"
 done

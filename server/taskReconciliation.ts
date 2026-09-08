@@ -101,7 +101,7 @@ export const reconcileLegacyTasks = async (
       user_id: userId,
       legacy_entity_id: (existing?.id || cloudId) === legacyId ? null : legacyId,
       title,
-      notes: String(task.description ?? task.notes ?? '').slice(0, 10_000),
+      notes: String(task.description ?? task.notes ?? ''),
       tags: Array.isArray(task.hashtags) ? task.hashtags.map(String).slice(0, 20) : [],
       schedule_precision: precision,
       scheduled_for: precision === 'month' ? `${scheduleValue}-01` : scheduleValue,

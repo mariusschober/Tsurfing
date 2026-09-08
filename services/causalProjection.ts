@@ -34,7 +34,9 @@ export function replayCausalHistory(accountId: string, history: SavedCausalHisto
   const receipts: Record<string, Record<string, any>> = {};
   for (let revision = 1; revision <= history.downloadedRevision; revision++) {
     const entry = assertCausalHistoryEntry(accountId, history.epoch, revision, JSON.parse(history.entries[String(revision)].body));
-    const receipt = entry.receipt, operation = parseCausalOperation(accountId, receipt.operation), command = operation.command;
+    const receipt = entry.receipt;
+    if (receipt.operation?.type === 'completion') throw new Error('Atomic completion history requires the task/effect application coordinator. All history remains retained.');
+    const operation = parseCausalOperation(accountId, receipt.operation), command = operation.command;
     const id = command.actionId as string;
     if (receipts[id] || id === history.epoch || Object.values(baselines).some(b => b.baselineId === id)) throw new Error('Causal history repeats an immutable action identity.');
     if (operation.type === 'focus') {

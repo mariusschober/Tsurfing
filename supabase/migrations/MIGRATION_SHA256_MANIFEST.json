@@ -28,5 +28,6 @@
   "20260907222904_s2_staged_reconciliation.sql": "e3d901b66ceb844d3c0f354dcb8d7bcc3b2691f8dcd408ed0e729776247e2b32",
   "20260907234144_s2_counter_day_admission.sql": "993de87e54dc4ffe0e201daef8dd68b20a5775e7f496374d1914b78d466ded58",
   "20260908004753_s2_causal_capability_discovery.sql": "2e6f536194902b3f6b505f78bbcdf4f510fa28093608196c9ee9aa5f38743d88",
-  "20260908011224_s2_causal_history_chunks.sql": "f440d9b5a74fc9efe9fed38f27a26d4201c035655bc1b7cbe23d8a21e2be2cc0"
+  "20260908011224_s2_causal_history_chunks.sql": "f440d9b5a74fc9efe9fed38f27a26d4201c035655bc1b7cbe23d8a21e2be2cc0",
+  "20260908015740_s2_atomic_focus_completion.sql": "9a65d3c91a1a38f0ba14af2c10dc27cc8a75d02dcaa9fa3e87b609d514734709"
 }

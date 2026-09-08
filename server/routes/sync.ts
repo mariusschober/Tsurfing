@@ -6,6 +6,7 @@ import { readConflictPage } from '../conflictPages';
 import { readStagedReconciliation, stageReconciliationChunk } from '../reconciliationStaging';
 import { admitCausalOperation, readCausalCapability } from '../causalActions';
 import { readCausalHistoryChunk } from '../causalHistory';
+import { completeCausalFocus } from '../causalCompletion';
 
 const syncEntityType = z.enum([
   'tasks', 'goals', 'habits', 'stats', 'progress', 'hashtags', 'accountability',
@@ -216,6 +217,20 @@ export const reconcileCandidate = async (database: SupabaseClient, userId: strin
 export const createSyncRouter = (admin?: SupabaseClient) => {
   const router = Router();
   const requireHardenedProtocol = admin ? createSyncProtocolGuard(admin) : undefined;
+
+  // Staging retains the full original completion body when it exceeds the
+  // ordinary 256 KiB request envelope. Both paths reach the same transaction.
+  for (const staged of [false, true]) router.post(staged ? '/sync/complete-focus-staged' : '/sync/complete-focus', async (request, response) => {
+    response.setHeader('Cache-Control', 'no-store');
+    try {
+      const input = staged ? await readStagedReconciliation(requireDatabase(admin), request.user!.id, request.body) : request.body;
+      response.json(await completeCausalFocus(requireDatabase(admin), request.user!.id, input));
+    } catch (error) {
+      if (isRecord(error) && error.code === '22023') response.status(409).json({ error: { code: 'completion_review_required', message: 'The saved completion needs reconciliation. Keep its original notes and action identity.' } });
+      else if (error instanceof z.ZodError) invalidRequest(response, error);
+      else response.status(503).json({ error: { code: 'completion_unavailable', message: 'Retry the exact saved completion. Its notes and effects remain pending.' } });
+    }
+  });
 
   router.get('/sync/causal-history', async (request, response) => {
     response.setHeader('Cache-Control', 'no-store');

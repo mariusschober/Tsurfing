@@ -55,7 +55,8 @@
     "20260907222904_s2_staged_reconciliation.sql",
     "20260907234144_s2_counter_day_admission.sql",
     "20260908004753_s2_causal_capability_discovery.sql",
-    "20260908011224_s2_causal_history_chunks.sql"
+    "20260908011224_s2_causal_history_chunks.sql",
+    "20260908015740_s2_atomic_focus_completion.sql"
   ],
   "roomSchemaFiles": [
     "1.json",
