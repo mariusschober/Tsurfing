@@ -3,7 +3,7 @@
   "status": "BLOCKED",
   "acceptanceReason": "Implementation continues. Web automatic enrollment and fresh-account server initialization are locally verified. Divergent legacy reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
-  "finalCommit": null,
+  "finalCommit": "8f2cd1621ecc63418f8cf6be56658b3b598c4ca2",
   "prerequisites": [
     {
       "stageId": "S1",
@@ -3092,6 +3092,60 @@
         }
       ],
       "testIdentity": "Robolectric Room and production NativeSyncEngine with a synthetic HTTP backend; not hosted or device acceptance.",
+      "blockers": [
+        "Native projection application, request/receipt acknowledgment and pending overlay remain incomplete.",
+        "Native causal completion admission and UI integration remain incomplete.",
+        "macOS causal integration, divergent recovery and comprehensive acceptance remain incomplete."
+      ],
+      "permittedNextStage": "Continue S2; S3 blocked"
+    },
+    {
+      "commit": "8f2cd1621ecc63418f8cf6be56658b3b598c4ca2",
+      "scope": "Native reconstruction of retained causal revision bases without trimming evidence",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalReplay.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalReplayTest.kt"
+      ],
+      "findingIds": [
+        "S2-NATIVE-REVISION-BASIS"
+      ],
+      "commands": [
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": {
+            "passed": 173,
+            "failed": 0,
+            "skipped": 1
+          },
+          "skipped": "hostedBrowserRecordConvergesThroughProductionTransport"
+        },
+        {
+          "command": "npm run verify:room-hashes && npm run verify:identifiers && git diff --check",
+          "exitCode": 0,
+          "checked": [
+            9,
+            24
+          ]
+        }
+      ],
+      "failedAttempts": [
+        {
+          "command": "./gradlew :app:testDebugUnitTest --tests '*NativeCausalReplayTest'",
+          "exitCode": 1,
+          "reason": "Sandbox denied the Gradle cache lock; escalated retry then failed because the configured release keystore is absent. Used the existing production-debug tasks and explicit goalflowSkipSigning setting."
+        }
+      ],
+      "migrations": [],
+      "compatibility": "No stored schema or command changes. Full saved history shape, hashes and receipt structures are validated before replaying the requested downloaded prefix.",
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-basis-android.log",
+          "sha256": "27162be33393267486a740a42e9c85ab714e098d11215cfc45868474577fe58b"
+        }
+      ],
+      "testIdentity": "Robolectric native tests using the shared sequential history fixture; no hosted or installed-app acceptance.",
       "blockers": [
         "Native projection application, request/receipt acknowledgment and pending overlay remain incomplete.",
         "Native causal completion admission and UI integration remain incomplete.",

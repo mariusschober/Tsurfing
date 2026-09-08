@@ -284,3 +284,8 @@ Android now retains bounded history chunks and exact complete bodies in the priv
 ## Native enrollment and evidence orchestration
 
 Android now has an explicit evidence sync entrypoint using the production session-bound HTTP method. Enrollment requests are persisted before sending and retries reuse the same bytes and identity. A known tracking cutover requires exactly one preserved positive server version; missing or conflicting evidence remains a recovery case. Fresh local defaults may initialize an absent server record or receive proof of an existing legacy baseline without relabeling local pending increments as baseline counts. Downloaded history remains separate from projection application. Normal UI activation and atomic acknowledgment await the remaining native integration.
+
+
+## Retained native admission bases
+
+Local admissions must remain verifiable against the server revision visible when they were captured. Native replay can reconstruct that earlier prefix after history grows, without slicing or rewriting stored evidence. A requested revision must already be downloaded; all retained envelope checksums and receipt structures are still validated. The upcoming admission timeline must record projection transitions between local commands and preserve original outcomes rather than replacing them with later server outcomes.
