@@ -22,6 +22,52 @@ struct CausalJournalState: Codable, Equatable, Sendable {
     var counterDayOutbox: [String: AnyCodable]
     var counterBaselines: [String: AnyCodable]
     var taskCompletionAdmissions: [String: AnyCodable]
+    var causalRequests: [String: AnyCodable]
+    var causalReceipts: [String: AnyCodable]
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion, accountId, generation, trackingPresent, trackingValue
+        case cutoverTracking, focus, focusAdmissions, focusOutbox
+        case counterAdmissions, counterOutbox, counterDayAdmissions, counterDayOutbox
+        case counterBaselines, taskCompletionAdmissions, causalRequests, causalReceipts
+    }
+
+    init(schemaVersion: Int, accountId: String, generation: Int, trackingPresent: Bool,
+         trackingValue: AnyCodable?, cutoverTracking: AnyCodable?,
+         focus: [String: AnyCodable], focusAdmissions: [String: AnyCodable], focusOutbox: [String: AnyCodable],
+         counterAdmissions: [String: AnyCodable], counterOutbox: [String: AnyCodable],
+         counterDayAdmissions: [String: AnyCodable], counterDayOutbox: [String: AnyCodable],
+         counterBaselines: [String: AnyCodable], taskCompletionAdmissions: [String: AnyCodable],
+         causalRequests: [String: AnyCodable], causalReceipts: [String: AnyCodable]) {
+        self.schemaVersion = schemaVersion; self.accountId = accountId; self.generation = generation
+        self.trackingPresent = trackingPresent; self.trackingValue = trackingValue; self.cutoverTracking = cutoverTracking
+        self.focus = focus; self.focusAdmissions = focusAdmissions; self.focusOutbox = focusOutbox
+        self.counterAdmissions = counterAdmissions; self.counterOutbox = counterOutbox
+        self.counterDayAdmissions = counterDayAdmissions; self.counterDayOutbox = counterDayOutbox
+        self.counterBaselines = counterBaselines; self.taskCompletionAdmissions = taskCompletionAdmissions
+        self.causalRequests = causalRequests; self.causalReceipts = causalReceipts
+    }
+
+    init(from decoder: Decoder) throws {
+        let box = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try box.decode(Int.self, forKey: .schemaVersion)
+        accountId = try box.decode(String.self, forKey: .accountId)
+        generation = try box.decode(Int.self, forKey: .generation)
+        trackingPresent = try box.decode(Bool.self, forKey: .trackingPresent)
+        trackingValue = try box.decodeIfPresent(AnyCodable.self, forKey: .trackingValue)
+        cutoverTracking = try box.decodeIfPresent(AnyCodable.self, forKey: .cutoverTracking)
+        focus = try box.decode([String: AnyCodable].self, forKey: .focus)
+        focusAdmissions = try box.decodeIfPresent([String: AnyCodable].self, forKey: .focusAdmissions) ?? [:]
+        focusOutbox = try box.decodeIfPresent([String: AnyCodable].self, forKey: .focusOutbox) ?? [:]
+        counterAdmissions = try box.decodeIfPresent([String: AnyCodable].self, forKey: .counterAdmissions) ?? [:]
+        counterOutbox = try box.decodeIfPresent([String: AnyCodable].self, forKey: .counterOutbox) ?? [:]
+        counterDayAdmissions = try box.decodeIfPresent([String: AnyCodable].self, forKey: .counterDayAdmissions) ?? [:]
+        counterDayOutbox = try box.decodeIfPresent([String: AnyCodable].self, forKey: .counterDayOutbox) ?? [:]
+        counterBaselines = try box.decodeIfPresent([String: AnyCodable].self, forKey: .counterBaselines) ?? [:]
+        taskCompletionAdmissions = try box.decodeIfPresent([String: AnyCodable].self, forKey: .taskCompletionAdmissions) ?? [:]
+        causalRequests = try box.decodeIfPresent([String: AnyCodable].self, forKey: .causalRequests) ?? [:]
+        causalReceipts = try box.decodeIfPresent([String: AnyCodable].self, forKey: .causalReceipts) ?? [:]
+    }
 }
 
 /// File + UserDefaults replicas with canonical-JSON drift repair, mirroring
@@ -113,6 +159,16 @@ final class CausalJournalStore: @unchecked Sendable {
         guard usedSequences == expectedSequence else {
             throw SyncError.corruptStorage("The causal admission sequence is incomplete. Nothing was discarded; recovery requires operator review.")
         }
+        for (id, raw) in state.causalRequests {
+            guard raw.value is String else {
+                throw SyncError.corruptStorage("A saved causal request is damaged. Nothing was discarded; recovery requires operator review.")
+            }
+        }
+        for (id, raw) in state.causalReceipts {
+            guard raw.value is [String: Any], state.causalRequests[id] != nil else {
+                throw SyncError.corruptStorage("A causal receipt has no original request. Nothing was discarded; recovery requires operator review.")
+            }
+        }
         let cutover = state.cutoverTracking?.value as? [String: Any]
         var replay = try initialFocusJournal(accountId: state.accountId, baseline: cutover?["focusSession"])
         admissions.sort { $0.sequence < $1.sequence }
@@ -191,7 +247,8 @@ final class CausalJournalStore: @unchecked Sendable {
                 focusAdmissions: [:], focusOutbox: [:],
                 counterAdmissions: [:], counterOutbox: [:],
                 counterDayAdmissions: [:], counterDayOutbox: [:],
-                counterBaselines: [:], taskCompletionAdmissions: [:]
+                counterBaselines: [:], taskCompletionAdmissions: [:],
+                causalRequests: [:], causalReceipts: [:]
             )
             try save(state)
             return state
@@ -336,6 +393,95 @@ final class CausalJournalStore: @unchecked Sendable {
         let outcome: [String: Any]
         let duplicate: Bool
         let generation: Int
+    }
+
+    struct ReceiptApplication {
+        let duplicate: Bool
+        let accepted: Bool
+    }
+
+    private func pendingCommand(_ state: CausalJournalState, _ actionId: String) -> (kind: String, command: [String: Any])? {
+        if let raw = state.focusOutbox[actionId]?.value as? [String: Any] { return ("focus", raw) }
+        if let raw = state.counterOutbox[actionId]?.value as? [String: Any] { return ("counter", raw) }
+        if let raw = state.counterDayOutbox[actionId]?.value as? [String: Any] { return ("counterDay", raw) }
+        return nil
+    }
+
+    /// Persists exact wire bytes for an admitted command before transport.
+    /// Bytes are immutable across retry: re-saving different bytes fails.
+    /// Never retires anything and never touches projections or cursors.
+    func saveRequest(actionId: String, bytes: Data) throws -> [String: Any] {
+        guard let text = String(data: bytes, encoding: .utf8),
+              let parsed = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+              let operation = parsed as? [String: Any],
+              let type = operation["type"] as? String, ["focus", "counter", "counterDay"].contains(type),
+              let command = operation["command"] as? [String: Any],
+              command["actionId"] as? String == actionId,
+              let epoch = operation["epoch"] as? String, UUID(uuidString: epoch) != nil,
+              operation["schemaVersion"] as? Int == 2 else {
+            throw SyncError.validation("The saved causal request does not prove its admitted command. Nothing was saved.")
+        }
+        return try Self.withLock {
+            guard var state = try loadWithoutValidation() else {
+                throw SyncError.validation("Causal account preparation is required. Nothing was saved.")
+            }
+            try Self.validate(state)
+            guard state.accountId == accountId else {
+                throw SyncError.validation("The causal request belongs to another account. Nothing was saved.")
+            }
+            guard let pending = pendingCommand(state, actionId),
+                  pending.kind == type,
+                  stableJson(pending.command) == stableJson(command) else {
+                throw SyncError.validation("The saved causal request differs from its durable admission. Nothing was saved.")
+            }
+            if let existing = state.causalRequests[actionId]?.value as? String {
+                guard existing == text else {
+                    throw SyncError.validation("The attempted causal request was rewritten. Original bytes are retained.")
+                }
+                return operation
+            }
+            state.causalRequests[actionId] = AnyCodable(text)
+            try save(state)
+            return operation
+        }
+    }
+
+    /// Archives a validated receipt and retires its accepted outbox entry in
+    /// one persist. Rejected receipts keep their pending intent for explicit
+    /// resolution. Transport success alone never calls this.
+    func commitReceipt(actionId: String, receipt: [String: Any]) throws -> ReceiptApplication {
+        try Self.withLock {
+            guard var state = try loadWithoutValidation() else {
+                throw SyncError.validation("Causal account preparation is required. Nothing was retired.")
+            }
+            try Self.validate(state)
+            guard state.accountId == accountId else {
+                throw SyncError.validation("The causal receipt belongs to another account. Nothing was retired.")
+            }
+            if let prior = state.causalReceipts[actionId]?.value as? [String: Any] {
+                guard stableJson(prior) == stableJson(receipt) else {
+                    throw SyncError.validation("The original causal receipt is immutable. Nothing was retired.")
+                }
+                return ReceiptApplication(duplicate: true, accepted: (prior["accepted"] as? Bool) == true)
+            }
+            guard let saved = state.causalRequests[actionId]?.value as? String,
+                  let savedData = saved.data(using: .utf8),
+                  let operation = try? JSONSerialization.jsonObject(with: savedData) as? [String: Any] else {
+                throw SyncError.validation("The causal receipt has no original request. Nothing was retired.")
+            }
+            try CausalReceiptValidator.assert(operation: operation, receipt: receipt, accountId: state.accountId)
+            guard pendingCommand(state, actionId) != nil else {
+                throw SyncError.validation("The receipt has no pending intent. Nothing was retired.")
+            }
+            state.causalReceipts[actionId] = AnyCodable(receipt)
+            if (receipt["accepted"] as? Bool) == true {
+                state.focusOutbox.removeValue(forKey: actionId)
+                state.counterOutbox.removeValue(forKey: actionId)
+                state.counterDayOutbox.removeValue(forKey: actionId)
+            }
+            try save(state)
+            return ReceiptApplication(duplicate: false, accepted: (receipt["accepted"] as? Bool) == true)
+        }
     }
 
     private static let counters = ["planViewCount", "dailyPostponeCount"]
