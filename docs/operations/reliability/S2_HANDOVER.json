@@ -803,6 +803,36 @@
         "evidence/s2-causal-transport-release.log",
         "evidence/s2-causal-transport-release-retry.log"
       ]
+    },
+    {
+      "commit": "0e1b639c75cb6d3bf16412adc5b0ce9d2b1d9a43",
+      "scope": "Durable Web causal request, receipt and send pipeline",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "services/causalReceipts.ts",
+        "services/causalReceipts.test.ts"
+      ],
+      "commands": [
+        {
+          "command": "VERIFY_PORT=43975 npm run verify:release",
+          "exitCode": 0,
+          "testsPassed": 524,
+          "testFilesPassed": 84
+        }
+      ],
+      "initialFailures": [
+        "Type check rejected optional tx.store access; explicit CAUSAL_STORE access passed.",
+        "Synthetic start focus epoch differed from actionId; corrected fixture passed."
+      ],
+      "compatibility": "Private causal journal extension only. No epoch enrollment, authoritative projection integration, client activation or SQL/native change.",
+      "evidence": [
+        "evidence/s2-causal-receipts-unit.log",
+        "evidence/s2-causal-receipts-lint.log",
+        "evidence/s2-causal-receipts-unit-final.log",
+        "evidence/s2-causal-receipts-unit-retry.log",
+        "evidence/s2-causal-receipts-release.log",
+        "evidence/s2-causal-receipts-release-final.log"
+      ]
     }
   ],
   "findings": [
@@ -931,7 +961,13 @@
     "evidence/s2-causal-api-postgres-retry.log",
     "evidence/s2-causal-transport-unit.log",
     "evidence/s2-causal-transport-release.log",
-    "evidence/s2-causal-transport-release-retry.log"
+    "evidence/s2-causal-transport-release-retry.log",
+    "evidence/s2-causal-receipts-unit.log",
+    "evidence/s2-causal-receipts-lint.log",
+    "evidence/s2-causal-receipts-unit-final.log",
+    "evidence/s2-causal-receipts-unit-retry.log",
+    "evidence/s2-causal-receipts-release.log",
+    "evidence/s2-causal-receipts-release-final.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

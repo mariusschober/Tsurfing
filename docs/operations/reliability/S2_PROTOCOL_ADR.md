@@ -142,3 +142,7 @@ old-tab evidence and an explicit rollout handover. No S3 permission yet.
 ### Saved Web action transport
 
 The client validates version-2 receipts using the same pure boundary as the API. One request transmits the saved JSON body unchanged, with a 256 KiB UTF-8 body limit and an 8 MiB receipt limit. HTTP errors never acknowledge an action. A valid receipt must still be committed with the journal by a separate durable application step; transport success alone cannot retire the outbox or advance a pull cursor. This transport remains dormant pending that integration and capability rollout.
+
+### Durable Web receipt application
+
+The private causal account row retains a wire request by logical action ID before transport. That request must exactly match an admitted command and is immutable across retry and account-epoch changes. Receipt archival and accepted-command retirement share one IndexedDB transaction; rejected receipts remain pending for explicit resolution. The original domain admission and wire/receipt evidence are never removed. Receipt records are historical snapshots, so this transaction does not apply their projection or advance the authoritative pull cursor. The pipeline returns an already archived receipt without a new HTTP request. Authenticated epoch enrollment and authoritative projection reconciliation are required before activation.

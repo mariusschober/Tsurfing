@@ -1,0 +1,28 @@
+
+ RUN  v4.1.10 /Users/schober/Projects/TSurfing
+
+ ❯ services/causalReceipts.test.ts (5 tests | 1 failed) 27ms
+   × archives a rejected focus receipt without retiring or replaying away its local intent 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  services/causalReceipts.test.ts > archives a rejected focus receipt without retiring or replaying away its local intent
+Error: The focus command is invalid. It was not admitted.
+ ❯ validateFocusCommand src/domain/causalFocus.ts:62:11
+     60|       : command.durationSeconds !== null)
+     61|     || (command.kind === 'start' && command.epoch !== command.actionId…
+     62|     throw new Error('The focus command is invalid. It was not admitted…
+       |           ^
+     63|   }
+     64| }
+ ❯ admitLocalFocus services/causalFocusCoordinator.ts:54:3
+ ❯ services/causalReceipts.test.ts:86:23
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  01:18:10
+   Duration  444ms (transform 110ms, setup 0ms, import 163ms, tests 27ms, environment 0ms)
+

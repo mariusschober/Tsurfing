@@ -1,0 +1,5 @@
+
+> tsurfing@0.4.0-beta.1 lint
+> tsc --noEmit
+
+services/causalReceipts.ts(26,13): error TS18048: 'tx.store' is possibly 'undefined'.
