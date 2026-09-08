@@ -768,3 +768,16 @@ Rejected causal completions dismiss with their reservations released, so held su
 Validation: `npm run verify:release` exit 0, 731 tests in 108 files. Focused suites: 7 passed (4 blocked-review, 3 rejected-completion, including retired-envelope, crash-window, idempotency and pull-unpause coverage). `test:s1:storage` 38 passed ×3. S1 browser 44 passed (new dismissal journey × Chromium/WebKit); S2 browser 26 passed; full E2E 94 passed. Both PostgreSQL matrices passed. Android: 228 tests, 0 failures, 1 hosted skip; lint/debug build passed. macOS: 226 tests, 1 hosted skip, 0 failures. Identifiers 24, migrations 32, migration hashes 32, Room hashes 9 passed. Two intermediate browser-fixture failures are retained in working notes (review text matcher; single-dismiss group resolution via the retained envelope).
 
 Remaining: divergent legacy ambiguity import, nonempty-restore reconciliation, macOS causal integration and full cross-client acceptance. S2 remains incomplete and S3 is not permitted. No migration, deployment, installation or live data writes occurred.
+
+## CI triage for the S2 branch (staging prep status)
+
+Run `34251123011` (push `78e24a3`, native UI admission docs): `verify`, `macos`, `migrations`, `secrets`, `dependency-audit`, `web-release` all **passed**. Four failures triaged as non-code:
+
+- `native-android`: emulator never booted (`adb: device offline` throughout); all unit/lint/build steps before the emulator journey passed. Infrastructure flake.
+- `android` (legacy): production-debug APK built, then artifact upload failed with HTTP 403 from blob storage. Infrastructure flake.
+- `hosted-staging`: fail-closed as designed — staging still serves revision `5ea00f8` and did not serve the exact candidate within eight minutes. The S2 branch is undeployed (no production release authorized; staging follows `develop`), so the harness refuses to test the wrong revision. Expected `BLOCKED`, not a regression.
+- `hosted-cross-client` / `beta-gate`: downstream of the above; correctly red.
+
+Locally the same commit is fully green (228 Android unit tests, 226 macOS tests, 719–731 Web tests across this session's slices, both PostgreSQL matrices, 42 S1 + 26 S2 browser journeys). No code action taken on the flakes; rerun is at owner discretion.
+
+Unblocking staging proof requires existing explicit authorization for that target: deploy the exact candidate SHA to staging (Railway) and rerun; hosted test secrets are already configured (the harness ran against staging for eight minutes). Production release remains not authorized.
