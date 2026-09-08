@@ -595,3 +595,12 @@ Automatic enrollment selection, absent/divergent local baseline reconciliation, 
 Validation: full release exit 0, 700 tests in 103 files, including production build and artifact checks. The initial sandbox run failed on loopback `listen EPERM`; the permitted rerun passed. The JSON handover records the sanitized log and checksum. HTTP responses remain synthetic.
 
 Absent/divergent account baseline reconciliation, native integration, non-focus completion concurrency and comprehensive legacy recovery/mixed-version acceptance remain incomplete. No SQL changes, native/browser reruns, installation, live configuration or deployment. Overall S2 remains **BLOCKED**; S3 is not permitted.
+
+
+## Fresh local account history checkpoint
+
+`6428cd6f90fa8aa007a02a6e3376356f0d6df03a`: **PASS_LOCAL**. A newly initialized local account can join verified enrolled server history. The original local absence, zero defaults and day intent remain immutable; a separate revision-zero history binding records the server baseline. Pending increments retain identity and apply after verified baseline establishment. Initialization evidence is checked on reads and backup imports.
+
+The synthetic cloud test proves server 27/3 plus a queued local increment becomes 28/3 without changing server focus; replay sends no duplicate actions. Altered initial counts, day and absence are rejected without changing stored authority. Full release exit 0: 704 tests across 103 files, including build/artifact checks. Log and checksum are in the JSON handover.
+
+Server-absent enrollment, divergent legacy reconciliation, native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete. No SQL changes, native/browser reruns, installation or deployment. Overall S2 remains **BLOCKED**, with no S3 handoff.

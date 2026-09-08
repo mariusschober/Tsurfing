@@ -2587,6 +2587,44 @@
         "No SQL changes, native/browser reruns, installation, live configuration or deployment."
       ],
       "permittedNextStage": null
+    },
+    {
+      "commit": "6428cd6f90fa8aa007a02a6e3376356f0d6df03a",
+      "scope": "Fresh local account joins verified enrolled server history",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "services/causalCounterDayCoordinator.ts",
+        "services/causalInitialization.ts",
+        "services/causalProjection.ts",
+        "services/causalStorage.ts",
+        "services/cloudSync.causal.test.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-FRESH-LOCAL-HISTORY",
+          "disposition": "Bind verified revision-zero history to preserved local absence and zero defaults before projecting canonical history and draining pending day/counter actions. Validate original initialization on reads and backup imports."
+        }
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "tests": 704,
+          "testFiles": 103,
+          "evidence": "evidence/s2-initialization-history-release.log",
+          "sha256": "28a3ed31022e9dfdf44ff04573a0d5319f704e2186b7de13c1365b1ce9d268b2"
+        }
+      ],
+      "failedAttempts": [
+        "The initial fixture seeded an existing sync/task account before fencing; corrected to exercise real new-account initialization.",
+        "Local unknown defaults remain in immutable initialization evidence; ordinary canonical tracking carries server unknown fields. Corrected the fixture expectation to verify both."
+      ],
+      "limitations": [
+        "Enrolled server history only; server-absent account creation and divergent legacy reconciliation remain incomplete.",
+        "Native integration, non-focus completion concurrency and comprehensive recovery/mixed-version acceptance remain incomplete.",
+        "HTTP responses are synthetic; no SQL changes, native/browser reruns, installation, live configuration or deployment."
+      ],
+      "permittedNextStage": null
     }
   ],
   "findings": [
