@@ -1,7 +1,7 @@
 {
   "stageId": "S2",
   "status": "BLOCKED",
-  "acceptanceReason": "Implementation continues; transport, database lock, and shared domain checkpoints only.",
+  "acceptanceReason": "Implementation continues; Web causal history download/application now verified locally. Native causal journals, atomic server completion, recovery and active client rollout remain incomplete.",
   "baselineCommit": "8f3c863b837398ae0c4a2b5bad3d8536995ff355",
   "finalCommit": null,
   "prerequisites": [
@@ -1050,6 +1050,94 @@
         "Hosted PostgREST NOT_MEASURED"
       ],
       "permittedNextStage": null
+    },
+    {
+      "commit": "93a40d60fad322e1e423d54dd196308b849a1d6d",
+      "relatedCommit": "2381aec3ff809ce18d82cbb0e7488e9a7f47aab8",
+      "scope": "Durable causal history download and atomic Web projection application",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "scripts/test-s2-causal-api-postgres.ts",
+        "services/causalHistory.test.ts",
+        "services/causalHistory.ts",
+        "services/causalProjection.test.ts",
+        "services/causalProjection.ts"
+      ],
+      "findings": [
+        {
+          "id": "S2-HISTORY-DURABILITY",
+          "disposition": "PASS_LOCAL; interrupted and backup-restored downloads resume exact offsets"
+        },
+        {
+          "id": "S2-HISTORY-PROJECTION",
+          "disposition": "PASS_LOCAL; counter/focus replay plus pending intent overlay and exact receipt retirement are atomic"
+        }
+      ],
+      "commands": [
+        {
+          "command": "npm run verify:release (downloader)",
+          "exitCode": 0,
+          "passed": 550,
+          "files": 89,
+          "evidence": "evidence/s2-history-client-release.log"
+        },
+        {
+          "command": "npm run verify:release (projection)",
+          "exitCode": 0,
+          "passed": 556,
+          "files": 90,
+          "evidence": "evidence/s2-history-projection-release.log"
+        },
+        {
+          "command": "npx vitest run services/causalHistory.test.ts services/causalProjection.test.ts",
+          "exitCode": 0,
+          "passed": 13,
+          "evidence": "evidence/s2-history-projection-unit-final.log"
+        },
+        {
+          "command": "npx vitest run services/causalProjection.test.ts (additional rejected receipt assertion)",
+          "exitCode": 0,
+          "passed": 6,
+          "evidence": "evidence/s2-history-projection-rejected-receipt.log"
+        },
+        {
+          "command": "PATH=/opt/homebrew/opt/postgresql@17/bin:$PATH PGHOST=127.0.0.1 PGPORT=55437 PGUSER=schober npm run test:migrations:postgres",
+          "exitCode": 0,
+          "paths": [
+            "empty",
+            "upgrade"
+          ],
+          "historyReplay": "EXACT",
+          "evidence": "evidence/s2-history-projection-postgres.log"
+        },
+        {
+          "command": "npm run lint (initial projection)",
+          "exitCode": 2,
+          "disposition": "Fixed inferred tracking type; full release type check passed",
+          "evidence": "evidence/s2-history-projection-lint.log"
+        }
+      ],
+      "migrations": "NONE; existing hashes unchanged",
+      "compatibility": "Dormant protected account authority; original cutover must match server baseline. Retains pending intents, immutable requests, receipts, unknown tracking and unrelated data. Does not activate UI or advance ordinary cursor.",
+      "evidenceSha256": {
+        "s2-history-client-lint.log": "e90ee48ea12d3a4c3b7a3b27a3894b3cf36c40b2d5d29e5bd6efc2dafbd309e5",
+        "s2-history-client-release.log": "05916c4bea6d0d6e60d2a376d84fbc4fc8601c47e8037fc1ad8e2901c6ae065a",
+        "s2-history-client-types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "s2-history-client-unit-final.log": "7509f826123dbab33f4fb9bc8709d2cbb6d74f2f07babcc0997cf5d0afd43868",
+        "s2-history-client-unit.log": "bd04a9d4fe212f5e566766f701b5341cd44b71a11243a50e10e51fc3ff7c60ed",
+        "s2-history-projection-lint.log": "9622e439b8edc5efdc4444f5d34053130035a7bb24ecc16d7475e3598cf97fe3",
+        "s2-history-projection-postgres.log": "8f5e5e70b7a1c7fe174ea004f5edf25265213460c19cdefe7553d24602379157",
+        "s2-history-projection-rejected-receipt.log": "8cea3ce091bd63037bebfe4bb96ed04dcb0da32d0839f2ab9ab6c173b1689870",
+        "s2-history-projection-release.log": "bd8033f32c33e2398bd62572211e48aaf987ba5cb8524cb16c5eae8c42d04833",
+        "s2-history-projection-unit-final.log": "95375d02a56e549bc2cfd20d40112ef22fd2a50796c95db5be338354735dbc9c",
+        "s2-history-projection-unit.log": "97530a18ff441b34577e729aa10287aa62c6243104805f0aedc1963834b76197"
+      },
+      "blockers": [
+        "Active application coordination and rollout pending",
+        "Native causal journals and atomic server completion pending",
+        "Ambiguous legacy and nonempty restore recovery pending"
+      ],
+      "permittedNextStage": null
     }
   ],
   "findings": [
@@ -1221,7 +1309,18 @@
     "evidence/s2-causal-history-sql-unit.log",
     "evidence/s2-causal-history-unit-final.log",
     "evidence/s2-causal-history-unit-network.log",
-    "evidence/s2-causal-history-unit.log"
+    "evidence/s2-causal-history-unit.log",
+    "evidence/s2-history-client-lint.log",
+    "evidence/s2-history-client-release.log",
+    "evidence/s2-history-client-types.log",
+    "evidence/s2-history-client-unit-final.log",
+    "evidence/s2-history-client-unit.log",
+    "evidence/s2-history-projection-lint.log",
+    "evidence/s2-history-projection-postgres.log",
+    "evidence/s2-history-projection-rejected-receipt.log",
+    "evidence/s2-history-projection-release.log",
+    "evidence/s2-history-projection-unit-final.log",
+    "evidence/s2-history-projection-unit.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

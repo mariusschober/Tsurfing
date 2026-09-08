@@ -1,0 +1,7 @@
+
+> tsurfing@0.4.0-beta.1 lint
+> tsc --noEmit
+
+services/causalProjection.ts(170,40): error TS2339: Property 'focusSession' does not exist on type '{ planViewCount: number; dailyPostponeCount: number; date: any; }'.
+services/causalProjection.ts(171,72): error TS2339: Property 'focusSession' does not exist on type '{ planViewCount: number; dailyPostponeCount: number; date: any; }'.
+services/causalProjection.ts(172,24): error TS2339: Property 'focusSession' does not exist on type '{ planViewCount: number; dailyPostponeCount: number; date: any; }'.
