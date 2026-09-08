@@ -158,3 +158,9 @@ The schema-5 importer now supports an empty destination account. It rechecks emp
 ### Authenticated epoch discovery and immutable binding
 
 `GET /api/v1/sync/causal-capability` is read-only, uses the authenticated immutable user UUID, and reports either no enrollment or the exact existing epoch/revision. Its private RPC is executable only by service_role and performs no writes. `rolloutReady` remains false. Local binding requires an already prepared causal store, never fences a database on discovery, and cannot replace an epoch or lower the observed revision. Existing attempted wire requests are checked before binding. Request preparation requires a matching bound epoch; it never rewrites old attempted bytes to adopt a new epoch. Capability revision is not a pull cursor and cannot apply a projection. Offline local admissions can remain pending while discovery is unavailable.
+
+### Immutable causal history transport
+
+Read history by authenticated account and immutable epoch, anchored to an observed causal `throughRevision`. Revision 0 is the original cutover receipt; subsequent revisions are retained action receipts. Every entry is delivered in 49,152-byte chunks with entry/chunk SHA-256, byte length and aligned offsets. Reassembly validates the entire receipt contract before any future durable progress may be recorded. New revisions do not change prior entry bodies. No count-based truncation or history identity retirement is permitted.
+
+The API/shared implementation supports up to 16 MiB per entry, with 65,536-character maximum base64 chunk data. Larger retained entries produce an explicit unavailable/recovery boundary, not partial success. This checkpoint supplies authenticated transport only; it does not implement partial-download persistence, authoritative client projection application, enrollment or mixed-client activation. Ordinary pull cursors are unchanged.

@@ -986,6 +986,70 @@
         "20260908004753_s2_causal_capability_discovery.sql"
       ],
       "compatibility": "Read-only RPC; no enrollment or rollout activation. Web wire preparation now requires a durably discovered matching epoch. Legacy requests and receipts are unchanged; older attempted causal bytes must bind to their original epoch."
+    },
+    {
+      "commit": "f6268941d31aaded50799459fe8cb13547cf67bd",
+      "migrationCommit": "8e400b63602f310367fd1f4f61985e6ac680ece4",
+      "scope": "Authenticated bounded immutable causal history transport",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "config/durable-identifiers.json",
+        "scripts/migration-causal-history-assertions.sql",
+        "scripts/test-postgres-migrations.sh",
+        "scripts/test-s2-causal-api-postgres.ts",
+        "server/causalHistory.ts",
+        "server/routes/sync.reconciliation.test.ts",
+        "server/routes/sync.ts",
+        "services/causalHistoryProtocol.test.ts",
+        "services/causalHistoryProtocol.ts",
+        "supabase/migrations/20260908011224_s2_causal_history_chunks.sql",
+        "supabase/migrations/MIGRATION_SHA256_MANIFEST.json"
+      ],
+      "findings": [
+        {
+          "id": "S2-CAUSAL-HISTORY",
+          "disposition": "PASS_LOCAL transport; durable client application pending"
+        }
+      ],
+      "commands": [
+        {
+          "command": "npx vitest run services/causalHistoryProtocol.test.ts server/routes/sync.reconciliation.test.ts",
+          "exitCode": 0,
+          "passed": 11,
+          "evidence": "evidence/s2-causal-history-unit-network.log"
+        },
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "passed": 543,
+          "files": 88,
+          "evidence": "evidence/s2-causal-history-release-network.log"
+        },
+        {
+          "command": "PATH=/opt/homebrew/opt/postgresql@17/bin:$PATH PGHOST=127.0.0.1 PGPORT=55437 PGUSER=schober npm run test:migrations:postgres",
+          "exitCode": 0,
+          "paths": [
+            "empty",
+            "upgrade"
+          ],
+          "historyEntries": 1002,
+          "validatedReceiptEntriesPerPath": 6,
+          "validatedChunksPerPath": 13,
+          "evidence": "evidence/s2-causal-history-postgres.log"
+        }
+      ],
+      "migration": {
+        "file": "20260908011224_s2_causal_history_chunks.sql",
+        "sha256": "f440d9b5a74fc9efe9fed38f27a26d4201c035655bc1b7cbe23d8a21e2be2cc0",
+        "existingMigrations": "UNCHANGED"
+      },
+      "compatibility": "Service-only read RPC; no enrollment, feed change, projection write or activation. Shared/API maximum 16 MiB per entry; no total entry count cap.",
+      "blockers": [
+        "Durable partial download and authoritative client history application pending",
+        "Native journals and server completion pending",
+        "Hosted PostgREST NOT_MEASURED"
+      ],
+      "permittedNextStage": null
     }
   ],
   "findings": [
@@ -1143,7 +1207,21 @@
     "evidence/s2-causal-capability-migrations.log",
     "evidence/s2-causal-capability-hashes.log",
     "evidence/s2-causal-capability-identifiers.log",
-    "evidence/s2-causal-capability-identifiers-final.log"
+    "evidence/s2-causal-capability-identifiers-final.log",
+    "evidence/s2-causal-history-advisors.log",
+    "evidence/s2-causal-history-api-postgres.log",
+    "evidence/s2-causal-history-hashes.log",
+    "evidence/s2-causal-history-identifiers.log",
+    "evidence/s2-causal-history-iteration.log",
+    "evidence/s2-causal-history-lint.log",
+    "evidence/s2-causal-history-migrations.log",
+    "evidence/s2-causal-history-postgres.log",
+    "evidence/s2-causal-history-release-network.log",
+    "evidence/s2-causal-history-release.log",
+    "evidence/s2-causal-history-sql-unit.log",
+    "evidence/s2-causal-history-unit-final.log",
+    "evidence/s2-causal-history-unit-network.log",
+    "evidence/s2-causal-history-unit.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

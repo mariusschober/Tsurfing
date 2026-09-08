@@ -1,0 +1,1 @@
+{"status":"PASS","engine":"PostgreSQL","apiReceiptValidation":"EXACT","cases":7,"unknownEvidence":"PRESERVED","rejectedFocus":"AUDITED","daySelection":"FOCUS_PRESERVED","historyEntries":6,"historyChunks":13,"hostedPostgREST":"NOT_MEASURED"}
