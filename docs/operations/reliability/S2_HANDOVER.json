@@ -4211,6 +4211,53 @@
         "Nonempty-restore reconciliation",
         "Cross-client acceptance"
       ]
+    },
+    {
+      "id": "macos-focus-admission",
+      "sourceCommit": "bc58228c985fc8708fc3335ac6fd92d9cdfed63f",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "macos-native/GoalflowMac/Sync/CausalJournal.swift",
+        "macos-native/GoalflowMacTests/CausalJournalTests.swift"
+      ],
+      "verification": [
+        {
+          "command": "xcodebuild test -project macos-native/GoalflowMac.xcodeproj -scheme GoalflowMac -configuration Debug -destination platform=macOS CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0,
+          "tests": 237,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "bash macos-native/scripts/verify-project-sources.sh",
+          "exitCode": 0
+        },
+        {
+          "command": "VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "passed": 732,
+          "files": 108
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-macos-focus-admission-tests.log",
+          "sha256": "49e380fa6d7ce74bb9306a38ee438439c3592785024992db17ff8418539598c5"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-macos-focus-admission-release.log",
+          "sha256": "1dcb0e4c153e94d494b0a3e03cb13f96d96df06531dfdf49ad3f444096f2c82d"
+        }
+      ],
+      "compatibility": "Additive journal method + tests. No schema, migration, identifier, wire or receipt-contract change. Legacy macOS sync paths untouched.",
+      "remaining": [
+        "macOS counter/day admission",
+        "macOS causal transport, receipts, history, projection, enrollment",
+        "macOS completion and UI activation",
+        "Divergent legacy ambiguity import",
+        "Nonempty-restore reconciliation",
+        "Cross-client acceptance"
+      ]
     }
   ],
   "findings": [
