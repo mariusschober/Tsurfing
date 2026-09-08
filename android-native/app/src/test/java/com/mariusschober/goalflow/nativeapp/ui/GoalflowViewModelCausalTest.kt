@@ -135,4 +135,15 @@ class GoalflowViewModelCausalTest {
         assertNotNull(viewModel.error.value)
         assertEquals("OPEN", runBlocking { database.taskDao().get(taskId)!! }.status)
     }
+
+    @Test fun `task completion admits causally when prepared and legacy otherwise`() {
+        fence()
+        var done = false
+        awaitDone({ done || viewModel.error.value != null }) { viewModel.completeTask(createdTask) { done = true } }
+        assertTrue(done)
+        assertNull(viewModel.error.value)
+        assertEquals("COMPLETED", runBlocking { database.taskDao().get(taskId)!! }.status)
+        val journal = journal()
+        assertEquals(1, journal.optJSONObject("taskCompletionAdmissions")?.length() ?: 0)
+    }
 }

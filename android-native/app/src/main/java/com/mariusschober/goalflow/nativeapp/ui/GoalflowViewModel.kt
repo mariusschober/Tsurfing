@@ -132,6 +132,7 @@ class GoalflowViewModel(
     val undoTaskId: StateFlow<String?> = _undoTaskId.asStateFlow()
 
     private val completing = mutableSetOf<String>()
+    private val taskCompletionActions = mutableMapOf<String, String>()
 
     init {
         viewModelScope.launch {
@@ -217,10 +218,19 @@ class GoalflowViewModel(
         onComplete: () -> Unit = {}
     ) {
         if (!completing.add(task.id)) return
+        val capturedAt = Instant.now()
         viewModelScope.launch {
             try {
                 clearError()
-                runCatching { repository.completeTask(task.id, actualDuration, flowState, finalDescription) }
+                runCatching {
+                    if (repository.hasCausalJournal()) {
+                        val fingerprint = listOf(task.id, actualDuration, flowState, finalDescription).joinToString("|")
+                        val actionId = taskCompletionActions.getOrPut(fingerprint) { java.util.UUID.randomUUID().toString() }
+                        repository.admitTaskCompletionIntent(task.id, capturedAt, actualDuration, flowState, finalDescription, actionId)
+                    } else {
+                        repository.completeTask(task.id, actualDuration, flowState, finalDescription)
+                    }
+                }
                     .onSuccess {
                         _undoTaskId.value = task.id
                         onComplete()

@@ -300,6 +300,30 @@ class GoalflowRepository(
                 actualDuration, flowState, finalDescription))
     }
 
+    /** Normal-UI task-only completion admission. Effects derive from current
+     * collections inside the journal transaction; members keep the ordinary
+     * receipt contract. Requires explicit preparation; legacy callers keep
+     * their path. */
+    suspend fun admitTaskCompletionIntent(
+        taskId: String, capturedAt: Instant,
+        actualDuration: Int?, flowState: String?, finalDescription: String?,
+        actionId: String = UUID.randomUUID().toString()
+    ): NativeTaskCompletionAdmission {
+        val userId = database.withTransaction { accounts.get()?.userId } ?: error("No signed-in account.")
+        val day = timeProvider.today().toString()
+        val zone = java.time.ZoneId.systemDefault().id
+        val intent = NativeTaskCompletionIntent(actionId, taskId, day, zone,
+            actualDuration, flowState, finalDescription, ActionJson.instantFormatter.format(capturedAt))
+        val result = causalStore.admitTaskCompletion(userId, intent) {
+            completeTaskInTransaction(taskId, actualDuration, flowState, finalDescription,
+                completionAt = capturedAt, completionDay = day, exactNotes = true,
+                completionMetadata = JSONObject().put("source", "android").put("actionId", actionId)
+                    .put("timeZone", zone).put("actualDuration", actualDuration ?: JSONObject.NULL))
+        }
+        onMutation()
+        return result
+    }
+
     val taskStream: Flow<List<GoalflowTask>> = tasks.observeAll().map { rows -> rows.map(::toDomain) }
     val goalStream: Flow<List<GoalflowGoal>> = goals.observeAll().map { rows -> rows.map(::toDomain) }
     val habitStream: Flow<List<GoalflowHabit>> = habits.observeAll().map { rows -> rows.map(::toDomain) }

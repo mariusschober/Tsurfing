@@ -100,4 +100,46 @@ class GoalflowRepositoryCausalUiTest {
         assertFalse(JSONObject(repeated.outcome).getBoolean("accepted"))
         assertEquals("Final notes", database.taskDao().get(task)!!.notes)
     }
+
+    @Test fun `task completion intents compose ordinary effects with idempotent retries`() = runTest {
+        fence()
+        val second = repository.createTask("Second synthetic", "notes", SchedulePrecision.DAY, "2026-09-08", null, false).id
+        val first = repository.admitTaskCompletionIntent(task, time, 10, "flow", "First done")
+        assertFalse(first.duplicate)
+        val other = repository.admitTaskCompletionIntent(second, time, null, null, null)
+        assertFalse(other.duplicate)
+        assertEquals("COMPLETED", database.taskDao().get(task)!!.status)
+        assertEquals("COMPLETED", database.taskDao().get(second)!!.status)
+        assertEquals("First done", database.taskDao().get(task)!!.notes)
+        val outbox = database.syncOutboxDao().getAll()
+        assertTrue(outbox.map { it.mutationId }.containsAll(first.mutationIds + other.mutationIds))
+        assertTrue(outbox.all { it.attemptedAt == null })
+        val statsRows = outbox.filter { it.entityType == "stats" }
+        assertEquals(2, statsRows.size)
+        val roots = statsRows.filter { it.dependsOnMutationId == null }
+        assertEquals(1, roots.size)
+        val chained = statsRows.filter { it.dependsOnMutationId == roots.single().mutationId }
+        assertEquals(1, chained.size)
+        val retry = repository.admitTaskCompletionIntent(task, time, 10, "flow", "First done", first.actionId)
+        assertTrue(retry.duplicate)
+        assertEquals(retry.mutationIds.sorted(), first.mutationIds.sorted())
+        assertEquals(outbox.map { it.mutationId }.toSet(), database.syncOutboxDao().getAll().map { it.mutationId }.toSet())
+        assertTrue(runCatching {
+            repository.admitTaskCompletionIntent(task, time, 10, "flow", "Changed retry", first.actionId)
+        }.isFailure)
+    }
+
+    @Test fun `task completion fails closed without a journal or an open task`() = runTest {
+        assertTrue(runCatching {
+            repository.admitTaskCompletionIntent(task, time, null, null, null)
+        }.isFailure)
+        val legacy = repository.createTask("Legacy completion", "notes", SchedulePrecision.DAY, "2026-09-08", null, false).id
+        repository.completeTask(legacy, null, null, null)
+        assertEquals("COMPLETED", database.taskDao().get(legacy)!!.status)
+        fence()
+        assertTrue(runCatching {
+            repository.admitTaskCompletionIntent("missing-task", time, null, null, null)
+        }.isFailure)
+        assertNull(database.causalAccountDao().get(owner)?.let { NativeCausalJournal.validate(it).optJSONObject("taskCompletionAdmissions") })
+    }
 }

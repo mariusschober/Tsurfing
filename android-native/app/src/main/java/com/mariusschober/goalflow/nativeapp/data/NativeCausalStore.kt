@@ -41,6 +41,29 @@ data class NativeCounterDayIntent(val actionId: String, val kind: String, val da
         .put("timeZone", timeZone).put("capturedAt", capturedAt)
 }
 
+data class NativeTaskCompletionIntent(
+    val actionId: String, val taskId: String, val day: String, val timeZone: String,
+    val actualDuration: Int?, val flowState: String?, val finalDescription: String?, val capturedAt: String
+) {
+    fun json(accountId: String, actorId: String): JSONObject = JSONObject()
+        .put("schemaVersion", 1).put("accountId", accountId).put("actorId", actorId)
+        .put("actionId", actionId).put("taskId", taskId).put("day", day).put("timeZone", timeZone)
+        .put("actualDuration", actualDuration ?: JSONObject.NULL)
+        .put("flowState", flowState ?: JSONObject.NULL)
+        .put("finalDescription", finalDescription ?: JSONObject.NULL).put("capturedAt", capturedAt)
+    fun validate() {
+        require(ActionJson.identity(actionId) && taskId.isNotBlank() && taskId.length <= 240
+            && ActionJson.day(day) && timeZone.matches(Regex("^[A-Za-z0-9_+./-]{1,128}$"))
+            && (actualDuration == null || actualDuration >= 0)
+            && (flowState == null || flowState in setOf("distracted", "good", "high", "flow"))
+            && ActionJson.instant(capturedAt)
+            && runCatching { java.time.ZoneId.of(timeZone) }.isSuccess) {
+            "Invalid task completion intent. Nothing was completed." }
+    }
+}
+
+data class NativeTaskCompletionAdmission(val actionId: String, val duplicate: Boolean, val generation: Long, val mutationIds: List<String>)
+
 /** A replayable private journal. Unknown fields and original serialized legacy
  * payloads survive; wall-clock timestamps never choose the causal parent. */
 object NativeCausalJournal {
@@ -322,6 +345,53 @@ class NativeCausalStore(private val database: GoalflowDatabase, private val acto
                 database.rawCollectionDao().insert(RawCollectionEntity("tracking", tracking.toString(), captured.capturedAt, null))
             }
             NativeCausalAdmission(tracking.toString(), outcome.toString(), false, generation)
+        }
+    }
+
+    /** Task-only completion for prepared accounts. Business effects derive
+     * inside this same Room transaction through [effects], which must apply
+     * the task/statistics/goal/habit/event transition and enqueue ordinary
+     * outbox rows, returning false when the task is already completed.
+     * Members keep the exact ordinary receipt contract with their dependency
+     * chain; the journal only records the immutable admission for
+     * idempotent retries. */
+    suspend fun admitTaskCompletion(
+        accountId: String, captured: NativeTaskCompletionIntent, effects: suspend () -> Boolean
+    ): NativeTaskCompletionAdmission {
+        captured.validate()
+        val intent = captured.json(accountId, actorId)
+        return database.withTransaction {
+            bound(accountId)
+            val entity = accounts.get(accountId) ?: error("Causal account preparation is required.")
+            val state = NativeCausalJournal.validate(entity)
+            val admissions = state.optJSONObject("taskCompletionAdmissions") ?: JSONObject().also { state.put("taskCompletionAdmissions", it) }
+            admissions.optJSONObject(captured.actionId)?.let { prior ->
+                require(ActionJson.canonical(prior.getJSONObject("intent")) == ActionJson.canonical(intent)) {
+                    "The task completion action identity has different intent." }
+                val mutationIds = prior.getJSONArray("mutationIds").let { array -> (0 until array.length()).map { array.getString(it) } }
+                return@withTransaction NativeTaskCompletionAdmission(captured.actionId, true, state.getLong("generation"), mutationIds)
+            }
+            for (key in listOf("focusAdmissions", "counterAdmissions", "counterDayAdmissions", "completionAdmissions")) {
+                require(state.optJSONObject(key)?.has(captured.actionId) != true) { "The task completion action identity is already in use." }
+            }
+            val before = database.syncOutboxDao().getAll().associateBy { it.mutationId }
+            require(effects()) { "The completion task is no longer open. Nothing was completed." }
+            val generated = database.syncOutboxDao().getAll().filter { it.mutationId !in before }
+            require(generated.isNotEmpty() && generated.all { it.attemptedAt == null }) {
+                "The task completion produced no transportable change. Nothing was completed." }
+            require(before.all { (id, original) -> database.syncOutboxDao().get(id) == original }) {
+                "Completion changed an existing queued request." }
+            val generation = state.getLong("generation")
+            admissions.put(captured.actionId, JSONObject().put("intent", intent)
+                .put("mutationIds", org.json.JSONArray(generated.map { it.mutationId })))
+            // The local generation sequence stays with timeline admissions
+            // (focus/counter/day/projection): task-only members order through
+            // the ordinary outbox version chain instead.
+            NativeCausalTimeline.materialize(accountId, state)
+            val updated = CausalAccountEntity(accountId, state.toString())
+            NativeCausalJournal.validate(updated)
+            check(accounts.update(updated) == 1) { "The causal account disappeared." }
+            NativeTaskCompletionAdmission(captured.actionId, false, generation, generated.map { it.mutationId })
         }
     }
 }
