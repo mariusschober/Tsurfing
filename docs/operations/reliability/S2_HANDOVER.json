@@ -892,6 +892,36 @@
       ],
       "migrations": [],
       "compatibility": "Schema 5 only for fenced database exports. Schema 4 unchanged for ordinary exports. Causal restore/reconciliation remains blocked before any replacement; unsupported structured-clone preimages fail export visibly."
+    },
+    {
+      "commit": "01ab984aa0bab480807db337b3a702b51cc341fa",
+      "scope": "Atomic fresh-account causal restore with idempotent retries and preserved original evidence",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "services/storage.ts",
+        "services/causalBackup.ts",
+        "services/causalBackup.test.ts",
+        "services/causalRestore.test.ts"
+      ],
+      "commands": [
+        {
+          "command": "npx vitest run services/causalRestore.test.ts services/causalBackup.test.ts services/storage.test.ts",
+          "exitCode": 0,
+          "testsPassed": 42
+        },
+        {
+          "command": "npm run lint",
+          "exitCode": 0
+        },
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "testsPassed": 532,
+          "testFilesPassed": 86
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Uses the existing preserving IndexedDB fence. Restores only empty accounts or acknowledges an identical already-committed import. Nonempty-account reconciliation and rendered client activation are not complete. No native or SQL changes."
     }
   ],
   "findings": [
@@ -1032,7 +1062,12 @@
     "evidence/s2-backup-checksum-release.log",
     "evidence/s2-causal-backup-unit.log",
     "evidence/s2-causal-backup-lint.log",
-    "evidence/s2-causal-backup-release.log"
+    "evidence/s2-causal-backup-release.log",
+    "evidence/s2-causal-restore-unit.log",
+    "evidence/s2-causal-restore-unit-final.log",
+    "evidence/s2-causal-restore-lint.log",
+    "evidence/s2-causal-restore-release.log",
+    "evidence/s2-causal-restore-release-final.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

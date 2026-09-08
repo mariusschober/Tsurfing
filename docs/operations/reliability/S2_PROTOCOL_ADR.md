@@ -150,3 +150,7 @@ The private causal account row retains a wire request by logical action ID befor
 ### Causal backup transport boundary
 
 Causal account exports use schema 5 and retain an encoded private journal under `causal_actions`, including original wire bytes and receipts. The codec preserves undefined and own keys without treating user-shaped tags as metadata; unsupported structured-clone preimages fail visibly. This is preservation, not authentication or server acceptance. Ordinary accounts continue schema-4 exports. Legacy code must reject schema 5. Import and self-repair cannot fall through to legacy tracking writes on a fenced database; until causal ledger reconciliation exists they fail before replacement. A backup checksum is not evidence of server acceptance.
+
+### Fresh-account causal restoration
+
+The schema-5 importer now supports an empty destination account. It rechecks emptiness in the restoring write transaction, copies retained authority and raw sync metadata without normalization or new mutation IDs, and archives the exact imported artifact by checksum. Repeated imports return without replacing newer state. Restored legacy captures remain recovery evidence rather than executable WAL. Nonempty destinations still require an explicit journal reconciliation path; neither merge nor replace permits overwriting them. A validated local backup does not replace authenticated epoch discovery or authoritative server pull.
