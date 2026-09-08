@@ -922,6 +922,70 @@
       ],
       "migrations": [],
       "compatibility": "Uses the existing preserving IndexedDB fence. Restores only empty accounts or acknowledges an identical already-committed import. Nonempty-account reconciliation and rendered client activation are not complete. No native or SQL changes."
+    },
+    {
+      "commit": "4247269b52b79db1f7e0276de7216771fab566ec",
+      "migrationCommit": "7d0af94e84b02a5e565e9b55cc1645f60eaac41f",
+      "scope": "Read-only authenticated capability discovery and immutable local epoch binding",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "config/durable-identifiers.json",
+        "scripts/migration-causal-capability-assertions.sql",
+        "scripts/test-postgres-migrations.sh",
+        "server/causalActions.ts",
+        "server/routes/sync.reconciliation.test.ts",
+        "server/routes/sync.ts",
+        "services/causalCapability.ts",
+        "services/causalEnrollment.test.ts",
+        "services/causalEnrollment.ts",
+        "services/causalReceipts.test.ts",
+        "services/causalReceipts.ts",
+        "services/causalRestore.test.ts",
+        "supabase/migrations/20260908004753_s2_causal_capability_discovery.sql",
+        "supabase/migrations/MIGRATION_SHA256_MANIFEST.json"
+      ],
+      "commands": [
+        {
+          "command": "npx vitest run services/causalEnrollment.test.ts services/causalReceipts.test.ts services/causalRestore.test.ts",
+          "exitCode": 0,
+          "testsPassed": 14,
+          "note": "Initial focused run; final historical-byte regression covered by final full run."
+        },
+        {
+          "command": "npm run verify:release",
+          "exitCode": 0,
+          "testsPassed": 538,
+          "testFilesPassed": 87
+        },
+        {
+          "command": "PGHOST=/private/tmp PGPORT=55437 npm run test:migrations:postgres",
+          "exitCode": 0,
+          "paths": [
+            "empty",
+            "current-schema upgrade"
+          ]
+        },
+        {
+          "command": "npm run verify:migrations && npm run verify:migration-hashes",
+          "exitCode": 0,
+          "migrations": 29
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "initialExitCode": 1,
+          "finalExitCode": 0,
+          "note": "Added only the new migration filename to the identifier ledger."
+        },
+        {
+          "command": "supabase db advisors --db-url <isolated-loopback-database> --type all --level warn --fail-on error",
+          "exitCode": 0,
+          "warning": "Existing synthetic bootstrap pgcrypto in public."
+        }
+      ],
+      "migrations": [
+        "20260908004753_s2_causal_capability_discovery.sql"
+      ],
+      "compatibility": "Read-only RPC; no enrollment or rollout activation. Web wire preparation now requires a durably discovered matching epoch. Legacy requests and receipts are unchanged; older attempted causal bytes must bind to their original epoch."
     }
   ],
   "findings": [
@@ -1067,7 +1131,19 @@
     "evidence/s2-causal-restore-unit-final.log",
     "evidence/s2-causal-restore-lint.log",
     "evidence/s2-causal-restore-release.log",
-    "evidence/s2-causal-restore-release-final.log"
+    "evidence/s2-causal-restore-release-final.log",
+    "evidence/s2-causal-capability-iteration.log",
+    "evidence/s2-causal-capability-sql-unit.log",
+    "evidence/s2-causal-capability-advisors.log",
+    "evidence/s2-causal-capability-unit.log",
+    "evidence/s2-causal-capability-lint.log",
+    "evidence/s2-causal-capability-postgres.log",
+    "evidence/s2-causal-capability-release.log",
+    "evidence/s2-causal-capability-release-final.log",
+    "evidence/s2-causal-capability-migrations.log",
+    "evidence/s2-causal-capability-hashes.log",
+    "evidence/s2-causal-capability-identifiers.log",
+    "evidence/s2-causal-capability-identifiers-final.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

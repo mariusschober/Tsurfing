@@ -154,3 +154,7 @@ Causal account exports use schema 5 and retain an encoded private journal under 
 ### Fresh-account causal restoration
 
 The schema-5 importer now supports an empty destination account. It rechecks emptiness in the restoring write transaction, copies retained authority and raw sync metadata without normalization or new mutation IDs, and archives the exact imported artifact by checksum. Repeated imports return without replacing newer state. Restored legacy captures remain recovery evidence rather than executable WAL. Nonempty destinations still require an explicit journal reconciliation path; neither merge nor replace permits overwriting them. A validated local backup does not replace authenticated epoch discovery or authoritative server pull.
+
+### Authenticated epoch discovery and immutable binding
+
+`GET /api/v1/sync/causal-capability` is read-only, uses the authenticated immutable user UUID, and reports either no enrollment or the exact existing epoch/revision. Its private RPC is executable only by service_role and performs no writes. `rolloutReady` remains false. Local binding requires an already prepared causal store, never fences a database on discovery, and cannot replace an epoch or lower the observed revision. Existing attempted wire requests are checked before binding. Request preparation requires a matching bound epoch; it never rewrites old attempted bytes to adopt a new epoch. Capability revision is not a pull cursor and cannot apply a projection. Offline local admissions can remain pending while discovery is unavailable.
