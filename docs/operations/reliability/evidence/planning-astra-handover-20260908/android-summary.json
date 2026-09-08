@@ -1,0 +1,10 @@
+{
+  "tests": 244,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 1,
+  "classes": 35,
+  "skippedTests": [
+    "com.mariusschober.goalflow.nativeapp.sync.NativeSyncEngineTest.hostedBrowserRecordConvergesThroughProductionTransport"
+  ]
+}
