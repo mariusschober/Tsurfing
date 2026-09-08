@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef, useId } from 'react';
 import { Modal } from './Modal';
-import { RefreshIcon } from './Icons';
 import { type SyncState } from '../services/cloudSync';
 import { storageService, STORES } from '../services/storage';
 
@@ -41,7 +40,7 @@ export const SyncStatus: React.FC<{ userKey: string; closeSignal?: string; onOpe
   return (
     <div className="min-w-0">
       <button ref={buttonRef} type="button" onClick={() => setOpen(value => !value)} aria-label={`Sync status: ${labels[status.state]}`} aria-expanded={open} aria-controls={panelId} aria-haspopup="dialog" className="header-control sync-status-control text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-slate-700" title={status.lastSuccessfulSync ? `Last synced ${new Date(status.lastSuccessfulSync).toLocaleString()}` : status.message || labels[status.state]}>
-        <span className="relative shrink-0"><RefreshIcon className="h-5 w-5" aria-hidden="true" /><span aria-hidden="true" className={`absolute -right-1 -top-1 h-2 w-2 rounded-full ${color} ${status.state === 'syncing' ? 'animate-pulse' : ''}`} /></span>
+        <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${color} ${status.state === 'syncing' ? 'animate-pulse' : ''}`} />
         <span className="app-header__sync-label">{labels[status.state]}</span>
       </button>
       <Modal isOpen={open} onClose={() => setOpen(false)} title="Sync status" variant="popover" id={panelId} anchorRef={buttonRef} returnFocusRef={buttonRef}>
