@@ -9,6 +9,7 @@ import { pullCausalHistory, fetchCausalHistoryChunk, validateSavedCausalHistory 
 import { causalHistoryHash, CAUSAL_HISTORY_CHUNK_BYTES } from './causalHistoryProtocol';
 import { encodeCausalBackup, decodeCausalBackup } from './causalBackup';
 import { storageService, STORES } from './storage';
+import { applyDownloadedCausalHistory } from './causalProjection';
 
 async function fixture(projectionRevision = 1) {
   const name = `s2-history-${crypto.randomUUID()}`, accountId = crypto.randomUUID(), epoch = crypto.randomUUID();
@@ -146,6 +147,7 @@ it('resumes a partial download after actual schema-5 export and fresh-account re
   const db = await openDB(target);
   expect((await db.get(CAUSAL_STORE, f.accountId)).causalHistory).toEqual(partial);
   expect((await pullCausalHistory(target, f.accountId, { authenticatedFetch: f.fetch })).complete).toBe(true);
+  expect((await applyDownloadedCausalHistory(target, f.accountId)).duplicate).toBe(false);
   expect(f.requests[1]).toContain(`offset=${CAUSAL_HISTORY_CHUNK_BYTES}`);
   expect((await db.get(CAUSAL_STORE, f.accountId)).trackingValue.planViewCount).toBe(28);
   db.close();

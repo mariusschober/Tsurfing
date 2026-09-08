@@ -7,6 +7,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { admitCausalOperation } from '../server/causalActions';
 import { readCausalHistoryChunk } from '../server/causalHistory';
 import { assembleCausalHistoryEntry } from '../services/causalHistoryProtocol';
+import { replayCausalHistory } from '../services/causalProjection';
+import type { SavedCausalHistory } from '../services/causalHistory';
 
 if (!/^(goalflow_empty_|goalflow_upgrade_|s2_)/.test(process.env.PGDATABASE ?? '')) throw new Error('Disposable fixture database required');
 const literal = (value: unknown) => "'" + JSON.stringify(value).replaceAll("'", "''") + "'::jsonb";
@@ -57,6 +59,7 @@ const selected = await send('counterDay', { ...common, actionId: randomUUID(), k
 assert.deepEqual(selected.counts, { planViewCount: 0, dailyPostponeCount: 0 });
 assert.deepEqual(selected.record.payload.focusSession, paused.record.payload.focusSession);
 let historyChunks = 0;
+const history: SavedCausalHistory = { schemaVersion: 1, epoch, throughRevision: 5, downloadedRevision: 5, entries: {} };
 for (let revision = 0; revision <= 5; revision++) {
   const position = { epoch, revision, throughRevision: 5, offset: 0 };
   const parts = []; let offset: number | null = 0;
@@ -67,7 +70,12 @@ for (let revision = 0; revision <= 5; revision++) {
   const result = await assembleCausalHistoryEntry(owner, position, parts);
   assert.equal(result.entry.revision, revision);
   assert.deepEqual(result.entry.receipt.record.payload.future, tracking.future);
+  history.entries[String(revision)] = { body: result.body, sha256: result.sha256 };
 }
 assert.ok(historyChunks > 6);
+const replayed = replayCausalHistory(owner, history);
+assert.deepEqual(replayed.tracking, selected.record.payload);
+assert.deepEqual(replayed.focus.sessions[sessionId].projection, paused.record.payload.focusSession);
+assert.equal(Object.keys(replayed.events).length, 1);
 console.log(JSON.stringify({ status: 'PASS', engine: 'PostgreSQL', apiReceiptValidation: 'EXACT', cases: 7,
-  unknownEvidence: 'PRESERVED', rejectedFocus: 'AUDITED', daySelection: 'FOCUS_PRESERVED', historyEntries: 6, historyChunks, hostedPostgREST: 'NOT_MEASURED' }));
+  unknownEvidence: 'PRESERVED', rejectedFocus: 'AUDITED', daySelection: 'FOCUS_PRESERVED', historyEntries: 6, historyChunks, historyReplay: 'EXACT', hostedPostgREST: 'NOT_MEASURED' }));
