@@ -1234,6 +1234,37 @@ export const storageService = {
     return result;
   },
 
+  /** Recovery reviews awaiting explicit action: blocked local captures and
+   * rejected causal completions. Read-only; never mutates evidence. */
+  async listRecoveryReviews(userKey: string): Promise<{
+    blocked: Array<{ id: string; message: string }>;
+    rejectedCompletions: Array<{ actionId: string; taskId: string; code: string }>;
+  }> {
+    const meta = normalizeSyncMeta(await this.get(STORES.SYNC, userKey));
+    const blocked = Object.entries<string>(meta.localState?.blocked ?? {})
+      .filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+      .map(([id, message]) => ({ id, message }));
+    const rejectedCompletions: Array<{ actionId: string; taskId: string; code: string }> = [];
+    const db = await getDB();
+    if (db?.objectStoreNames.contains(CAUSAL_STORE)) {
+      const state = await db.get(CAUSAL_STORE, userKey) as Record<string, any> | undefined;
+      const outbox = state?.completionOutbox as Record<string, any> | undefined;
+      const receipts = state?.completionReceipts as Record<string, any> | undefined;
+      for (const [actionId, admission] of Object.entries(outbox ?? {})) {
+        const receipt = receipts?.[actionId] as Record<string, any> | undefined;
+        if (!receipt || (receipt as Record<string, unknown>).accepted !== false) continue;
+        const outcome = (receipt as Record<string, any>).outcome as Record<string, any> | undefined;
+        rejectedCompletions.push({
+          actionId,
+          taskId: typeof (admission as Record<string, any>)?.intent?.focus?.taskId === 'string'
+            ? (admission as Record<string, any>).intent.focus.taskId : '',
+          code: typeof outcome?.code === 'string' ? outcome.code : 'REJECTED'
+        });
+      }
+    }
+    return { blocked, rejectedCompletions };
+  },
+
   /** Dismiss blocked local reviews after explicit review. The original
    * blocked message and journal evidence move to an archive; committed
    * projections, outbox, receipts and conflicts are untouched. Dismissing a

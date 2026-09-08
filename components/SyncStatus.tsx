@@ -16,6 +16,7 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
   const [status, setStatus] = useState<StatusDetail>({ state: navigator.onLine ? 'saved-locally' : 'offline' });
   const [conflicts, setConflicts] = useState<Array<{ id: string; entityType: string; entityId: string; localPayload?: any }>>([]);
   const [reviews, setReviews] = useState<Array<{ id: string; message: string }>>([]);
+  const [rejected, setRejected] = useState<Array<{ actionId: string; taskId: string; code: string }>>([]);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const renderedGeneration = useRef(-1);
@@ -32,7 +33,17 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
     setStatus({ state: navigator.onLine ? 'saved-locally' : 'offline' });
     setConflicts([]);
     setReviews([]);
+    setRejected([]);
     setConfirming(null);
+    const refreshReviews = (revision: number) => {
+      void storageService.listRecoveryReviews(userKey).then(list => {
+        if (!stopped && revision === stateRevision.current) {
+          setReviews(list.blocked);
+          setRejected(list.rejectedCompletions);
+          setConfirming(null);
+        }
+      }).catch(() => {});
+    };
     const onState = async (event: Event) => {
       const detail = (event as CustomEvent<StatusDetail>).detail;
       if (stopped || detail.userKey !== userKey) return;
@@ -73,12 +84,7 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
         setStatus(detail);
         if (detail.state === 'error') {
           const revision = stateRevision.current;
-          void storageService.readCommittedSnapshot(userKey).then(snapshot => {
-            if (!stopped && revision === stateRevision.current) {
-              setReviews(Object.entries<string>(snapshot.meta.localState?.blocked ?? {}).map(([id, message]) => ({ id, message })));
-              setConfirming(null);
-            }
-          }).catch(() => {});
+          refreshReviews(revision);
         }
       }
       if (detail.conflictCount) {
@@ -115,8 +121,7 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
       if (blocked.length) { lastErrorWasLocal = true; setStatus({ state: 'error', message: blocked[0] }); }
       else if (snapshot.pendingCount || snapshot.meta.outbox.length || snapshot.meta.conflicts.length) setStatus(previous => previous.state === 'error' ? previous : { state: 'saved-locally', message: 'Waiting for cloud acknowledgment.' });
       if (!stopped && revision === stateRevision.current) {
-        setReviews(Object.entries<string>(snapshot.meta.localState?.blocked ?? {}).map(([id, message]) => ({ id, message })));
-        setConfirming(null);
+        refreshReviews(revision);
       }
     };
     window.addEventListener('goalflow:sync-state', onState);
@@ -187,6 +192,31 @@ export const SyncStatus: React.FC<{ userKey: string }> = ({ userKey }) => {
                 </div>
                 : <button type="button" onClick={() => setConfirming(review.id)}
                   className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 dark:border-slate-600 dark:text-gray-200">Dismiss</button>}
+            </div>)}
+          </div>}
+          {rejected.length > 0 && <div className="mt-3 border-t border-gray-100 pt-3 dark:border-slate-700">
+            <p className="text-sm text-gray-700 dark:text-gray-200">{rejected.length} completed {rejected.length === 1 ? 'task was' : 'tasks were'} rejected by the cloud. Effects stay until dismissed.</p>
+            {rejected.map(item => <div key={item.actionId} className="mt-2">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Completion {item.code}.</p>
+              {confirming === `completion:${item.actionId}`
+                ? <div className="mt-1 flex gap-2">
+                  <button type="button" onClick={() => {
+                    void storageService.dismissRejectedCompletion(userKey, item.actionId, 'Dismissed from sync status review').then(() => {
+                      stateRevision.current++;
+                      setRejected(previous => previous.filter(entry => entry.actionId !== item.actionId));
+                      setConfirming(null);
+                      window.dispatchEvent(new Event('goalflow:sync-retry'));
+                    }).catch(error => {
+                      window.dispatchEvent(new CustomEvent('goalflow:sync-state', { detail: { userKey,
+                        state: 'error', localFailure: true, message: error instanceof Error ? error.message : 'The completion could not be dismissed.' } }));
+                    });
+                  }}
+                  className="rounded-lg border border-red-300 px-3 py-2 text-xs font-bold text-red-700 dark:border-red-700 dark:text-red-300">Confirm dismiss</button>
+                  <button type="button" onClick={() => setConfirming(null)}
+                    className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 dark:border-slate-600 dark:text-gray-200">Keep</button>
+                </div>
+                : <button type="button" onClick={() => setConfirming(`completion:${item.actionId}`)}
+                  className="mt-1 rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 dark:border-slate-600 dark:text-gray-200">Dismiss completion</button>}
             </div>)}
           </div>}
         </div>

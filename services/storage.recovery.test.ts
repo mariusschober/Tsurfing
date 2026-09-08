@@ -76,6 +76,23 @@ describe('explicit recovery dismissal', () => {
     expect(Object.keys(dismissed.localState?.groups ?? {})).toHaveLength(1); // envelope retained
   });
 
+  it('lists blocked reviews and no rejected completions without a causal journal', async () => {
+    const { user } = fixture();
+    await storage.set('tasks', user, [], 'cloud');
+    await storage.set('stats', user, { completed: 10 }, 'cloud');
+    storage.stageLocalValues(user, [
+      { storeName: 'tasks', previousValue: [], nextValue: [{ id: 'a', completed: true }] },
+      { storeName: 'stats', previousValue: { completed: 0 }, nextValue: { completed: 1 } }
+    ]);
+    await storage.flushPendingLocalChanges(user);
+    const list = await storage.listRecoveryReviews(user);
+    expect(list.blocked).toHaveLength(2);
+    expect(list.rejectedCompletions).toEqual([]);
+    const [first] = list.blocked;
+    await storage.dismissBlockedReview(user, first.id, 'reviewed');
+    expect(await storage.listRecoveryReviews(user)).toEqual({ blocked: [], rejectedCompletions: [] });
+  });
+
   it('refuses unknown, live and malformed dismissals without changing state', async () => {
     const { name, user } = fixture();
     await storage.set('tasks', user, [], 'cloud');

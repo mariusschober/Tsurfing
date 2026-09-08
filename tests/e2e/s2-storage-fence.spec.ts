@@ -573,3 +573,55 @@ test('rendered non-focus completion admits two task completions atomically on a 
   expect(Object.keys(result.snapshot.meta.localState?.blocked ?? {})).toHaveLength(0);
   expect(result.snapshot.causal).toBeTruthy();
 });
+
+test('rendered rejected completions dismiss with reservations released and audit retained', async ({ page }) => {
+  const { account } = await fencedFocusApp(page);
+  const admitted = await page.evaluate(async account => {
+    const api = window as any, name = localStorage.getItem('goalflow_active_database_v2') || 'GoalflowDB';
+    const epoch = crypto.randomUUID();
+    await api.__s2BindCapability(name, account, { schemaVersion: 2, accountId: account, enrolled: true,
+      epoch, projectionRevision: 0, rolloutReady: false });
+    const snapshot = await api.__s1Storage.readCommittedSnapshot(account);
+    const tasks = snapshot.values.tasks;
+    const focus = snapshot.values.tracking.focusSession;
+    const predecessorBatch = snapshot.meta.outbox;
+    const predecessorResults = predecessorBatch.map((m: any, index: number) => ({ mutationId: m.mutationId,
+      accepted: true, serverVersion: 100 + index,
+      record: { user_id: account, entity_type: m.entityType, entity_id: m.entityId, payload: m.payload,
+        version: m.version, server_version: 100 + index, device_id: m.deviceId, updated_at: m.updatedAt, deleted_at: null } }));
+    await api.__s1Storage.commitPushResults(account, predecessorBatch, predecessorResults);
+    const intent = { focus: { schemaVersion: 1, accountId: account, actionId: crypto.randomUUID(), actorId: 'browser',
+      kind: 'complete', sessionId: focus.sessionId, taskId: focus.taskId, epoch: focus.sessionId,
+      expectedCurrentSessionId: focus.sessionId, capturedAt: new Date().toISOString(), durationSeconds: null },
+    details: { day: snapshot.values.tracking.date, timeZone: 'Atlantic/Canary' }, deviceId: 'browser' };
+    await api.__s2AdmitCompletion(name, intent);
+    const bytes = await api.__s2PrepareCompletion(name, account, intent.focus.actionId);
+    const operation = JSON.parse(bytes);
+    const db = await api.__s1Fence(name), state = await db.get('causal_actions', account); db.close();
+    const receipt = { schemaVersion: 2, epoch, projectionRevision: 1, operation, accepted: false,
+      outcome: { accepted: false, code: 'STALE_REVISION', revision: focus.sessionId },
+      record: { user_id: account, entity_type: 'tracking', entity_id: 'singleton', payload: state.trackingValue,
+        version: 2, server_version: 100, device_id: 'browser', updated_at: operation.command.capturedAt, deleted_at: null },
+      changes: [] };
+    await api.__s2CommitCompletion(name, account, intent.focus.actionId, receipt);
+    window.dispatchEvent(new CustomEvent('goalflow:committed', { detail: { userKey: account } }));
+    return { actionId: intent.focus.actionId, taskId: focus.taskId };
+  }, account);
+  await page.getByRole('button', { name: /Saved locally|Syncing|Synced|Offline|Sync error|Syncing saved changes/ }).first().click();
+  await expect(page.getByText('rejected by the cloud', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Dismiss completion', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirm dismiss', exact: true }).click();
+  await expect(page.getByText('rejected by the cloud', { exact: false })).toHaveCount(0);
+  const result = await page.evaluate(async ({ account, actionId }) => {
+    const api = window as any, name = localStorage.getItem('goalflow_active_database_v2') || 'GoalflowDB';
+    const snapshot = await api.__s1Storage.readCommittedSnapshot(account);
+    const db = await api.__s1Fence(name); const state = await db.get('causal_actions', account); db.close();
+    return { snapshot, state };
+  }, { account, actionId: admitted.actionId });
+  expect(result.state.completionOutbox[admitted.actionId]).toBeUndefined();
+  expect(Object.keys(result.snapshot.meta.localState?.completionReservations ?? {})).toHaveLength(0);
+  expect(result.state.completionAdmissions[admitted.actionId]).toBeDefined();
+  expect(result.state.completionReceipts[admitted.actionId].accepted).toBe(false);
+  expect(result.state.completionDismissals[admitted.actionId].reason).toBe('Dismissed from sync status review');
+  expect(result.snapshot.values.tasks.find((t: any) => t.id === admitted.taskId).completed).toBe(true);
+});
