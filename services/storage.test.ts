@@ -550,6 +550,21 @@ describe('durable storage failure boundaries', () => {
     expect(await storageService.get(STORES.TASKS, key)).toEqual([{ id: 'target', title: 'must survive' }]);
   });
 
+  it('binds unknown own __proto__ fields into the backup checksum', async () => {
+    installBrowserStorage();
+    const key = `storage-prototype-checksum-${crypto.randomUUID()}`;
+    const original = JSON.parse('{"date":"2099-03-01","planViewCount":27,"__proto__":{"audit":"original"}}');
+    await storageService.set(STORES.TRACKING, key, original, 'cloud');
+    const backup = await storageService.exportBackup(key);
+    const corrupted = structuredClone(backup);
+    (corrupted.collections[STORES.TRACKING] as any).__proto__.audit = 'modified';
+    await expect(storageService.importBackup(key, corrupted, 'replace')).rejects.toThrow('checksum');
+    expect(await storageService.get(STORES.TRACKING, key)).toEqual(original);
+    const unchanged = JSON.parse(JSON.stringify(backup));
+    await storageService.importBackup(key, unchanged, 'merge');
+    expect(Object.hasOwn(await storageService.get(STORES.TRACKING, key), '__proto__')).toBe(true);
+  });
+
   it('rolls back when a restored mutation id collides with different pending data', async () => {
     installBrowserStorage();
     const key = `storage-collision-${crypto.randomUUID()}`;

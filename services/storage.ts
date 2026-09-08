@@ -125,7 +125,7 @@ const checksumCollections = async (collections: Record<string, unknown>): Promis
     return Object.keys(value).sort().reduce<Record<string, unknown>>((acc, k) => {
       acc[k] = (value as Record<string, unknown>)[k];
       return acc;
-    }, {});
+    }, Object.create(null));
   });
   const bytes = new TextEncoder().encode(stable);
   const digest = await crypto.subtle.digest('SHA-256', bytes);
