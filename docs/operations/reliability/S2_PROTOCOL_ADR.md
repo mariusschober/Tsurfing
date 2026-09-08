@@ -326,3 +326,12 @@ Completion participates in the existing ordered native action journal using its 
 On accepted history, a local completion receives a `local` application decision bound to its frozen request and admission. The current typed replica must match the original member or a later retained local mutation/reservation. Rewards are not replayed. Member-dependent unattempted rows are released atomically with metadata and the applied history basis; a different entity’s dependency does not borrow the task’s server version as its own base. After initial application, later receipt replay follows existing represented-version rules. Normal UI and scheduler activation remains a separate unfinished integration step.
 
 Valid history can make the private journal exceed Android’s CursorWindow. Account reads therefore assemble bounded SQLite character substrings in a Room read transaction. This preserves existing Unicode bytes and avoids a schema migration or evidence truncation.
+
+
+## Native normal synchronization checkpoint
+
+`6ba4f34f614baf5dbb781d6a64defab70ca0a5fc`: **PASS_LOCAL**. Normal Android synchronization now drains ordinary predecessors around causal actions and preserves pending focus/counter projections when ordinary tracking rows arrive. Exact tracking observations and their history basis are retained transactionally. A newer protected snapshot triggers bounded history refresh and retries the same ordinary cursor; failed application advances no cursor. Older ambiguous snapshots remain review evidence, not inferred increments. Seven regression tests cover completion dependencies, later notes, tracking preservation, unknown-field ordering, rollback and concurrent history publication.
+
+Verification: 220 native tests, 219 passed, one hosted test skipped; lint and debug APK passed. Repository release verification passed (719 tests, 105 files). Room hashes (9), identifiers (24), and diff checks passed. Tests use synthetic server responses. No migration, deployment or installation.
+
+Remaining: normal UI admission/enrollment activation, rejected/conflicting completion and legacy ambiguity recovery, macOS integration and full cross-client acceptance. S2 remains incomplete and S3 is not permitted.

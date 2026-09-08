@@ -3615,6 +3615,54 @@
         "No hosted/native-device or new CI acceptance is claimed."
       ],
       "permittedNextStage": "Continue S2; S3 blocked"
+    },
+    {
+      "id": "native-normal-sync",
+      "sourceCommit": "6ba4f34f614baf5dbb781d6a64defab70ca0a5fc",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/GoalflowRepository.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalStore.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeTrackingPullEvidence.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeCausalActionSync.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeSyncEngine.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalProjectionStoreTest.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/sync/NativeCausalActionSyncTest.kt"
+      ],
+      "verification": [
+        {
+          "command": "JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./gradlew :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "cwd": "android-native",
+          "exitCode": 0,
+          "tests": 220,
+          "passed": 219,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "passed": 719,
+          "files": 105
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-tracking-pull-android.log",
+          "sha256": "d7a06ccc4c162d14cf60b0cdaf9a4f5763583ec7db3a1e977391e40c57758c3f"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-tracking-pull-release.log",
+          "sha256": "357e80a93aad3c9ce7761efc3fd322d7c58bb178c66d280b95ee7799c9599eca"
+        }
+      ],
+      "compatibility": "No schema change. Existing causal journal required; UI enrollment not activated. Legacy ambiguity retained for review.",
+      "remaining": [
+        "UI activation/enrollment",
+        "Rejected completion and legacy recovery",
+        "macOS integration",
+        "Cross-client acceptance"
+      ]
     }
   ],
   "findings": [
@@ -3870,7 +3918,9 @@
     "docs/operations/reliability/evidence/s2-native-completion-admission-release.log",
     "docs/operations/reliability/evidence/s2-native-completion-send-android.log",
     "docs/operations/reliability/evidence/s2-native-completion-send-release.log",
-    "docs/operations/reliability/evidence/s2-native-completion-send-disk-failure.log"
+    "docs/operations/reliability/evidence/s2-native-completion-send-disk-failure.log",
+    "docs/operations/reliability/evidence/s2-native-tracking-pull-android.log",
+    "docs/operations/reliability/evidence/s2-native-tracking-pull-release.log"
   ],
   "blockers": [
     "S2 implementation and acceptance requirements remain; see S2_REPORT.md"

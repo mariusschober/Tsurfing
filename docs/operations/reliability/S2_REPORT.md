@@ -2,7 +2,7 @@
 
 Stage acceptance: **BLOCKED — implementation continues. S3 is not permitted.**
 
-Latest tested source: `32743d3bb2c7c15354212520b123d3c398e2299e`. Native completion synchronization through the production engine and Room against synthetic server responses: **PASS_LOCAL** (212 native tests passed, one hosted test skipped; lint/debug build passed; 719 Web/server tests and release verification passed). Normal activation, recovery, macOS and cross-client acceptance remain incomplete. S3 remains blocked.
+Latest tested source: `6ba4f34f614baf5dbb781d6a64defab70ca0a5fc`. Normal Android synchronization: **PASS_LOCAL** (219 native tests passed, one hosted skip; lint/build and 719-test release verification passed). UI activation, recovery, macOS and cross-client acceptance remain incomplete.
 
 S1's tested commit `09245261b6174ec878f0296ca61682c603f54304` is integrated.
 S1.2 correction `262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d` is integrated;
@@ -729,3 +729,12 @@ The large-note test reproduced a real SQLite CursorWindow limit in whole-row cau
 Final verification: 213 native tests, 212 passed and one hosted test skipped; lint and debug APK passed. Release verification passed with 719 tests in 105 files. Nine Room hashes and 24 identifiers passed. An earlier full run failed during native-runtime extraction because the disk was full; its failure excerpt is retained. Removing only unused generated compiler module caches restored space and the complete gate was rerun successfully.
 
 Remaining: normal native UI/scheduler activation, recovery for rejected/conflicting completions, macOS integration and the full cross-client campaign. The engine tests use synthetic server responses and do not establish live PostgreSQL, hosted or physical-device acceptance. No deployment or app replacement occurred.
+
+
+## Native normal synchronization checkpoint
+
+`6ba4f34f614baf5dbb781d6a64defab70ca0a5fc`: **PASS_LOCAL**. Normal Android synchronization now drains ordinary predecessors around causal actions and preserves pending focus/counter projections when ordinary tracking rows arrive. Exact tracking observations and their history basis are retained transactionally. A newer protected snapshot triggers bounded history refresh and retries the same ordinary cursor; failed application advances no cursor. Older ambiguous snapshots remain review evidence, not inferred increments. Seven regression tests cover completion dependencies, later notes, tracking preservation, unknown-field ordering, rollback and concurrent history publication.
+
+Verification: 220 native tests, 219 passed, one hosted test skipped; lint and debug APK passed. Repository release verification passed (719 tests, 105 files). Room hashes (9), identifiers (24), and diff checks passed. Tests use synthetic server responses. No migration, deployment or installation.
+
+Remaining: normal UI admission/enrollment activation, rejected/conflicting completion and legacy ambiguity recovery, macOS integration and full cross-client acceptance. S2 remains incomplete and S3 is not permitted.
