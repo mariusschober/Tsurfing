@@ -16,6 +16,35 @@ async function endpoint(rpc:any) {
   return `http://127.0.0.1:${(server.address() as any).port}/sync/conflicts/reconcile`;
 }
 describe('automatic sync API boundary',()=>{
+  it('routes causal actions by authenticated owner and rejects mismatched receipts', async () => {
+    const actionId = '22222222-2222-4222-8222-222222222222';
+    const epoch = '33333333-3333-4333-8333-333333333333';
+    const body = { schemaVersion: 2, epoch, type: 'counter', command: {
+      schemaVersion: 1, actionId, accountId: owner, actorId: 'synthetic', day: '2026-09-08', timeZone: 'UTC',
+      counter: 'planViewCount', delta: 1, capturedAt: '2026-09-08T00:00:00.000Z', businessActionId: null, correctionOf: null
+    } };
+    const result = { schemaVersion: 2, operation: body, epoch, accepted: true, projectionRevision: 1,
+      outcome: { accepted: true, code: 'APPLIED', day: '2026-09-08', counts: { planViewCount: 28, dailyPostponeCount: 3 } },
+      record: { user_id: owner, entity_type: 'tracking', entity_id: 'singleton', version: 2, server_version: 5,
+        device_id: 'causal-action-v2', updated_at: '2026-09-08T00:00:00.123456+00:00', deleted_at: null,
+        payload: { date: '2026-09-08', planViewCount: 28, dailyPostponeCount: 3 } } };
+    const rpc = vi.fn().mockResolvedValue({ data: result, error: null });
+    const url = (await endpoint(rpc)).replace('/conflicts/reconcile', '/actions');
+    const send = (input: unknown) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) });
+    expect((await send(body)).status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('goalflow_admit_action_v2', { target_user_id: owner, operation: body });
+    expect((await send({ ...body, command: { ...body.command, accountId: epoch } })).status).toBe(400);
+    expect(rpc).toHaveBeenCalledTimes(1);
+    result.record.user_id = epoch;
+    expect((await send(body)).status).toBe(500);
+    rpc.mockResolvedValue({ data: null, error: { code: '22023', message: 'private synthetic database details' } });
+    const conflict = await send(body);
+    expect(conflict.status).toBe(409);
+    expect(await conflict.json()).toEqual({ error: { code: 'causal_review_required',
+      message: 'This saved action needs recovery review. Keep its original identity and contents.' } });
+    rpc.mockResolvedValue({ data: null, error: { code: '40001' } });
+    expect((await send(body)).status).toBe(503);
+  });
   it('replays a staged oversized mutation through the exact legacy receipt boundary', async () => {
     const mutation = { mutationId: '22222222-2222-4222-8222-222222222222', deviceId: 'original-device',
       entityType: 'settings', entityId: 'singleton', baseServerVersion: null, version: 1,

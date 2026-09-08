@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { reconcileLegacyTasks } from '../taskReconciliation';
 import { readConflictPage } from '../conflictPages';
 import { readStagedReconciliation, stageReconciliationChunk } from '../reconciliationStaging';
+import { admitCausalOperation } from '../causalActions';
 
 const syncEntityType = z.enum([
   'tasks', 'goals', 'habits', 'stats', 'progress', 'hashtags', 'accountability',
@@ -214,6 +215,22 @@ export const reconcileCandidate = async (database: SupabaseClient, userId: strin
 export const createSyncRouter = (admin?: SupabaseClient) => {
   const router = Router();
   const requireHardenedProtocol = admin ? createSyncProtocolGuard(admin) : undefined;
+
+  // Does not enroll accounts or advertise rollout readiness. The database
+  // requires an existing exact cutover epoch for every submitted operation.
+  router.post('/sync/actions', async (request, response) => {
+    try {
+      response.json(await admitCausalOperation(requireDatabase(admin), request.user!.id, request.body));
+    } catch (error) {
+      if (isRecord(error) && error.code === '22023') {
+        response.status(409).json({ error: { code: 'causal_review_required',
+          message: 'This saved action needs recovery review. Keep its original identity and contents.' } });
+      } else if (isRecord(error) && ['40001', '40P01'].includes(String(error.code))) {
+        response.status(503).json({ error: { code: 'causal_retry_required',
+          message: 'Synchronization was interrupted. Retry the exact saved action.' } });
+      } else invalidRequest(response, error);
+    }
+  });
 
   router.post('/sync/push', async (request, response) => {
     try {

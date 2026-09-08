@@ -110,3 +110,7 @@ done
 for test_database in "${empty_database}" "${upgrade_database}"; do
   PGDATABASE="${test_database}" python3 "${repository_root}/scripts/test-s2-counter-days.py"
 done
+
+for test_database in "${empty_database}" "${upgrade_database}"; do
+  PGDATABASE="${test_database}" node --import tsx "${repository_root}/scripts/test-s2-causal-api-postgres.ts"
+done
