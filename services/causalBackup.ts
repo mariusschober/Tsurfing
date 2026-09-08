@@ -1,3 +1,6 @@
+import type { CausalAccountState } from './causalStorage';
+import { assertCausalReceipt, parseCausalOperation } from './causalProtocol';
+
 /** Tagged JSON preserves absent/undefined fields in retained cutover preimages.
  * Unsupported structured-clone values fail export explicitly rather than being
  * silently discarded by JSON.stringify. This is not a trust/receipt validator. */
@@ -39,4 +42,42 @@ export function decodeCausalBackup(value: unknown): unknown {
     Object.defineProperty(result, entry[0], { value: decodeCausalBackup(entry[1]), enumerable: true, writable: true, configurable: true });
   }
   return result;
+}
+
+export interface CausalBackupEvidence {
+  authority: CausalAccountState & Record<string, any>;
+  trackingMirror: unknown;
+  sync: unknown;
+  captures: Record<string, string>;
+  [key: string]: unknown;
+}
+
+/** Validate the restore binding, without interpreting legacy captures or
+ * treating a checksum as server acceptance. Original evidence is retained. */
+export function readCausalBackup(accountKey: string, value: unknown): CausalBackupEvidence {
+  const record = (item: unknown): item is Record<string, any> => item !== null && typeof item === 'object' && !Array.isArray(item);
+  if (!record(value) || value.schemaVersion !== 1) throw new Error('The causal backup schema is unsupported.');
+  const decoded = decodeCausalBackup(value.encoded);
+  if (!record(decoded) || !record(decoded.authority) || !record(decoded.captures)
+    || Object.values(decoded.captures).some(raw => typeof raw !== 'string')) throw new Error('The causal backup evidence is invalid.');
+  const state = decoded.authority;
+  if (state.schemaVersion !== 1 || state.accountKey !== accountKey || !Number.isSafeInteger(state.generation)
+    || state.generation < 0 || typeof state.trackingPresent !== 'boolean' || !record(state.cutover)
+    || typeof state.cutover.trackingPresent !== 'boolean' || typeof state.cutover.syncPresent !== 'boolean') {
+    throw new Error('The causal backup account binding is invalid.');
+  }
+  // Exact receipt validation runs before any database schema or data change.
+  const requests = state.causalRequests ?? {};
+  const receipts = state.causalReceipts ?? {};
+  if (!record(requests) || !record(receipts)) throw new Error('The causal backup request ledger is invalid.');
+  for (const [id, bytes] of Object.entries(requests)) {
+    if (typeof bytes !== 'string') throw new Error('The saved causal request is invalid.');
+    let parsed: unknown;
+    try { parsed = JSON.parse(bytes); } catch (_) { throw new Error('The saved causal request JSON is invalid.'); }
+    const operation = parseCausalOperation(accountKey, parsed);
+    if (operation.command.actionId !== id) throw new Error('The saved causal request identity differs.');
+    if (Object.hasOwn(receipts, id)) assertCausalReceipt(accountKey, operation, receipts[id]);
+  }
+  if (Object.keys(receipts).some(id => !Object.hasOwn(requests, id))) throw new Error('A retained receipt has no exact request.');
+  return decoded as CausalBackupEvidence;
 }

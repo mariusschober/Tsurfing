@@ -25,8 +25,8 @@ import {
 } from './syncProtocol';
 import { mergeTrackingFocusSession, normalizeFocusSession } from '../src/domain/focusSession';
 import { assertNewSyncPayload, transportablePushBatch } from './syncEnvelope';
-import { CAUSAL_STORE, readCausalAccount } from './causalStorage';
-import { encodeCausalBackup } from './causalBackup';
+import { CAUSAL_STORE, TRACKING_KEY_PATH, fenceLegacyTracking, readCausalAccount } from './causalStorage';
+import { encodeCausalBackup, readCausalBackup } from './causalBackup';
 
 const BASE_DB_NAME = 'GoalflowDB';
 const ACTIVE_DB_KEY = 'goalflow_active_database_v2';
@@ -241,6 +241,19 @@ const recoveryKey = (storeName: string, key: string): string => `goalflow_dr_${s
 const fallbackKey = (storeName: string, key: string): string => `goalflow_fallback_${storeName}_${key}`;
 const deletedKey = (storeName: string, key: string): string => `goalflow_dr_deleted_${storeName}_${key}`;
 const walPrefixForUser = (userKey: string): string => `${WAL_PREFIX}${encodeURIComponent(userKey)}_`;
+const backupLocalCaptures = (userKey: string): Record<string, string> => {
+  const captures: Record<string, string> = {};
+  if (!hasWindow()) return captures;
+  const prefix = walPrefixForUser(userKey);
+  const keys = new Set([...DATA_STORES, STORES.SYNC].flatMap(store => [fallbackKey(store, userKey), recoveryKey(store, userKey), deletedKey(store, userKey)]));
+  for (let i = 0; i < window.localStorage.length; i++) {
+    const key = window.localStorage.key(i);
+    if (!key || (!key.startsWith(prefix) && !keys.has(key))) continue;
+    const raw = window.localStorage.getItem(key);
+    if (raw !== null) captures[key] = raw;
+  }
+  return captures;
+};
 const walKey = (transaction: StagedLocalTransaction): string => `${walPrefixForUser(transaction.userKey)}${transaction.id}`;
 
 const verifiedLocalStorageWrite = (key: string, value: string): void => {
@@ -1552,16 +1565,7 @@ export const storageService = {
         if (meta !== undefined) collections[STORES.SYNC] = normalizeSyncMeta(meta);
         await tx.done;
         if (causal) {
-          const captures: Record<string, string> = {};
-          if (hasWindow()) {
-            const prefix = walPrefixForUser(userKey);
-            for (let i = 0; i < window.localStorage.length; i++) {
-              const key = window.localStorage.key(i);
-              if (!key || (!key.startsWith(prefix) && ![...DATA_STORES, STORES.SYNC].some(store => key === fallbackKey(store, userKey)))) continue;
-              const raw = window.localStorage.getItem(key);
-              if (raw !== null) captures[key] = raw;
-            }
-          }
+          const captures = backupLocalCaptures(userKey);
           collections[CAUSAL_STORE] = { schemaVersion: 1, encoded: encodeCausalBackup({ authority, trackingMirror, sync: meta, captures }) };
         }
       } else {
@@ -1581,6 +1585,7 @@ export const storageService = {
   },
 
   async importBackup(userKey: string, backup: Record<string, any>, mode: 'merge' | 'replace' = 'merge'): Promise<void> {
+    backup = structuredClone(backup);
     const envelope = backup as Partial<GoalflowBackup>;
     const verifiedCollections = validateBackupCollections(backup);
     if (Number(envelope.schemaVersion) >= 4 && envelope.ownerKey !== userKey) {
@@ -1589,7 +1594,69 @@ export const storageService = {
     if (envelope.checksum && await checksumCollections(verifiedCollections) !== envelope.checksum.toLowerCase()) {
       throw new Error('Backup checksum validation failed. The file may be incomplete or modified.');
     }
-    if (Object.hasOwn(verifiedCollections, CAUSAL_STORE) || (await getDB())?.objectStoreNames.contains(CAUSAL_STORE)) {
+    if (Object.hasOwn(verifiedCollections, CAUSAL_STORE)) {
+      if (envelope.schemaVersion !== 5 || envelope.ownerKey !== userKey || !envelope.checksum) throw new DurableStorageError('A bound schema-5 causal backup is required.');
+      const evidence = readCausalBackup(userKey, verifiedCollections[CAUSAL_STORE]);
+      if (stableJson(verifiedCollections[STORES.TRACKING]) !== stableJson(evidence.authority.trackingPresent ? evidence.authority.trackingValue : undefined)
+        || stableJson(verifiedCollections[STORES.SYNC]) !== stableJson(evidence.sync === undefined ? undefined : normalizeSyncMeta(evidence.sync))) {
+        throw new DurableStorageError('The causal backup projections differ from their retained evidence. Nothing was restored.');
+      }
+      return queueMutation(async () => {
+        const initial = await getDB();
+        if (!initial) throw new DurableStorageError('Causal restore requires IndexedDB. Existing data is unchanged.');
+        const assertEmpty = async (tx: IDBPTransaction<unknown, string[], 'readonly' | 'readwrite'>) => {
+          if (Array.from(tx.objectStoreNames).includes(CAUSAL_STORE)) {
+            const existing = await tx.objectStore(CAUSAL_STORE).get(userKey);
+            const restored = existing?.restoredBackups?.[envelope.checksum!];
+            if (restored !== undefined) {
+              if (stableJson(restored) !== stableJson(backup)) throw new DurableStorageError('The retained backup identity differs. Nothing was restored.');
+              return true;
+            }
+          }
+          for (const store of tx.objectStoreNames) {
+            if (await tx.objectStore(store).getKey(userKey) !== undefined) throw new DurableStorageError('Causal backup recovery requires journal reconciliation before restore into an existing account. Existing data is unchanged.');
+          }
+          if (Object.keys(backupLocalCaptures(userKey)).length) throw new DurableStorageError('Existing local captures require journal reconciliation before restore. They remain unchanged.');
+          return false;
+        };
+        const before = initial.transaction([...DATA_STORES, STORES.SYNC, ...(initial.objectStoreNames.contains(CAUSAL_STORE) ? [CAUSAL_STORE] : [])], 'readonly');
+        const duplicate = await assertEmpty(before);
+        await before.done;
+        if (duplicate) return;
+        const db = await fenceLegacyTracking(initial.name);
+        try {
+          const tx = db.transaction([...DATA_STORES, STORES.SYNC, CAUSAL_STORE], 'readwrite');
+          void tx.done.catch(() => undefined);
+          try {
+            // Recheck inside the write transaction: a peer may have committed
+            // after the read-only preflight or during versionchange.
+            if (await assertEmpty(tx)) { await tx.done; return; }
+            const authority = structuredClone(evidence.authority);
+            // Archive the complete imported artifact, including unknown stores,
+            // mirror discrepancies and captures. Never turn captures into new
+            // operations or materialize them under their old WAL keys.
+            const archived = authority.restoredBackups ?? {};
+            if (!isRecord(archived) || Object.hasOwn(archived, envelope.checksum!)) throw new DurableStorageError('The backup recovery archive needs explicit reconciliation.');
+            authority.restoredBackups = { ...archived, [envelope.checksum!]: backup };
+            for (const store of DATA_STORES) {
+              if (store === STORES.TRACKING) {
+                if (authority.trackingPresent) await tx.objectStore(store).add({ [TRACKING_KEY_PATH]: userKey, payload: authority.trackingValue });
+              } else if (Object.hasOwn(verifiedCollections, store)) {
+                await tx.objectStore(store).add(verifiedCollections[store], userKey);
+              }
+            }
+            if (evidence.sync !== undefined) await tx.objectStore(STORES.SYNC).add(evidence.sync, userKey);
+            await tx.objectStore(CAUSAL_STORE).add(authority);
+            await tx.done;
+          } catch (error) {
+            try { tx.abort(); } catch (_) {}
+            try { await tx.done; } catch (_) {}
+            throw error;
+          }
+        } finally { db.close(); }
+      });
+    }
+    if ((await getDB())?.objectStoreNames.contains(CAUSAL_STORE)) {
       throw new DurableStorageError('Causal backup recovery requires journal reconciliation before restore. The backup and existing data remain unchanged.');
     }
     const collections = normalizeBackupCollectionsForWeb(verifiedCollections);

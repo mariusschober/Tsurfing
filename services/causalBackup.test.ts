@@ -50,7 +50,7 @@ describe('causal backup preservation', () => {
     expect(recovered.captures[walKey]).toBe(raw);
     expect(recovered.trackingMirror).toBeUndefined();
     expect(values.get(walKey)).toBe(raw);
-    await expect(storageService.importBackup(account, envelope)).rejects.toThrow('journal reconciliation');
+    await expect(storageService.importBackup(account, envelope)).rejects.toThrow(); // Synthetic receipt is intentionally not valid wire evidence.
     await expect(storageService.importBackup(account, legacyBackup)).rejects.toThrow('journal reconciliation');
     expect(await db.get(CAUSAL_STORE, account)).toEqual(state);
     expect(await db.get(STORES.TRACKING, account)).toBeUndefined();
