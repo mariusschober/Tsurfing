@@ -525,3 +525,34 @@ test('S1.2: local recovery cannot erase an earlier unresolved cloud error', asyn
   }, user);
   await expect(page.getByRole('button', { name: 'Sync error', exact: true })).toHaveAttribute('title', 'Immutable cloud request needs review.');
 });
+
+test('recovery: a blocked grouped action is dismissed with its evidence retained', async ({ page }) => {
+  await unlock(page);
+  await createTask(page, 'S1 retained task');
+  await page.evaluate(async user => {
+    const storage = (window as any).__s1Storage;
+    await storage.set('stats', user, { completed: 10 }, 'cloud');
+    const tasks = await storage.get('tasks', user);
+    storage.stageLocalValues(user, [
+      { storeName: 'tasks', previousValue: tasks, nextValue: [...tasks, { id: 'a', completed: true }] },
+      { storeName: 'stats', previousValue: { completed: 0 }, nextValue: { completed: 1 } }
+    ]);
+    await storage.flushPendingLocalChanges(user);
+  }, user);
+  const status = page.getByRole('button', { name: 'Sync error', exact: true });
+  await expect(status).toBeVisible();
+  await status.click();
+  await expect(page.getByText('need review. Nothing was discarded.', { exact: false })).toBeVisible();
+  // One dismissal retires the whole grouped action via its retained envelope.
+  await page.getByRole('button', { name: 'Dismiss', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Confirm dismiss', exact: true }).click();
+  await expect(page.getByText('need review. Nothing was discarded.', { exact: false })).toHaveCount(0);
+  const after = await page.evaluate(async user => {
+    const storage = (window as any).__s1Storage;
+    return { meta: await storage.get('sync', user), tasks: await storage.get('tasks', user) };
+  }, user);
+  expect(Object.keys(after.meta.localState?.blocked ?? {})).toHaveLength(0);
+  expect(Object.values(after.meta.localState?.discardedReviews ?? {}).map((r: any) => r.reason))
+    .toEqual(expect.arrayContaining(['Dismissed from sync status review']));
+  expect(after.tasks.some((t: any) => t.title === 'S1 retained task')).toBe(true);
+});

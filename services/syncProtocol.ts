@@ -83,6 +83,9 @@ export interface SyncMeta {
      * Legacy predecessors may drain; later ordinary edits wait for the exact
      * logical action receipt before acquiring its server version. */
     completionReservations?: Record<string, { actionId: string; entityType: string; entityId: string; version: number }>;
+    /** Explicitly dismissed local reviews. The original blocked message and
+     * journal evidence are retained here; dismissal never rewrites them. */
+    discardedReviews?: Record<string, { blocked: string; journal: unknown; at: string; reason: string }>;
   };
 }
 
@@ -328,7 +331,7 @@ export const normalizeSyncMeta = (value: unknown): SyncMeta => {
   }
   if (value.localState !== undefined) {
     const state = value.localState as Record<string, unknown>;
-    for (const key of ['blocked', 'groups', 'fallbackCopies', 'resolvedConflicts', 'reconciliations', 'migrations', 'completionReservations']) {
+    for (const key of ['blocked', 'groups', 'fallbackCopies', 'resolvedConflicts', 'reconciliations', 'migrations', 'completionReservations', 'discardedReviews']) {
       if (state[key] !== undefined && !isRecord(state[key])) throw new Error('Local synchronization evidence is damaged. It was not discarded.');
     }
     if (Object.values(state.blocked ?? {}).some(item => typeof item !== 'string')

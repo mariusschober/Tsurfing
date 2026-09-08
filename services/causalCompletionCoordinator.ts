@@ -45,6 +45,9 @@ export interface CompletionAccountState extends FocusAccountState, CausalEnrollm
   completionRequests?: Record<string, string>;
   completionReceipts?: Record<string, Record<string, any>>;
   causalReceipts?: Record<string, Record<string, any>>;
+  /** Explicitly dismissed rejected completions. Admissions, requests and
+   * receipts remain as audit; the pending intent and reservations are gone. */
+  completionDismissals?: Record<string, { at: string; reason: string }>;
 }
 const object = (value: unknown): value is Record<string, any> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const same = (a: unknown, b: unknown) => stableJson(a) === stableJson(b);
@@ -232,8 +235,35 @@ function assertAdmission(state: CompletionAccountState, id: string) {
   const admission = state.completionAdmissions?.[id];
   if (!admission || admission.command.actionId !== id || admission.command.accountId !== state.accountKey
     || !same(state.actionIdentities?.[id], { kind: 'completion', intent: admission.intent })) throw new Error('The original completion admission is missing.');
+  if (state.completionDismissals?.[id]) throw new Error('The completion was dismissed after rejection. Admit a new action to retry.');
   if (state.completionOutbox?.[id] && !same(state.completionOutbox[id], admission)) throw new Error('The pending completion differs from its original admission.');
   return admission;
+}
+
+/** Dismiss a rejected completion after explicit review. Reservations release
+ * so successors and pull pages proceed; the admission, request and rejected
+ * receipt remain as audit and the identity can never be re-admitted. Only a
+ * rejected receipt qualifies; pending and accepted completions keep theirs. */
+export async function dismissRejectedCompletion(name: string, accountId: string, id: string, reason: string) {
+  const clean = reason.trim();
+  if (!id || clean.length < 1 || clean.length > 500) throw new Error('Dismissal needs the retained completion identity and a short reason.');
+  return run(name, accountId, async (state, meta) => {
+    const admission = state.completionAdmissions?.[id];
+    if (!admission || admission.command.actionId !== id) throw new Error('The completion is unknown. Nothing was dismissed.');
+    if (!state.completionOutbox?.[id]) throw new Error('The completion is not pending. Nothing was dismissed.');
+    const receipt = state.completionReceipts?.[id];
+    if (!receipt || (receipt as Record<string, unknown>).accepted !== false) {
+      throw new Error('Only a rejected completion can be dismissed. Pending and accepted completions keep their evidence.');
+    }
+    delete state.completionOutbox[id];
+    const reservations = meta.localState?.completionReservations ?? {};
+    for (const [mutationId, entry] of Object.entries(reservations)) {
+      if (entry.actionId === id) delete reservations[mutationId];
+    }
+    state.completionDismissals ??= {};
+    state.completionDismissals[id] = { at: new Date().toISOString(), reason: clean };
+    return { dismissed: true as const, actionId: id };
+  });
 }
 
 export function assertCompletionAdmissionOperation(admission: CompletionAdmission, operation: CausalCompletionOperation) {
@@ -374,7 +404,17 @@ export function validateCompletionEvidence(accountId: string, state: CompletionA
   if (!capability.enrolled) throw new Error('Completion evidence has no established account epoch.');
   const expectedReservations: NonNullable<NonNullable<SyncMeta['localState']>['completionReservations']> = {};
   for (const [id, value] of Object.entries(state.completionAdmissions ?? {})) {
-    const admission = assertAdmission(state, id);
+    // Dismissed admissions keep structural and audit validation but skip the
+    // pending-intent guard: their outbox entry and reservations are gone.
+    const admission = state.completionDismissals?.[id]
+      ? (() => {
+        if (!value || value.command.actionId !== id || value.command.accountId !== state.accountKey
+          || !same(state.actionIdentities?.[id], { kind: 'completion', intent: value.intent })) {
+          throw new Error('The original completion admission is missing.');
+        }
+        return value;
+      })()
+      : assertAdmission(state, id);
     if (!object(value.intent) || !object(value.intent.focus) || !object(value.outcome) || !Array.isArray(value.members)
       || !object(value.dependencies) || !object(value.preimages) || typeof value.epoch !== 'string') throw new Error('The completion admission evidence is invalid.');
     validateFocusCommand(admission.command); validateCompletionDetails(admission.intent.details);
@@ -385,9 +425,11 @@ export function validateCompletionEvidence(accountId: string, state: CompletionA
       parseCausalCompletion(accountId, { schemaVersion: 2, epoch: admission.epoch, type: 'completion', command: admission.command, changes: admission.members });
       if (admission.members.some(member => member.deviceId !== admission.intent.deviceId)) throw new Error('Completion member device differs from its captured intent.');
       if (admission.outcome.code !== 'APPLIED' || admission.outcome.revision !== id) throw new Error('Completion admission outcome differs.');
-      if (!state.completionOutbox?.[id] && state.completionReceipts?.[id]?.accepted !== true) throw new Error('An admitted completion has neither a pending intent nor an accepted receipt.');
+      if (!state.completionOutbox?.[id] && state.completionReceipts?.[id]?.accepted !== true
+        && !state.completionDismissals?.[id]) throw new Error('An admitted completion has neither a pending intent nor an accepted receipt.');
       if (state.completionOutbox?.[id] && state.completionReceipts?.[id]?.accepted === true) throw new Error('An accepted completion still has pending reservations.');
-    } else if (admission.members.length || Object.keys(admission.dependencies).length || state.completionOutbox?.[id]) {
+    } else if ((admission.members.length || Object.keys(admission.dependencies).length || state.completionOutbox?.[id])
+      && !state.completionDismissals?.[id]) {
       throw new Error('A rejected local completion has member effects.');
     }
     for (const [memberId, dependency] of Object.entries(admission.dependencies)) {
@@ -404,9 +446,19 @@ export function validateCompletionEvidence(accountId: string, state: CompletionA
   if (!same(expectedReservations, meta.localState?.completionReservations ?? {})) throw new Error('Completion reservations differ from their durable intents.');
   for (const [id, bytes] of Object.entries(state.completionRequests ?? {})) {
     if (typeof bytes !== 'string') throw new Error('The completion request evidence is invalid.');
-    const admission = assertAdmission(state, id), operation = parseCausalCompletion(accountId, JSON.parse(bytes));
+    const dismissed = state.completionDismissals?.[id];
+    const admission = dismissed
+      ? (() => {
+        const raw = state.completionAdmissions?.[id];
+        if (!raw || raw.command.actionId !== id) throw new Error('The original completion admission is missing.');
+        return raw;
+      })()
+      : assertAdmission(state, id);
+    const operation = parseCausalCompletion(accountId, JSON.parse(bytes));
     assertCompletionAdmissionOperation(admission, operation);
-    if (!same(operation.changes, resolvedMembers(accountId, state, meta, admission))) throw new Error('The attempted completion has different dependency evidence.');
+    if (!dismissed && !same(operation.changes, resolvedMembers(accountId, state, meta, admission))) {
+      throw new Error('The attempted completion has different dependency evidence.');
+    }
     if (state.completionReceipts?.[id]) assertCausalCompletionReceipt(accountId, operation, state.completionReceipts[id]);
   }
   if (Object.keys(state.completionReceipts ?? {}).some(id => !state.completionRequests?.[id])) throw new Error('A completion receipt has no original request.');

@@ -37,7 +37,7 @@ import { encodeCausalBackup, readCausalBackup } from './causalBackup';
 import { admitLocalFocusControl, type LocalFocusControl, type FocusAccountState } from './causalFocusCoordinator';
 import { admitLocalCounterDay, type CounterDayAccountState } from './causalCounterDayCoordinator';
 import { parseCounterDayCommand } from './causalProtocol';
-import { admitLocalCompletionControl, type CompletionControlIntent } from './causalCompletionCoordinator';
+import { admitLocalCompletionControl, dismissRejectedCompletion as dismissRejectedCausalCompletion, type CompletionControlIntent } from './causalCompletionCoordinator';
 import { admitLocalTaskCompletion, type TaskCompletionIntent } from './causalTaskCompletion';
 
 const BASE_DB_NAME = 'GoalflowDB';
@@ -522,6 +522,7 @@ const mergeRestoredSyncMeta = (currentValue: unknown, incomingValue: unknown): S
     resolvedConflicts: mergeEvidence(current.localState?.resolvedConflicts, incoming.localState?.resolvedConflicts),
     reconciliations: mergeEvidence(current.localState?.reconciliations, incoming.localState?.reconciliations),
     completionReservations: mergeEvidence(current.localState?.completionReservations, incoming.localState?.completionReservations),
+    discardedReviews: mergeEvidence(current.localState?.discardedReviews, incoming.localState?.discardedReviews),
     fallbackCopies: Object.fromEntries([...new Set([...Object.keys(current.localState?.fallbackCopies ?? {}), ...Object.keys(incoming.localState?.fallbackCopies ?? {})])].map(store =>
       [store, [...new Set([...(current.localState?.fallbackCopies?.[store] ?? []), ...(incoming.localState?.fallbackCopies?.[store] ?? [])])]]))
   };
@@ -1217,8 +1218,7 @@ export const storageService = {
     return result;
   },
 
-  async admitTaskCompletion(userKey: string, input: {
-    taskId: string; actionId: string; details: TaskCompletionIntent['details']; capturedAt: string;
+  async admitTaskCompletion(userKey: string, input: { taskId: string; actionId: string; details: TaskCompletionIntent['details']; capturedAt: string;
   }) {
     const captured = structuredClone(input), deviceId = readDeviceId(), name = activeDatabaseName();
     const intent: TaskCompletionIntent = { ...captured, schemaVersion: 1, accountId: userKey, actorId: deviceId, deviceId };
@@ -1231,6 +1231,87 @@ export const storageService = {
     // This is a wake-up hint only; subscribers read the committed generation.
     publishCommit(userKey, 0, ['tasks', ...result.admission.transactions.map(member => member.storeName)], name);
     if (!result.duplicate) announceLocalChange(STORES.TASKS, userKey, undefined);
+    return result;
+  },
+
+  /** Dismiss blocked local reviews after explicit review. The original
+   * blocked message and journal evidence move to an archive; committed
+   * projections, outbox, receipts and conflicts are untouched. Dismissing a
+   * group dismisses every member together. Retained WAL bytes for dismissed
+   * reviews are removed only after the archive commits; a crash in between
+   * re-blocks and the dismissal can be retried. */
+  async dismissBlockedReview(userKey: string, reviewId: string, reason: string): Promise<SyncMeta> {
+    const cleanReason = reason.trim();
+    if (!reviewId || cleanReason.length < 1 || cleanReason.length > 500) {
+      throw new DurableStorageError('Dismissal needs the retained review identity and a short reason.');
+    }
+    return queueMutation(async () => {
+      const db = await getDB();
+      if (!db) throw new DurableStorageError('The review cannot be dismissed while IndexedDB is unavailable.');
+      const tx = db.transaction(accountTransactionStores(db, [STORES.SYNC]), 'readwrite');
+      let meta: SyncMeta;
+      const walKeys: string[] = [];
+      try {
+        meta = normalizeSyncMeta(await readAccountValue(tx, STORES.SYNC, userKey));
+        const evidence = localEvidence(meta);
+        const entries = listWal(userKey);
+        const target = entries.find(entry => entry.transaction.id === reviewId);
+        let group = target?.grouped ? entries.filter(entry => entry.key === target.key) : (target ? [target] : []);
+        if (!group.length) {
+          // Journaled groups retire their WAL bytes; the exact envelope
+          // survives in sync metadata for whole-group recovery.
+          for (const raw of Object.values(evidence.groups ?? {})) {
+            try {
+              const parsed = JSON.parse(raw) as { transactions?: Array<{ id?: unknown }> };
+              const ids = Array.isArray(parsed?.transactions) ? parsed.transactions.map(member => member?.id) : [];
+              if (ids.includes(reviewId)) {
+                group = ids.filter((id): id is string => typeof id === 'string')
+                  .map(id => ({ key: '', transaction: { id } as WalEntry['transaction'], grouped: true, raw, recoverableGroup: true }));
+              }
+            } catch (_) {}
+          }
+        }
+        const ids = group.length ? group.map(entry => entry.transaction.id) : [reviewId];
+        const archived = evidence.discardedReviews ??= {};
+        const blocked = evidence.blocked ?? {};
+        const anyBlocked = ids.some(id => typeof blocked[id] === 'string');
+        if (!anyBlocked && !(reviewId in archived)) {
+          throw new DurableStorageError('The review is not awaiting recovery. Nothing was discarded.');
+        }
+        for (const id of ids) {
+          if (typeof blocked[id] === 'string' && !(id in archived)) {
+            archived[id] = { blocked: blocked[id], journal: evidence.journal[id] ?? null, at: new Date().toISOString(), reason: cleanReason };
+          }
+          delete blocked[id];
+          delete evidence.journal[id];
+        }
+        for (const entry of group) if (entry.key && !walKeys.includes(entry.key)) walKeys.push(entry.key);
+        await putMeta(tx, userKey, meta);
+        await tx.done;
+      } catch (error) {
+        try { tx.abort(); } catch (_) {}
+        try { await tx.done; } catch (_) {}
+        throw error;
+      }
+      for (const key of walKeys) safeLocalStorageRemove(key);
+      publishCommit(userKey, meta, [STORES.SYNC]);
+      return meta;
+    });
+  },
+
+  /** Dismiss a rejected causal completion after explicit review, releasing
+   * its reservations so successors and pull pages proceed. Admissions,
+   * requests and the rejected receipt remain as audit; the identity can
+   * never be re-admitted. */
+  async dismissRejectedCompletion(userKey: string, actionId: string, reason: string): Promise<unknown> {
+    const name = activeDatabaseName();
+    await storageService.flushPendingLocalChanges(userKey);
+    const db = await getDB();
+    if (!db || db.name !== name || !db.objectStoreNames.contains(CAUSAL_STORE)
+      || !await db.get(CAUSAL_STORE, userKey)) throw new DurableStorageError('Completion recovery requires the prepared causal account.');
+    const result = await dismissRejectedCausalCompletion(name, userKey, actionId, reason);
+    publishCommit(userKey, 0, [STORES.TRACKING, STORES.TASKS], name);
+    announceLocalChange(STORES.TASKS, userKey, undefined);
     return result;
   },
 
