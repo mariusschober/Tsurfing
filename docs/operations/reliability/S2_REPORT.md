@@ -2,7 +2,7 @@
 
 Stage acceptance: **BLOCKED — implementation continues. S3 is not permitted.**
 
-Latest tested source: `cf04ba5dd107b2154d43b44ab5b44bbe9c40d4b6`. Android counter/day admission: **PASS_LOCAL** (158 passed, one hosted test skipped; lint and debug build passed). Native transport, causal business completion and production UI integration remain incomplete. S3 remains blocked.
+Latest tested source: `9757d7c230af7f0a2a05998a705a66793babc4d7`. Android causal receipt validation: **PASS_LOCAL** (161 native tests passed, one hosted test skipped; lint/debug build passed; 714 Web/server tests and release gate passed). Native history/receipt persistence, completion and UI integration remain incomplete. S3 remains blocked.
 
 S1's tested commit `09245261b6174ec878f0296ca61682c603f54304` is integrated.
 S1.2 correction `262fa6e96a8cba7d0ebbb6843b9f8a0131b4cb7d` is integrated;
@@ -629,3 +629,10 @@ Six focused Room tests cover serial extensions, exact retries, failed commits, s
 Stable account/actor/action IDs, day, timezone and millisecond timestamps are persisted with each counter event. Distinct equal-time actions count independently; retrying the same event changes nothing. Focus, day and counter IDs share an exclusion check. The complete admission sequence detects missing evidence even for a pending event that has no visible projection yet.
 
 Day commands retain requested date/zone. Unknown days preserve the previous proven tracking projection and focus, while explicitly admitted day events wait for a verified baseline. No zero baseline is inferred. Nine focused Room cases are included in the full 158-pass suite; one hosted test is skipped. Lint and debug build passed; Room 9 hashes and 24 durable identifiers passed. Command: `env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true`, exit 0. Evidence: `evidence/s2-native-counter-day.log`. Native server history and receipt integration, causal completion and UI activation remain unimplemented; no deployment or installation occurred.
+
+
+## Android exact receipt checkpoint `9757d7c230af7f0a2a05998a705a66793babc4d7`
+
+The native version-two action boundary validates exact operation identity, account/epoch, record identity/revisions, and focus/counter/day outcome constraints. It returns original JSON evidence without timestamp rewriting. One-attempt transport sends the saved request string verbatim, enforces the 256 KiB UTF-8 body limit and 8 MiB accepted response limit, and classifies retryable HTTP failures without exposing server diagnostics. The caller remains responsible for authentication binding, durable attempted bytes and atomic receipt/history persistence.
+
+Shared TypeScript/Kotlin fixtures cover focus, counter and day receipts, altered operation/account/revision and missing tombstone proof. Native tests cover identical request retries, microsecond receipt timestamps, multibyte oversize rejection and HTTP failures. Full native command `env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true` exited 0: 161 passed, one hosted test skipped; lint/debug build passed. `npm run verify:release` passed 714 tests after permitting loopback. The first sandbox run failed with reproduced `listen EPERM 127.0.0.1`; no validator was weakened. Logs: `evidence/s2-native-receipts-android.log` and `evidence/s2-native-receipts-release.log`. No deployment, live sync or installation is claimed.

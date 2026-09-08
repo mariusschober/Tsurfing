@@ -2820,6 +2820,75 @@
         "Unknown-day counts wait for verified server baselines; not zeroed."
       ],
       "permittedNextStage": "Continue S2; S3 blocked"
+    },
+    {
+      "commit": "9757d7c230af7f0a2a05998a705a66793babc4d7",
+      "scope": "Android version-two exact causal action receipt validation and byte-preserving sender",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalProtocol.kt",
+        "android-native/app/src/main/java/com/mariusschober/goalflow/nativeapp/sync/NativeCausalTransport.kt",
+        "android-native/app/src/test/java/com/mariusschober/goalflow/nativeapp/data/NativeCausalProtocolTest.kt",
+        "services/causalReceiptFixtures.test.ts",
+        "tests/fixtures/s2/action-receipts-v2.json"
+      ],
+      "findingIds": [
+        "S2-NATIVE-RECEIPTS"
+      ],
+      "commands": [
+        {
+          "command": "env JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ./android-native/gradlew -p android-native :app:testProductionDebugUnitTest :app:lintProductionDebug :app:assembleProductionDebug --offline -PgoalflowSkipSigning=true",
+          "exitCode": 0,
+          "tests": {
+            "passed": 161,
+            "failed": 0,
+            "skipped": 1
+          },
+          "skipped": "hostedBrowserRecordConvergesThroughProductionTransport"
+        },
+        {
+          "command": "npm run verify:release (loopback access permitted)",
+          "exitCode": 0,
+          "tests": {
+            "passed": 714,
+            "failed": 0,
+            "skipped": 0
+          }
+        },
+        {
+          "command": "npx vitest run services/causalReceiptFixtures.test.ts services/causalTransport.test.ts",
+          "exitCode": 0,
+          "tests": {
+            "passed": 13
+          }
+        },
+        {
+          "command": "npm run verify:room-hashes && npm run verify:identifiers",
+          "exitCode": 0,
+          "checked": [
+            9,
+            24
+          ]
+        }
+      ],
+      "migrations": [],
+      "compatibility": "Existing snapshot receipt contract unchanged; new version-two protocol retains exact operation and original receipt JSON. No runtime activation.",
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-receipts-android.log",
+          "sha256": "d99c632222765c09a1890ccc2b09dca4f86416c1a3b64ce2f1c3d9f9ff29fc53"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-native-receipts-release.log",
+          "sha256": "518629d2f9f27726d301700d051f37b5573f783d59019eb1b558f11580d44856"
+        }
+      ],
+      "failedApproach": "Initial sandbox verify:release exited 1; focused adminInvites reproduction proved listen EPERM on 127.0.0.1. Full authorized loopback rerun passed.",
+      "blockers": [
+        "Native enrollment, bounded history validation and durable acknowledgment integration remain incomplete.",
+        "Native atomic causal completion, UI wiring and macOS integration remain incomplete."
+      ],
+      "permittedNextStage": "Continue S2; S3 blocked"
     }
   ],
   "findings": [
