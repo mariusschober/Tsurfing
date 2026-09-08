@@ -797,3 +797,9 @@ Remaining: rejected/conflicting native completion recovery UI, divergent legacy 
 Validation: `npm run verify:release` exit 0, 732 tests in 108 files. `test:s1:storage` 38 passed ×3. S1 browser 44 passed; S2 browser 28 passed (14 journeys × Chromium/WebKit); full E2E 96 passed. Both PostgreSQL matrices passed. Android: 231 tests, 0 failures, one hosted skip; lint/debug build passed. macOS: 226 tests, one hosted skip, 0 failures. Identifiers 24, migrations 32, migration hashes 32, Room hashes 9 passed.
 
 Remaining: divergent legacy ambiguity import, nonempty-restore reconciliation, macOS causal integration and full cross-client acceptance. S2 remains incomplete and S3 is not permitted. No migration, deployment, installation or live data writes occurred.
+
+## macOS causal journal checkpoint
+
+`b8d2e9bbd9ef0bb1c58c1c308eaab2379e9a72bd`: **PASS_LOCAL**. macOS has a private causal journal: `Sync/CausalJournal.swift` persists one account journal in file + UserDefaults replicas with canonical-JSON drift repair, preserving the current tracking payload verbatim as cutover evidence (or recording its absence). Preparation is idempotent and never rebinds; validation fails closed on identity/schema/generation damage, cutover divergence before any admission, or focus mismatch, without deleting anything. Seven regression tests cover verbatim preservation, idempotency, absence recording, replica healing both ways, damage fail-closed with evidence retained, and tamper rejection. Legacy sync paths are untouched; admission, transport, receipts, history, enrollment and UI activation remain.
+
+Validation: `xcodebuild test` exit 0 — 233 tests, 0 failures, one hosted-transport skip; source-membership and public-config gates pass. Web release verification exit 0 (732 tests, 108 files; no Web sources changed). Identifiers 24 and Room hashes 9 pass. No migration, deployment, installation or live data writes occurred.

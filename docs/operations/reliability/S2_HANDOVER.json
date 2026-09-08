@@ -4149,6 +4149,68 @@
         "macOS causal integration",
         "Cross-client acceptance"
       ]
+    },
+    {
+      "id": "macos-causal-journal",
+      "sourceCommit": "b8d2e9bbd9ef0bb1c58c1c308eaab2379e9a72bd",
+      "status": "PASS_LOCAL",
+      "changedFiles": [
+        "macos-native/GoalflowMac/Sync/CausalJournal.swift",
+        "macos-native/GoalflowMacTests/CausalJournalTests.swift",
+        "macos-native/GoalflowMac.xcodeproj/project.pbxproj"
+      ],
+      "verification": [
+        {
+          "command": "xcodebuild test -project macos-native/GoalflowMac.xcodeproj -scheme GoalflowMac -configuration Debug -destination platform=macOS CODE_SIGNING_ALLOWED=NO",
+          "exitCode": 0,
+          "tests": 233,
+          "skipped": 1,
+          "failures": 0
+        },
+        {
+          "command": "bash macos-native/scripts/verify-project-sources.sh",
+          "exitCode": 0
+        },
+        {
+          "command": "bash macos-native/scripts/verify-public-config.sh",
+          "exitCode": 0
+        },
+        {
+          "command": "VERIFY_PORT=54173 npm run verify:release",
+          "exitCode": 0,
+          "passed": 732,
+          "files": 108
+        },
+        {
+          "command": "npm run verify:identifiers",
+          "exitCode": 0,
+          "checked": 24
+        },
+        {
+          "command": "npm run verify:room-hashes",
+          "exitCode": 0,
+          "schemas": 9
+        }
+      ],
+      "evidence": [
+        {
+          "path": "docs/operations/reliability/evidence/s2-macos-journal-tests.log",
+          "sha256": "c5961e6dd50386afb35679ca2d8e9c9b7aa506ba457f8004260049197a3663ec"
+        },
+        {
+          "path": "docs/operations/reliability/evidence/s2-macos-journal-release.log",
+          "sha256": "4ed67782262dcf6ec879f6aeaf60364da6f429931287598d659f5f5e899503f6"
+        }
+      ],
+      "compatibility": "Additive Swift files + project membership. No schema, migration, identifier, wire or receipt-contract change. Legacy macOS sync paths untouched.",
+      "remaining": [
+        "macOS focus/counter/day/completion admission",
+        "macOS causal transport, receipts, history, projection, enrollment",
+        "macOS UI activation",
+        "Divergent legacy ambiguity import",
+        "Nonempty-restore reconciliation",
+        "Cross-client acceptance"
+      ]
     }
   ],
   "findings": [
