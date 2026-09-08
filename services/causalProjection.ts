@@ -1,3 +1,4 @@
+import { causalBusinessTransactionStores, readCausalBusiness, writeCausalBusiness } from './causalBusinessStorage';
 import { openDB, type IDBPDatabase } from 'idb';
 import { applyFocusCommand, initialFocusJournal, type FocusCommand } from '../src/domain/causalFocus';
 import { projectCounters, validateCounterBaseline, type CounterBaseline, type CounterDelta } from '../src/domain/counterLedger';
@@ -167,8 +168,8 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
     if (!history || history.partial || history.downloadedRevision !== history.throughRevision) throw new Error('Complete the retained history horizon before applying it.');
     await validateSavedCausalHistory(accountId, history);
     const canonical = replayCausalHistory(accountId, history);
-    const tx = db.transaction([...new Set([CAUSAL_STORE, 'tracking', 'tasks', 'sync', ...COMPLETION_STORES])]
-      .filter(store => db.objectStoreNames.contains(store)), 'readwrite');
+    const tx = db.transaction(causalBusinessTransactionStores(db, [...new Set([CAUSAL_STORE, 'tracking', 'tasks', 'sync', ...COMPLETION_STORES])]
+      .filter(store => db.objectStoreNames.contains(store))), 'readwrite');
     void tx.done.catch(() => undefined);
     try {
       const state = await readCausalAccount(tx, accountId) as State | undefined;
@@ -185,9 +186,9 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
       if (needsCompletion) {
         for (const store of COMPLETION_STORES) {
           if (!db.objectStoreNames.contains(store)) throw new Error('Completion history requires all existing business stores before application.');
-          values[store] = await tx.objectStore(store).get(accountId);
+          values[store] = await readCausalBusiness(tx, store, accountId);
         }
-        rawMeta = await tx.objectStore('sync').get(accountId); meta = normalizeSyncMeta(rawMeta); beforeMeta = stableJson(meta);
+        rawMeta = await readCausalBusiness(tx, 'sync', accountId); meta = normalizeSyncMeta(rawMeta); beforeMeta = stableJson(meta);
         validateCompletionEvidence(accountId, state, rawMeta, values);
         try { assertCompletionCapturesMaterialized(accountId, meta); }
         catch (_) { throw new CompletionProjectionReview(completions[0]?.[0] ?? Object.keys(state.completionAdmissions!)[0], 'COMPLETION_CAPTURE_REVIEW'); }
@@ -279,7 +280,7 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
       const selected = state.counterBaselines[canonical.tracking.date];
       if (!selected) throw new Error('The selected counter day has no baseline.');
       let focus = canonical.focus;
-      const tasks = needsCompletion ? values.tasks : await tx.objectStore('tasks').get(accountId);
+      const tasks = needsCompletion ? values.tasks : await readCausalBusiness(tx, 'tasks', accountId);
       for (const command of orderedPendingFocus(state, canonical.receipts)) {
         const id = command.actionId;
         if (command.kind === 'complete') {
@@ -319,8 +320,8 @@ export async function applyDownloadedCausalHistory(name: string, accountId: stri
         meta.localState ??= { generation: 0, journal: {}, receipts: {} };
         if (!Number.isSafeInteger(meta.localState.generation + 1)) throw new Error('Local generation exhausted.');
         meta.localState.generation++;
-        for (const store of changedStores) await tx.objectStore(store).put(values[store], accountId);
-        await tx.objectStore('sync').put({ ...(record(rawMeta) ? rawMeta : {}), ...meta }, accountId);
+        for (const store of changedStores) await writeCausalBusiness(tx, store, accountId, values[store]);
+        await writeCausalBusiness(tx, 'sync', accountId, { ...(record(rawMeta) ? rawMeta : {}), ...meta });
       }
       await tx.objectStore(CAUSAL_STORE).put(state);
       await tx.objectStore('tracking').put({ [TRACKING_KEY_PATH]: accountId, payload: next });

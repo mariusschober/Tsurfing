@@ -1,3 +1,4 @@
+import { fenceLegacyBusinessStores, causalBusinessTransactionStores, readCausalBusiness, writeCausalBusiness } from './causalBusinessStorage';
 import 'fake-indexeddb/auto';
 import { openDB } from 'idb';
 import { IDBObjectStore } from 'fake-indexeddb';
@@ -15,7 +16,7 @@ import { causalHistoryHash } from './causalHistoryProtocol';
 const stores = ['tasks', 'stats', 'progress', 'goals', 'habits', 'task_events', 'tracking', 'sync'];
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-async function fixture() {
+async function fixture(fenced = false) {
   const name = `s2-completion-local-${crypto.randomUUID()}`, accountId = crypto.randomUUID(), sessionId = crypto.randomUUID(), epoch = crypto.randomUUID();
   const db = await openDB(name, 1, { upgrade(db) { for (const store of Object.values(STORES)) db.createObjectStore(store); } });
   const tracking = { date: '2026-09-08', planViewCount: 27, dailyPostponeCount: 3, unknown: { retained: true },
@@ -32,13 +33,18 @@ async function fixture() {
   await db.put('task_events', [], accountId);
   await db.put('sync', { ...emptySyncMeta(), cursor: 7 }, accountId); db.close();
   (await fenceLegacyTracking(name)).close();
+    if (fenced) (await fenceLegacyBusinessStores(name)).close();
   await bindCausalCapability(name, accountId, { schemaVersion: 2, accountId, enrolled: true, epoch, projectionRevision: 0, rolloutReady: false });
   const intent = (): CompletionIntent => ({ focus: { schemaVersion: 1, accountId, actionId: crypto.randomUUID(), actorId: 'synthetic-tab', kind: 'complete',
     sessionId, taskId: 'task', epoch: sessionId, expectedCurrentSessionId: sessionId, capturedAt: '2026-09-08T00:05:00.000Z', durationSeconds: null },
   details: { day: '2026-09-08', timeZone: 'Atlantic/Canary', actualDuration: 5, flowState: 'flow', finalDescription: '🧭'.repeat(12000) }, deviceId: 'synthetic-tab' });
   const read = async () => {
     const db = await openDB(name), values: any = {};
-    for (const store of [...stores, CAUSAL_STORE]) values[store] = await db.get(store, accountId);
+    for (const store of [...stores, CAUSAL_STORE]) {
+      const tx = db.transaction(causalBusinessTransactionStores(db, [store]));
+      values[store] = store === 'tracking' || store === CAUSAL_STORE ? await tx.objectStore(store).get(accountId) : await readCausalBusiness(tx, store, accountId);
+      await tx.done;
+    }
     db.close(); return values;
   };
   const write = async (store: string, value: unknown) => { const db = await openDB(name); await db.put(store, value, accountId); db.close(); };
@@ -55,8 +61,8 @@ async function fixture() {
   return { name, accountId, sessionId, epoch, tracking, intent, read, write, receipt };
 }
 
-it('admits all six effects with final notes and derives rewards from current durable state once', async () => {
-  const f = await fixture(), intent = f.intent();
+it.each([false, true])('admits all six effects with final notes and derives rewards once (business fence %s)', async fenced => {
+  const f = await fixture(fenced), intent = f.intent();
   const admitted = await admitLocalCompletion(f.name, intent);
   expect(admitted.admission.outcome.accepted).toBe(true);
   expect(admitted.admission.members).toHaveLength(6);

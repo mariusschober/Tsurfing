@@ -1,3 +1,4 @@
+import { causalBusinessTransactionStores, readCausalBusiness } from './causalBusinessStorage';
 import { type IDBPDatabase } from 'idb';
 import { applyFocusCommand, initialFocusJournal, validateFocusCommand, type FocusCommand, type FocusJournal, type FocusOutcome } from '../src/domain/causalFocus';
 import { stableJson } from './syncProtocol';
@@ -58,7 +59,7 @@ export async function admitLocalFocus(databaseName: string, captured: LocalFocus
 }
 
 async function admitInDatabase(db: IDBPDatabase, intent: LocalFocusIntent): Promise<LocalFocusResult> {
-  const tx = db.transaction([CAUSAL_STORE, 'tracking', 'tasks'], 'readwrite');
+  const tx = db.transaction(causalBusinessTransactionStores(db, [CAUSAL_STORE, 'tracking', 'tasks']), 'readwrite');
   // Observe abort immediately; callers receive the original validation/storage error.
   void tx.done.catch(() => undefined);
   try {
@@ -79,7 +80,7 @@ async function admitInDatabase(db: IDBPDatabase, intent: LocalFocusIntent): Prom
     const journal = state.focus ?? initialFocusJournal(intent.accountId, state.trackingValue.focusSession);
     const current = journal.currentSessionId ? journal.sessions[journal.currentSessionId] : undefined;
     const command: FocusCommand = { ...intent, expectedRevision: current?.revision ?? null };
-    const tasks = await tx.objectStore('tasks').get(intent.accountId);
+    const tasks = await readCausalBusiness(tx, 'tasks', intent.accountId);
     if (!Array.isArray(tasks)) throw new Error('The task projection cannot be verified. Nothing was admitted.');
     const matching = tasks.filter(task => record(task) && task.id === intent.taskId);
     if (matching.length !== 1) throw new Error('The focus target is missing or ambiguous. Nothing was admitted.');

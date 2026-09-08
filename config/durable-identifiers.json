@@ -6,7 +6,9 @@
     "walPrefix": "goalflow_wal_v2_",
     "deviceIdKey": "goalflow-device-id",
     "causalStore": "causal_actions",
-    "trackingKeyPath": "causalAccountKey"
+    "trackingKeyPath": "causalAccountKey",
+    "causalBusinessStore": "causal_business",
+    "businessKeyPath": "causalAccountKey"
   },
   "android": {
     "capacitorApplicationId": "com.mariusschober.tsurfing",

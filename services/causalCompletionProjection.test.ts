@@ -1,3 +1,4 @@
+import { fenceLegacyBusinessStores, causalBusinessTransactionStores, readCausalBusiness, writeCausalBusiness } from './causalBusinessStorage';
 import 'fake-indexeddb/auto';
 import { openDB } from 'idb';
 import { IDBObjectStore } from 'fake-indexeddb';
@@ -17,7 +18,7 @@ import { validateCompletionApplicationEvidence } from './causalCompletionProject
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 const business = ['tasks', 'stats', 'progress', 'goals', 'habits', 'task_events', 'daily_plans'] as const;
 
-async function fixture() {
+async function fixture(fenced = false) {
   const accountId = crypto.randomUUID(), epoch = crypto.randomUUID(), sessionId = crypto.randomUUID();
   const tracking = { date: '2026-09-08', planViewCount: 27, dailyPostponeCount: 3, future: 'retained',
     focusSession: { schemaVersion: 1, sessionId, taskId: 'task', phase: 'active', plannedDurationSeconds: 600,
@@ -40,18 +41,23 @@ async function fixture() {
       ? store === 'stats' ? {} : store === 'progress' ? { level: 1, xp: 0, xpToNextLevel: 100 } : [] : value, accountId);
     await db.put('tracking', tracking, accountId); await db.put('sync', empty ? emptySyncMeta() : baselineMeta, accountId); db.close();
     (await fenceLegacyTracking(name)).close();
+    if (fenced) (await fenceLegacyBusinessStores(name)).close();
     await bindCausalCapability(name, accountId, { schemaVersion: 2, accountId, enrolled: true, epoch, projectionRevision: 0, rolloutReady: false });
     return name;
   };
   const read = async (name: string) => {
     const db = await openDB(name), result: any = {};
-    for (const store of [...business, 'tracking', 'sync', CAUSAL_STORE]) result[store] = await db.get(store, accountId);
+    for (const store of [...business, 'tracking', 'sync', CAUSAL_STORE]) {
+      const tx = db.transaction(causalBusinessTransactionStores(db, [store]));
+      result[store] = store === 'tracking' || store === CAUSAL_STORE ? await tx.objectStore(store).get(accountId) : await readCausalBusiness(tx, store, accountId);
+      await tx.done;
+    }
     db.close(); return result;
   };
   const write = async (name: string, values: Record<string, any>) => {
-    const db = await openDB(name), tx = db.transaction(Object.keys(values), 'readwrite');
+    const db = await openDB(name), tx = db.transaction(causalBusinessTransactionStores(db, Object.keys(values)), 'readwrite');
     for (const [store, value] of Object.entries(values)) {
-      if (store === CAUSAL_STORE) await tx.objectStore(store).put(value); else await tx.objectStore(store).put(value, accountId);
+      if (store === CAUSAL_STORE) await tx.objectStore(store).put(value); else await writeCausalBusiness(tx, store, accountId, value);
     }
     await tx.done; db.close();
   };
@@ -94,8 +100,8 @@ async function fixture() {
   return { accountId, epoch, sessionId, tracking, collections, replica, read, write, receipts, intent, complete, focus, save };
 }
 
-it('applies remote notes, all six effects and completed focus atomically, retaining preimages and planning', async () => {
-  const f = await fixture(), source = await f.replica(), target = await f.replica(), before = await f.read(target);
+it.each([false, true])('applies remote notes, all six effects and completed focus atomically, retaining preimages and planning (business fence %s)', async fenced => {
+  const f = await fixture(fenced), source = await f.replica(), target = await f.replica(), before = await f.read(target);
   const completed = await f.complete(source); const history = await f.save(target);
   expect(replayCausalHistory(f.accountId, history).focus.sessions[f.sessionId].projection.phase).toBe('completed');
   expect((await applyDownloadedCausalHistory(target, f.accountId)).blocked).toBe(false);
@@ -123,8 +129,8 @@ it.each(['stats', 'sync', CAUSAL_STORE, 'tracking'])('rolls back every completio
   expect((await applyDownloadedCausalHistory(target, f.accountId)).blocked).toBe(false);
 });
 
-it('recovers a lost local response from exact history without rewinding newer notes or session G', async () => {
-  const f = await fixture(), source = await f.replica(), completed = await f.complete(source);
+it.each([false, true])('recovers a lost local response from exact history without rewinding newer notes or session G (business fence %s)', async fenced => {
+  const f = await fixture(fenced), source = await f.replica(), completed = await f.complete(source);
   const current = await f.read(source), edited = structuredClone(current.tasks); edited[0].description = 'Newer retained local notes';
   const action = buildStagedLocalTransaction('tasks', f.accountId, current.tasks, edited, 1, '2026-09-08T00:06:00.000Z', () => crypto.randomUUID())!;
   await f.write(source, { tasks: edited, sync: appendStagedTransactions(current.sync, [action], 'fixture') });

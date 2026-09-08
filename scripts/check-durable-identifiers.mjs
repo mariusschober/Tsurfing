@@ -76,6 +76,8 @@ assertExtracted('Native Android application ID', 'android-native/app/build.gradl
 
 assertExtracted('Web causal authority store', 'services/causalStorage.ts', /^export const CAUSAL_STORE = '([^']+)';/m, frozen.web.causalStore);
 assertExtracted('Web tracking key path', 'services/causalStorage.ts', /^export const TRACKING_KEY_PATH = '([^']+)';/m, frozen.web.trackingKeyPath);
+assertExtracted('Web business authority store', 'services/causalBusinessStorage.ts', /^export const CAUSAL_BUSINESS_STORE = '([^']+)';/m, frozen.web.causalBusinessStore);
+assertExtracted('Web business key path', 'services/causalBusinessStorage.ts', /^export const BUSINESS_KEY_PATH = '([^']+)';/m, frozen.web.businessKeyPath);
 assertExtracted('Web database name', 'services/storage.ts', /^const BASE_DB_NAME = '([^']+)';/m, frozen.web.databaseName);
 assertExtracted('Active web database key', 'services/storage.ts', /^const ACTIVE_DB_KEY = '([^']+)';/m, frozen.web.activeDatabaseKey);
 assertExtracted('Web WAL prefix', 'services/storage.ts', /^const WAL_PREFIX = '([^']+)';/m, frozen.web.walPrefix);

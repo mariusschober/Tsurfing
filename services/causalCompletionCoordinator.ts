@@ -1,3 +1,4 @@
+import { causalBusinessTransactionStores, readCausalBusiness, writeCausalBusiness } from './causalBusinessStorage';
 import { openDB, type IDBPTransaction } from 'idb';
 import { v5 as uuidv5 } from 'uuid';
 import { applyFocusCommand, initialFocusJournal, validateFocusCommand, type FocusCommand, type FocusOutcome } from '../src/domain/causalFocus';
@@ -72,12 +73,12 @@ async function run<T>(name: string, accountId: string, work: (state: CompletionA
   const db = await openDB(name);
   try {
     if (!db.objectStoreNames.contains(CAUSAL_STORE)) throw new Error('Explicit causal enrollment is required before completion.');
-    const tx = db.transaction([CAUSAL_STORE, 'tracking', 'sync', ...stores], 'readwrite');
+    const tx = db.transaction(causalBusinessTransactionStores(db, [CAUSAL_STORE, 'tracking', 'sync', ...stores]), 'readwrite');
     void tx.done.catch(() => undefined);
     try {
       const state = await readCausalAccount(tx, accountId) as CompletionAccountState | undefined;
       if (!state || !state.trackingPresent || !object(state.trackingValue)) throw new Error('Completion requires retained causal tracking.');
-      const rawMeta = await tx.objectStore('sync').get(accountId);
+      const rawMeta = await readCausalBusiness(tx, 'sync', accountId);
       const meta = normalizeSyncMeta(rawMeta);
       const beforeState = stableJson(state), beforeMeta = stableJson(meta);
       const result = await work(state, meta, tx);
@@ -88,7 +89,7 @@ async function run<T>(name: string, accountId: string, work: (state: CompletionA
         if (!Number.isSafeInteger(meta.localState.generation + 1)) throw new Error('Local generation exhausted.');
         meta.localState.generation++;
         await tx.objectStore(CAUSAL_STORE).put(state);
-        await tx.objectStore('sync').put({ ...(object(rawMeta) ? rawMeta : {}), ...meta }, accountId);
+        await writeCausalBusiness(tx, 'sync', accountId, { ...(object(rawMeta) ? rawMeta : {}), ...meta });
       }
       await tx.done;
       return structuredClone(result);
@@ -133,7 +134,7 @@ export async function admitLocalCompletion(name: string, captured: CompletionInt
     if (result.outcome.accepted) {
       const collections: any = {};
       for (const store of stores) {
-        const value = await tx.objectStore(store).get(accountId);
+        const value = await readCausalBusiness(tx, store, accountId);
         if (value === undefined && Object.keys(meta.versions).some(key => key === store || key.startsWith(`${store}:`))) {
           throw new Error('An absent completion collection has retained version evidence and requires recovery.');
         }
@@ -189,7 +190,7 @@ export async function admitLocalCompletion(name: string, captured: CompletionInt
       // Reserve room for every dependency's largest possible safe server version.
       const maximum = { ...operation, changes: operation.changes.map(member => ({ ...member, baseServerVersion: Number.MAX_SAFE_INTEGER })) };
       if (new TextEncoder().encode(JSON.stringify(maximum)).byteLength > SYNC_STAGED_BODY_BYTES) throw new Error('The complete action exceeds the 4 MiB transport envelope. Nothing was completed.');
-      for (const store of stores) if (!same(collections[store], derived.collections[store])) await tx.objectStore(store).put(derived.collections[store], accountId);
+      for (const store of stores) if (!same(collections[store], derived.collections[store])) await writeCausalBusiness(tx, store, accountId, derived.collections[store]);
       state.trackingValue = { ...state.trackingValue, focusSession: result.journal.sessions[result.journal.currentSessionId!].projection };
       await tx.objectStore('tracking').put({ [TRACKING_KEY_PATH]: accountId, payload: state.trackingValue });
       state.completionOutbox ??= {}; state.completionOutbox[id] = admission;

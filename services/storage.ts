@@ -27,6 +27,7 @@ import {
 import { mergeTrackingFocusSession, normalizeFocusSession } from '../src/domain/focusSession';
 import { assertNewSyncPayload, transportablePushBatch } from './syncEnvelope';
 import { CAUSAL_STORE, TRACKING_KEY_PATH, fenceLegacyTracking, readCausalAccount } from './causalStorage';
+import { CAUSAL_BUSINESS_STORE } from './causalBusinessStorage';
 import { encodeCausalBackup, readCausalBackup } from './causalBackup';
 
 const BASE_DB_NAME = 'GoalflowDB';
@@ -1552,6 +1553,7 @@ export const storageService = {
       const collections: Record<string, unknown> = {};
       const db = await getDB();
       if (db) {
+        if (db.objectStoreNames.contains(CAUSAL_BUSINESS_STORE)) throw new DurableStorageError('Business authority backup support is required before export. No incomplete backup was generated; existing data is unchanged.');
         const causal = db.objectStoreNames.contains(CAUSAL_STORE);
         const tx = db.transaction([...DATA_STORES, STORES.SYNC, ...(causal ? [CAUSAL_STORE] : [])], 'readonly');
         const authority = causal ? await readCausalAccount(tx, userKey) : undefined;
