@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useId } from 'react';
 import { useGoalflow } from './hooks/useGoalflow';
 import { CurrentView } from './components/CurrentView';
-import { PlanningView } from './components/PlanningView';
+import { PlanningView, type PlanningMode } from './components/PlanningView';
 import { DoneView } from './components/DoneView';
 import { HabitsView } from './components/HabitsView';
 import { Celebration } from './components/Celebration';
@@ -41,6 +41,9 @@ interface AppProps {
 const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetup = false, onLogout }) => {
   const [currentLocalDay, setCurrentLocalDay] = useState(getTodayYYYYMMDD());
   const [currentView, setCurrentView] = useState<View>('current');
+  const [planModeState, setPlanModeState] = useState<{ user: string; day: string; mode: PlanningMode }>(() => ({ user: userKey, day: currentLocalDay, mode: 'manual' }));
+  const planMode: PlanningMode = planModeState.user === userKey && planModeState.day === currentLocalDay ? planModeState.mode : 'manual';
+  const setPlanMode = useCallback((mode: PlanningMode) => setPlanModeState({ user: userKey, day: currentLocalDay, mode }), [userKey, currentLocalDay]);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -122,7 +125,6 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
     resetCircadianState,
     userSettings,
     updateUserSettings,
-    sortTodayTasksCircadian,
     dailyPlans,
     confirmDailyPlan: persistDailyPlan
   } = useGoalflow(userKey, userEmail);
@@ -339,7 +341,7 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
   }
 
   return (
-    <div className={`app-shell ${currentView === 'current' ? 'app-shell--current' : ''} bg-gray-50 dark:bg-slate-900 min-h-screen font-sans flex flex-col transition-colors duration-200 print:bg-white relative`}>
+    <div className={`app-shell ${currentView === 'current' ? 'app-shell--current' : currentView === 'planning' ? 'app-shell--planning' : ''} bg-gray-50 dark:bg-slate-900 min-h-screen font-sans flex flex-col transition-colors duration-200 print:bg-white relative`}>
       <PwaLifecycle />
       {isBioCheckInOpen && (
           <BioStateCheckIn 
@@ -408,12 +410,14 @@ const App: React.FC<AppProps> = ({ userEmail, userKey, userRole, openAccountSetu
                 completeTask={handleCompleteTask}
                 isAiEnabled={userSettings.enableAi}
                 createTask={addTask}
-                sortTodayTasksCircadian={sortTodayTasksCircadian}
-                modeControl={<ModeSelector active={isCircadianActive} mode={circadianState.mode} onManual={resetCircadianState} onBioAdaptive={() => setIsBioCheckInOpen(true)} />}
+                userKey={userKey}
+                planningMode={planMode}
+                onPlanningModeChange={setPlanMode}
+                onSubmitBioCheckIn={submitBioCheckIn}
             />
-            <div className="sticky bottom-4 z-10 mx-auto mt-6 max-w-xl rounded-xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-800/95">
-                <p className="mb-3 text-sm text-gray-600 dark:text-gray-300">
-                    {requiresMonthlyPlanning ? 'Assign every current-month task to an exact day before starting today.' : hasOverdue ? 'Resolve every overdue task before starting today.' : `Confirm today's order, then leave planning and focus on one task.`}
+            <div className="planning-confirmation border border-gray-200 bg-white/95 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-800/95">
+                <p className="planning-confirmation__summary text-sm text-gray-600 dark:text-gray-300">
+                    {requiresMonthlyPlanning ? 'Assign every current-month task to an exact day before starting today.' : hasOverdue ? 'Resolve every overdue task before starting today.' : `Confirm today's order, then start focus.`}
                 </p>
                 {planningSaveError && (
                     <p role="alert" className="mb-3 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-700 dark:bg-red-950/40 dark:text-red-200">

@@ -314,7 +314,7 @@ test('primary destinations, Insights/Done and overdue navigation restrictions re
   await expect(menu.getByRole('button', { name: 'Plan', exact: true })).toBeEnabled();
 });
 
-test('Plan and Current share mode; cancelling check-in and using Manual retain existing behavior', async ({ page }) => {
+test('Plan mode is independent; Current check-in and cancellation retain existing behavior', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 850 });
   await unlock(page);
   await page.getByRole('button', { name: 'Mode: Manual' }).click();
@@ -337,12 +337,12 @@ test('Plan and Current share mode; cancelling check-in and using Manual retain e
   await page.getByRole('button', { name: 'Exit', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Mode: Bio-Adaptive' })).toBeVisible();
   await navigate(page, 'Plan');
-  await expect(page.getByRole('button', { name: 'Bio-Adaptive', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByText('Apex', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Manual', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('Apex', { exact: true })).toBeHidden();
   await page.getByRole('button', { name: 'Manual', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Manual', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await navigate(page, 'Current');
-  await expect(page.getByRole('button', { name: 'Mode: Manual' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mode: Bio-Adaptive' })).toBeVisible();
 });
 
 test('opening Menu and crossing breakpoints preserve the active task and focus session', async ({ page }, testInfo) => {

@@ -212,3 +212,53 @@ button, input, textarea, select { font: inherit; }
 .app-shell--current .focus-ticking input::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; inline-size: 16px; block-size: 16px; margin-block-start: -6px; border: 0; border-radius: 50%; background: #6366f1; }
 .app-shell--current .focus-ticking input::-moz-range-thumb { inline-size: 16px; block-size: 16px; border: 0; border-radius: 50%; background: #6366f1; }
 @container current-view (max-height: 460px) { .app-shell--current .focus-ticking input { inline-size: 32px; } }
+
+/* Plan owns its presentation mode and task density; Current remains independent. */
+.planning-view { display: flex; flex-direction: column; gap: 24px; padding: 24px 32px 0; }
+.planning-view .planning-heading { align-items: flex-start; gap: 16px; }
+.planning-view .planning-heading__identity { display: block; }
+.plan-mode { display: flex; flex-direction: column; gap: 6px; max-inline-size: 100%; inline-size: 336px; }
+.plan-mode__options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 4px; border-radius: 14px; gap: 4px; }
+.plan-mode__option { min-block-size: 44px; min-inline-size: 0; padding: 8px; border-radius: 10px; font-size: 14px; font-weight: 600; }
+.plan-mode__option:disabled { opacity: .5; cursor: not-allowed; }
+.planning-flow-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+.planning-flow-heading__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.planning-flow-heading__actions > button { min-block-size: 44px; }
+.plan-density { display: flex; padding: 3px; border-radius: 10px; }
+.plan-density button { min-block-size: 36px; padding: 6px 10px; border-radius: 7px; font-size: 12px; font-weight: 600; }
+.planning-timeline { min-inline-size: 0; }
+.planning-task--compact { min-block-size: 72px; }
+.planning-task--compact .planning-task__content { padding: 12px; }
+.planning-task--compact .planning-task__title { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+.planning-task--compact .planning-task__content > div > div { text-align: start; }
+.planning-task--compact .planning-task__content > div > div > div { justify-content: flex-start; }
+.planning-task--compact .planning-task__content > div > div > div:last-child > div { flex-wrap: wrap; }
+.planning-view--compact .planning-task-list { display: flex; flex-direction: column; gap: 12px; }
+.planning-view--compact .planning-task-list > :not([hidden]) ~ :not([hidden]) { margin-block: 0; }
+.planning-task { scroll-margin-block: 16px 176px; }
+.planning-task:focus-within .planning-task__actions { opacity: 1; transform: translate(0, -50%); }
+.planning-horizon-empty { padding: 20px; border-radius: 18px; }
+.app-shell--planning > main { padding-block-end: 156px; }
+.planning-confirmation { position: fixed; inset-block-end: max(16px, env(safe-area-inset-bottom)); inset-inline-start: 50%; transform: translateX(-50%); inline-size: min(68rem, calc(100% - 160px)); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 14px; z-index: 30; }
+.planning-confirmation__summary { margin: 0; }
+.planning-confirmation > button { inline-size: auto; min-block-size: 44px; padding: 10px 20px; }
+.planning-confirmation > [role="alert"] { grid-column: 1 / -1; grid-row: 1; margin: 0; }
+.app-shell--planning .app-add-task { inline-size: 56px; block-size: 56px; padding: 12px; inset-inline-end: 16px; inset-block-end: max(16px, env(safe-area-inset-bottom)); }
+.app-shell--planning .app-add-task svg { inline-size: 28px; block-size: 28px; }
+@media (max-width: 767px) {
+  .planning-view { padding: 12px 0 0; }
+  .planning-view .planning-heading { flex-direction: column; }
+  .plan-mode { inline-size: 100%; }
+  .planning-flow-heading__actions { inline-size: 100%; justify-content: space-between; gap: 8px; }
+  .plan-density button { min-block-size: 44px; padding-inline: 8px; }
+  .planning-timeline { padding: 12px; border-radius: 20px; }
+  .planning-timeline > .absolute { left: 34px; }
+  .planning-task { gap: 8px; }
+  .planning-task > div:first-child { inline-size: 44px; }
+  .planning-task__content { padding-inline: 12px; }
+  .planning-confirmation { inset-inline-start: 16px; transform: none; inline-size: calc(100% - 104px); grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 10px 12px; }
+  .planning-confirmation__summary { font-size: 12px; }
+  .planning-confirmation > button { inline-size: 100%; font-size: 13px; padding-inline: 8px; }
+  .app-shell--planning > main { padding-block-end: 196px; }
+}
+@media print { .planning-confirmation { position: static; transform: none; inline-size: 100%; } }

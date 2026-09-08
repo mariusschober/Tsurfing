@@ -1,5 +1,13 @@
 # Tsurfing beta readiness evidence
 
+## Plan modes and density — 2026-09-08
+
+Plan now has independent Manual / Prioritize / Circadian controls and Compact /
+Proportional layouts. The existing quizzes and ranking handler are reused;
+circadian ordering remains deferred. All 48 local browser journeys pass.
+[Scope, screenshots and deployment evidence](ui/plan-modes-20260908/STAGING.md).
+This UI staging update does not change overall beta readiness.
+
 ## Responsive web navigation — 2026-09-08
 
 A UI-only staging candidate is based on the deployed `6f750a7` source. It fixes
